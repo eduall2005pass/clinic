@@ -214,7 +214,9 @@ export async function sendNotification(
       break;
       
     case 'admin':
-      const adminIds = recipients.adminIds || await getAdminUsers();
+      const adminIds = (recipients.adminIds && recipients.adminIds.length > 0)
+        ? recipients.adminIds
+        : await getAdminUsers();
       for (const adminId of adminIds) {
         if (channel.includes('bell')) {
           await createNotification(adminId, title, message, type);

@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Clock, Check, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
+import { sendNotification, requestPushPermission } from '@/lib/notifications';
 
 const days = [
   { index: 0, name: 'রবিবার' },
@@ -76,10 +77,27 @@ export default function DoctorSchedule() {
   }
 
   async function confirmSchedule(id: string) {
+    const schedule = pendingSchedules.find(s => s.id === id);
+    
     await supabase
       .from('schedules')
       .update({ status: 'active' })
       .eq('id', id);
+    
+    if (schedule) {
+      const { data: doctorRecord } = await supabase
+        .from('doctors')
+        .select('name')
+        .eq('id', schedule.doctor_id)
+        .single();
+      requestPushPermission();
+      await sendNotification('schedule_added_admin', {
+        adminIds: [],
+      }, {
+        doctorName: doctorRecord?.name,
+        date: schedule.date,
+      });
+    }
     
     toast.success('শিফট নিশ্চিত হয়েছে');
     loadSchedules();
