@@ -1,152 +1,133 @@
 # Clinic Connect
 
-A mobile-first clinic management app built with Next.js and TailwindCSS for small clinics in Bangladesh.
+বাংলাদেশের ছোট ক্লিনিকগুলির জন্য তৈরি একটি মোবাইল-ফার্স্ট ক্লিনিক ম্যানেজমেন্ট অ্যাপ্লিকেশন। Next.js, TailwindCSS এবং Supabase দিয়ে তৈরি।
 
-## Features
+---
 
-- **Admin Dashboard**: Schedule management, appointment overview, reports
-- **Doctor Dashboard**: Daily schedule, appointments, teleconsult
-- **Patient Dashboard**: Book appointments, view appointments, join teleconsult
-- **Teleconsult**: Video calls using Jitsi integration
-- **PWA**: Add to Home Screen, offline support
+## ফিচারসমূহ
 
-## Tech Stack
+### 👨‍💼 অ্যাডমিন ড্যাশবোর্ড
+- আজকের অ্যাপয়েন্টমেন্ট পরিসংখ্যান (অপেক্ষায়, নিশ্চিত, সম্পন্ন)
+- ক্লিনিক ফ্লো — ডাক্তারভিত্তিক রোগীর তালিকা
+- দ্রুত কাজ: শিফট যোগ, ওয়াক-ইন অ্যাপয়েন্টমেন্ট, ডাক্তার তালিকা
+- শিফট ম্যানেজমেন্ট, রিপোর্ট, ডাক্তার ম্যানেজমেন্ট
 
-- Next.js 14+
-- React 18+
-- TailwindCSS
-- Supabase (Backend)
-- Firebase (Push Notifications - setup required)
-- Jitsi (Video calls)
+### 🩺 ডাক্তার ড্যাশবোর্ড
+- দৈনিক সময়সূচী ও অ্যাপয়েন্টমেন্ট তালিকা
+- টেলিকনসাল্ট (ভিডিও কল)
+- প্রোফাইল ম্যানেজমেন্ট
 
-## Getting Started
+### 🏥 রোগী ড্যাশবোর্ড
+- অ্যাপয়েন্টমেন্ট বুকিং (সরাসরি বা টেলিকনসাল্ট)
+- আসন্ন অ্যাপয়েন্টমেন্ট দেখা ও ট্র্যাক করা
+- উপলব্ধ ডাক্তারের তালিকা
+- ভিডিও কল (টেলিকনসাল্ট)
+- নোটিফিকেশন (অ্যাপয়েন্টমেন্ট আপডেট)
 
-### Prerequisites
+### ⚙️ অন্যান্য
+- **PWA**: হোম স্ক্রিনে যোগ করুন, অফলাইন সাপোর্ট
+- **বাংলা ভাষা**: পুরো অ্যাপ বাংলায়
+- **Framer Motion**: স্মুথ অ্যানিমেশন
+- **রোল-ভিত্তিক অ্যাক্সেস**: Admin / Doctor / Patient
+
+---
+
+## টেক স্ট্যাক
+
+| বিভাগ | প্রযুক্তি |
+|---|---|
+| ফ্রেমওয়ার্ক | Next.js 14 (App Router) |
+| UI | React 18, TailwindCSS 3, Framer Motion |
+| ব্যাকএন্ড / DB | Supabase (PostgreSQL + Auth + RLS) |
+| PWA | next-pwa |
+| আইকন | lucide-react |
+| নোটিফিকেশন | react-hot-toast |
+| তারিখ | date-fns, react-datepicker |
+
+---
+
+## শুরু করুন
+
+### পূর্বশর্ত
 
 - Node.js 18+
-- npm or yarn
-- Supabase account
+- npm
+- Supabase অ্যাকাউন্ট
 
-### Installation
+### ইনস্টলেশন
 
 ```bash
 npm install
 ```
 
-### Configuration
+### এনভায়রনমেন্ট কনফিগারেশন
 
-1. Create a `.env.local` file with your Supabase credentials:
+`.env.local` ফাইল তৈরি করুন এবং আপনার Supabase তথ্য দিন:
 
-```
+```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### Database Setup
+### ডেটাবেস সেটআপ
 
-Run the following SQL in your Supabase SQL editor to create the necessary tables:
+`supabase-setup.sql` ফাইলটি Supabase SQL Editor-এ রান করুন। এটি নিচের টেবিলগুলো তৈরি করবে:
 
-```sql
--- Users table
-CREATE TABLE users (
-  id UUID PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  role TEXT CHECK (role IN ('admin', 'doctor', 'patient')),
-  phone TEXT,
-  avatar_url TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+| টেবিল | বিবরণ |
+|---|---|
+| `users` | সকল ব্যবহারকারী (Supabase Auth-এর সাথে সংযুক্ত) |
+| `doctors` | ডাক্তারের তথ্য, ফি, রেটিং, প্রাপ্যতা |
+| `shifts` | ডাক্তারের সাপ্তাহিক শিফট সময়সূচী |
+| `appointments` | রোগীর অ্যাপয়েন্টমেন্ট (সরাসরি ও টেলিকনসাল্ট) |
+| `notifications` | ব্যবহারকারীর নোটিফিকেশন |
 
--- Doctors table
-CREATE TABLE doctors (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  name TEXT NOT NULL,
-  specialty TEXT,
-  phone TEXT,
-  avatar_url TEXT,
-  consultation_fee DECIMAL(10,2),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+Row Level Security (RLS) স্বয়ংক্রিয়ভাবে সক্রিয় হবে।
 
--- Shifts table
-CREATE TABLE shifts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  doctor_id UUID REFERENCES doctors(id),
-  day_of_week INTEGER CHECK (day_of_week >= 0 AND day_of_week <= 6),
-  start_time TIME NOT NULL,
-  end_time TIME NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Appointments table
-CREATE TABLE appointments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  patient_id UUID REFERENCES users(id),
-  doctor_id UUID REFERENCES doctors(id),
-  date DATE NOT NULL,
-  time TIME NOT NULL,
-  status TEXT CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')),
-  type TEXT CHECK (type IN ('in-person', 'teleconsult')),
-  reason TEXT,
-  notes TEXT,
-  teleconsult_link TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Notifications table
-CREATE TABLE notifications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  title TEXT NOT NULL,
-  message TEXT NOT NULL,
-  type TEXT CHECK (type IN ('appointment', 'shift', 'teleconsult', 'general')),
-  is_read BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Enable RLS
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE doctors ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-```
-
-### Run Development Server
+### ডেভেলপমেন্ট সার্ভার চালু করুন
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser.
+ব্রাউজারে [http://localhost:3000](http://localhost:3000) খুলুন।
 
-### Build for Production
+### প্রোডাকশন বিল্ড
 
 ```bash
 npm run build
 npm start
 ```
 
-## Deploy to Vercel
+---
 
-1. Push your code to GitHub
-2. Import the project to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy
+## ফোল্ডার স্ট্রাকচার
 
-## PWA Setup
+```
+src/
+├── app/
+│   ├── dashboard/
+│   │   ├── admin/        # অ্যাডমিন পেজসমূহ
+│   │   ├── doctor/       # ডাক্তার পেজসমূহ
+│   │   └── patient/      # রোগী পেজসমূহ
+│   ├── login/
+│   └── register/
+├── components/           # শেয়ার্ড UI কম্পোনেন্ট
+├── context/              # Auth ও Loading Context
+├── lib/                  # Supabase ক্লায়েন্ট, ক্যাশ, নোটিফিকেশন
+└── types/                # TypeScript টাইপ ডেফিনিশন
+```
 
-The app is configured with next-pwa for offline support. Custom icons can be added to the public folder.
+---
 
-## UX Recommendations
+## Vercel-এ ডিপ্লয়
 
-1. **Trust building**: Show doctor credentials, patient reviews, clinic certifications
-2. **Simplicity**: Minimize steps for booking - 3 clicks max
-3. **Accessibility**: Large fonts (16px+), high contrast, simple icons
-4. **Notifications**: Send SMS + Push for rural areas with poor internet
-5. **Language**: Support Bengali throughout the app
-6. **Offline**: Cache appointments and doctor list for offline access
-# clinicConnect
+1. কোড GitHub-এ পুশ করুন
+2. [Vercel](https://vercel.com)-এ প্রজেক্ট ইমপোর্ট করুন
+3. Environment Variables-এ `NEXT_PUBLIC_SUPABASE_URL` ও `NEXT_PUBLIC_SUPABASE_ANON_KEY` যোগ করুন
+4. Deploy করুন
+
+---
+
+## লাইসেন্স
+
+MIT
