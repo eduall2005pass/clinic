@@ -318,6 +318,35 @@ export default function AdminAppointments() {
       .eq('id', apt.id);
 
     if (!error) {
+      requestPushPermission();
+
+      if (apt.type === 'teleconsult') {
+        await sendNotification('teleconsult_cancelled_patient', {
+          patientId: apt.patient_id,
+        }, {
+          doctorName: apt.doctors?.name,
+        });
+
+        await sendNotification('teleconsult_cancelled_doctor', {
+          doctorId: apt.doctor_id,
+        }, {
+          patientName: apt.patients?.name,
+        });
+      } else {
+        await sendNotification('appointment_cancelled_patient', {
+          patientId: apt.patient_id,
+        }, {
+          patientName: apt.patients?.name,
+          doctorName: apt.doctors?.name,
+        });
+
+        await sendNotification('appointment_cancelled_doctor', {
+          doctorId: apt.doctor_id,
+        }, {
+          patientName: apt.patients?.name,
+        });
+      }
+
       toast.success('অ্যাপয়েন্টমেন্ট বাতিল হয়েছে');
       loadData();
     }
@@ -460,6 +489,13 @@ export default function AdminAppointments() {
         setCreatingWalkin(false);
         return;
       }
+
+      requestPushPermission();
+      await sendNotification('walkin_doctor', {
+        doctorId: walkinPatient.doctor_id,
+      }, {
+        patientName: walkinPatient.name,
+      });
 
       toast.success('অ্যাপয়েন্টমেন্ট যোগ হয়েছে');
       setShowWalkinModal(false);

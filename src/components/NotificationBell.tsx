@@ -59,14 +59,14 @@ export function NotificationBell({ role, userId }: Props) {
       .eq('is_read', true);
 
     const getLocalDateString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
-  const { data } = await supabase
+    const { data } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)

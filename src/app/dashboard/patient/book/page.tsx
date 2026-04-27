@@ -160,15 +160,15 @@ setLoading(false);
       if (appointment) {
         requestPushPermission();
 
-        const { data: adminUsers } = await supabase
-          .from('users')
-          .select('id')
-          .eq('role', 'admin');
-        const adminIds = adminUsers?.map(u => u.id) || [];
+        await sendNotification('appointment_pending_patient', {
+          patientId: patientData.id,
+        }, {
+          date: selectedDate,
+          time: selectedSlot.start,
+        });
 
         await sendNotification('appointment_booked_admin', {
-          adminIds,
-          doctorId: selectedDoctor.id,
+          adminIds: [],
         }, {
           patientName: patientData.name,
           doctorName: selectedDoctor.name,
