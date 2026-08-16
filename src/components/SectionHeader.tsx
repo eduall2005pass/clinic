@@ -16,7 +16,7 @@ export default function SectionHeader({
         {label}
         <span className="h-px w-6 bg-primary-600/60" />
       </span>
-      <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+      <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-heading sm:text-4xl">
         {title}
       </h2>
       {description ? (

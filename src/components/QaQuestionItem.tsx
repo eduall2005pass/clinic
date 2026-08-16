@@ -17,7 +17,7 @@ function FavouriteButton() {
       className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
         favourite
           ? "border-primary-500 bg-primary-600/15 text-primary-400"
-          : "border-white/10 bg-white/5 text-neutral-400 hover:border-primary-500/60 hover:text-primary-400"
+          : "border-ink/10 bg-ink/5 text-neutral-400 hover:border-primary-500/60 hover:text-primary-400"
       }`}
     >
       <svg
@@ -48,7 +48,7 @@ function AttachmentIndicator({
   return (
     <span
       title={`Has ${label}`}
-      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-neutral-400"
+      className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-ink/5 px-2.5 py-1 text-[11px] font-semibold text-neutral-400"
     >
       {icon === "picture" ? (
         <svg
@@ -90,9 +90,9 @@ export default function QaQuestionItem({
   question: QaQuestion;
 }) {
   return (
-    <article className="rounded-2xl border border-white/10 bg-dark-900 p-6 shadow-lg shadow-black/20 transition hover:border-primary-600/50 hover:shadow-primary-900/20">
+    <article className="rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20 transition hover:border-primary-600/50 hover:shadow-primary-900/20">
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-dark-800">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-ink/10 bg-dark-800">
           <Image
             src={question.studentAvatar}
             alt={question.studentName}
@@ -102,7 +102,7 @@ export default function QaQuestionItem({
           />
         </div>
         <div>
-          <p className="text-sm font-bold text-white">
+          <p className="text-sm font-bold text-heading">
             {question.studentName}
           </p>
           <p className="text-xs text-neutral-500">{question.createdAt}</p>
@@ -111,7 +111,7 @@ export default function QaQuestionItem({
           className={`ml-auto rounded-full px-3 py-1 text-[11px] font-bold ${
             question.status === "answered"
               ? "bg-emerald-500/15 text-emerald-400"
-              : "border border-white/10 bg-white/5 text-neutral-400"
+              : "border border-ink/10 bg-ink/5 text-neutral-400"
           }`}
         >
           {question.status === "answered" ? "Answered" : "Unanswered"}
@@ -133,7 +133,7 @@ export default function QaQuestionItem({
         </div>
       )}
 
-      <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
+      <div className="mt-5 flex items-center justify-between border-t border-ink/10 pt-4">
         <FavouriteButton />
         <span className="text-xs text-neutral-500">
           {question.status === "answered"

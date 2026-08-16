@@ -1,8 +1,60 @@
 @import "tailwindcss";
 
-:root {
+/* ============ Theme tokens ============ */
+/* Dark Mode is the default theme. */
+:root,
+:root[data-theme="dark"] {
   --background: #0a0a0a;
   --foreground: #d4d4d8;
+
+  --surface-600: #333333;
+  --surface-700: #262626;
+  --surface-800: #1a1a1a;
+  --surface-850: #151515;
+  --surface-900: #111111;
+  --surface-950: #0a0a0a;
+
+  --text-muted-strong: #d4d4d8;
+  --text-muted: #a1a1aa;
+  --text-muted-faint: #71717a;
+
+  --heading: #ffffff;
+  --ink: #ffffff;
+  --ink-rgb: 255 255 255;
+
+  color-scheme: dark;
+}
+
+/* ============ Light Mode ============ */
+:root[data-theme="light"] {
+  --background: #f4f5f7;
+  --foreground: #3f3f46;
+
+  --surface-600: #c9cbd1;
+  --surface-700: #d4d6db;
+  --surface-800: #eceef1;
+  --surface-850: #fbfbfd;
+  --surface-900: #ffffff;
+  --surface-950: #f4f5f7;
+
+  --text-muted-strong: #52525b;
+  --text-muted: #71717a;
+  --text-muted-faint: #a1a1aa;
+
+  --heading: #18181b;
+  --ink: #18181b;
+  --ink-rgb: 24 24 27;
+
+  color-scheme: light;
+}
+
+/* Subtle transition while switching themes (applied transiently by the theme toggle). */
+html[data-theme-transition="true"] *,
+html[data-theme-transition="true"] *::before,
+html[data-theme-transition="true"] *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease,
+    color 0.3s ease, fill 0.3s ease, stroke 0.3s ease,
+    box-shadow 0.3s ease !important;
 }
 
 @theme inline {
@@ -22,12 +74,19 @@
   --color-primary-800: #9b0610;
   --color-primary-900: #7f0710;
 
-  --color-dark-600: #333333;
-  --color-dark-700: #262626;
-  --color-dark-800: #1a1a1a;
-  --color-dark-850: #151515;
-  --color-dark-900: #111111;
-  --color-dark-950: #0a0a0a;
+  --color-dark-600: var(--surface-600);
+  --color-dark-700: var(--surface-700);
+  --color-dark-800: var(--surface-800);
+  --color-dark-850: var(--surface-850);
+  --color-dark-900: var(--surface-900);
+  --color-dark-950: var(--surface-950);
+
+  --color-neutral-300: var(--text-muted-strong);
+  --color-neutral-400: var(--text-muted);
+  --color-neutral-500: var(--text-muted-faint);
+
+  --color-heading: var(--heading);
+  --color-ink: var(--ink);
 
   --animate-fade-up: fade-up 0.7s ease-out both;
   --animate-fade-in: fade-in 0.8s ease-out both;
@@ -70,17 +129,17 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: var(--surface-950);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #262626;
+  background: var(--surface-700);
   border-radius: 9999px;
-  border: 2px solid #0a0a0a;
+  border: 2px solid var(--surface-950);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: var(--surface-600);
 }
 
 /* Subtle medical dot grid */
@@ -97,7 +156,7 @@ body {
 .bg-neutral-dots {
   background-image: radial-gradient(
     circle at 1px 1px,
-    rgba(255, 255, 255, 0.06) 1px,
+    rgb(var(--ink-rgb) / 0.07) 1px,
     transparent 0
   );
   background-size: 24px 24px;
@@ -107,10 +166,14 @@ body {
 .bg-grid-lines {
   background-image: linear-gradient(
       to right,
-      rgba(255, 255, 255, 0.03) 1px,
+      rgb(var(--ink-rgb) / 0.04) 1px,
       transparent 1px
     ),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(
+      to bottom,
+      rgb(var(--ink-rgb) / 0.04) 1px,
+      transparent 1px
+    );
   background-size: 48px 48px;
 }
 

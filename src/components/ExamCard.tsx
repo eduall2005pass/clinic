@@ -14,7 +14,7 @@ const statusStyles: Record<
     dot: "bg-white/80",
   },
   Closed: {
-    badge: "bg-dark-800 text-neutral-400 border border-white/10",
+    badge: "bg-dark-800 text-neutral-400 border border-ink/10",
     dot: "bg-neutral-500",
   },
 };
@@ -42,8 +42,8 @@ export default function ExamCard({ exam }: { exam: PublicExam }) {
   const isClosed = exam.status === "Closed";
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-900 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30">
-      <div className="relative flex h-36 items-center justify-center bg-gradient-to-br from-primary-700 via-primary-900 to-dark-950">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30">
+      <div className="relative flex h-36 items-center justify-center bg-gradient-to-br from-primary-700 via-primary-900 to-[#0a0a0a]">
         <div className="pointer-events-none absolute inset-0 bg-medical-dots opacity-40" />
         <ClipboardIcon />
         <span
@@ -59,37 +59,37 @@ export default function ExamCard({ exam }: { exam: PublicExam }) {
 
       <div className="flex flex-1 flex-col p-6">
         <div className="flex items-center gap-2">
-          <span className="rounded-md border border-white/10 bg-dark-800 px-2 py-0.5 text-[11px] font-bold text-white">
+          <span className="rounded-md border border-ink/10 bg-dark-800 px-2 py-0.5 text-[11px] font-bold text-heading">
             {exam.batch}
           </span>
           <span className="rounded-md bg-primary-600/15 px-2 py-0.5 text-[11px] font-bold text-primary-400">
             {exam.totalMarks} Marks
           </span>
         </div>
-        <h3 className="mt-3 text-lg font-bold text-white transition group-hover:text-primary-400">
+        <h3 className="mt-3 text-lg font-bold text-heading transition group-hover:text-primary-400">
           {exam.name}
         </h3>
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-xl border border-ink/10 bg-ink/5 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
               Duration
             </p>
-            <p className="mt-1 font-bold text-white">
+            <p className="mt-1 font-bold text-heading">
               {exam.durationMinutes} min
             </p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-xl border border-ink/10 bg-ink/5 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
               Date / Time
             </p>
-            <p className="mt-1 font-bold text-white">
+            <p className="mt-1 font-bold text-heading">
               {exam.examDate} · {exam.examTime}
             </p>
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5">
+        <div className="mt-6 flex items-center justify-between border-t border-ink/10 pt-5">
           <span className="text-xs font-medium text-neutral-500">
             {isClosed
               ? "This exam has ended."

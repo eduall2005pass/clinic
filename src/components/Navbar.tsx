@@ -2,21 +2,24 @@
 
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 import { loginHref } from "@/lib/nav-links";
 
 export default function Navbar() {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-dark-950/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="shrink-0 transition-opacity hover:opacity-90">
           <Logo size="large" />
         </Link>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <ThemeToggle />
+
           <Link
             href="/dashboard/notifications"
             aria-label="Notifications"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-neutral-300 transition hover:border-primary-500/50 hover:bg-primary-500/10 hover:text-white"
+            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-ink/10 bg-ink/5 text-neutral-300 transition hover:border-primary-500/50 hover:bg-primary-500/10 hover:text-heading"
           >
             <svg
               className="h-5 w-5"

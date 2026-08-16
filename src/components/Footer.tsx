@@ -4,7 +4,7 @@ import { mainNavLinks, loginHref } from "@/lib/nav-links";
 
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden border-t border-white/10 bg-dark-950 text-neutral-400">
+    <footer className="relative overflow-hidden border-t border-ink/10 bg-dark-950 text-neutral-400">
       <div className="pointer-events-none absolute inset-0 bg-medical-cross opacity-60" />
       <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-primary-600/10 blur-3xl" />
 
@@ -18,7 +18,7 @@ export default function Footer() {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold text-white">Explore</h3>
+          <h3 className="text-sm font-semibold text-heading">Explore</h3>
           <ul className="mt-4 space-y-2.5 text-sm">
             {mainNavLinks.map((link) => (
               <li key={link.href}>
@@ -42,7 +42,7 @@ export default function Footer() {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold text-white">Programs</h3>
+          <h3 className="text-sm font-semibold text-heading">Programs</h3>
           <ul className="mt-4 space-y-2.5 text-sm">
             <li>HSC Academic</li>
             <li>Medical Admission</li>
@@ -52,7 +52,7 @@ export default function Footer() {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold text-white">Contact</h3>
+          <h3 className="text-sm font-semibold text-heading">Contact</h3>
           <ul className="mt-4 space-y-2.5 text-sm">
             <li>support@medispark.com</li>
             <li>hello@medispark.com</li>
@@ -60,7 +60,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="relative border-t border-white/10 py-6 text-center text-sm text-neutral-500">
+      <div className="relative border-t border-ink/10 py-6 text-center text-sm text-neutral-500">
         © {new Date().getFullYear()} MediSpark. All rights reserved.
       </div>
     </footer>

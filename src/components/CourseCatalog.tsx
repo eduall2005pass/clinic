@@ -37,7 +37,7 @@ export default function CourseCatalog({
 
   return (
     <div>
-      <div className="mb-10 flex flex-col gap-6 rounded-2xl border border-white/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mb-10 flex flex-col gap-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
         <CourseFilters
           batches={batches}
           batch={batch}
@@ -51,8 +51,8 @@ export default function CourseCatalog({
       </div>
 
       {groups.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/15 bg-dark-900/60 p-12 text-center">
-          <p className="font-semibold text-white">No courses found</p>
+        <div className="rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-12 text-center">
+          <p className="font-semibold text-heading">No courses found</p>
           <p className="mt-1 text-sm text-neutral-400">
             Try a different batch or course type.
           </p>
@@ -62,14 +62,14 @@ export default function CourseCatalog({
           {groups.map((group) => (
             <section key={group.batch.id}>
               <div className="mb-6 flex items-center gap-4">
-                <h2 className="text-xl font-extrabold text-white sm:text-2xl">
+                <h2 className="text-xl font-extrabold text-heading sm:text-2xl">
                   {group.batch.label}
                 </h2>
                 <span className="rounded-full bg-primary-600/15 px-3 py-1 text-xs font-bold text-primary-500">
                   {group.items.length} course
                   {group.items.length === 1 ? "" : "s"}
                 </span>
-                <span className="h-px flex-1 bg-white/10" />
+                <span className="h-px flex-1 bg-ink/10" />
               </div>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {group.items.map((course) => (

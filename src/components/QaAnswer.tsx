@@ -5,7 +5,7 @@ export default function QaAnswer({ answer }: { answer: TeacherAnswer }) {
   return (
     <div className="mt-4 rounded-xl border border-primary-600/30 bg-primary-600/10 p-5">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-dark-800">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-ink/10 bg-dark-800">
           <Image
             src="/avatars/teacher.svg"
             alt={answer.teacherName}
@@ -15,7 +15,7 @@ export default function QaAnswer({ answer }: { answer: TeacherAnswer }) {
           />
         </div>
         <div>
-          <p className="text-sm font-bold text-white">
+          <p className="text-sm font-bold text-heading">
             {answer.teacherName}
           </p>
           <span className="rounded-full bg-primary-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">

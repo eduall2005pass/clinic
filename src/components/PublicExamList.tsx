@@ -22,7 +22,7 @@ export default function PublicExamList({
   );
 
   const selectClass =
-    "rounded-lg border border-white/10 bg-dark-850 px-3.5 py-2.5 text-sm font-semibold text-white transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30";
+    "rounded-lg border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm font-semibold text-heading transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30";
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -68,8 +68,8 @@ export default function PublicExamList({
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-white/15 bg-dark-900/60 p-10 text-center">
-          <p className="font-semibold text-white">No exams found</p>
+        <div className="rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
+          <p className="font-semibold text-heading">No exams found</p>
           <p className="mt-1 text-sm text-neutral-400">
             Try changing the batch or course type filters.
           </p>

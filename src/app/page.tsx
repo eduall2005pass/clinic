@@ -2,7 +2,6 @@ import Hero from "@/components/home/Hero";
 import FeaturedCourses from "@/components/home/FeaturedCourses";
 import WhyMediSpark from "@/components/home/WhyMediSpark";
 import Mentors from "@/components/home/Mentors";
-import FinalCTA from "@/components/home/FinalCTA";
 
 export default function HomePage() {
   return (
@@ -11,7 +10,6 @@ export default function HomePage() {
       <FeaturedCourses />
       <WhyMediSpark />
       <Mentors />
-      <FinalCTA />
     </main>
   );
 }

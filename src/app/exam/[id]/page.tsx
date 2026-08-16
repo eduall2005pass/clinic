@@ -41,12 +41,12 @@ export default async function ExamDetailPage({ params }: ExamPageProps) {
           ].map((item) => (
             <div
               key={item.label}
-              className="rounded-2xl border border-white/10 bg-dark-900 p-5 text-center shadow-lg shadow-black/20"
+              className="rounded-2xl border border-ink/10 bg-dark-900 p-5 text-center shadow-lg shadow-black/20"
             >
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 {item.label}
               </p>
-              <p className="mt-2 text-xl font-extrabold text-white">
+              <p className="mt-2 text-xl font-extrabold text-heading">
                 {item.value}
               </p>
             </div>

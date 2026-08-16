@@ -70,13 +70,13 @@ export default function QaExplorer({
         <div>
           {selectedSubject ? (
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-extrabold text-white">
+              <h2 className="text-2xl font-extrabold text-heading">
                 {selectedSubject.name}
               </h2>
               <button
                 type="button"
                 onClick={() => setSelectedSubjectId(null)}
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-neutral-400 transition hover:border-primary-500/60 hover:text-primary-400"
+                className="rounded-lg border border-ink/10 bg-ink/5 px-3 py-1.5 text-xs font-semibold text-neutral-400 transition hover:border-primary-500/60 hover:text-primary-400"
               >
                 Change Subject
               </button>
@@ -133,8 +133,8 @@ export default function QaExplorer({
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-white/15 bg-dark-900/60 p-12 text-center">
-          <p className="font-semibold text-white">No questions yet</p>
+        <div className="rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-12 text-center">
+          <p className="font-semibold text-heading">No questions yet</p>
           <p className="mt-1 text-sm text-neutral-400">
             Be the first to ask a question in {selectedSubject.name}.
           </p>

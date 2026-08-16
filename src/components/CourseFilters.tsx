@@ -12,7 +12,7 @@ type CourseFiltersProps = {
 };
 
 const selectClass =
-  "rounded-xl border border-white/10 bg-dark-850 px-4 py-2.5 text-sm font-semibold text-white outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30";
+  "rounded-xl border border-ink/10 bg-dark-850 px-4 py-2.5 text-sm font-semibold text-heading outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30";
 
 export default function CourseFilters({
   batches,

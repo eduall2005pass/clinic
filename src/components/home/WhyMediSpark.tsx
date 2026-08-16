@@ -108,7 +108,7 @@ const benefits: Benefit[] = [
 
 export default function WhyMediSpark() {
   return (
-    <section className="relative overflow-hidden border-t border-white/5 bg-dark-900">
+    <section className="relative overflow-hidden border-t border-ink/5 bg-dark-900">
       <div className="pointer-events-none absolute inset-0 bg-grid-lines" />
       <div className="pointer-events-none absolute -right-40 top-0 h-96 w-96 rounded-full bg-primary-600/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
@@ -118,19 +118,23 @@ export default function WhyMediSpark() {
           description="One platform for your HSC academics and medical admission journey."
         />
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {benefits.map((benefit) => (
             <div
               key={benefit.title}
-              className="group rounded-2xl border border-white/10 bg-dark-950/60 p-6 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
+              className="group flex items-center gap-4 rounded-2xl border border-ink/10 bg-dark-950/60 p-4 shadow-lg shadow-black/20 transition duration-300 hover:border-primary-600/60 hover:shadow-primary-900/30"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50">
                 <benefit.Icon className="h-6 w-6" />
               </span>
-              <h3 className="mt-4 font-bold text-white">{benefit.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-400">
-                {benefit.description}
-              </p>
+              <div className="min-w-0">
+                <h3 className="font-bold leading-snug text-heading">
+                  {benefit.title}
+                </h3>
+                <p className="mt-0.5 text-sm leading-snug text-neutral-400">
+                  {benefit.description}
+                </p>
+              </div>
             </div>
           ))}
         </div>

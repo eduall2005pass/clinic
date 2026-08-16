@@ -38,7 +38,7 @@ export default async function CourseDetailsPage({
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 shadow-lg shadow-black/20">
+            <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-ink/10 shadow-lg shadow-black/20">
               <Image
                 src={course.image}
                 alt={course.name}
@@ -51,22 +51,22 @@ export default async function CourseDetailsPage({
           </div>
 
           <div className="lg:col-span-2">
-            <div className="flex h-full flex-col rounded-2xl border border-white/10 bg-dark-900 p-8 shadow-lg shadow-black/20">
+            <div className="flex h-full flex-col rounded-2xl border border-ink/10 bg-dark-900 p-8 shadow-lg shadow-black/20">
               <div className="flex flex-wrap items-center gap-2">
                 {batch && (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-neutral-300">
+                  <span className="rounded-full border border-ink/10 bg-ink/5 px-3 py-1 text-xs font-bold text-neutral-300">
                     {batch.label}
                   </span>
                 )}
                 <span className="rounded-full bg-primary-600/15 px-3 py-1 text-xs font-bold text-primary-500">
                   {course.type}
                 </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-neutral-300">
+                <span className="rounded-full border border-ink/10 bg-ink/5 px-3 py-1 text-xs font-bold text-neutral-300">
                   {course.duration}
                 </span>
               </div>
 
-              <h2 className="mt-6 text-2xl font-extrabold text-white">
+              <h2 className="mt-6 text-2xl font-extrabold text-heading">
                 {course.name}
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-neutral-400">
@@ -90,7 +90,7 @@ export default async function CourseDetailsPage({
                   </button>
                   <Link
                     href="/courses"
-                    className="w-full rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-center font-semibold text-white transition hover:border-primary-500/60 hover:bg-white/10"
+                    className="w-full rounded-xl border border-ink/15 bg-ink/5 px-6 py-3 text-center font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
                   >
                     Back to Courses
                   </Link>

@@ -7,7 +7,7 @@ export default function CourseCard({ course }: { course: Course }) {
   const batch = getBatch(course.batchId);
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-900 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30">
       <div className="relative aspect-[16/10] overflow-hidden">
         <Image
           src={course.image}
@@ -23,7 +23,7 @@ export default function CourseCard({ course }: { course: Course }) {
       </div>
 
       <div className="flex flex-1 flex-col p-6">
-        <h3 className="text-lg font-bold text-white transition group-hover:text-primary-400">
+        <h3 className="text-lg font-bold text-heading transition group-hover:text-primary-400">
           {course.name}
         </h3>
         <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-400">
@@ -32,11 +32,11 @@ export default function CourseCard({ course }: { course: Course }) {
 
         <div className="mt-3 flex items-center gap-2 text-xs font-medium text-neutral-400">
           {batch && (
-            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+            <span className="rounded-full border border-ink/10 bg-ink/5 px-2.5 py-1">
               {batch.label}
             </span>
           )}
-          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+          <span className="rounded-full border border-ink/10 bg-ink/5 px-2.5 py-1">
             {course.duration}
           </span>
         </div>
@@ -52,7 +52,7 @@ export default function CourseCard({ course }: { course: Course }) {
           <div className="mt-4 flex gap-3">
             <Link
               href={`/courses/${course.slug}`}
-              className="flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:border-primary-500/60 hover:bg-white/10"
+              className="flex-1 rounded-xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-center text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
             >
               View Details
             </Link>

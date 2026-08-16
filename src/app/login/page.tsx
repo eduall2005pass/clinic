@@ -14,11 +14,11 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 rounded-full bg-primary-600/15 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-primary-900/30 blur-3xl" />
 
-      <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-dark-900 p-8 shadow-2xl shadow-black/40">
+      <div className="relative w-full max-w-md rounded-2xl border border-ink/10 bg-dark-900 p-8 shadow-2xl shadow-black/40">
         <div className="flex justify-center">
           <Logo />
         </div>
-        <h1 className="mt-6 text-center text-2xl font-extrabold text-white">
+        <h1 className="mt-6 text-center text-2xl font-extrabold text-heading">
           Login to MediSpark
         </h1>
         <p className="mt-2 text-center text-sm text-neutral-400">
@@ -36,7 +36,7 @@ export default function LoginPage() {
         </div>
         <Link
           href="/"
-          className="mt-6 block rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-center font-semibold text-white transition hover:border-primary-500/60 hover:bg-white/10"
+          className="mt-6 block rounded-xl border border-ink/15 bg-ink/5 px-6 py-3 text-center font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
         >
           Back to Home
         </Link>
