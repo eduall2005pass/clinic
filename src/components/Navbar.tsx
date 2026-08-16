@@ -9,7 +9,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-white/10 bg-dark-950/90 backdrop-blur">
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="shrink-0 transition-opacity hover:opacity-90">
-          <Logo />
+          <Logo size="large" />
         </Link>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
