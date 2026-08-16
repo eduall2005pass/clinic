@@ -1,7 +1,10 @@
 import Hero from "@/components/home/Hero";
 import FeaturedCourses from "@/components/home/FeaturedCourses";
 import WhyMediSpark from "@/components/home/WhyMediSpark";
+import OurSuccess from "@/components/home/OurSuccess";
 import Mentors from "@/components/home/Mentors";
+import StudentReviews from "@/components/home/StudentReviews";
+import FaqSection from "@/components/home/FaqSection";
 
 export default function HomePage() {
   return (
@@ -9,7 +12,10 @@ export default function HomePage() {
       <Hero />
       <FeaturedCourses />
       <WhyMediSpark />
+      <OurSuccess />
       <Mentors />
+      <StudentReviews />
+      <FaqSection />
     </main>
   );
 }
