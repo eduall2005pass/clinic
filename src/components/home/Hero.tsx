@@ -1,27 +1,50 @@
+import Link from "next/link";
+
 export default function Hero() {
   return (
-    <section className="px-4 pt-8 sm:px-6 sm:pt-12">
-      <div className="animate-fade-up relative mx-auto flex max-w-3xl items-center gap-4 overflow-hidden rounded-2xl border border-primary-200/60 bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 px-5 py-5 shadow-sm sm:gap-5 sm:px-8 sm:py-6">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/70 ring-1 ring-primary-200/70 sm:h-11 sm:w-11">
-          <svg
-            className="h-4 w-4 text-primary-700 sm:h-[1.125rem] sm:w-[1.125rem]"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 3 2 7.5 12 12l10-4.5L12 3Z" />
-            <path d="M6 9.8v3.4c0 1.6 2.7 3 6 3s6-1.4 6-3V9.8" />
-            <path d="M22 9.3V13" />
-            <path d="M12 5.6v3.8M10.1 7.5h3.8" />
-          </svg>
+    <section className="relative overflow-hidden bg-dark-950">
+      <div className="pointer-events-none absolute -left-40 -top-40 h-[28rem] w-[28rem] rounded-full bg-primary-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-48 -right-32 h-[30rem] w-[30rem] rounded-full bg-primary-900/40 blur-3xl" />
+      <div className="pointer-events-none absolute right-0 top-24 hidden h-full w-32 opacity-60 lg:block bg-dna" />
+
+      <div className="relative mx-auto max-w-3xl px-4 pb-20 pt-16 text-center sm:px-6 sm:pb-28 sm:pt-24">
+        <div className="animate-fade-up">
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary-500/40 bg-primary-500/10 px-4 py-1.5 text-sm font-medium text-primary-300">
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 3a9 9 0 100 18 9 9 0 000-18zm-1.5 4.5h3V12h4.5v3h-4.5v4.5h-3V15h-4.5v-3h4.5V7.5z" />
+            </svg>
+            HSC Academic + Medical Admission Preparation
+          </span>
+          <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-heading sm:text-5xl xl:text-6xl">
+            Learn Smarter. Prepare Better.{" "}
+            <span className="bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 bg-clip-text text-transparent">
+              Achieve Your Dream.
+            </span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-neutral-400">
+            MediSpark brings HSC academics and medical admission preparation
+            together — structured courses, model exams, and expert Q&amp;A in
+            one clean platform.
+          </p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              href="/courses"
+              className="rounded-xl bg-primary-600 px-6 py-3.5 text-center font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+            >
+              Explore Courses
+            </Link>
+            <Link
+              href="/dashboard"
+              className="rounded-xl border border-ink/20 bg-ink/5 px-6 py-3.5 text-center font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
+            >
+              Dashboard
+            </Link>
+          </div>
         </div>
-        <p className="text-base font-semibold leading-snug text-black sm:text-lg">
-          A dedicated platform for academic and admission courses.
-        </p>
       </div>
     </section>
   );
