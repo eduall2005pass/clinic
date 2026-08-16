@@ -1,6 +1,10 @@
+"use client";
+
 import Image from "next/image";
+import { useLogo } from "@/components/LogoProvider";
 
 export default function Logo({ size = "default" }: { size?: "default" | "large" }) {
+  const { logo } = useLogo();
   const imageClass =
     size === "large"
       ? "h-auto w-full object-contain"
@@ -12,10 +16,10 @@ export default function Logo({ size = "default" }: { size?: "default" | "large" 
       aria-label="MediSpark — Together we Achieve Dream"
     >
       <Image
-        src="/medispark_logo_transparent.png"
+        src={logo.url}
         alt="MediSpark — Together we Achieve Dream"
-        width={1536}
-        height={683}
+        width={logo.width}
+        height={logo.height}
         priority
         className={imageClass}
       />

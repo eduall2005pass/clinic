@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# admin-uploaded assets
+/public/uploads/
+
 # production
 /build
 

@@ -4,6 +4,8 @@ import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import Footer from "@/components/Footer";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { LogoProvider } from "@/components/LogoProvider";
+import { getActiveLogo } from "@/lib/logo-store";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,7 +27,8 @@ export const metadata: Metadata = {
     "MediSpark is an HSC academic and medical admission preparation platform — courses, exams, and Q&A built for future medical students.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const initialLogo = await getActiveLogo();
   return (
     <html
       lang="en"
@@ -41,10 +44,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col bg-dark-950 pb-16 text-neutral-300">
         <ThemeProvider>
-          <Navbar />
-          {children}
-          <Footer />
-          <BottomNav />
+          <LogoProvider initialLogo={initialLogo}>
+            <Navbar />
+            {children}
+            <Footer />
+            <BottomNav />
+          </LogoProvider>
         </ThemeProvider>
       </body>
     </html>
