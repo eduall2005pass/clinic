@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Student profile pictures: readable by any authenticated user,
+    // writable only by the owner of the profile (uid in path must match).
+    match /student-profiles/{uid}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

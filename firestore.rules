@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // A student can only read/write their own profile document.
+    // Document ID must match the Firebase Authentication UID, so a student
+    // can never create or modify a profile for another user.
+    match /students/{uid} {
+      allow create, read, update, delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Student ID index used to guarantee unique IDs.
+    // Anyone may check an ID, but only the owning student may create it,
+    // and IDs can never be updated, deleted, or forged for another user.
+    match /studentIds/{studentId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}

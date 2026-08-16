@@ -4,8 +4,12 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { loginHref } from "@/lib/nav-links";
+import { useAuth } from "@/lib/auth-context";
 
 export default function Navbar() {
+  const { user } = useAuth();
+  const actionHref = user ? "/dashboard" : loginHref;
+  const actionLabel = user ? "Dashboard" : "Login";
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
@@ -37,7 +41,7 @@ export default function Navbar() {
           </Link>
 
           <Link
-            href={loginHref}
+            href={actionHref}
             className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] sm:px-4"
           >
             <svg
@@ -52,7 +56,7 @@ export default function Navbar() {
               <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            <span>Login</span>
+            <span>{actionLabel}</span>
           </Link>
         </div>
       </nav>
