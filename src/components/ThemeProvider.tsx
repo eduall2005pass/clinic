@@ -40,6 +40,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored =
       document.documentElement.dataset.theme === "light" ? "light" : "dark";
+    // Sync React state with the theme already applied by the inline
+    // <head> script. Initial state intentionally stays "dark" so the
+    // server-rendered HTML hydrates without a mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(stored);
   }, []);
 
