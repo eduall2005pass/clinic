@@ -8,8 +8,8 @@ import { loginHref } from "@/lib/nav-links";
 export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
-      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="shrink-0 transition-opacity hover:opacity-90">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+        <Link href="/" className="flex w-1/3 max-w-[384px] shrink-0 transition-opacity hover:opacity-90">
           <Logo size="large" />
         </Link>
 
