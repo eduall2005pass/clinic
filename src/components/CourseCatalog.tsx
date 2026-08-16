@@ -37,7 +37,7 @@ export default function CourseCatalog({
 
   return (
     <div>
-      <div className="mb-10 flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="mb-10 flex flex-col gap-6 rounded-2xl border border-white/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
         <CourseFilters
           batches={batches}
           batch={batch}
@@ -45,15 +45,15 @@ export default function CourseCatalog({
           onBatchChange={setBatch}
           onTypeChange={setType}
         />
-        <p className="text-sm font-medium text-neutral-500">
+        <p className="text-sm font-medium text-neutral-400">
           {total} course{total === 1 ? "" : "s"} found
         </p>
       </div>
 
       {groups.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-12 text-center">
-          <p className="font-semibold text-dark-900">No courses found</p>
-          <p className="mt-1 text-sm text-neutral-500">
+        <div className="rounded-2xl border border-dashed border-white/15 bg-dark-900/60 p-12 text-center">
+          <p className="font-semibold text-white">No courses found</p>
+          <p className="mt-1 text-sm text-neutral-400">
             Try a different batch or course type.
           </p>
         </div>
@@ -62,14 +62,14 @@ export default function CourseCatalog({
           {groups.map((group) => (
             <section key={group.batch.id}>
               <div className="mb-6 flex items-center gap-4">
-                <h2 className="text-xl font-extrabold text-dark-900 sm:text-2xl">
+                <h2 className="text-xl font-extrabold text-white sm:text-2xl">
                   {group.batch.label}
                 </h2>
-                <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700">
+                <span className="rounded-full bg-primary-600/15 px-3 py-1 text-xs font-bold text-primary-500">
                   {group.items.length} course
                   {group.items.length === 1 ? "" : "s"}
                 </span>
-                <span className="h-px flex-1 bg-neutral-200" />
+                <span className="h-px flex-1 bg-white/10" />
               </div>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {group.items.map((course) => (

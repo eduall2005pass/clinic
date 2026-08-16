@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import PageHeader from "@/components/PageHeader";
 import ProfileCard from "@/components/dashboard/ProfileCard";
 import DashboardSectionCard from "@/components/dashboard/DashboardSectionCard";
 import { dashboardSections } from "@/lib/dashboard";
@@ -17,12 +16,7 @@ const placeholderStudent = {
 
 export default function DashboardPage() {
   return (
-    <main className="flex-1 bg-neutral-50">
-      <PageHeader
-        title="Dashboard"
-        description="Your personal dashboard — track preparation progress and manage your information."
-      />
-
+    <main className="flex-1 bg-dark-950">
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <ProfileCard {...placeholderStudent} />
 

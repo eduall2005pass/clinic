@@ -108,8 +108,10 @@ const benefits: Benefit[] = [
 
 export default function WhyMediSpark() {
   return (
-    <section className="border-t border-white/5 bg-dark-900">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+    <section className="relative overflow-hidden border-t border-white/5 bg-dark-900">
+      <div className="pointer-events-none absolute inset-0 bg-grid-lines" />
+      <div className="pointer-events-none absolute -right-40 top-0 h-96 w-96 rounded-full bg-primary-600/10 blur-3xl" />
+      <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
           label="Why MediSpark"
           title="Learn smarter with MediSpark"
@@ -120,9 +122,9 @@ export default function WhyMediSpark() {
           {benefits.map((benefit) => (
             <div
               key={benefit.title}
-              className="rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-primary-500/60 hover:bg-white/[0.07]"
+              className="group rounded-2xl border border-white/10 bg-dark-950/60 p-6 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50">
                 <benefit.Icon className="h-6 w-6" />
               </span>
               <h3 className="mt-4 font-bold text-white">{benefit.title}</h3>

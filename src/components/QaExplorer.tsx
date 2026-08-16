@@ -70,19 +70,19 @@ export default function QaExplorer({
         <div>
           {selectedSubject ? (
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-extrabold text-dark-900">
+              <h2 className="text-2xl font-extrabold text-white">
                 {selectedSubject.name}
               </h2>
               <button
                 type="button"
                 onClick={() => setSelectedSubjectId(null)}
-                className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-500 transition hover:border-primary-500 hover:text-primary-600"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-neutral-400 transition hover:border-primary-500/60 hover:text-primary-400"
               >
                 Change Subject
               </button>
             </div>
           ) : (
-            <p className="text-sm font-medium text-neutral-500">
+            <p className="text-sm font-medium text-neutral-400">
               Select a subject to browse its questions.
             </p>
           )}
@@ -91,7 +91,7 @@ export default function QaExplorer({
         <button
           type="button"
           onClick={() => setAskOpen(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-primary-900/20 transition hover:bg-primary-700"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
         >
           <svg
             className="h-4 w-4"
@@ -133,9 +133,9 @@ export default function QaExplorer({
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-12 text-center">
-          <p className="font-semibold text-dark-900">No questions yet</p>
-          <p className="mt-1 text-sm text-neutral-500">
+        <div className="rounded-2xl border border-dashed border-white/15 bg-dark-900/60 p-12 text-center">
+          <p className="font-semibold text-white">No questions yet</p>
+          <p className="mt-1 text-sm text-neutral-400">
             Be the first to ask a question in {selectedSubject.name}.
           </p>
         </div>

@@ -8,15 +8,15 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-dark-950/90 backdrop-blur">
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="shrink-0">
-          <Logo light />
+        <Link href="/" className="shrink-0 transition-opacity hover:opacity-90">
+          <Logo />
         </Link>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <button
-            type="button"
+          <Link
+            href="/dashboard/notifications"
             aria-label="Notifications"
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-neutral-300 transition hover:bg-white/10 hover:text-white"
+            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-neutral-300 transition hover:border-primary-500/50 hover:bg-primary-500/10 hover:text-white"
           >
             <svg
               className="h-5 w-5"
@@ -30,11 +30,12 @@ export default function Navbar() {
               <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-          </button>
+            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary-500" />
+          </Link>
 
           <Link
             href={loginHref}
-            className="flex items-center gap-2 rounded-lg bg-primary-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-primary-700 sm:px-4"
+            className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] sm:px-4"
           >
             <svg
               className="h-4 w-4"

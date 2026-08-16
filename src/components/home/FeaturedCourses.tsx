@@ -24,7 +24,7 @@ export default function FeaturedCourses() {
         <div className="mt-10 text-center">
           <Link
             href="/courses"
-            className="inline-block rounded-xl border-2 border-primary-600 px-6 py-3 font-semibold text-primary-500 transition hover:bg-primary-600 hover:text-white"
+            className="inline-block rounded-xl border border-white/15 bg-white/5 px-6 py-3 font-semibold text-white transition hover:border-primary-500/60 hover:bg-primary-600/15 hover:text-primary-400"
           >
             View All Courses
           </Link>

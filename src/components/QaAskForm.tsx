@@ -43,17 +43,17 @@ export default function QaAskForm({
 
   if (submitted) {
     return (
-      <div className="rounded-2xl border border-primary-200 bg-primary-50 p-6 text-center">
-        <p className="font-semibold text-primary-800">
+      <div className="rounded-2xl border border-primary-600/30 bg-primary-600/10 p-6 text-center">
+        <p className="font-semibold text-primary-300">
           Your question has been submitted.
         </p>
-        <p className="mt-1 text-sm text-primary-700">
+        <p className="mt-1 text-sm text-primary-200/70">
           You will be notified when a teacher answers it.
         </p>
         <button
           type="button"
           onClick={onClose}
-          className="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
+          className="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700"
         >
           Back to Questions
         </button>
@@ -64,15 +64,15 @@ export default function QaAskForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8"
+      className="rounded-2xl border border-white/10 bg-dark-900 p-6 shadow-lg shadow-black/20 sm:p-8"
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-dark-900">Ask a Question</h2>
+        <h2 className="text-lg font-bold text-white">Ask a Question</h2>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close question form"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-dark-900"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"
         >
           <svg
             className="h-5 w-5"
@@ -93,7 +93,7 @@ export default function QaAskForm({
         <select
           value={subjectId}
           onChange={(event) => setSubjectId(event.target.value)}
-          className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-dark-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
+          className="mt-2 w-full rounded-xl border border-white/10 bg-dark-850 px-4 py-2.5 text-sm font-semibold text-white outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
         >
           <option value="">Select a subject</option>
           {subjects.map((subject) => (
@@ -113,16 +113,16 @@ export default function QaAskForm({
           onChange={(event) => setText(event.target.value)}
           rows={4}
           placeholder="Type your question here..."
-          className="mt-2 w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-dark-900 outline-none transition placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
+          className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-dark-850 px-4 py-3 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
         />
       </label>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <label className="block cursor-pointer rounded-xl border border-dashed border-neutral-300 p-4 text-center transition hover:border-primary-500">
-          <span className="block text-sm font-semibold text-neutral-600">
+        <label className="block cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/5 p-4 text-center transition hover:border-primary-500/60">
+          <span className="block text-sm font-semibold text-neutral-300">
             Picture Upload
           </span>
-          <span className="mt-1 block text-xs text-neutral-400">
+          <span className="mt-1 block text-xs text-neutral-500">
             {pictureName || "Attach a picture"}
           </span>
           <input
@@ -135,11 +135,11 @@ export default function QaAskForm({
           />
         </label>
 
-        <label className="block cursor-pointer rounded-xl border border-dashed border-neutral-300 p-4 text-center transition hover:border-primary-500">
-          <span className="block text-sm font-semibold text-neutral-600">
+        <label className="block cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/5 p-4 text-center transition hover:border-primary-500/60">
+          <span className="block text-sm font-semibold text-neutral-300">
             Audio Upload
           </span>
-          <span className="mt-1 block text-xs text-neutral-400">
+          <span className="mt-1 block text-xs text-neutral-500">
             {audioName || "Attach an audio recording"}
           </span>
           <input
@@ -157,14 +157,14 @@ export default function QaAskForm({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="flex-1 rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500"
+          className="flex-1 rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:border disabled:border-white/10 disabled:bg-dark-800 disabled:text-neutral-500 disabled:shadow-none"
         >
           Submit Question
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-xl border-2 border-neutral-200 px-6 py-3 font-semibold text-neutral-600 transition hover:border-primary-500 hover:text-primary-600"
+          className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 font-semibold text-neutral-300 transition hover:border-primary-500/60 hover:text-primary-400"
         >
           Cancel
         </button>

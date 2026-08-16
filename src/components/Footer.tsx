@@ -4,12 +4,15 @@ import { mainNavLinks, loginHref } from "@/lib/nav-links";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-dark-950 text-neutral-400">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+    <footer className="relative overflow-hidden border-t border-white/10 bg-dark-950 text-neutral-400">
+      <div className="pointer-events-none absolute inset-0 bg-medical-cross opacity-60" />
+      <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-primary-600/10 blur-3xl" />
+
+      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         <div>
-          <Logo light />
+          <Logo />
           <p className="mt-4 text-sm leading-relaxed">
-            HSC academic & medical admission preparation platform built for
+            HSC academic &amp; medical admission preparation platform built for
             future medical students.
           </p>
         </div>
@@ -19,7 +22,10 @@ export default function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm">
             {mainNavLinks.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="transition hover:text-white">
+                <Link
+                  href={link.href}
+                  className="transition hover:text-primary-400"
+                >
                   {link.label}
                 </Link>
               </li>
@@ -27,7 +33,7 @@ export default function Footer() {
             <li>
               <Link
                 href={loginHref}
-                className="transition hover:text-white"
+                className="transition hover:text-primary-400"
               >
                 Login
               </Link>
@@ -41,7 +47,7 @@ export default function Footer() {
             <li>HSC Academic</li>
             <li>Medical Admission</li>
             <li>Model Tests</li>
-            <li>Expert Q&A</li>
+            <li>Expert Q&amp;A</li>
           </ul>
         </div>
 
@@ -54,7 +60,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-6 text-center text-sm text-neutral-500">
+      <div className="relative border-t border-white/10 py-6 text-center text-sm text-neutral-500">
         © {new Date().getFullYear()} MediSpark. All rights reserved.
       </div>
     </footer>

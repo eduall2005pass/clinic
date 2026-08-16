@@ -103,8 +103,20 @@ export default function BottomNav() {
                   : "text-neutral-500 hover:text-neutral-300"
               }`}
             >
-              {icons[link.href]}
-              <span className="text-[11px] font-medium">{link.label}</span>
+              <span
+                className={`flex h-8 w-12 items-center justify-center rounded-full transition-colors ${
+                  active ? "bg-primary-500/10" : ""
+                }`}
+              >
+                {icons[link.href]}
+              </span>
+              <span
+                className={`text-[11px] font-medium ${
+                  active ? "text-primary-500" : ""
+                }`}
+              >
+                {link.label}
+              </span>
             </Link>
           );
         })}

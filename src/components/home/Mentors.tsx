@@ -30,8 +30,9 @@ const mentors: Mentor[] = [
 
 export default function Mentors() {
   return (
-    <section className="border-t border-white/5 bg-dark-950">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+    <section className="relative overflow-hidden border-t border-white/5 bg-dark-950">
+      <div className="pointer-events-none absolute -left-32 top-24 h-72 w-72 rounded-full bg-primary-600/10 blur-3xl" />
+      <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
           label="Our Mentors"
           title="Learn from experienced mentors"
@@ -42,9 +43,9 @@ export default function Mentors() {
           {mentors.map((mentor) => (
             <article
               key={mentor.name}
-              className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center transition hover:border-primary-500/60 hover:bg-white/[0.07]"
+              className="group rounded-2xl border border-white/10 bg-dark-900 p-6 text-center shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
             >
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-800 text-xl font-extrabold text-white">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-800 text-xl font-extrabold text-white shadow-lg shadow-primary-900/40 transition group-hover:shadow-primary-800/50">
                 {mentor.initials}
               </div>
               <h3 className="mt-4 font-bold text-white">{mentor.name}</h3>

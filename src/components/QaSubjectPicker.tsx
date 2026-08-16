@@ -14,13 +14,13 @@ export default function QaSubjectPicker({
   return (
     <div>
       <div className="mx-auto max-w-2xl text-center">
-        <p className="text-xs font-bold uppercase tracking-widest text-primary-600">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-500">
           Select a Subject
         </p>
-        <h2 className="mt-3 text-2xl font-extrabold text-dark-900 sm:text-3xl">
+        <h2 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">
           Choose a subject to see its questions
         </h2>
-        <p className="mt-3 text-sm leading-relaxed text-neutral-500">
+        <p className="mt-3 text-sm leading-relaxed text-neutral-400">
           Pick a subject from the list below to view community questions and
           teacher answers for that subject.
         </p>
@@ -32,19 +32,19 @@ export default function QaSubjectPicker({
             key={subject.id}
             type="button"
             onClick={() => onSelect(subject.id)}
-            className="group flex flex-col rounded-2xl border border-neutral-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-primary-500 hover:shadow-lg"
+            className="group flex flex-col rounded-2xl border border-white/10 bg-dark-900 p-6 text-left shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-800 text-lg font-extrabold text-white shadow-md shadow-primary-900/20">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-800 text-lg font-extrabold text-white shadow-md shadow-primary-900/20 transition group-hover:shadow-primary-800/50">
               {subject.name.charAt(0)}
             </span>
-            <h3 className="mt-4 font-bold text-dark-900 transition group-hover:text-primary-700">
+            <h3 className="mt-4 font-bold text-white transition group-hover:text-primary-400">
               {subject.name}
             </h3>
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-neutral-400">
               {questionCounts[subject.id] ?? 0} question
               {(questionCounts[subject.id] ?? 0) === 1 ? "" : "s"}
             </p>
-            <span className="mt-4 inline-block text-sm font-semibold text-primary-600">
+            <span className="mt-4 inline-block text-sm font-semibold text-primary-500 transition group-hover:text-primary-400">
               View Questions →
             </span>
           </button>

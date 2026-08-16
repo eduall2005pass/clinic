@@ -1,13 +1,35 @@
 import Link from "next/link";
 
+function EkgLine() {
+  return (
+    <svg
+      viewBox="0 0 240 48"
+      className="h-12 w-full text-primary-500/80"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      preserveAspectRatio="none"
+    >
+      <path d="M0 24h52l8-16 10 32 10-32 8 16h52l8-16 10 32 10-32 8 16h64" />
+    </svg>
+  );
+}
+
 function HeroVisual() {
   return (
     <div className="relative mx-auto w-full max-w-md">
-      <div className="absolute -inset-6 rounded-[2.5rem] bg-gradient-to-br from-primary-600/30 to-primary-950/20 blur-2xl" />
+      <div className="absolute -inset-6 rounded-[2.5rem] bg-gradient-to-br from-primary-600/25 to-primary-950/20 blur-2xl" />
 
       <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-dark-900/80 p-5 shadow-2xl backdrop-blur sm:p-6">
-        <div className="relative flex h-64 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary-600 via-primary-800 to-dark-950 sm:h-72">
-          <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.4)_1px,transparent_0)] [background-size:22px_22px]" />
+        <div className="pointer-events-none absolute inset-0 bg-medical-cross opacity-70" />
+
+        <div className="relative flex h-64 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary-700 via-primary-900 to-dark-950 sm:h-72">
+          <div className="absolute inset-0 bg-medical-dots opacity-50" />
+          <div className="absolute inset-x-6 bottom-5 opacity-90">
+            <EkgLine />
+          </div>
           <svg viewBox="0 0 160 160" className="relative h-40 w-40 sm:h-44 sm:w-44">
             <defs>
               <linearGradient id="heroCross" x1="0" y1="0" x2="1" y2="1">
@@ -31,8 +53,8 @@ function HeroVisual() {
           </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className="relative mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 transition hover:border-primary-500/40 hover:bg-white/[0.07]">
             <svg
               className="h-6 w-6 text-primary-400"
               fill="none"
@@ -53,7 +75,7 @@ function HeroVisual() {
               Chapter-based lessons
             </p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 transition hover:border-primary-500/40 hover:bg-white/[0.07]">
             <svg
               className="h-6 w-6 text-primary-400"
               fill="none"
@@ -128,9 +150,10 @@ export default function Hero() {
     <section className="relative overflow-hidden bg-dark-950">
       <div className="pointer-events-none absolute -left-40 -top-40 h-[28rem] w-[28rem] rounded-full bg-primary-600/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-48 -right-32 h-[30rem] w-[30rem] rounded-full bg-primary-900/40 blur-3xl" />
+      <div className="pointer-events-none absolute right-0 top-24 hidden h-full w-32 opacity-60 lg:block bg-dna" />
 
       <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:grid-cols-2">
-        <div>
+        <div className="animate-fade-up">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary-500/40 bg-primary-500/10 px-4 py-1.5 text-sm font-medium text-primary-300">
             <svg
               className="h-4 w-4"
@@ -155,20 +178,22 @@ export default function Hero() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/courses"
-              className="rounded-xl bg-primary-600 px-6 py-3.5 text-center font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700"
+              className="rounded-xl bg-primary-600 px-6 py-3.5 text-center font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
             >
               Explore Courses
             </Link>
             <Link
               href="/dashboard"
-              className="rounded-xl border border-white/20 px-6 py-3.5 text-center font-semibold text-white transition hover:border-primary-500/60 hover:bg-white/5"
+              className="rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-center font-semibold text-white transition hover:border-primary-500/60 hover:bg-white/10"
             >
               Dashboard
             </Link>
           </div>
         </div>
 
-        <HeroVisual />
+        <div className="animate-fade-in [animation-delay:150ms]">
+          <HeroVisual />
+        </div>
       </div>
     </section>
   );

@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #d4d4d8;
 }
 
 @theme inline {
@@ -16,21 +16,110 @@
   --color-primary-200: #fecaca;
   --color-primary-300: #fca5a5;
   --color-primary-400: #f87171;
-  --color-primary-500: #ef4444;
-  --color-primary-600: #dc2626;
-  --color-primary-700: #b91c1c;
-  --color-primary-800: #991b1b;
-  --color-primary-900: #7f1d1d;
+  --color-primary-500: #ff3540;
+  --color-primary-600: #e50914;
+  --color-primary-700: #c00812;
+  --color-primary-800: #9b0610;
+  --color-primary-900: #7f0710;
 
   --color-dark-600: #333333;
   --color-dark-700: #262626;
   --color-dark-800: #1a1a1a;
+  --color-dark-850: #151515;
   --color-dark-900: #111111;
   --color-dark-950: #0a0a0a;
+
+  --animate-fade-up: fade-up 0.7s ease-out both;
+  --animate-fade-in: fade-in 0.8s ease-out both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--color-primary-600);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 9999px;
+  border: 2px solid #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Subtle medical dot grid */
+.bg-medical-dots {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(229, 9, 20, 0.22) 1px,
+    transparent 0
+  );
+  background-size: 26px 26px;
+}
+
+/* Faint neutral dot grid */
+.bg-neutral-dots {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(255, 255, 255, 0.06) 1px,
+    transparent 0
+  );
+  background-size: 24px 24px;
+}
+
+/* Fine grid lines for deep sections */
+.bg-grid-lines {
+  background-image: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Medical cross watermark */
+.bg-medical-cross {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='rgba(229,9,20,0.05)' stroke-width='2'%3E%3Cpath d='M26 14h4v12h12v4H30v12h-4V30H14v-4h12z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* DNA double-helix strand, drawn vertically */
+.bg-dna {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='120' viewBox='0 0 40 120'%3E%3Cg fill='none' stroke='rgba(229,9,20,0.07)' stroke-width='1.5'%3E%3Cpath d='M8 0c12 15-12 30 0 45s-12 30 0 45-12 30 0 45'/%3E%3Cpath d='M32 0c-12 15 12 30 0 45s12 30 0 45 12 30 0 45'/%3E%3Cpath d='M10 15h20M10 45h20M10 75h20M10 105h20'/%3E%3C/g%3E%3C/svg%3E");
 }

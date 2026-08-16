@@ -11,6 +11,9 @@ type CourseFiltersProps = {
   onTypeChange: (value: CourseType | "all") => void;
 };
 
+const selectClass =
+  "rounded-xl border border-white/10 bg-dark-850 px-4 py-2.5 text-sm font-semibold text-white outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30";
+
 export default function CourseFilters({
   batches,
   batch,
@@ -27,7 +30,7 @@ export default function CourseFilters({
         <select
           value={batch}
           onChange={(event) => onBatchChange(event.target.value)}
-          className="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-dark-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
+          className={selectClass}
         >
           <option value="all">All Batches</option>
           {batches.map((item) => (
@@ -47,7 +50,7 @@ export default function CourseFilters({
           onChange={(event) =>
             onTypeChange(event.target.value as CourseType | "all")
           }
-          className="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-dark-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
+          className={selectClass}
         >
           <option value="all">All Types</option>
           {courseTypes.map((item) => (
