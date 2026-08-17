@@ -28,16 +28,19 @@ export default function EnrollButton({
 
   const label = isActive ? "Enrolled" : isPending ? "Pending" : "Enroll";
 
+  const handleClick = () => {
+    setOpen(true);
+  };
+
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        disabled={!configured}
+        onClick={handleClick}
         className={
           variant === "details"
-            ? "w-full rounded-xl bg-primary-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-            : "flex-1 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            ? "w-full rounded-xl bg-primary-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+            : "flex-1 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
         }
       >
         {label}
