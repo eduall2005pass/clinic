@@ -3,6 +3,7 @@ import Hero from "@/components/home/Hero";
 import FeaturedCourses from "@/components/home/FeaturedCourses";
 import WhyMediSpark from "@/components/home/WhyMediSpark";
 import OurSuccess from "@/components/home/OurSuccess";
+import JerseyGallery from "@/components/home/JerseyGallery";
 import Mentors from "@/components/home/Mentors";
 import StudentReviews from "@/components/home/StudentReviews";
 import FaqSection from "@/components/home/FaqSection";
@@ -15,6 +16,7 @@ export default function HomePage() {
       <FeaturedCourses />
       <WhyMediSpark />
       <OurSuccess />
+      <JerseyGallery />
       <Mentors />
       <StudentReviews />
       <FaqSection />
