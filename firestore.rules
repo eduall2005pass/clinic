@@ -107,5 +107,19 @@ service cloud.firestore {
         && isEnrolledPaid(resource.data.courseId);
       allow write: if false;
     }
+
+    // Active website logo. Readable by everyone (it is displayed on every
+    // page); the "active" document is replaced whenever a new logo image is
+    // uploaded from the website. The image file itself lives in Firebase
+    // Storage — only its URL and metadata are stored here.
+    match /logos/{logoId} {
+      allow read: if true;
+      allow write: if logoId == "active"
+        && request.resource.data.url is string
+        && request.resource.data.url.startsWith("https://firebasestorage.googleapis.com/")
+        && request.resource.data.fileName is string
+        && request.resource.data.width is int && request.resource.data.width > 0
+        && request.resource.data.height is int && request.resource.data.height > 0;
+    }
   }
 }

@@ -7,5 +7,13 @@ service firebase.storage {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // Website logo images: readable by everyone (displayed on every page),
+    // writable so a new logo can be uploaded directly from the website.
+    // Only the current logo's download URL is stored in Firestore.
+    match /website-logos/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }
