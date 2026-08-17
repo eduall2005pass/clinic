@@ -7,14 +7,15 @@ import LogoUploadButton from "@/components/LogoUploadButton";
 import { loginHref } from "@/lib/nav-links";
 import { useAuth } from "@/lib/auth-context";
 
-const menuLinks = [
+const menuLinks: { label: string; href?: string }[] = [
   { label: "Home", href: "/" },
-  { label: "Courses", href: "/courses" },
-  { label: "Mentor", href: "/#mentors" },
+  { label: "Course", href: "/courses" },
   { label: "Public Exam", href: "/exam" },
-  { label: "FAQ", href: "/#faq" },
-  { label: "Reviews", href: "/#reviews" },
   { label: "Our Success", href: "/#our-success" },
+  { label: "Jersey" },
+  { label: "Mentor", href: "/#mentors" },
+  { label: "Review", href: "/#reviews" },
+  { label: "FAQ", href: "/#faq" },
 ];
 
 export default function Navbar() {
@@ -107,17 +108,31 @@ export default function Navbar() {
                   aria-label="Menu"
                   className="absolute right-0 top-full z-50 mt-2 min-w-52 rounded-xl border border-ink/10 bg-dark-950/95 p-1.5 shadow-2xl shadow-black/40 backdrop-blur"
                 >
-                  {menuLinks.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                      className="block rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 transition hover:bg-primary-500/10 hover:text-heading"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+                  {menuLinks.map((link) =>
+                    link.href ? (
+                      <Link
+                        key={link.label}
+                        href={link.href}
+                        role="menuitem"
+                        onClick={() => setMenuOpen(false)}
+                        className="block rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 transition hover:bg-primary-500/10 hover:text-heading"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <span
+                        key={link.label}
+                        role="menuitem"
+                        aria-disabled="true"
+                        className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-neutral-600"
+                      >
+                        {link.label}
+                        <span className="rounded-full border border-ink/10 bg-ink/5 px-2 py-0.5 text-[10px] font-semibold text-neutral-500">
+                          Soon
+                        </span>
+                      </span>
+                    ),
+                  )}
                 </div>
               </>
             )}

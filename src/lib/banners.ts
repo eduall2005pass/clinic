@@ -1,45 +1,43 @@
 export type BannerSlide = {
   id: string;
-  image?: string;
-  title?: string;
-  subtitle?: string;
-  buttonLabel?: string;
+  image: string;
   href?: string;
+  alt?: string;
+  title?: string;
+  buttonLabel?: string;
 };
 
 export const bannerSlides: BannerSlide[] = [
   {
     id: "hsc-28-biology",
-    image: "/courses/biology.svg",
-    title: "HSC 28 Biology Complete Course",
-    subtitle:
-      "The full Botany & Zoology syllabus — recorded lessons, notes and model exams in one place.",
-    buttonLabel: "Enroll Now",
+    image: "/banners/biology.svg",
     href: "/courses/botany",
+    alt: "HSC 28 Biology Complete Course",
+    title: "HSC 28 Biology Complete Course",
+    buttonLabel: "Enroll Now",
   },
   {
     id: "medical-admission",
-    image: "/courses/medical-admission.svg",
-    title: "Special Medical Admission Course",
-    subtitle:
-      "Targeted preparation for medical admission — the complete guide to your dream college.",
-    buttonLabel: "View Course",
+    image: "/banners/medical.svg",
     href: "/courses/medical-admission",
+    alt: "Special Medical Admission Course",
+    title: "Special Medical Admission Course",
+    buttonLabel: "View Course",
   },
   {
     id: "public-exam",
-    title: "MediSpark Public Exam",
-    subtitle:
-      "Test yourself against the best — chapter-wise and full-syllabus model exams for HSC 28.",
-    buttonLabel: "Take the Exam",
+    image: "/banners/exam.svg",
     href: "/exam",
+    alt: "MediSpark Public Exam",
+    title: "MediSpark Public Exam",
+    buttonLabel: "Take the Exam",
   },
   {
     id: "our-success",
-    title: "Your Success Story Starts Here",
-    subtitle:
-      "Hundreds of students have already achieved their medical admission dream with MediSpark.",
-    buttonLabel: "See Our Success",
+    image: "/banners/success.svg",
     href: "/#our-success",
+    alt: "Your Success Story Starts Here",
+    title: "Your Success Story Starts Here",
+    buttonLabel: "See Our Success",
   },
 ];
