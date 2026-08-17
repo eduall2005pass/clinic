@@ -7,7 +7,7 @@ export default function FeaturedCourses() {
   const featured = getFeaturedCourses().slice(0, 2);
 
   return (
-    <section className="border-t border-ink/5 bg-dark-950">
+    <section id="featured-courses" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
           label="Featured Courses"

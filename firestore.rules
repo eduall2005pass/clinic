@@ -121,5 +121,20 @@ service cloud.firestore {
         && request.resource.data.width is int && request.resource.data.width > 0
         && request.resource.data.height is int && request.resource.data.height > 0;
     }
+
+    // Hero banner slider. Readable by everyone (displayed on the homepage);
+    // the "active" document is replaced whenever a banner image is uploaded
+    // from the website. Images live in Firebase Storage — only their URLs and
+    // metadata are stored here.
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if bannerId == "active"
+        && request.resource.data.slides is list
+        && request.resource.data.slides.all(slide => slide.id is string
+            && slide.url is string
+            && slide.url.startsWith("https://firebasestorage.googleapis.com/")
+            && slide.fileName is string
+            && slide.href is string);
+    }
   }
 }

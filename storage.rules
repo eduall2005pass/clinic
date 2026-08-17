@@ -15,5 +15,13 @@ service firebase.storage {
       allow read: if true;
       allow write: if true;
     }
+
+    // Hero banner images: readable by everyone (displayed on the homepage),
+    // writable so new banners can be uploaded directly from the website.
+    // Only the current banners' download URLs are stored in Firestore.
+    match /website-banners/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }

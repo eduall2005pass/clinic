@@ -3,19 +3,50 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { bannerSlides } from "@/lib/banners";
+import type { CustomBanner } from "@/lib/banner-firebase";
 
 const AUTO_SLIDE_MS = 3000;
 const SWIPE_THRESHOLD_PX = 40;
 
 export default function BannerSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [slides, setSlides] = useState(bannerSlides);
   const [paused, setPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchSwiped = useRef(false);
 
-  const goTo = useCallback((index: number) => {
-    setActiveIndex((index + bannerSlides.length) % bannerSlides.length);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/banners", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { slides?: CustomBanner[] | null } | null) => {
+        if (cancelled) return;
+        const custom = data?.slides ?? [];
+        if (custom.length === 0) return;
+        const customById = new Map(custom.map((slide) => [slide.id, slide]));
+        setSlides((defaults) =>
+          defaults.map((slide) => {
+            const override = customById.get(slide.id);
+            if (!override) return slide;
+            return {
+              ...slide,
+              image: override.url,
+              href: override.href ?? slide.href,
+            };
+          }),
+        );
+      })
+      .catch(() => {
+        // Keep the default banners when the API is unreachable.
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const goTo = useCallback((index: number) => {
+    setActiveIndex((index + slides.length) % slides.length);
+  }, [slides.length]);
 
   useEffect(() => {
     if (paused) return;
@@ -56,44 +87,55 @@ export default function BannerSlider() {
         className="flex touch-pan-y transition-transform duration-700 ease-out"
         style={{ transform: `translateX(-${activeIndex * 100}%)` }}
       >
-        {bannerSlides.map((slide) => (
-          <div
-            key={slide.id}
-            className="relative aspect-[8/3] w-full shrink-0 sm:aspect-[16/5]"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+        {slides.map((slide) => {
+          const banner = (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={slide.image}
               alt={slide.alt ?? ""}
               draggable={false}
               className="h-full w-full object-cover"
             />
-
-            {(slide.title || slide.buttonLabel) && (
-              <div className="absolute inset-0 flex items-center bg-gradient-to-r from-black/60 via-black/20 to-transparent">
-                <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-                  {slide.title && (
-                    <h2 className="max-w-md text-lg font-extrabold leading-tight tracking-tight text-white drop-shadow-md sm:text-2xl md:text-3xl">
-                      {slide.title}
-                    </h2>
-                  )}
-                  {slide.buttonLabel && slide.href && (
-                    <Link
-                      href={slide.href}
-                      className="mt-3 inline-flex w-fit items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-black/40 transition hover:bg-primary-700 active:scale-[0.98] sm:mt-4 sm:px-5 sm:py-2.5 sm:text-sm"
-                    >
-                      {slide.buttonLabel}
-                    </Link>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+          const hashTarget = slide.href?.startsWith("#")
+            ? slide.href.slice(1)
+            : null;
+          return (
+            <div
+              key={slide.id}
+              className="relative aspect-[8/3] w-full shrink-0 sm:aspect-[16/5]"
+            >
+              {hashTarget ? (
+                <a
+                  href={slide.href}
+                  className="block h-full w-full"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    const element = document.getElementById(hashTarget);
+                    if (element) {
+                      element.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
+                    }
+                  }}
+                >
+                  {banner}
+                </a>
+              ) : slide.href ? (
+                <Link href={slide.href} className="block h-full w-full">
+                  {banner}
+                </Link>
+              ) : (
+                banner
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
-        {bannerSlides.map((slide, index) => (
+        {slides.map((slide, index) => (
           <button
             key={slide.id}
             type="button"

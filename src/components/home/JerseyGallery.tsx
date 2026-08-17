@@ -32,7 +32,7 @@ export default function JerseyGallery() {
       <div className="pointer-events-none absolute left-1/2 top-24 h-80 w-80 -translate-x-1/2 rounded-full bg-primary-600/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
-          label="Jersey প্রদর্শনী"
+          label="Premium Jersey"
           title="Jersey of MediSpark"
           description="Wear the spirit of MediSpark — our premium jersey, designed for champions."
         />

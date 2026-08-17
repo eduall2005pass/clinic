@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 600" width="1600" height="600" role="img" aria-label="Public exam">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a0c"/>
+      <stop offset="55%" stop-color="#141013"/>
+      <stop offset="100%" stop-color="#2b0e12"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.75">
+      <stop offset="0%" stop-color="#e50914" stop-opacity="0.42"/>
+      <stop offset="60%" stop-color="#e50914" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#e50914" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="check" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff3540"/>
+      <stop offset="100%" stop-color="#e50914"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="600" fill="url(#bg)"/>
+  <rect width="1600" height="600" fill="url(#glow)"/>
+
+  <g stroke="#ffffff" stroke-opacity="0.05" stroke-width="1">
+    <line x1="1050" y1="0" x2="1050" y2="600"/>
+    <line x1="1200" y1="0" x2="1200" y2="600"/>
+    <line x1="1350" y1="0" x2="1350" y2="600"/>
+    <line x1="1500" y1="0" x2="1500" y2="600"/>
+    <line x1="1050" y1="150" x2="1600" y2="150"/>
+    <line x1="1050" y1="300" x2="1600" y2="300"/>
+    <line x1="1050" y1="450" x2="1600" y2="450"/>
+  </g>
+
+  <g fill="#e50914" opacity="0.08">
+    <circle cx="1370" cy="120" r="230"/>
+    <circle cx="430" cy="520" r="170"/>
+    <circle cx="560" cy="90" r="120"/>
+  </g>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M455 305 l75 75 l165 -185" stroke="url(#check)" stroke-width="22"/>
+  </g>
+
+  <rect x="610" y="110" width="280" height="400" rx="14" fill="#1a1a1a" stroke="#ffffff" stroke-opacity="0.12" stroke-width="2"/>
+  <rect x="620" y="120" width="260" height="36" rx="8" fill="#e50914" opacity="0.85"/>
+  <g stroke="#ffffff" stroke-opacity="0.12" stroke-width="4" stroke-linecap="round">
+    <line x1="642" y1="196" x2="858" y2="196"/>
+    <line x1="642" y1="232" x2="858" y2="232"/>
+    <line x1="642" y1="268" x2="858" y2="268"/>
+    <line x1="642" y1="304" x2="858" y2="304"/>
+    <line x1="642" y1="340" x2="858" y2="340"/>
+    <line x1="642" y1="376" x2="776" y2="376"/>
+    <line x1="642" y1="412" x2="858" y2="412"/>
+    <line x1="642" y1="448" x2="726" y2="448"/>
+  </g>
+  <rect x="642" y="464" width="104" height="22" rx="11" fill="#ff3540" opacity="0.5"/>
+
+  <circle cx="1230" cy="300" r="95" fill="none" stroke="#e50914" stroke-width="5" opacity="0.9"/>
+  <circle cx="1230" cy="300" r="70" fill="#1a1a1a" stroke="#ff3540" stroke-opacity="0.5" stroke-width="2"/>
+  <path d="M1218 268 h24 v24 h20 v16 h-20 v24 h-24 v-24 h-20 v-16 h20 z" fill="#ffffff"/>
+
+  <circle cx="1100" cy="120" r="26" fill="none" stroke="#ff3540" stroke-width="3" opacity="0.7"/>
+  <circle cx="1100" cy="120" r="9" fill="#ff3540"/>
+  <circle cx="470" cy="470" r="18" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3"/>
+
+  <g stroke="#ff3540" stroke-width="4" stroke-linecap="round" opacity="0.7">
+    <line x1="1406" y1="470" x2="1418" y2="470"/>
+    <line x1="1412" y1="464" x2="1412" y2="476"/>
+    <line x1="1360" y1="500" x2="1372" y2="500"/>
+    <line x1="1366" y1="494" x2="1366" y2="506"/>
+  </g>
+</svg>
