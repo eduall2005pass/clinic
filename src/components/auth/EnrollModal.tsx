@@ -167,10 +167,10 @@ export default function EnrollModal({
             <LockIcon />
           </StatusIcon>
           <h3 className="mt-5 text-lg font-bold text-heading">
-            Registration Required
+            Registration First
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-neutral-400">
-            Registration is required to enroll in a course.
+            Please complete your registration first to enroll in this course.
           </p>
           <button
             type="button"
@@ -184,7 +184,7 @@ export default function EnrollModal({
             onClick={onClose}
             className={`${secondaryButtonClass} mt-3`}
           >
-            Cancel
+            Back
           </button>
         </div>
       );
