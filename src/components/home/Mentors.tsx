@@ -30,7 +30,7 @@ const mentors: Mentor[] = [
 
 export default function Mentors() {
   return (
-    <section className="relative overflow-hidden border-t border-ink/5 bg-dark-950">
+    <section id="mentors" className="relative scroll-mt-24 overflow-hidden border-t border-ink/5 bg-dark-950">
       <div className="pointer-events-none absolute -left-32 top-24 h-72 w-72 rounded-full bg-primary-600/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader

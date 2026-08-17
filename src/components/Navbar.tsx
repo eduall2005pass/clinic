@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 const menuLinks = [
   { label: "Home", href: "/" },
   { label: "Courses", href: "/courses" },
+  { label: "Mentor", href: "/#mentors" },
   { label: "Public Exam", href: "/exam" },
   { label: "FAQ", href: "/#faq" },
   { label: "Reviews", href: "/#reviews" },
