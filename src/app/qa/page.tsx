@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import QaExplorer from "@/components/QaExplorer";
+import QaPageClient from "@/components/auth/QaPageClient";
 import { qaSubjects, qaQuestions } from "@/lib/qa";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export default function QaPage() {
   return (
     <main className="flex-1 bg-dark-950">
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <QaExplorer subjects={qaSubjects} questions={qaQuestions} />
+        <QaPageClient subjects={qaSubjects} questions={qaQuestions} />
       </section>
     </main>
   );

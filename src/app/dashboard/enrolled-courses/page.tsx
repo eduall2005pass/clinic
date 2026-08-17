@@ -1,19 +1,26 @@
 import type { Metadata } from "next";
-import SectionPlaceholder from "@/components/dashboard/SectionPlaceholder";
+import { AccessGate } from "@/components/auth/AccessGuard";
+import EnrolledCoursesList from "@/components/dashboard/EnrolledCoursesList";
 
 export const metadata: Metadata = {
-  title: "My Enrolled Course",
+  title: "My Enrolled Courses",
   description:
-    "Access your enrolled courses on MediSpark — your enrolled courses will appear here.",
+    "Access your enrolled courses on MediSpark — active enrollments and pending requests.",
 };
 
 export default function EnrolledCoursesPage() {
   return (
-    <main className="flex-1 bg-dark-950">
-      <SectionPlaceholder
-        title="My Enrolled Course"
-        description="Your enrolled courses will be shown here. Enrolled course data will be connected to your account in an upcoming step."
-      />
-    </main>
+    <AccessGate
+      requirement="registered"
+      title="Registration Required"
+      message="You need to register to view your enrolled courses."
+      actionLabel="Register Now"
+      actionHref="/register"
+      loadingLabel="Loading your enrolled courses..."
+      secondaryLabel="Back to Dashboard"
+      secondaryHref="/dashboard"
+    >
+      <EnrolledCoursesList />
+    </AccessGate>
   );
 }

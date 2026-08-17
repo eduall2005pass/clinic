@@ -17,6 +17,11 @@ import {
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db, googleProvider, isFirebaseConfigured } from "./firebase";
+import {
+  fetchEnrollments,
+  isActiveEnrollment,
+  type Enrollment,
+} from "./enrollments";
 
 export type StudentProfile = {
   uid: string;
@@ -34,15 +39,24 @@ export type StudentProfile = {
   updatedAt?: unknown;
 };
 
+export type StudentAccess = {
+  registered: boolean;
+  hasEnrollment: boolean;
+  hasPaidEnrollment: boolean;
+};
+
 type AuthContextValue = {
   user: User | null;
   profile: StudentProfile | null;
+  enrollments: Enrollment[];
+  access: StudentAccess;
   authLoading: boolean;
   profileLoading: boolean;
   configured: boolean;
   signInWithGoogle: () => Promise<StudentProfile | null>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshEnrollments: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -56,6 +70,7 @@ async function fetchProfile(uid: string): Promise<StudentProfile | null> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
 
@@ -71,12 +86,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthLoading(false);
       if (!firebaseUser) {
         setProfile(null);
+        setEnrollments([]);
         setProfileLoading(false);
         return;
       }
       setProfileLoading(true);
-      const studentProfile = await fetchProfile(firebaseUser.uid);
+      const [studentProfile, studentEnrollments] = await Promise.all([
+        fetchProfile(firebaseUser.uid),
+        fetchEnrollments(firebaseUser.uid),
+      ]);
       setProfile(studentProfile);
+      setEnrollments(studentEnrollments);
       setProfileLoading(false);
     });
     return unsubscribe;
@@ -93,14 +113,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfileLoading(false);
   }, [user]);
 
+  const refreshEnrollments = useCallback(async () => {
+    if (!user) {
+      setEnrollments([]);
+      return;
+    }
+    const studentEnrollments = await fetchEnrollments(user.uid);
+    setEnrollments(studentEnrollments);
+  }, [user]);
+
   const signInWithGoogle = useCallback(async () => {
     if (!auth) {
       throw new Error("Firebase authentication is not configured.");
     }
     const result = await signInWithPopup(auth, googleProvider);
     setUser(result.user);
-    const studentProfile = await fetchProfile(result.user.uid);
+    const [studentProfile, studentEnrollments] = await Promise.all([
+      fetchProfile(result.user.uid),
+      fetchEnrollments(result.user.uid),
+    ]);
     setProfile(studentProfile);
+    setEnrollments(studentEnrollments);
     return studentProfile;
   }, []);
 
@@ -110,27 +143,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null);
     setProfile(null);
+    setEnrollments([]);
   }, []);
+
+const access = useMemo<StudentAccess>(() => {
+    const activeEnrollments = enrollments.filter(isActiveEnrollment);
+    return {
+      registered: profile !== null,
+      hasEnrollment: activeEnrollments.length > 0,
+      hasPaidEnrollment: activeEnrollments.some(
+        (enrollment) => enrollment.courseKind === "paid",
+      ),
+    };
+  }, [profile, enrollments]);
 
   const value = useMemo(
     () => ({
       user,
       profile,
+      enrollments,
+      access,
       authLoading,
       profileLoading,
       configured: isFirebaseConfigured,
       signInWithGoogle,
       logout,
       refreshProfile,
+      refreshEnrollments,
     }),
     [
       user,
       profile,
+      enrollments,
+      access,
       authLoading,
       profileLoading,
       signInWithGoogle,
       logout,
       refreshProfile,
+      refreshEnrollments,
     ],
   );
 

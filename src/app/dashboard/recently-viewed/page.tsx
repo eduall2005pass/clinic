@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SectionPlaceholder from "@/components/dashboard/SectionPlaceholder";
+import EnrollmentRequiredSection from "@/components/auth/EnrollmentRequiredSection";
 
 export const metadata: Metadata = {
   title: "Recently Viewed",
@@ -9,11 +9,9 @@ export const metadata: Metadata = {
 
 export default function RecentlyViewedPage() {
   return (
-    <main className="flex-1 bg-dark-950">
-      <SectionPlaceholder
-        title="Recently Viewed"
-        description="Your recently viewed content will be shown here. Recent activity data will be connected to your account in an upcoming step."
-      />
-    </main>
+    <EnrollmentRequiredSection
+      title="Recently Viewed"
+      description="Your recently viewed content will be shown here. Recent activity data will be connected to your account in an upcoming step."
+    />
   );
 }

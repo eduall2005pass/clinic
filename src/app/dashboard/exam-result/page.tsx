@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SectionPlaceholder from "@/components/dashboard/SectionPlaceholder";
+import EnrollmentRequiredSection from "@/components/auth/EnrollmentRequiredSection";
 
 export const metadata: Metadata = {
   title: "Exam Result",
@@ -9,11 +9,9 @@ export const metadata: Metadata = {
 
 export default function ExamResultPage() {
   return (
-    <main className="flex-1 bg-dark-950">
-      <SectionPlaceholder
-        title="Exam Result"
-        description="Your exam results will be shown here. Exam result data will be connected to your account in an upcoming step."
-      />
-    </main>
+    <EnrollmentRequiredSection
+      title="Exam Result"
+      description="Your exam results will be shown here. Exam result data will be connected to your account in an upcoming step."
+    />
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 import { saveProfileWithUniqueStudentId } from "@/lib/student-id";
@@ -27,6 +27,8 @@ const labelClass = "mb-1.5 block text-xs font-semibold text-neutral-400";
 
 export default function RegisterClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const { user, profile, authLoading, configured } = useAuth();
 
   const [fullName, setFullName] = useState("");
@@ -44,13 +46,15 @@ export default function RegisterClient() {
   useEffect(() => {
     if (authLoading || !configured) return;
     if (!user) {
-      router.replace("/login");
+      router.replace(
+        next ? `/login?next=${encodeURIComponent(next)}` : "/login",
+      );
       return;
     }
     if (profile) {
-      router.replace("/dashboard");
+      router.replace(next || "/dashboard");
     }
-  }, [user, profile, authLoading, configured, router]);
+  }, [user, profile, authLoading, configured, router, next]);
 
   useEffect(() => {
     if (!user) return;
@@ -114,7 +118,7 @@ export default function RegisterClient() {
         profilePictureUrl: finalPictureUrl,
       });
 
-      router.replace("/dashboard");
+      router.replace(next || "/dashboard");
     } catch (err) {
       setError(
         err instanceof Error

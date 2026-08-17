@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 
@@ -31,17 +31,23 @@ function GoogleIcon() {
 
 export default function LoginClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const { user, profile, authLoading, profileLoading, configured, signInWithGoogle } =
     useAuth();
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const registerHref = next
+    ? `/register?next=${encodeURIComponent(next)}`
+    : "/register";
+
   useEffect(() => {
     if (authLoading || !configured) return;
     if (user && !profileLoading) {
-      router.replace(profile ? "/dashboard" : "/register");
+      router.replace(profile ? next || "/dashboard" : registerHref);
     }
-  }, [user, profile, profileLoading, authLoading, configured, router]);
+  }, [user, profile, profileLoading, authLoading, configured, router, next, registerHref]);
 
   const handleGoogleSignIn = async () => {
     if (signingIn) return;
@@ -49,7 +55,7 @@ export default function LoginClient() {
     setError(null);
     try {
       const studentProfile = await signInWithGoogle();
-      router.replace(studentProfile ? "/dashboard" : "/register");
+      router.replace(studentProfile ? next || "/dashboard" : registerHref);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Google sign-in failed. Please try again.",

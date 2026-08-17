@@ -1,5 +1,21 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Firestore rules
+
+Publish `firestore.rules` (and `storage.rules`) to your Firebase project. They
+enforce enrollment security:
+
+- Students can only create/manage their own enrollment (`enrollments/{uid}_{courseId}`).
+- Free courses can only be created as `active`; paid courses only as `pending` —
+  a paid enrollment can never be created or flipped to `active` by a student.
+- `courses/{courseId}` is a read-only registry. Its `kind` must match the
+  canonical catalog (`src/lib/courses.ts`); missing or mismatched entries are
+  rejected. The app self-registers canonical course documents on first
+  enrollment. If a course is added/removed, update `canonicalKind` in
+  `firestore.rules` accordingly.
+- Classes, materials, exams, and Q&A reads require an ACTIVE (and for Q&A, PAID)
+  enrollment for that specific course.
+
 ## Getting Started
 
 First, run the development server:

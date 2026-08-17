@@ -1,20 +1,110 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     // A student can only read/write their own profile document.
-    // Document ID must match the Firebase Authentication UID, so a student
-    // can never create or modify a profile for another user.
     match /students/{uid} {
-      allow create, read, update, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, read, update, delete: if isSignedIn() && request.auth.uid == uid;
     }
 
     // Student ID index used to guarantee unique IDs.
-    // Anyone may check an ID, but only the owning student may create it,
-    // and IDs can never be updated, deleted, or forged for another user.
     match /studentIds/{studentId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
+    }
+
+    // Course catalog registry. Must stay in sync with src/lib/courses.ts.
+    // Clients may only create canonical registry documents; they cannot
+    // overwrite or tamper with existing ones.
+    function canonicalKind(courseId) {
+      return courseId == "biology"
+          || courseId == "chemistry"
+          || courseId == "physics"
+          || courseId == "higher-mathematics"
+          || courseId == "english"
+          || courseId == "medical-admission"
+          || courseId == "biology-27"
+          || courseId == "physics-27"
+          || courseId == "medical-admission-27"
+          || courseId == "physics-26"
+          || courseId == "medical-admission-26" ? "paid" : null;
+    }
+    match /courses/{courseId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.kind == canonicalKind(courseId)
+        && request.resource.data.courseId == courseId;
+      allow update, delete: if false;
+    }
+
+    // Enrollment records. Document ID format: {uid}_{courseId}.
+    // A student can only create or manage their own enrollment, and only
+    // through the allowed transitions below. Paid enrollments can never be
+    // created as active — they require payment/approval.
+    function isOwnEnrollment(enrollmentId) {
+      return isSignedIn()
+        && enrollmentId.split('_')[0] == request.auth.uid;
+    }
+    function validCreate(enrollmentId) {
+      if (!isOwnEnrollment(enrollmentId)) return false;
+      if (request.resource.data.studentUid != request.auth.uid) return false;
+      if (request.resource.data.courseId != enrollmentId.split('_').slice(1).join('_')) return false;
+      let kind = request.resource.data.courseKind;
+      let status = request.resource.data.enrollmentStatus;
+      return kind == canonicalKind(request.resource.data.courseId)
+        && ((kind == "free" && status == "active")
+            || (kind == "paid" && status == "pending"));
+    }
+    function validTransition(from, to, kind) {
+      return (from == "active" && to == "cancelled")
+          || (from == "pending" && to == "cancelled")
+          || (from == "cancelled" && to == "pending")
+          || (from == "cancelled" && to == "active" && kind == "free");
+    }
+    match /enrollments/{enrollmentId} {
+      allow read: if isSignedIn()
+        && resource.data.studentUid == request.auth.uid
+        && enrollmentId.split('_')[0] == request.auth.uid;
+      allow create: if validCreate(enrollmentId);
+      allow update: if isOwnEnrollment(enrollmentId)
+        && resource.data.studentUid == request.auth.uid
+        && request.resource.data.studentUid == request.auth.uid
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.courseKind == resource.data.courseKind
+        && validTransition(
+            resource.data.enrollmentStatus,
+            request.resource.data.enrollmentStatus,
+            request.resource.data.courseKind);
+      allow delete: if false;
+    }
+
+    // Enrolled-course content: classes, materials, and course exams may
+    // only be read by students with an ACTIVE enrollment for that course.
+    function isEnrolled(courseId) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/enrollments/$(request.auth.uid)_$(courseId)).data.enrollmentStatus == "active";
+    }
+    match /courses/{courseId} {
+      match /classes/{classId} { allow read: if isEnrolled(courseId); allow write: if false; }
+      match /materials/{materialId} { allow read: if isEnrolled(courseId); allow write: if false; }
+      match /exams/{examId} { allow read: if isEnrolled(courseId); allow write: if false; }
+    }
+
+    // Q&A content requires an ACTIVE PAID course enrollment.
+    function isEnrolledPaid(courseId) {
+      return isEnrolled(courseId)
+        && get(/databases/$(database)/documents/enrollments/$(request.auth.uid)_$(courseId)).data.courseKind == "paid";
+    }
+    match /qa/{document} {
+      allow read: if isSignedIn()
+        && resource.data.courseId is string
+        && isEnrolledPaid(resource.data.courseId);
+      allow write: if false;
     }
   }
 }

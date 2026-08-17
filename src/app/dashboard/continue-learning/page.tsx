@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SectionPlaceholder from "@/components/dashboard/SectionPlaceholder";
+import EnrollmentRequiredSection from "@/components/auth/EnrollmentRequiredSection";
 
 export const metadata: Metadata = {
   title: "Continue Learning",
@@ -9,11 +9,9 @@ export const metadata: Metadata = {
 
 export default function ContinueLearningPage() {
   return (
-    <main className="flex-1 bg-dark-950">
-      <SectionPlaceholder
-        title="Continue Learning"
-        description="Your in-progress learning will be shown here. Continue Learning data will be connected to your account in an upcoming step."
-      />
-    </main>
+    <EnrollmentRequiredSection
+      title="Continue Learning"
+      description="Your in-progress learning will be shown here. Continue Learning data will be connected to your account in an upcoming step."
+    />
   );
 }

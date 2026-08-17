@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Course } from "@/lib/courses";
 import { getBatch, formatFee } from "@/lib/courses";
+import EnrollButton from "@/components/auth/EnrollButton";
 
 export default function CourseCard({ course }: { course: Course }) {
   const batch = getBatch(course.batchId);
@@ -56,12 +57,7 @@ export default function CourseCard({ course }: { course: Course }) {
             >
               View Details
             </Link>
-            <button
-              type="button"
-              className="flex-1 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
-            >
-              Enroll
-            </button>
+            <EnrollButton course={course} />
           </div>
         </div>
       </div>

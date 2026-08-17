@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { publishedExams } from "@/lib/public-exams";
+import ExamParticipationArea from "@/components/auth/ExamParticipationArea";
 
 type ExamPageProps = {
   params: Promise<{ id: string }>;
@@ -53,14 +54,8 @@ export default async function ExamDetailPage({ params }: ExamPageProps) {
           ))}
         </div>
 
-        <div className="mt-8 rounded-2xl border border-primary-600/30 bg-primary-600/10 p-6 text-center">
-          <p className="font-semibold text-primary-300">
-            Exam engine coming soon.
-          </p>
-          <p className="mt-1 text-sm text-primary-200/70">
-            Questions, timer, marking and results will be added in an upcoming
-            step. This page is the entry point for the future exam system.
-          </p>
+        <div className="mt-8">
+          <ExamParticipationArea examId={exam.id} />
         </div>
       </section>
     </main>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { loginHref } from "@/lib/nav-links";
+import { useAuth } from "@/lib/auth-context";
 
 export default function StartExamButton({
   examId,
@@ -11,21 +11,21 @@ export default function StartExamButton({
   disabled?: boolean;
 }) {
   const router = useRouter();
+  const { user, profile, authLoading } = useAuth();
 
   const handleStart = () => {
-    if (disabled) return;
+    if (disabled || authLoading) return;
 
-    // Future: real authentication check here. For now no account system
-    // exists, so every student is treated as unauthenticated and is sent
-    // to the login / registration entry point before the exam opens.
-    const isAuthenticated = false;
-
-    if (!isAuthenticated) {
-      router.push(loginHref);
+    if (!user) {
+      router.push(`/login?next=${encodeURIComponent(`/exam/${examId}`)}`);
       return;
     }
 
-    // Future: continue to the exam engine for this exam.
+    if (!profile) {
+      router.push(`/register?next=${encodeURIComponent(`/exam/${examId}`)}`);
+      return;
+    }
+
     router.push(`/exam/${examId}`);
   };
 

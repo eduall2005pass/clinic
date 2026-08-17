@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { courses, getBatch, getCourse, formatFee } from "@/lib/courses";
+import CourseEnrollFlow from "@/components/auth/CourseEnrollFlow";
 
 type CourseDetailsParams = { params: Promise<{ slug: string }> };
 
@@ -82,12 +84,13 @@ export default async function CourseDetailsPage({
                 </p>
 
                 <div className="mt-6 flex flex-col gap-3">
-                  <button
-                    type="button"
-                    className="w-full rounded-xl bg-primary-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+                  <Suspense
+                    fallback={
+                      <div className="h-[52px] w-full animate-pulse rounded-xl bg-ink/10" />
+                    }
                   >
-                    Enroll in this Course
-                  </button>
+                    <CourseEnrollFlow course={course} />
+                  </Suspense>
                   <Link
                     href="/courses"
                     className="w-full rounded-xl border border-ink/15 bg-ink/5 px-6 py-3 text-center font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
