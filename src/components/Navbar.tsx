@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -10,12 +11,53 @@ export default function Navbar() {
   const { user } = useAuth();
   const actionHref = user ? "/dashboard" : loginHref;
   const actionLabel = user ? "Dashboard" : "Login";
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/" className="flex w-1/3 max-w-[384px] shrink-0 transition-opacity hover:opacity-90">
-          <Logo size="large" />
-        </Link>
+        <div className="relative flex w-1/3 max-w-[384px] shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label="Menu"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
+              menuOpen
+                ? "border-primary-500/50 bg-primary-500/10 text-heading"
+                : "border-ink/10 bg-ink/5 text-neutral-300 hover:border-primary-500/50 hover:bg-primary-500/10 hover:text-heading"
+            }`}
+          >
+            <svg
+              className="h-5 w-5"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="5" r="1.8" />
+              <circle cx="12" cy="12" r="1.8" />
+              <circle cx="12" cy="19" r="1.8" />
+            </svg>
+          </button>
+
+          <Link href="/" className="flex min-w-0 flex-1 transition-opacity hover:opacity-90">
+            <Logo size="large" />
+          </Link>
+
+          {menuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setMenuOpen(false)}
+                aria-hidden="true"
+              />
+              <div
+                role="menu"
+                aria-label="Menu"
+                className="absolute left-0 top-full z-50 mt-2 min-w-52 rounded-xl border border-ink/10 bg-dark-950/95 p-2 shadow-2xl shadow-black/40 backdrop-blur"
+              />
+            </>
+          )}
+        </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <ThemeToggle />
