@@ -126,7 +126,7 @@ export default function OurSuccess() {
   const items = getPublishedSuccessItems();
 
   return (
-    <section className="relative overflow-hidden border-t border-ink/5 bg-dark-900">
+    <section id="our-success" className="relative scroll-mt-24 overflow-hidden border-t border-ink/5 bg-dark-900">
       <div className="pointer-events-none absolute inset-0 bg-grid-lines" />
       <div className="pointer-events-none absolute -left-40 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-primary-600/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
