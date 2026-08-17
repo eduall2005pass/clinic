@@ -150,7 +150,7 @@ export default function BrandingPage() {
               <div>
                 <dt className="text-xs text-neutral-500">File</dt>
                 <dd className="mt-0.5 font-mono text-xs text-neutral-400">
-                  {isCustom ? logo.fileName : "medispark_logo_transparent.png"}
+                  {isCustom ? logo.fileName : "medispark-logo.png"}
                 </dd>
               </div>
               <div>

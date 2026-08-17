@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 
 const menuLinks: { label: string; href?: string }[] = [
   { label: "Home", href: "/" },
+  { label: "Dashboard", href: "/dashboard" },
   { label: "Course", href: "/courses" },
   { label: "Public Exam", href: "/exam" },
   { label: "Our Success", href: "/#our-success" },
