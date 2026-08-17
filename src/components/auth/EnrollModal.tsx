@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useCourseAccess } from "@/lib/course-access";
 import { enrollInCourse, getCourseKind } from "@/lib/enrollments";
-import { formatFee } from "@/lib/courses";
+import { formatFee, getPayableFee } from "@/lib/courses";
 import type { Course } from "@/lib/courses";
 
 const primaryButtonClass =
@@ -92,6 +92,7 @@ export default function EnrollModal({
   } = useAuth();
   const { isActive, isPending, isCancelled, isCompleted } = useCourseAccess(course);
   const isPaid = getCourseKind(course) === "paid";
+  const payableFee = getPayableFee(course);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
@@ -324,7 +325,7 @@ export default function EnrollModal({
                 Course Fee
               </p>
               <p className="text-xl font-extrabold text-primary-500">
-                {formatFee(course.fee)}
+                {formatFee(payableFee)}
               </p>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-neutral-400">

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BatchCourseList from "@/components/BatchCourseList";
-import { batches, courses } from "@/lib/courses";
+import { batches, getPublicCourses } from "@/lib/courses";
 
 export const metadata: Metadata = {
   title: "Admission Courses",
@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default function AdmissionCoursesPage() {
-  const admissionCourses = courses.filter(
-    (course) => course.type === "Admission",
+  const admissionCourses = getPublicCourses().filter(
+    (course) => course.category === "Admission",
   );
 
   return (

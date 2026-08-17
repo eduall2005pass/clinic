@@ -5,15 +5,32 @@ export type Batch = {
 
 export type CourseType = "Academic" | "Admission";
 
+export type CourseCategory = CourseType;
+
+export type CourseStatus = "published" | "unpublished";
+
+export type CourseAvailability = "available" | "hidden";
+
 export type Course = {
   slug: string;
   name: string;
+  category: CourseCategory;
   batchId: string;
-  type: CourseType;
-  fee: number;
   image: string;
-  duration: string;
+  shortDescription: string;
   description: string;
+  teacherName: string;
+  teacherPhoto: string;
+  designation: string;
+  duration: string;
+  fee: number;
+  discountFee: number | null;
+  features: string[];
+  overviewTitle: string;
+  overview: string[];
+  status: CourseStatus;
+  availability: CourseAvailability;
+  couponEnabled: boolean;
 };
 
 export const batches: Batch[] = [
@@ -25,126 +42,431 @@ export const batches: Batch[] = [
 export const courseTypes: CourseType[] = ["Academic", "Admission"];
 
 export const courses: Course[] = [
+  // ── HSC 28 — Academic ────────────────────────────────────────────────
   {
-    slug: "biology",
-    name: "Biology",
+    slug: "botany",
+    name: "Botany Complete Course",
+    category: "Academic",
     batchId: "hsc-28",
-    type: "Academic",
-    fee: 4500,
     image: "/courses/biology.svg",
-    duration: "12 chapters",
+    shortDescription:
+      "Complete HSC Botany preparation — cell biology to plant physiology, morphology and genetics with exam-focused explanations.",
     description:
-      "Complete HSC Biology preparation — cell biology to genetics, physiology, and plant science with exam-focused explanations.",
-  },
-  {
-    slug: "chemistry",
-    name: "Chemistry",
-    batchId: "hsc-28",
-    type: "Academic",
+      "A complete HSC Botany course for the HSC 28 batch. Every chapter of the Botany syllabus is covered step by step — from cell biology and cell division to plant tissues, morphology, physiology, reproduction, genetics and ecology — with board exam-focused explanations, class notes and chapter-wise tests.",
+    teacherName: "Dr. Anika Rahman",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Senior Biology Faculty",
+    duration: "Full Syllabus",
     fee: 4500,
-    image: "/courses/chemistry.svg",
-    duration: "12 chapters",
-    description:
-      "HSC Chemistry made clear — physical, inorganic, and organic chemistry fundamentals with step-by-step problem solving.",
+    discountFee: 4000,
+    features: [
+      "Full chapter-wise video classes",
+      "Class notes & chapter PDFs",
+      "Chapter-wise exam with answer solutions",
+      "Board question analysis",
+      "Doubt solving support",
+    ],
+    overviewTitle: "Chapters",
+    overview: [
+      "Cell Biology & Cell Division",
+      "Plant Tissues & Morphology",
+      "Plant Physiology",
+      "Plant Reproduction & Development",
+      "Genetics & Evolution",
+      "Microbiology, Fungi & Ecology",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: true,
   },
   {
-    slug: "physics",
-    name: "Physics",
+    slug: "zoology",
+    name: "Zoology Complete Course",
+    category: "Academic",
     batchId: "hsc-28",
-    type: "Academic",
+    image: "/courses/biology.svg",
+    shortDescription:
+      "Complete HSC Zoology preparation — animal diversity, human physiology, genetics and applied zoology with exam-focused practice.",
+    description:
+      "A complete HSC Zoology course for the HSC 28 batch. The full Zoology syllabus is covered — animal diversity, tissues, human physiology, nervous and endocrine systems, reproduction, genetics and applied zoology — with clear explanations, diagrams and board exam-focused practice.",
+    teacherName: "Dr. Farhana Akter",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Senior Biology Faculty",
+    duration: "Full Syllabus",
     fee: 4500,
-    image: "/courses/physics.svg",
-    duration: "12 chapters",
-    description:
-      "Mechanics, waves, electricity, and modern physics — conceptual clarity and numerical practice for HSC success.",
+    discountFee: 4000,
+    features: [
+      "Full chapter-wise video classes",
+      "Class notes & chapter PDFs",
+      "Chapter-wise exam with answer solutions",
+      "Diagram & practical-based preparation",
+      "Doubt solving support",
+    ],
+    overviewTitle: "Chapters",
+    overview: [
+      "Animal Diversity & Classification",
+      "Animal Tissues & Organisation",
+      "Human Physiology — Digestion & Respiration",
+      "Human Physiology — Circulation & Excretion",
+      "Nervous, Endocrine & Reproductive Systems",
+      "Genetics, Evolution & Applied Zoology",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: false,
   },
   {
-    slug: "higher-mathematics",
-    name: "Higher Mathematics",
+    slug: "biology-revision",
+    name: "Biology Revision Course",
+    category: "Academic",
     batchId: "hsc-28",
-    type: "Academic",
-    fee: 4500,
-    image: "/courses/higher-mathematics.svg",
-    duration: "12 chapters",
+    image: "/courses/biology.svg",
+    shortDescription:
+      "Rapid revision of the complete HSC Biology syllabus — both papers with past board questions and model tests.",
     description:
-      "Systematic higher math preparation — algebra, calculus, trigonometry, and geometry with worked examples.",
-  },
-  {
-    slug: "english",
-    name: "English",
-    batchId: "hsc-28",
-    type: "Academic",
+      "A focused revision course for the HSC 28 batch covering the complete HSC Biology syllabus — both 1st and 2nd papers. Rapid concept reviews, past board question practice and full model tests help you consolidate everything before the board exam.",
+    teacherName: "Dr. Anika Rahman",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Senior Biology Faculty",
+    duration: "Rapid Revision",
     fee: 4000,
-    image: "/courses/english.svg",
-    duration: "8 chapters",
-    description:
-      "Grammar, composition, and HSC board exam skills — build strong English fundamentals step by step.",
+    discountFee: 3500,
+    features: [
+      "Rapid concept revision of all chapters",
+      "Past board question practice",
+      "Full model tests with solutions",
+      "Common mistakes & exam tips",
+    ],
+    overviewTitle: "Revision Papers",
+    overview: [
+      "Biology 1st Paper — Complete Revision",
+      "Biology 2nd Paper — Complete Revision",
+      "Past Board Question Practice",
+      "Model Test Papers",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: true,
   },
+  // ── HSC 28 — Admission ───────────────────────────────────────────────
   {
     slug: "medical-admission",
-    name: "Medical Admission Preparation",
+    name: "Special Medical Admission Course",
+    category: "Admission",
     batchId: "hsc-28",
-    type: "Admission",
-    fee: 8500,
     image: "/courses/medical-admission.svg",
-    duration: "Full syllabus",
+    shortDescription:
+      "Focused medical admission preparation for the HSC 28 batch — combined syllabus training with exam strategy for the medical entrance race.",
     description:
-      "Targeted preparation for medical admission — biology, chemistry, physics, and math combined with exam strategy.",
+      "A special medical admission preparation course for the HSC 28 batch. Biology, Chemistry, Physics and Higher Mathematics are combined into one admission-focused program with chapter-wise classes, MCQ practice and full model tests — plus admission exam strategy and analysis to keep you ready for the medical entrance race.",
+    teacherName: "Prof. Shafiqul Islam",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Medical Admission Program Lead",
+    duration: "Full Syllabus",
+    fee: 8500,
+    discountFee: 7500,
+    features: [
+      "Combined Biology, Chemistry, Physics & Math",
+      "Admission-focused concept classes",
+      "Chapter-wise & full model tests",
+      "MCQ & written practice",
+      "Exam strategy & result analysis",
+    ],
+    overviewTitle: "Subjects",
+    overview: [
+      "Biology (Botany & Zoology)",
+      "Chemistry",
+      "Physics",
+      "Higher Mathematics",
+      "Admission Model Tests",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: true,
   },
+  // ── HSC 27 — Academic ────────────────────────────────────────────────
   {
-    slug: "biology-27",
-    name: "Biology",
+    slug: "botany-27",
+    name: "Botany Complete Course",
+    category: "Academic",
     batchId: "hsc-27",
-    type: "Academic",
-    fee: 4500,
     image: "/courses/biology.svg",
-    duration: "12 chapters",
+    shortDescription:
+      "Complete HSC Botany preparation for the HSC 27 batch — every chapter with board exam-focused explanations.",
     description:
-      "Complete HSC Biology preparation — cell biology to genetics, physiology, and plant science with exam-focused explanations.",
+      "A complete HSC Botany course for the HSC 27 batch. The full Botany syllabus is covered chapter by chapter — cell biology, division, tissues, morphology, physiology, reproduction, genetics and ecology — with board exam-focused classes, notes and tests.",
+    teacherName: "Dr. Anika Rahman",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Senior Biology Faculty",
+    duration: "Full Syllabus",
+    fee: 4500,
+    discountFee: 4000,
+    features: [
+      "Full chapter-wise video classes",
+      "Class notes & chapter PDFs",
+      "Chapter-wise exam with answer solutions",
+      "Board question analysis",
+      "Doubt solving support",
+    ],
+    overviewTitle: "Chapters",
+    overview: [
+      "Cell Biology & Cell Division",
+      "Plant Tissues & Morphology",
+      "Plant Physiology",
+      "Plant Reproduction & Development",
+      "Genetics & Evolution",
+      "Microbiology, Fungi & Ecology",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: true,
   },
   {
-    slug: "physics-27",
-    name: "Physics",
+    slug: "zoology-27",
+    name: "Zoology Complete Course",
+    category: "Academic",
     batchId: "hsc-27",
-    type: "Academic",
-    fee: 4500,
-    image: "/courses/physics.svg",
-    duration: "12 chapters",
+    image: "/courses/biology.svg",
+    shortDescription:
+      "Complete HSC Zoology preparation for the HSC 27 batch — animal diversity, human physiology and applied zoology.",
     description:
-      "Mechanics, waves, electricity, and modern physics — conceptual clarity and numerical practice for HSC success.",
+      "A complete HSC Zoology course for the HSC 27 batch. The full Zoology syllabus — animal diversity, tissues, human physiology, nervous and endocrine systems, reproduction, genetics and applied zoology — is covered with clear explanations and exam-focused practice.",
+    teacherName: "Dr. Farhana Akter",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Senior Biology Faculty",
+    duration: "Full Syllabus",
+    fee: 4500,
+    discountFee: 4000,
+    features: [
+      "Full chapter-wise video classes",
+      "Class notes & chapter PDFs",
+      "Chapter-wise exam with answer solutions",
+      "Diagram & practical-based preparation",
+      "Doubt solving support",
+    ],
+    overviewTitle: "Chapters",
+    overview: [
+      "Animal Diversity & Classification",
+      "Animal Tissues & Organisation",
+      "Human Physiology — Digestion & Respiration",
+      "Human Physiology — Circulation & Excretion",
+      "Nervous, Endocrine & Reproductive Systems",
+      "Genetics, Evolution & Applied Zoology",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: true,
   },
+  {
+    slug: "biology-revision-27",
+    name: "Biology Revision Course",
+    category: "Academic",
+    batchId: "hsc-27",
+    image: "/courses/biology.svg",
+    shortDescription:
+      "Rapid revision of the complete HSC Biology syllabus for the HSC 27 batch — both papers with model tests.",
+    description:
+      "A focused revision course for the HSC 27 batch covering the complete HSC Biology syllabus — both 1st and 2nd papers. Rapid concept reviews, past board questions and full model tests consolidate everything before the board exam.",
+    teacherName: "Dr. Anika Rahman",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Senior Biology Faculty",
+    duration: "Rapid Revision",
+    fee: 4000,
+    discountFee: 3500,
+    features: [
+      "Rapid concept revision of all chapters",
+      "Past board question practice",
+      "Full model tests with solutions",
+      "Common mistakes & exam tips",
+    ],
+    overviewTitle: "Revision Papers",
+    overview: [
+      "Biology 1st Paper — Complete Revision",
+      "Biology 2nd Paper — Complete Revision",
+      "Past Board Question Practice",
+      "Model Test Papers",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: false,
+  },
+  // ── HSC 27 — Admission ───────────────────────────────────────────────
   {
     slug: "medical-admission-27",
-    name: "Medical Admission Preparation",
+    name: "Special Medical Admission Course",
+    category: "Admission",
     batchId: "hsc-27",
-    type: "Admission",
-    fee: 8500,
     image: "/courses/medical-admission.svg",
-    duration: "Full syllabus",
+    shortDescription:
+      "Focused medical admission preparation for the HSC 27 batch — combined syllabus training with exam strategy.",
     description:
-      "Targeted preparation for medical admission — biology, chemistry, physics, and math combined with exam strategy.",
+      "A special medical admission preparation course for the HSC 27 batch. Biology, Chemistry, Physics and Higher Mathematics are combined into one admission-focused program with chapter-wise classes, MCQ practice and full model tests — plus admission exam strategy and analysis.",
+    teacherName: "Prof. Shafiqul Islam",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Medical Admission Program Lead",
+    duration: "Full Syllabus",
+    fee: 8500,
+    discountFee: 7500,
+    features: [
+      "Combined Biology, Chemistry, Physics & Math",
+      "Admission-focused concept classes",
+      "Chapter-wise & full model tests",
+      "MCQ & written practice",
+      "Exam strategy & result analysis",
+    ],
+    overviewTitle: "Subjects",
+    overview: [
+      "Biology (Botany & Zoology)",
+      "Chemistry",
+      "Physics",
+      "Higher Mathematics",
+      "Admission Model Tests",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: false,
+  },
+  // ── HSC 26 — Academic ────────────────────────────────────────────────
+  {
+    slug: "botany-26",
+    name: "Botany Complete Course",
+    category: "Academic",
+    batchId: "hsc-26",
+    image: "/courses/biology.svg",
+    shortDescription:
+      "Complete HSC Botany preparation for the HSC 26 batch — every chapter with board exam-focused explanations.",
+    description:
+      "A complete HSC Botany course for the HSC 26 batch. The full Botany syllabus is covered chapter by chapter — cell biology, division, tissues, morphology, physiology, reproduction, genetics and ecology — with board exam-focused classes, notes and tests.",
+    teacherName: "Dr. Anika Rahman",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Senior Biology Faculty",
+    duration: "Full Syllabus",
+    fee: 4500,
+    discountFee: 4000,
+    features: [
+      "Full chapter-wise video classes",
+      "Class notes & chapter PDFs",
+      "Chapter-wise exam with answer solutions",
+      "Board question analysis",
+      "Doubt solving support",
+    ],
+    overviewTitle: "Chapters",
+    overview: [
+      "Cell Biology & Cell Division",
+      "Plant Tissues & Morphology",
+      "Plant Physiology",
+      "Plant Reproduction & Development",
+      "Genetics & Evolution",
+      "Microbiology, Fungi & Ecology",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: false,
   },
   {
-    slug: "physics-26",
-    name: "Physics",
+    slug: "zoology-26",
+    name: "Zoology Complete Course",
+    category: "Academic",
     batchId: "hsc-26",
-    type: "Academic",
-    fee: 4500,
-    image: "/courses/physics.svg",
-    duration: "12 chapters",
+    image: "/courses/biology.svg",
+    shortDescription:
+      "Complete HSC Zoology preparation for the HSC 26 batch — animal diversity, human physiology and applied zoology.",
     description:
-      "Mechanics, waves, electricity, and modern physics — conceptual clarity and numerical practice for HSC success.",
+      "A complete HSC Zoology course for the HSC 26 batch. The full Zoology syllabus — animal diversity, tissues, human physiology, nervous and endocrine systems, reproduction, genetics and applied zoology — is covered with clear explanations and exam-focused practice.",
+    teacherName: "Dr. Farhana Akter",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Senior Biology Faculty",
+    duration: "Full Syllabus",
+    fee: 4500,
+    discountFee: 4000,
+    features: [
+      "Full chapter-wise video classes",
+      "Class notes & chapter PDFs",
+      "Chapter-wise exam with answer solutions",
+      "Diagram & practical-based preparation",
+      "Doubt solving support",
+    ],
+    overviewTitle: "Chapters",
+    overview: [
+      "Animal Diversity & Classification",
+      "Animal Tissues & Organisation",
+      "Human Physiology — Digestion & Respiration",
+      "Human Physiology — Circulation & Excretion",
+      "Nervous, Endocrine & Reproductive Systems",
+      "Genetics, Evolution & Applied Zoology",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: false,
   },
+  {
+    slug: "biology-revision-26",
+    name: "Biology Revision Course",
+    category: "Academic",
+    batchId: "hsc-26",
+    image: "/courses/biology.svg",
+    shortDescription:
+      "Rapid revision of the complete HSC Biology syllabus for the HSC 26 batch — both papers with model tests.",
+    description:
+      "A focused revision course for the HSC 26 batch covering the complete HSC Biology syllabus — both 1st and 2nd papers. Rapid concept reviews, past board questions and full model tests consolidate everything before the board exam.",
+    teacherName: "Dr. Anika Rahman",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Senior Biology Faculty",
+    duration: "Rapid Revision",
+    fee: 4000,
+    discountFee: 3500,
+    features: [
+      "Rapid concept revision of all chapters",
+      "Past board question practice",
+      "Full model tests with solutions",
+      "Common mistakes & exam tips",
+    ],
+    overviewTitle: "Revision Papers",
+    overview: [
+      "Biology 1st Paper — Complete Revision",
+      "Biology 2nd Paper — Complete Revision",
+      "Past Board Question Practice",
+      "Model Test Papers",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: true,
+  },
+  // ── HSC 26 — Admission ───────────────────────────────────────────────
   {
     slug: "medical-admission-26",
-    name: "Medical Admission Preparation",
+    name: "Special Medical Admission Course",
+    category: "Admission",
     batchId: "hsc-26",
-    type: "Admission",
-    fee: 8500,
     image: "/courses/medical-admission.svg",
-    duration: "Full syllabus",
+    shortDescription:
+      "Focused medical admission preparation for the HSC 26 batch — combined syllabus training with exam strategy.",
     description:
-      "Targeted preparation for medical admission — biology, chemistry, physics, and math combined with exam strategy.",
+      "A special medical admission preparation course for the HSC 26 batch. Biology, Chemistry, Physics and Higher Mathematics are combined into one admission-focused program with chapter-wise classes, MCQ practice and full model tests — plus admission exam strategy and analysis.",
+    teacherName: "Prof. Shafiqul Islam",
+    teacherPhoto: "/avatars/teacher.svg",
+    designation: "Medical Admission Program Lead",
+    duration: "Full Syllabus",
+    fee: 8500,
+    discountFee: 7500,
+    features: [
+      "Combined Biology, Chemistry, Physics & Math",
+      "Admission-focused concept classes",
+      "Chapter-wise & full model tests",
+      "MCQ & written practice",
+      "Exam strategy & result analysis",
+    ],
+    overviewTitle: "Subjects",
+    overview: [
+      "Biology (Botany & Zoology)",
+      "Chemistry",
+      "Physics",
+      "Higher Mathematics",
+      "Admission Model Tests",
+    ],
+    status: "published",
+    availability: "available",
+    couponEnabled: true,
   },
 ];
 
@@ -156,9 +478,26 @@ export function getCourse(slug: string): Course | undefined {
   return courses.find((course) => course.slug === slug);
 }
 
+export function getPublicCourses(): Course[] {
+  return courses.filter(
+    (course) =>
+      course.status === "published" && course.availability === "available",
+  );
+}
+
 export function getFeaturedCourses(): Course[] {
   const latestBatch = batches[0];
-  return courses.filter((course) => course.batchId === latestBatch.id);
+  return getPublicCourses().filter(
+    (course) => course.batchId === latestBatch.id,
+  );
+}
+
+export function getPayableFee(course: Course): number {
+  return course.discountFee != null ? course.discountFee : course.fee;
+}
+
+export function hasDiscount(course: Course): boolean {
+  return course.discountFee != null && course.discountFee < course.fee;
 }
 
 export function formatFee(fee: number): string {

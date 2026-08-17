@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { Course } from "./courses";
+import { getPayableFee } from "./courses";
 
 export type CourseKind = "free" | "paid";
 
@@ -89,9 +90,9 @@ export async function enrollInCourse(
     studentUid: uid,
     courseId: course.slug,
     courseName: course.name,
-    courseType: course.type,
+    courseType: course.category,
     courseKind: getCourseKind(course),
-    fee: course.fee,
+    fee: getPayableFee(course),
     enrollmentStatus: getCourseKind(course) === "free" ? "active" : "pending",
     enrollmentDate: serverTimestamp(),
     updatedAt: serverTimestamp(),

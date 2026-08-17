@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BatchCourseList from "@/components/BatchCourseList";
-import { batches, courses } from "@/lib/courses";
+import { batches, getPublicCourses } from "@/lib/courses";
 
 export const metadata: Metadata = {
   title: "Academic Courses",
   description:
-    "Browse MediSpark HSC academic courses by batch — subjects with board exam-focused preparation.",
+    "Browse MediSpark HSC academic courses by batch — Botany, Zoology and Biology Revision with board exam-focused preparation.",
 };
 
 export default function AcademicCoursesPage() {
-  const academicCourses = courses.filter(
-    (course) => course.type === "Academic",
+  const academicCourses = getPublicCourses().filter(
+    (course) => course.category === "Academic",
   );
 
   return (

@@ -22,16 +22,17 @@ service cloud.firestore {
     // Clients may only create canonical registry documents; they cannot
     // overwrite or tamper with existing ones.
     function canonicalKind(courseId) {
-      return courseId == "biology"
-          || courseId == "chemistry"
-          || courseId == "physics"
-          || courseId == "higher-mathematics"
-          || courseId == "english"
+      return courseId == "botany"
+          || courseId == "zoology"
+          || courseId == "biology-revision"
           || courseId == "medical-admission"
-          || courseId == "biology-27"
-          || courseId == "physics-27"
+          || courseId == "botany-27"
+          || courseId == "zoology-27"
+          || courseId == "biology-revision-27"
           || courseId == "medical-admission-27"
-          || courseId == "physics-26"
+          || courseId == "botany-26"
+          || courseId == "zoology-26"
+          || courseId == "biology-revision-26"
           || courseId == "medical-admission-26" ? "paid" : null;
     }
     match /courses/{courseId} {

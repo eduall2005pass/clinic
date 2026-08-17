@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { getCourse } from "@/lib/courses";
+import { getCourse, getPayableFee } from "@/lib/courses";
 import type { Enrollment } from "@/lib/enrollments";
 
 const statusStyles: Record<string, string> = {
@@ -57,7 +57,9 @@ function EnrollmentCard({ enrollment }: { enrollment: Enrollment }) {
             Fee
           </p>
           <p className="mt-0.5 font-bold text-primary-500">
-            {course ? `৳ ${course.fee.toLocaleString("en-IN")}` : "—"}
+            {course
+              ? `৳ ${getPayableFee(course).toLocaleString("en-IN")}`
+              : "—"}
           </p>
         </div>
         {enrollment.enrollmentDate ? (
