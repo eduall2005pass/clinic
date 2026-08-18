@@ -30,9 +30,9 @@ export const qaSubjects: QaSubject[] = [
   { id: "biology", name: "Biology", order: 1 },
   { id: "chemistry", name: "Chemistry", order: 2 },
   { id: "physics", name: "Physics", order: 3 },
-  { id: "higher-mathematics", name: "Higher Mathematics", order: 4 },
-  { id: "english", name: "English", order: 5 },
-  { id: "medical-admission", name: "Medical Admission", order: 6 },
+  { id: "english", name: "English", order: 4 },
+  { id: "gk", name: "GK", order: 5 },
+  { id: "guideline", name: "Guideline", order: 6 },
 ];
 
 export const qaQuestions: QaQuestion[] = [
@@ -168,3 +168,44 @@ export function getSubject(subjectId: string): QaSubject | undefined {
 export function getQuestionsBySubject(subjectId: string): QaQuestion[] {
   return qaQuestions.filter((question) => question.subjectId === subjectId);
 }
+
+export type QaGuidelineSection = {
+  title: string;
+  items: string[];
+};
+
+export const qaGuideline: QaGuidelineSection[] = [
+  {
+    title: "How to Ask a Question",
+    items: [
+      "Choose the correct subject for your question so the right teachers can answer it.",
+      "Use the Ask a Question button, pick a subject and write your question clearly.",
+      "You can attach a picture or an audio recording when it helps explain your question.",
+    ],
+  },
+  {
+    title: "Writing a Good Question",
+    items: [
+      "Be specific — mention the chapter, topic or exam (HSC, admission) you are asking about.",
+      "Write the full question in one clear paragraph instead of many short messages.",
+      "Type your question text whenever possible; avoid blurry screenshots.",
+    ],
+  },
+  {
+    title: "How Answers Work",
+    items: [
+      "Teachers answer questions in their own time; answered questions are marked Answered.",
+      "Unanswered questions stay open until a teacher provides an answer.",
+      "You will be notified once your question receives an answer.",
+    ],
+  },
+  {
+    title: "Community Rules",
+    items: [
+      "One question per submission — keep each question focused on a single topic.",
+      "Be respectful to teachers and fellow students; no abusive or off-topic content.",
+      "Do not share personal contact information or promote outside services.",
+      "Questions that violate the rules may be removed by moderators.",
+    ],
+  },
+];

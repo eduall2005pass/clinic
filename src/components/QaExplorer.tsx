@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 import type { QaQuestion, QaSubject } from "@/lib/qa";
 import { getSubject, getQuestionsBySubject } from "@/lib/qa";
 import QaSubjectPicker from "@/components/QaSubjectPicker";
+import type { SubjectStats } from "@/components/QaSubjectPicker";
 import QaQuestionItem from "@/components/QaQuestionItem";
 import QaAskForm from "@/components/QaAskForm";
+import QaGuideline from "@/components/QaGuideline";
 
 type NewQuestion = Omit<QaQuestion, "id" | "createdAt" | "status">;
 
@@ -23,11 +25,21 @@ export default function QaExplorer({
   const [localQuestions, setLocalQuestions] =
     useState<QaQuestion[]>(questions);
 
-  const questionCounts = useMemo(
+  const subjectStats = useMemo(
     () =>
-      subjects.reduce<Record<string, number>>((counts, subject) => {
-        counts[subject.id] = getQuestionsBySubject(subject.id).length;
-        return counts;
+      subjects.reduce<Record<string, SubjectStats>>((stats, subject) => {
+        if (subject.id === "guideline") {
+          stats[subject.id] = { total: null, answered: null };
+          return stats;
+        }
+        const subjectQuestions = getQuestionsBySubject(subject.id);
+        stats[subject.id] = {
+          total: subjectQuestions.length,
+          answered: subjectQuestions.filter(
+            (question) => question.status === "answered"
+          ).length,
+        };
+        return stats;
       }, {}),
     [subjects]
   );
@@ -35,6 +47,8 @@ export default function QaExplorer({
   const selectedSubject = selectedSubjectId
     ? getSubject(selectedSubjectId)
     : undefined;
+
+  const isGuideline = selectedSubjectId === "guideline";
 
   const visibleQuestions = selectedSubjectId
     ? localQuestions.filter(
@@ -109,7 +123,9 @@ export default function QaExplorer({
       {askOpen && (
         <div className="mb-10">
           <QaAskForm
-            subjects={subjects}
+            subjects={subjects.filter(
+              (subject) => subject.id !== "guideline"
+            )}
             initialSubjectId={selectedSubjectId ?? undefined}
             onSubmit={handleAskSubmit}
             onClose={closeAsk}
@@ -120,12 +136,14 @@ export default function QaExplorer({
       {!selectedSubject ? (
         <QaSubjectPicker
           subjects={subjects}
-          questionCounts={questionCounts}
+          stats={subjectStats}
           onSelect={(subjectId) => {
             setSelectedSubjectId(subjectId);
             setAskOpen(false);
           }}
         />
+      ) : isGuideline ? (
+        <QaGuideline />
       ) : visibleQuestions.length > 0 ? (
         <div className="flex flex-col gap-6">
           {visibleQuestions.map((question) => (
