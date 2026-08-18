@@ -10,6 +10,16 @@ function getServiceAccount() {
   if (rawJson && rawJson.length > 0) {
     return JSON.parse(rawJson) as Record<string, string>;
   }
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (projectId && clientEmail && privateKey) {
+    return {
+      project_id: projectId,
+      client_email: clientEmail,
+      private_key: privateKey.replace(/\\n/g, "\n"),
+    };
+  }
   if (serviceAccountPath.length > 0) {
     try {
       return JSON.parse(
