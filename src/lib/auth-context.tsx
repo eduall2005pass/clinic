@@ -10,8 +10,9 @@ import {
   type ReactNode,
 } from "react";
 import {
+  getRedirectResult,
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
   signOut,
   type User,
 } from "firebase/auth";
@@ -134,15 +135,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) {
       throw new Error("Firebase authentication is not configured.");
     }
-    const result = await signInWithPopup(auth, googleProvider);
-    setUser(result.user);
-    const [studentProfile, studentEnrollments] = await Promise.all([
-      fetchProfile(result.user),
-      fetchEnrollments(result.user),
-    ]);
-    setProfile(studentProfile);
-    setEnrollments(studentEnrollments);
-    return studentProfile;
+    // Handles the result of a completed redirect sign-in.
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      setUser(result.user);
+      const [studentProfile, studentEnrollments] = await Promise.all([
+        fetchProfile(result.user),
+        fetchEnrollments(result.user),
+      ]);
+      setProfile(studentProfile);
+      setEnrollments(studentEnrollments);
+      return studentProfile;
+    }
+    // Redirect flow (no popups) — works reliably on mobile browsers,
+    // incognito and in-app browsers where popups are often blocked.
+    await signInWithRedirect(auth, googleProvider);
+    return null;
   }, []);
 
   const logout = useCallback(async () => {

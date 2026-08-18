@@ -55,12 +55,13 @@ export default function LoginClient() {
     setError(null);
     try {
       const studentProfile = await signInWithGoogle();
-      router.replace(studentProfile ? next || "/dashboard" : registerHref);
+      if (studentProfile) {
+        router.replace(studentProfile ? next || "/dashboard" : registerHref);
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Google sign-in failed. Please try again.",
       );
-    } finally {
       setSigningIn(false);
     }
   };
