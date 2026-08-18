@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { db, storage } from "@/lib/firebase";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { updateStudentProfile } from "@/lib/student-id";
 
 const inputClass =
   "w-full rounded-xl border border-ink/15 bg-dark-950 px-4 py-3 text-sm text-heading placeholder-neutral-500 outline-none transition focus:border-primary-500/70 focus:ring-2 focus:ring-primary-500/20";
@@ -83,7 +81,7 @@ export default function StudentProfileView() {
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !db) return;
+    if (!user) return;
     const trimmedName = fullName.trim();
     const trimmedInstitution = institution.trim();
     if (!trimmedName || !trimmedInstitution) {
@@ -94,26 +92,19 @@ export default function StudentProfileView() {
     setSaving(true);
     setError(null);
     try {
-      let finalPictureUrl = pictureUrl;
-      if (pictureFile) {
-        if (!storage) {
-          throw new Error("Firebase Storage is not configured.");
-        }
-        const extension = pictureFile.name.split(".").pop() || "jpg";
-        const fileRef = ref(
-          storage,
-          `student-profiles/${user.uid}/profile-picture-${Date.now()}.${extension}`,
-        );
-        await uploadBytes(fileRef, pictureFile);
-        finalPictureUrl = await getDownloadURL(fileRef);
-      }
-
-      await updateDoc(doc(db, "students", user.uid), {
-        fullName: trimmedName,
-        institution: trimmedInstitution,
-        profilePictureUrl: finalPictureUrl,
-        updatedAt: serverTimestamp(),
-      });
+      await updateStudentProfile(
+        user,
+        {
+          fullName: trimmedName,
+          gender: profile.gender,
+          institution: trimmedInstitution,
+          hscBatch: profile.hscBatch,
+          contactNumber: profile.contactNumber,
+          email: profile.email,
+          facebookUrl: profile.facebookUrl,
+        },
+        pictureFile,
+      );
 
       await refreshProfile();
       setPictureFile(null);

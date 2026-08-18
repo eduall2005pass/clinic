@@ -3,7 +3,7 @@ import {
   fetchCustomBanners,
   removeCustomBanner,
   saveCustomBanner,
-} from "@/lib/banner-firebase";
+} from "@/lib/banner-store";
 import { parseImageDimensions } from "@/lib/image-dimensions";
 import {
   ALLOWED_BANNER_EXTENSIONS,

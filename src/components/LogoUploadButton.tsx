@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useLogo } from "@/components/LogoProvider";
-import { saveActiveLogo } from "@/lib/logo-firebase";
+import { saveActiveLogo } from "@/lib/logo-store";
 import { MAX_LOGO_FILE_SIZE } from "@/lib/logo";
 import { isFirebaseConfigured } from "@/lib/firebase";
 

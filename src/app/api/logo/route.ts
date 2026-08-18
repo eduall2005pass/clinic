@@ -3,7 +3,7 @@ import {
   fetchActiveLogo,
   removeActiveLogo,
   saveActiveLogo,
-} from "@/lib/logo-firebase";
+} from "@/lib/logo-store";
 import { parseImageDimensions } from "@/lib/image-dimensions";
 import { ALLOWED_LOGO_EXTENSIONS, MAX_LOGO_FILE_SIZE } from "@/lib/logo";
 

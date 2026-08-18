@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { bannerSlides } from "@/lib/banners";
-import type { CustomBanner } from "@/lib/banner-firebase";
+import type { CustomBanner } from "@/lib/banner-store";
 
 const AUTO_SLIDE_MS = 3000;
 const SWIPE_THRESHOLD_PX = 40;

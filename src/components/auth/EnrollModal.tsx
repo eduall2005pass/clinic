@@ -122,7 +122,7 @@ export default function EnrollModal({
     setSubmitting(true);
     setError(null);
     try {
-      await enrollInCourse(course, user.uid);
+      await enrollInCourse(course, user);
       await refreshEnrollments();
       setCompleted(true);
     } catch (err) {

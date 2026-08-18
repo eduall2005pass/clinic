@@ -10,7 +10,7 @@ import {
 import type { ReactNode } from "react";
 import type { LogoInfo } from "@/lib/logo";
 import { DEFAULT_LOGO } from "@/lib/logo";
-import { fetchActiveLogo } from "@/lib/logo-firebase";
+import { fetchActiveLogo } from "@/lib/logo-store";
 
 type LogoContextValue = {
   logo: LogoInfo;

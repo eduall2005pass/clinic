@@ -52,14 +52,14 @@ service cloud.firestore {
         && enrollmentId.split('_')[0] == request.auth.uid;
     }
     function validCreate(enrollmentId) {
-      if (!isOwnEnrollment(enrollmentId)) return false;
-      if (request.resource.data.studentUid != request.auth.uid) return false;
-      if (request.resource.data.courseId != enrollmentId.split('_').slice(1).join('_')) return false;
-      let kind = request.resource.data.courseKind;
-      let status = request.resource.data.enrollmentStatus;
-      return kind == canonicalKind(request.resource.data.courseId)
-        && ((kind == "free" && status == "active")
-            || (kind == "paid" && status == "pending"));
+      return isOwnEnrollment(enrollmentId)
+        && request.resource.data.studentUid == request.auth.uid
+        && request.resource.data.courseId == enrollmentId.split('_').slice(1).join('_')
+        && request.resource.data.courseKind == canonicalKind(request.resource.data.courseId)
+        && ((request.resource.data.courseKind == "free"
+              && request.resource.data.enrollmentStatus == "active")
+            || (request.resource.data.courseKind == "paid"
+              && request.resource.data.enrollmentStatus == "pending"));
     }
     function validTransition(from, to, kind) {
       return (from == "active" && to == "cancelled")
@@ -86,9 +86,13 @@ service cloud.firestore {
 
     // Enrolled-course content: classes, materials, and course exams may
     // only be read by students with an ACTIVE enrollment for that course.
+    // Enrollment document ID format: {uid}_{courseId}.
+    function enrollmentDocId(uid, courseId) {
+      return uid + "_" + courseId;
+    }
     function isEnrolled(courseId) {
       return isSignedIn()
-        && get(/databases/$(database)/documents/enrollments/$(request.auth.uid)_$(courseId)).data.enrollmentStatus == "active";
+        && get(/databases/$(database)/documents/enrollments/$(enrollmentDocId(request.auth.uid, courseId))).data.enrollmentStatus == "active";
     }
     match /courses/{courseId} {
       match /classes/{classId} { allow read: if isEnrolled(courseId); allow write: if false; }
@@ -99,7 +103,7 @@ service cloud.firestore {
     // Q&A content requires an ACTIVE PAID course enrollment.
     function isEnrolledPaid(courseId) {
       return isEnrolled(courseId)
-        && get(/databases/$(database)/documents/enrollments/$(request.auth.uid)_$(courseId)).data.courseKind == "paid";
+        && get(/databases/$(database)/documents/enrollments/$(enrollmentDocId(request.auth.uid, courseId))).data.courseKind == "paid";
     }
     match /qa/{document} {
       allow read: if isSignedIn()
@@ -125,16 +129,30 @@ service cloud.firestore {
     // Hero banner slider. Readable by everyone (displayed on the homepage);
     // the "active" document is replaced whenever a banner image is uploaded
     // from the website. Images live in Firebase Storage — only their URLs and
-    // metadata are stored here.
+    // metadata are stored here. Each slide is validated by index (the rules
+    // language used here does not support list lambdas).
+    function validSlide(slide) {
+      return slide is map
+        && slide.id is string
+        && slide.url is string
+        && slide.url.startsWith("https://firebasestorage.googleapis.com/")
+        && slide.fileName is string
+        && slide.href is string;
+    }
     match /banners/{bannerId} {
       allow read: if true;
       allow write: if bannerId == "active"
         && request.resource.data.slides is list
-        && request.resource.data.slides.all(slide => slide.id is string
-            && slide.url is string
-            && slide.url.startsWith("https://firebasestorage.googleapis.com/")
-            && slide.fileName is string
-            && slide.href is string);
+        && request.resource.data.slides.size() >= 1
+        && request.resource.data.slides.size() <= 8
+        && (request.resource.data.slides.size() < 1 || validSlide(request.resource.data.slides[0]))
+        && (request.resource.data.slides.size() < 2 || validSlide(request.resource.data.slides[1]))
+        && (request.resource.data.slides.size() < 3 || validSlide(request.resource.data.slides[2]))
+        && (request.resource.data.slides.size() < 4 || validSlide(request.resource.data.slides[3]))
+        && (request.resource.data.slides.size() < 5 || validSlide(request.resource.data.slides[4]))
+        && (request.resource.data.slides.size() < 6 || validSlide(request.resource.data.slides[5]))
+        && (request.resource.data.slides.size() < 7 || validSlide(request.resource.data.slides[6]))
+        && (request.resource.data.slides.size() < 8 || validSlide(request.resource.data.slides[7]));
     }
   }
 }

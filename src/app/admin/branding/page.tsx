@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useLogo } from "@/components/LogoProvider";
 import { MAX_LOGO_FILE_SIZE } from "@/lib/logo";
 import { bannerSlides, MAX_BANNER_FILE_SIZE } from "@/lib/banners";
-import type { CustomBanner } from "@/lib/banner-firebase";
+import type { CustomBanner } from "@/lib/banner-store";
 
 type Notice = { kind: "success" | "error"; text: string };
 

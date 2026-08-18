@@ -1,9 +1,4 @@
-import {
-  doc,
-  runTransaction,
-  serverTimestamp,
-  type Firestore,
-} from "firebase/firestore";
+import type { User } from "firebase/auth";
 import type { StudentProfile } from "./auth-context";
 
 const ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -21,41 +16,56 @@ export type NewStudentData = Omit<
   "uid" | "studentId" | "provider" | "createdAt" | "updatedAt"
 >;
 
-export async function saveProfileWithUniqueStudentId(
-  db: Firestore,
-  uid: string,
-  data: NewStudentData,
+type ProfileEditableFields = Omit<NewStudentData, "profilePictureUrl">;
+
+async function profileRequest(
+  user: User,
+  url: string,
+  method: "POST" | "PATCH",
+  data: ProfileEditableFields,
+  pictureFile: File | null | undefined,
 ): Promise<StudentProfile> {
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const studentId = randomStudentId();
-    try {
-      const saved = await runTransaction(db, async (transaction) => {
-        const idRef = doc(db, "studentIds", studentId);
-        const existing = await transaction.get(idRef);
-        if (existing.exists()) {
-          throw new Error("STUDENT_ID_TAKEN");
-        }
-        transaction.set(idRef, { uid });
-        const profile = {
-          ...data,
-          uid,
-          studentId,
-          provider: "google",
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-        transaction.set(doc(db, "students", uid), profile);
-        return profile;
-      });
-      return saved as StudentProfile;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message !== "STUDENT_ID_TAKEN") {
-        throw error;
-      }
-    }
+  const token = await user.getIdToken();
+  const formData = new FormData();
+  formData.append("fullName", data.fullName);
+  formData.append("gender", data.gender);
+  formData.append("institution", data.institution);
+  formData.append("hscBatch", data.hscBatch);
+  formData.append("contactNumber", data.contactNumber);
+  formData.append("email", data.email);
+  formData.append("facebookUrl", data.facebookUrl);
+  if (pictureFile) {
+    formData.append("picture", pictureFile);
   }
-  throw new Error(
-    "Could not generate a unique Student ID. Please try again.",
-  );
+  const response = await fetch(url, {
+    method,
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const body = (await response.json().catch(() => null)) as {
+    profile?: StudentProfile;
+    error?: string;
+  } | null;
+  if (!response.ok || !body?.profile) {
+    throw new Error(
+      body?.error ?? "Could not save your profile. Please try again.",
+    );
+  }
+  return body.profile;
+}
+
+export async function saveProfileWithUniqueStudentId(
+  user: User,
+  data: NewStudentData,
+  pictureFile?: File | null,
+): Promise<StudentProfile> {
+  return profileRequest(user, "/api/me", "POST", data, pictureFile);
+}
+
+export async function updateStudentProfile(
+  user: User,
+  data: ProfileEditableFields,
+  pictureFile?: File | null,
+): Promise<StudentProfile> {
+  return profileRequest(user, "/api/me", "PATCH", data, pictureFile);
 }

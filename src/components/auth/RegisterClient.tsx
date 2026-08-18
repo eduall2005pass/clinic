@@ -6,8 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 import { saveProfileWithUniqueStudentId } from "@/lib/student-id";
-import { db, storage } from "@/lib/firebase";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 const GENDERS = ["Male", "Female", "Other"];
 
@@ -78,7 +76,7 @@ export default function RegisterClient() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !db) return;
+    if (!user) return;
 
     const trimmedName = fullName.trim();
     const trimmedInstitution = institution.trim();
@@ -93,30 +91,20 @@ export default function RegisterClient() {
     setSubmitting(true);
     setError(null);
     try {
-      let finalPictureUrl = pictureUrl;
-      if (pictureFile) {
-        if (!storage) {
-          throw new Error("Firebase Storage is not configured.");
-        }
-        const extension = pictureFile.name.split(".").pop() || "jpg";
-        const fileRef = ref(
-          storage,
-          `student-profiles/${user.uid}/profile-picture-${Date.now()}.${extension}`,
-        );
-        await uploadBytes(fileRef, pictureFile);
-        finalPictureUrl = await getDownloadURL(fileRef);
-      }
-
-      await saveProfileWithUniqueStudentId(db, user.uid, {
-        fullName: trimmedName,
-        gender,
-        institution: trimmedInstitution,
-        hscBatch,
-        contactNumber: trimmedContact,
-        email: user.email ?? "",
-        facebookUrl: trimmedFacebook,
-        profilePictureUrl: finalPictureUrl,
-      });
+      await saveProfileWithUniqueStudentId(
+        user,
+        {
+          fullName: trimmedName,
+          gender,
+          institution: trimmedInstitution,
+          hscBatch,
+          contactNumber: trimmedContact,
+          email: user.email ?? "",
+          facebookUrl: trimmedFacebook,
+          profilePictureUrl: "",
+        },
+        pictureFile,
+      );
 
       router.replace(next || "/dashboard");
     } catch (err) {

@@ -15,8 +15,7 @@ import {
   signOut,
   type User,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db, googleProvider, isFirebaseConfigured } from "./firebase";
+import { auth, googleProvider, isFirebaseConfigured } from "./firebase";
 import {
   fetchEnrollments,
   isActiveEnrollment,
@@ -61,10 +60,19 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function fetchProfile(uid: string): Promise<StudentProfile | null> {
-  if (!db) return null;
-  const snapshot = await getDoc(doc(db, "students", uid));
-  return snapshot.exists() ? (snapshot.data() as StudentProfile) : null;
+async function fetchProfile(user: User): Promise<StudentProfile | null> {
+  try {
+    const token = await user.getIdToken();
+    const response = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { profile?: StudentProfile | null };
+    return data.profile ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -92,8 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setProfileLoading(true);
       const [studentProfile, studentEnrollments] = await Promise.all([
-        fetchProfile(firebaseUser.uid),
-        fetchEnrollments(firebaseUser.uid),
+        fetchProfile(firebaseUser),
+        fetchEnrollments(firebaseUser),
       ]);
       setProfile(studentProfile);
       setEnrollments(studentEnrollments);
@@ -108,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     setProfileLoading(true);
-    const studentProfile = await fetchProfile(user.uid);
+    const studentProfile = await fetchProfile(user);
     setProfile(studentProfile);
     setProfileLoading(false);
   }, [user]);
@@ -118,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setEnrollments([]);
       return;
     }
-    const studentEnrollments = await fetchEnrollments(user.uid);
+    const studentEnrollments = await fetchEnrollments(user);
     setEnrollments(studentEnrollments);
   }, [user]);
 
@@ -129,8 +137,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await signInWithPopup(auth, googleProvider);
     setUser(result.user);
     const [studentProfile, studentEnrollments] = await Promise.all([
-      fetchProfile(result.user.uid),
-      fetchEnrollments(result.user.uid),
+      fetchProfile(result.user),
+      fetchEnrollments(result.user),
     ]);
     setProfile(studentProfile);
     setEnrollments(studentEnrollments);

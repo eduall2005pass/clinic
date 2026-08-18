@@ -1,12 +1,4 @@
-import { db, storage } from "@/lib/firebase";
-import {
-  deleteDoc,
-  doc,
-  getDoc,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
-import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { supabaseServer, storagePublicUrl } from "@/lib/supabase";
 
 export const BANNER_COLLECTION = "banners";
 export const BANNER_DOCUMENT_ID = "active";
@@ -21,28 +13,25 @@ export type CustomBanner = {
   updatedAt: number;
 };
 
-function bannerDocumentRef() {
-  return doc(db!, BANNER_COLLECTION, BANNER_DOCUMENT_ID);
-}
-
 function parseUpdatedAt(raw: unknown): number {
   if (typeof raw === "number") return raw;
-  if (
-    typeof raw === "object" &&
-    raw !== null &&
-    typeof (raw as { toMillis?: unknown }).toMillis === "function"
-  ) {
-    return (raw as { toMillis: () => number }).toMillis();
+  if (typeof raw === "string") {
+    const parsed = Date.parse(raw);
+    return Number.isNaN(parsed) ? 0 : parsed;
   }
   return 0;
 }
 
 export async function fetchCustomBanners(): Promise<CustomBanner[] | null> {
-  if (!db) return null;
+  if (!supabaseServer) return null;
   try {
-    const snapshot = await getDoc(bannerDocumentRef());
-    if (!snapshot.exists()) return null;
-    const rawSlides: unknown = snapshot.data().slides;
+    const { data, error } = await supabaseServer
+      .from("banners")
+      .select("slides")
+      .eq("id", BANNER_DOCUMENT_ID)
+      .maybeSingle();
+    if (error || !data) return null;
+    const rawSlides: unknown = data.slides;
     if (!Array.isArray(rawSlides)) return null;
     const slides: CustomBanner[] = [];
     for (const raw of rawSlides) {
@@ -88,16 +77,19 @@ export async function saveCustomBanner(input: {
   width: number;
   height: number;
 }): Promise<CustomBanner[]> {
-  if (!db || !storage) {
-    throw new Error("Firebase is not configured.");
+  if (!supabaseServer) {
+    throw new Error("Supabase is not configured.");
   }
   const extension = input.file.name.includes(".")
     ? `.${input.file.name.split(".").pop()?.toLowerCase() ?? ""}`
     : ".png";
   const storagePath = `${BANNER_STORAGE_DIR}/${input.id}-${Date.now()}${extension}`;
-  const fileRef = ref(storage, storagePath);
-  await uploadBytes(fileRef, input.file);
-  const url = await getDownloadURL(fileRef);
+  const fileRef = supabaseServer.storage.from(BANNER_STORAGE_DIR);
+  const { error: uploadError } = await fileRef.upload(storagePath, input.file);
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+  const url = storagePublicUrl(BANNER_STORAGE_DIR, storagePath);
 
   const previous = await fetchCustomBanners();
   const previousSlide = previous?.find((slide) => slide.id === input.id);
@@ -114,14 +106,18 @@ export async function saveCustomBanner(input: {
     },
   ];
 
-  await setDoc(bannerDocumentRef(), {
+  const { error: dbError } = await supabaseServer.from("banners").upsert({
+    id: BANNER_DOCUMENT_ID,
     slides: next,
-    updatedAt: serverTimestamp(),
+    updated_at: new Date().toISOString(),
   });
+  if (dbError) {
+    throw new Error(dbError.message);
+  }
 
   if (previousSlide?.storagePath) {
     try {
-      await deleteObject(ref(storage, previousSlide.storagePath));
+      await fileRef.remove([previousSlide.storagePath]);
     } catch {
       // Best-effort cleanup of the previous file.
     }
@@ -131,23 +127,31 @@ export async function saveCustomBanner(input: {
 }
 
 export async function removeCustomBanner(id: string): Promise<CustomBanner[]> {
-  if (!db || !storage) return [];
+  if (!supabaseServer) return [];
   try {
     const previous = await fetchCustomBanners();
     if (!previous) return [];
     const removed = previous.find((slide) => slide.id === id);
     const next = previous.filter((slide) => slide.id !== id);
     if (next.length === 0) {
-      await deleteDoc(bannerDocumentRef());
+      const { error } = await supabaseServer
+        .from("banners")
+        .delete()
+        .eq("id", BANNER_DOCUMENT_ID);
+      if (error) throw error;
     } else {
-      await setDoc(bannerDocumentRef(), {
+      const { error } = await supabaseServer.from("banners").upsert({
+        id: BANNER_DOCUMENT_ID,
         slides: next,
-        updatedAt: serverTimestamp(),
+        updated_at: new Date().toISOString(),
       });
+      if (error) throw error;
     }
     if (removed?.storagePath) {
       try {
-        await deleteObject(ref(storage, removed.storagePath));
+        await supabaseServer.storage
+          .from(BANNER_STORAGE_DIR)
+          .remove([removed.storagePath]);
       } catch {
         // Best-effort cleanup of the removed file.
       }

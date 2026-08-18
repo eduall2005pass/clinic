@@ -1,94 +1,135 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+import { supabaseServer, storagePublicUrl } from "@/lib/supabase";
 import type { LogoInfo } from "@/lib/logo";
-import {
-  ALLOWED_LOGO_EXTENSIONS,
-  MAX_LOGO_FILE_SIZE,
-} from "@/lib/logo";
-import { parseImageDimensions } from "@/lib/image-dimensions";
+import { DEFAULT_LOGO } from "@/lib/logo";
 
-const LOGO_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "logo");
-const LOGO_METADATA_PATH = path.join(LOGO_UPLOAD_DIR, "logo.json");
-const ACTIVE_FILE_PREFIX = "active-logo-";
-const LEGACY_FILE_PREFIX = "active-logo";
+export const LOGO_COLLECTION = "logos";
+export const LOGO_DOCUMENT_ID = "active";
+export const LOGO_STORAGE_DIR = "website-logos";
 
-export async function getActiveLogo(): Promise<LogoInfo | null> {
+/**
+ * Server-friendly alias used by server components (e.g. layout.tsx)
+ * to resolve the active logo before rendering.
+ */
+export const getActiveLogo = fetchActiveLogo;
+
+export async function fetchActiveLogo(): Promise<LogoInfo | null> {
+  if (!supabaseServer) return null;
   try {
-    const metadata = await readLogoMetadata();
-    if (!metadata) return null;
-    await fs.access(path.join(LOGO_UPLOAD_DIR, metadata.fileName));
-    return metadata;
+    const { data, error } = await supabaseServer
+      .from("logos")
+      .select("url, file_name, width, height, updated_at")
+      .eq("id", LOGO_DOCUMENT_ID)
+      .maybeSingle();
+    if (error || !data) return null;
+    const rawUpdatedAt: unknown = data.updated_at;
+    const updatedAt =
+      typeof rawUpdatedAt === "number"
+        ? rawUpdatedAt
+        : typeof rawUpdatedAt === "string"
+          ? Date.parse(rawUpdatedAt)
+          : 0;
+    return {
+      fileName: data.file_name,
+      url: data.url,
+      width:
+        typeof data.width === "number" && data.width > 0
+          ? data.width
+          : DEFAULT_LOGO.width,
+      height:
+        typeof data.height === "number" && data.height > 0
+          ? data.height
+          : DEFAULT_LOGO.height,
+      updatedAt: Number.isNaN(updatedAt) ? 0 : updatedAt,
+    };
   } catch {
     return null;
   }
 }
 
-export async function saveActiveLogo(file: File): Promise<LogoInfo> {
-  const extension = path.extname(file.name).toLowerCase();
-  if (!ALLOWED_LOGO_EXTENSIONS.includes(extension as never)) {
-    throw new Error("Unsupported file type. Use PNG, JPG, WebP, GIF or SVG.");
+export async function saveActiveLogo(
+  file: File,
+  width: number,
+  height: number,
+): Promise<LogoInfo> {
+  if (!supabaseServer) {
+    throw new Error("Supabase is not configured.");
   }
-  if (file.size > MAX_LOGO_FILE_SIZE) {
-    throw new Error("Logo file must be 5 MB or smaller.");
+  const extension = file.name.includes(".")
+    ? `.${file.name.split(".").pop()?.toLowerCase() ?? ""}`
+    : ".png";
+  const storagePath = `${LOGO_STORAGE_DIR}/active-logo-${Date.now()}${extension}`;
+  const bucket = supabaseServer.storage.from(LOGO_STORAGE_DIR);
+  const { error: uploadError } = await bucket.upload(storagePath, file);
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+  const url = storagePublicUrl(LOGO_STORAGE_DIR, storagePath);
+
+  let previousStoragePath: string | null = null;
+  try {
+    const { data } = await supabaseServer
+      .from("logos")
+      .select("storage_path")
+      .eq("id", LOGO_DOCUMENT_ID)
+      .maybeSingle();
+    const previousPath: unknown = data?.storage_path;
+    if (
+      typeof previousPath === "string" &&
+      previousPath.startsWith(`${LOGO_STORAGE_DIR}/`)
+    ) {
+      previousStoragePath = previousPath;
+    }
+  } catch {
+    // Keep going — cleaning up the old file is best-effort only.
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const { width, height } = parseImageDimensions(
-    new Uint8Array(buffer),
-    extension,
-  );
-
-  await fs.mkdir(LOGO_UPLOAD_DIR, { recursive: true });
-  await removeActiveLogoFiles();
-
-  const fileName = `${ACTIVE_FILE_PREFIX}${Date.now()}${extension}`;
-  await fs.writeFile(path.join(LOGO_UPLOAD_DIR, fileName), buffer);
-
-  const logo: LogoInfo = {
-    fileName,
-    url: `/uploads/logo/${fileName}`,
+  const { error: dbError } = await supabaseServer.from("logos").upsert({
+    id: LOGO_DOCUMENT_ID,
+    url,
+    file_name: file.name,
     width,
     height,
-    updatedAt: Date.now(),
-  };
-  await fs.writeFile(LOGO_METADATA_PATH, JSON.stringify(logo));
-  return logo;
+    storage_path: storagePath,
+    updated_at: new Date().toISOString(),
+  });
+  if (dbError) {
+    throw new Error(dbError.message);
+  }
+
+  if (previousStoragePath) {
+    try {
+      await bucket.remove([previousStoragePath]);
+    } catch {
+      // Best-effort cleanup of the previous file.
+    }
+  }
+
+  return { fileName: file.name, url, width, height, updatedAt: Date.now() };
 }
 
 export async function removeActiveLogo(): Promise<void> {
-  await removeActiveLogoFiles();
-  await fs.rm(LOGO_METADATA_PATH, { force: true });
-}
-
-async function readLogoMetadata(): Promise<LogoInfo | null> {
+  if (!supabaseServer) return;
   try {
-    const raw = await fs.readFile(LOGO_METADATA_PATH, "utf8");
-    const parsed = JSON.parse(raw) as LogoInfo;
-    if (
-      !parsed.fileName ||
-      !parsed.url ||
-      !parsed.width ||
-      !parsed.height ||
-      !parsed.updatedAt
-    ) {
-      return null;
+    const { data } = await supabaseServer
+      .from("logos")
+      .select("storage_path")
+      .eq("id", LOGO_DOCUMENT_ID)
+      .maybeSingle();
+    const { error } = await supabaseServer
+      .from("logos")
+      .delete()
+      .eq("id", LOGO_DOCUMENT_ID);
+    if (error) throw error;
+    if (typeof data?.storage_path === "string") {
+      try {
+        await supabaseServer.storage
+          .from(LOGO_STORAGE_DIR)
+          .remove([data.storage_path]);
+      } catch {
+        // Best-effort cleanup of the previous file.
+      }
     }
-    return parsed;
   } catch {
-    return null;
+    // The logo is either already gone or could not be removed.
   }
-}
-
-async function removeActiveLogoFiles(): Promise<void> {
-  let entries: string[] = [];
-  try {
-    entries = await fs.readdir(LOGO_UPLOAD_DIR);
-  } catch {
-    return;
-  }
-  await Promise.all(
-    entries
-      .filter((name) => name.startsWith(LEGACY_FILE_PREFIX))
-      .map((name) => fs.rm(path.join(LOGO_UPLOAD_DIR, name), { force: true })),
-  );
 }
