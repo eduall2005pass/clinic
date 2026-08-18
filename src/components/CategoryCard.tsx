@@ -34,10 +34,10 @@ export default function CategoryCard({
         </p>
       </div>
 
-      <span className="relative mt-8 inline-flex items-center gap-2 text-sm font-bold text-primary-500 transition duration-300 group-hover:gap-3 group-hover:text-primary-400">
-        Explore Courses
+      <span className="relative mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-900/40 transition duration-300 group-hover:bg-primary-700 group-hover:shadow-primary-900/60 active:scale-[0.98]">
+        Explore Course
         <svg
-          className="h-4 w-4"
+          className="h-4 w-4 transition duration-300 group-hover:translate-x-0.5"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
