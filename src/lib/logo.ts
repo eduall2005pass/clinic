@@ -4,6 +4,7 @@ export type LogoInfo = {
   width: number;
   height: number;
   updatedAt: number;
+  updatedBy: string | null;
 };
 
 export const DEFAULT_LOGO: LogoInfo = {
@@ -12,6 +13,7 @@ export const DEFAULT_LOGO: LogoInfo = {
   width: 1536,
   height: 683,
   updatedAt: 0,
+  updatedBy: null,
 };
 
 export const MAX_LOGO_FILE_SIZE = 5 * 1024 * 1024;

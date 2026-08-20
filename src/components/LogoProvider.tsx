@@ -15,14 +15,12 @@ type LogoContextValue = {
   logo: LogoInfo;
   isCustom: boolean;
   refresh: () => Promise<void>;
-  setLogo: (logo: LogoInfo) => void;
 };
 
 const LogoContext = createContext<LogoContextValue>({
   logo: DEFAULT_LOGO,
   isCustom: false,
   refresh: async () => {},
-  setLogo: () => {},
 });
 
 export function useLogo() {
@@ -54,16 +52,10 @@ export function LogoProvider({
     refresh();
   }, [refresh]);
 
-  const setLogo = useCallback((logo: LogoInfo) => {
-    setActive(logo);
-  }, []);
-
   const isCustom = active.fileName !== "default";
 
   return (
-    <LogoContext.Provider
-      value={{ logo: active, isCustom, refresh, setLogo }}
-    >
+    <LogoContext.Provider value={{ logo: active, isCustom, refresh }}>
       {children}
     </LogoContext.Provider>
   );

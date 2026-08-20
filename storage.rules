@@ -8,12 +8,18 @@ service firebase.storage {
       allow write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Website logo images: readable by everyone (displayed on every page),
-    // writable so a new logo can be uploaded directly from the website.
-    // Only the current logo's download URL is stored in Firestore.
+    // Website logo images: readable by everyone (displayed on every page).
+    // Uploads are handled server-side by the authorized admin flow
+    // (/api/logo), which stores files under public/uploads/website/logo.
+    // The legacy storage paths below are write-disabled entirely — no
+    // client can upload, replace, or delete logo files directly.
     match /website-logos/{fileName} {
       allow read: if true;
-      allow write: if true;
+      allow write: if false;
+    }
+    match /website/logo/{fileName} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // Hero banner images: readable by everyone (displayed on the homepage),

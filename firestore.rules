@@ -113,17 +113,13 @@ service cloud.firestore {
     }
 
     // Active website logo. Readable by everyone (it is displayed on every
-    // page); the "active" document is replaced whenever a new logo image is
-    // uploaded from the website. The image file itself lives in Firebase
-    // Storage — only its URL and metadata are stored here.
+    // page). Logo configuration now lives server-side (MySQL `logos` table,
+    // managed through the /api/logo routes, which verify the caller is an
+    // authorized admin), so the legacy Firestore mirror below is
+    // write-disabled entirely — no client can modify it.
     match /logos/{logoId} {
       allow read: if true;
-      allow write: if logoId == "active"
-        && request.resource.data.url is string
-        && request.resource.data.url.startsWith("https://firebasestorage.googleapis.com/")
-        && request.resource.data.fileName is string
-        && request.resource.data.width is int && request.resource.data.width > 0
-        && request.resource.data.height is int && request.resource.data.height > 0;
+      allow write: if false;
     }
 
     // Hero banner slider. Readable by everyone (displayed on the homepage);

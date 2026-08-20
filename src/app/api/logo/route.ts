@@ -6,6 +6,7 @@ import {
 } from "@/lib/logo-store";
 import { parseImageDimensions } from "@/lib/image-dimensions";
 import { ALLOWED_LOGO_EXTENSIONS, MAX_LOGO_FILE_SIZE } from "@/lib/logo";
+import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   const formData = await request.formData();
   const file = formData.get("logo");
   if (!(file instanceof File)) {
@@ -41,7 +46,7 @@ export async function POST(request: NextRequest) {
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const { width, height } = parseImageDimensions(bytes, extension);
-    const logo = await saveActiveLogo(file, width, height);
+    const logo = await saveActiveLogo(file, width, height, admin.uid);
     return NextResponse.json({ logo });
   } catch (error) {
     const message =
@@ -50,7 +55,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   await removeActiveLogo();
   return NextResponse.json({ ok: true });
 }

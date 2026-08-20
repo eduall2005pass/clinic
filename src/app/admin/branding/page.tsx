@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useLogo } from "@/components/LogoProvider";
+import { useAuth } from "@/lib/auth-context";
 import { MAX_LOGO_FILE_SIZE } from "@/lib/logo";
 import { bannerSlides, MAX_BANNER_FILE_SIZE } from "@/lib/banners";
 import type { CustomBanner } from "@/lib/banner-store";
+import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 
 type Notice = { kind: "success" | "error"; text: string };
 
@@ -20,17 +22,65 @@ type SlideState = {
 
 export default function BrandingPage() {
   const { logo, isCustom, refresh } = useLogo();
+  const { user, authLoading } = useAuth();
   const [selected, setSelected] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState<"save" | "remove" | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [adminStatus, setAdminStatus] = useState<
+    "checking" | "admin" | "denied"
+  >("checking");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let cancelled = false;
+    user
+      .getIdToken()
+      .then((token) =>
+        fetch("/api/admin", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }),
+      )
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { isAdmin?: boolean } | null) => {
+        if (cancelled) return;
+        setAdminStatus(data?.isAdmin ? "admin" : "denied");
+      })
+      .catch(() => {
+        if (!cancelled) setAdminStatus("denied");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
 
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  const adminCheck =
+    !authLoading && !user ? "denied" : adminStatus;
+
+  if (authLoading || adminCheck === "checking") {
+    return <AccessLoading label="Checking administrator access…" />;
+  }
+
+  if (adminCheck === "denied") {
+    return (
+      <AccessMessage
+        title="Administrators only"
+        message="The website logo and banner settings are restricted to authorized administrators. Your account does not have permission to change them."
+        actionLabel="Back to Home"
+        actionHref="/"
+        secondaryLabel="Go to Dashboard"
+        secondaryHref="/dashboard"
+      />
+    );
+  }
 
   function handleFileChange(file: File | undefined) {
     setNotice(null);
@@ -52,14 +102,16 @@ export default function BrandingPage() {
   }
 
   async function handleSave() {
-    if (!selected) return;
+    if (!selected || !user) return;
     setBusy("save");
     setNotice(null);
     try {
+      const token = await user.getIdToken();
       const formData = new FormData();
       formData.append("logo", selected);
       const response = await fetch("/api/logo", {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       const data = (await response.json()) as {
@@ -82,10 +134,15 @@ export default function BrandingPage() {
   }
 
   async function handleRemove() {
+    if (!user) return;
     setBusy("remove");
     setNotice(null);
     try {
-      const response = await fetch("/api/logo", { method: "DELETE" });
+      const token = await user.getIdToken();
+      const response = await fetch("/api/logo", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!response.ok) {
         setNotice({ kind: "error", text: "Failed to remove the logo." });
         return;
@@ -112,13 +169,14 @@ export default function BrandingPage() {
           <h1 className="mt-2 text-3xl font-extrabold text-heading">Branding</h1>
           <p className="mt-2 text-sm text-neutral-400">
             Manage the website logo and hero banner slider from one central
-            place. Changes apply immediately across the website.
+            place. Changes apply immediately across the website. Only
+            authorized administrators can change these settings.
           </p>
         </header>
 
         <div className="mt-8 space-y-6">
           <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
-            <h2 className="text-lg font-bold text-heading">Current Logo</h2>
+            <h2 className="text-lg font-bold text-heading">Website Logo</h2>
             <p className="mt-1 text-xs text-neutral-500">
               This is exactly what visitors see right now.
             </p>
@@ -167,6 +225,12 @@ export default function BrandingPage() {
                     : "Never (using default)"}
                 </dd>
               </div>
+              <div>
+                <dt className="text-xs text-neutral-500">Updated by</dt>
+                <dd className="mt-0.5 text-neutral-400">
+                  {isCustom && logo.updatedBy ? logo.updatedBy : "—"}
+                </dd>
+              </div>
             </dl>
 
             {isCustom && (
@@ -176,13 +240,13 @@ export default function BrandingPage() {
                 disabled={busy === "remove"}
                 className="mt-5 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {busy === "remove" ? "Removing…" : "Remove Logo"}
+                {busy === "remove" ? "Restoring…" : "Restore Default Logo"}
               </button>
             )}
           </section>
 
           <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
-            <h2 className="text-lg font-bold text-heading">Replace Logo</h2>
+            <h2 className="text-lg font-bold text-heading">Upload New Logo</h2>
             <p className="mt-1 text-xs text-neutral-500">
               Upload a new logo to replace the current one. PNG (transparent
               preferred), JPG, WebP, GIF or SVG up to 5 MB. The original aspect

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import LogoUploadButton from "@/components/LogoUploadButton";
 import { loginHref } from "@/lib/nav-links";
 import { useAuth } from "@/lib/auth-context";
 
@@ -27,9 +26,12 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <LogoUploadButton href="/">
+        <Link
+          href="/"
+          className="flex w-1/3 max-w-[384px] shrink-0 transition-opacity hover:opacity-90"
+        >
           <Logo size="large" />
-        </LogoUploadButton>
+        </Link>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <Link
