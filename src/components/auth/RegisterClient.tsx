@@ -27,7 +27,7 @@ export default function RegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
-  const { user, profile, authLoading, configured } = useAuth();
+  const { user, profile, authLoading, configured, refreshProfile } = useAuth();
 
   const [fullName, setFullName] = useState("");
   const [gender, setGender] = useState("");
@@ -106,6 +106,7 @@ export default function RegisterClient() {
         pictureFile,
       );
 
+      await refreshProfile();
       router.replace(next || "/dashboard");
     } catch (err) {
       setError(

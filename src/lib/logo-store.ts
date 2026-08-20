@@ -1,4 +1,5 @@
-import { supabaseServer, storagePublicUrl } from "@/lib/supabase";
+import { query, parseDate } from "@/lib/mysql";
+import { saveFile, removeFile, isLocalUpload } from "@/lib/storage";
 import type { LogoInfo } from "@/lib/logo";
 import { DEFAULT_LOGO } from "@/lib/logo";
 
@@ -6,28 +7,25 @@ export const LOGO_COLLECTION = "logos";
 export const LOGO_DOCUMENT_ID = "active";
 export const LOGO_STORAGE_DIR = "website-logos";
 
-/**
- * Server-friendly alias used by server components (e.g. layout.tsx)
- * to resolve the active logo before rendering.
- */
+type LogoRow = {
+  url: string;
+  file_name: string;
+  width: number;
+  height: number;
+  storage_path: string;
+  updated_at: Date | string;
+};
+
 export const getActiveLogo = fetchActiveLogo;
 
 export async function fetchActiveLogo(): Promise<LogoInfo | null> {
-  if (!supabaseServer) return null;
   try {
-    const { data, error } = await supabaseServer
-      .from("logos")
-      .select("url, file_name, width, height, updated_at")
-      .eq("id", LOGO_DOCUMENT_ID)
-      .maybeSingle();
-    if (error || !data) return null;
-    const rawUpdatedAt: unknown = data.updated_at;
-    const updatedAt =
-      typeof rawUpdatedAt === "number"
-        ? rawUpdatedAt
-        : typeof rawUpdatedAt === "string"
-          ? Date.parse(rawUpdatedAt)
-          : 0;
+    const rows = await query<LogoRow[]>(
+      "SELECT url, file_name, width, height, storage_path, updated_at FROM logos WHERE id = ? LIMIT 1",
+      [LOGO_DOCUMENT_ID],
+    );
+    const data = rows[0];
+    if (!data) return null;
     return {
       fileName: data.file_name,
       url: data.url,
@@ -39,7 +37,7 @@ export async function fetchActiveLogo(): Promise<LogoInfo | null> {
         typeof data.height === "number" && data.height > 0
           ? data.height
           : DEFAULT_LOGO.height,
-      updatedAt: Number.isNaN(updatedAt) ? 0 : updatedAt,
+      updatedAt: Date.parse(parseDate(data.updated_at)) || 0,
     };
   } catch {
     return null;
@@ -51,83 +49,61 @@ export async function saveActiveLogo(
   width: number,
   height: number,
 ): Promise<LogoInfo> {
-  if (!supabaseServer) {
-    throw new Error("Supabase is not configured.");
-  }
   const extension = file.name.includes(".")
     ? `.${file.name.split(".").pop()?.toLowerCase() ?? ""}`
     : ".png";
   const storagePath = `${LOGO_STORAGE_DIR}/active-logo-${Date.now()}${extension}`;
-  const bucket = supabaseServer.storage.from(LOGO_STORAGE_DIR);
-  const { error: uploadError } = await bucket.upload(storagePath, file);
-  if (uploadError) {
-    throw new Error(uploadError.message);
-  }
-  const url = storagePublicUrl(LOGO_STORAGE_DIR, storagePath);
+  const url = await saveFile(
+    LOGO_STORAGE_DIR,
+    storagePath.split("/").pop() ?? "",
+    await file.arrayBuffer(),
+  );
 
   let previousStoragePath: string | null = null;
   try {
-    const { data } = await supabaseServer
-      .from("logos")
-      .select("storage_path")
-      .eq("id", LOGO_DOCUMENT_ID)
-      .maybeSingle();
-    const previousPath: unknown = data?.storage_path;
-    if (
-      typeof previousPath === "string" &&
-      previousPath.startsWith(`${LOGO_STORAGE_DIR}/`)
-    ) {
+    const rows = await query<{ storage_path: string }[]>(
+      "SELECT storage_path FROM logos WHERE id = ? LIMIT 1",
+      [LOGO_DOCUMENT_ID],
+    );
+    const previousPath: unknown = rows[0]?.storage_path;
+    if (typeof previousPath === "string" && isLocalUpload(previousPath)) {
       previousStoragePath = previousPath;
     }
   } catch {
     // Keep going — cleaning up the old file is best-effort only.
   }
 
-  const { error: dbError } = await supabaseServer.from("logos").upsert({
-    id: LOGO_DOCUMENT_ID,
-    url,
-    file_name: file.name,
-    width,
-    height,
-    storage_path: storagePath,
-    updated_at: new Date().toISOString(),
-  });
-  if (dbError) {
-    throw new Error(dbError.message);
-  }
+  await query(
+    `INSERT INTO logos
+      (id, url, file_name, width, height, storage_path, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE
+      url = VALUES(url),
+      file_name = VALUES(file_name),
+      width = VALUES(width),
+      height = VALUES(height),
+      storage_path = VALUES(storage_path),
+      updated_at = NOW()`,
+    [LOGO_DOCUMENT_ID, url, file.name, width, height, storagePath],
+  );
 
   if (previousStoragePath) {
-    try {
-      await bucket.remove([previousStoragePath]);
-    } catch {
-      // Best-effort cleanup of the previous file.
-    }
+    await removeFile(previousStoragePath);
   }
 
   return { fileName: file.name, url, width, height, updatedAt: Date.now() };
 }
 
 export async function removeActiveLogo(): Promise<void> {
-  if (!supabaseServer) return;
   try {
-    const { data } = await supabaseServer
-      .from("logos")
-      .select("storage_path")
-      .eq("id", LOGO_DOCUMENT_ID)
-      .maybeSingle();
-    const { error } = await supabaseServer
-      .from("logos")
-      .delete()
-      .eq("id", LOGO_DOCUMENT_ID);
-    if (error) throw error;
-    if (typeof data?.storage_path === "string") {
-      try {
-        await supabaseServer.storage
-          .from(LOGO_STORAGE_DIR)
-          .remove([data.storage_path]);
-      } catch {
-        // Best-effort cleanup of the previous file.
-      }
+    const rows = await query<{ storage_path: string }[]>(
+      "SELECT storage_path FROM logos WHERE id = ? LIMIT 1",
+      [LOGO_DOCUMENT_ID],
+    );
+    const storagePath: unknown = rows[0]?.storage_path;
+    await query("DELETE FROM logos WHERE id = ?", [LOGO_DOCUMENT_ID]);
+    if (typeof storagePath === "string" && isLocalUpload(storagePath)) {
+      await removeFile(storagePath);
     }
   } catch {
     // The logo is either already gone or could not be removed.

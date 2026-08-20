@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFirebaseUser } from "@/lib/auth-api";
-import { supabaseServer } from "@/lib/supabase";
-import { storagePublicUrl } from "@/lib/supabase";
+import { query, exec, parseDate, isMysqlConfigured } from "@/lib/mysql";
+import { saveFile } from "@/lib/storage";
 import { randomStudentId } from "@/lib/student-id";
 import type { StudentProfile } from "@/lib/auth-context";
 
 export const dynamic = "force-dynamic";
+
+const PROFILE_PICTURE_DIR = "student-profiles";
 
 type StudentRow = {
   uid: string;
@@ -19,8 +21,8 @@ type StudentRow = {
   facebook_url: string;
   profile_picture_url: string;
   provider: string;
-  created_at: string;
-  updated_at: string;
+  created_at: Date | string;
+  updated_at: Date | string;
 };
 
 function mapProfile(row: StudentRow): StudentProfile {
@@ -36,30 +38,31 @@ function mapProfile(row: StudentRow): StudentProfile {
     facebookUrl: row.facebook_url,
     profilePictureUrl: row.profile_picture_url,
     provider: row.provider,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: parseDate(row.created_at),
+    updatedAt: parseDate(row.updated_at),
   };
 }
 
 export async function GET(request: NextRequest) {
   const user = await getFirebaseUser(request);
-  if (!user || !supabaseServer) {
+  if (!user || !isMysqlConfigured) {
     return NextResponse.json({ profile: null }, { status: 200 });
   }
-  const { data, error } = await supabaseServer
-    .from("students")
-    .select("*")
-    .eq("uid", user.uid)
-    .maybeSingle();
-  if (error) {
+  try {
+    const rows = await query<StudentRow[]>(
+      "SELECT * FROM students WHERE uid = ? LIMIT 1",
+      [user.uid],
+    );
+    const data = rows[0];
+    return NextResponse.json({
+      profile: data ? mapProfile(data) : null,
+    });
+  } catch {
     return NextResponse.json(
       { error: "Could not load the profile." },
       { status: 500 },
     );
   }
-  return NextResponse.json({
-    profile: data ? mapProfile(data as StudentRow) : null,
-  });
 }
 
 const REQUIRED_FIELDS = [
@@ -70,12 +73,20 @@ const REQUIRED_FIELDS = [
   "contactNumber",
 ] as const;
 
+async function uploadProfilePicture(picture: File) {
+  const extension = picture.name.includes(".")
+    ? `.${picture.name.split(".").pop()?.toLowerCase() ?? ""}`
+    : ".jpg";
+  const fileName = `profile-picture-${Date.now()}${extension}`;
+  return saveFile(PROFILE_PICTURE_DIR, fileName, await picture.arrayBuffer());
+}
+
 export async function POST(request: NextRequest) {
   const user = await getFirebaseUser(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (!supabaseServer) {
+  if (!isMysqlConfigured) {
     return NextResponse.json(
       { error: "Database is not configured." },
       { status: 500 },
@@ -113,20 +124,14 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    const extension = picture.name.includes(".")
-      ? `.${picture.name.split(".").pop()?.toLowerCase() ?? ""}`
-      : ".jpg";
-    const storagePath = `student-profiles/${user.uid}/profile-picture-${Date.now()}${extension}`;
-    const { error: uploadError } = await supabaseServer.storage
-      .from("student-profiles")
-      .upload(storagePath, picture);
-    if (uploadError) {
+    try {
+      profilePictureUrl = await uploadProfilePicture(picture);
+    } catch {
       return NextResponse.json(
         { error: "Could not upload the profile picture." },
         { status: 400 },
       );
     }
-    profilePictureUrl = storagePublicUrl("student-profiles", storagePath);
   }
 
   const now = new Date().toISOString();
@@ -134,44 +139,48 @@ export async function POST(request: NextRequest) {
   let saved = false;
   for (let attempt = 0; attempt < 8; attempt++) {
     const candidate = randomStudentId();
-    const { count } = await supabaseServer
-      .from("student_ids")
-      .upsert(
-        { student_id: candidate, uid: user.uid },
-        { onConflict: "student_id", ignoreDuplicates: true, count: "exact" },
-      );
-    if (!count || count === 0) continue;
+    try {
+      await query("INSERT INTO student_ids (student_id, uid) VALUES (?, ?)", [
+        candidate,
+        user.uid,
+      ]);
+    } catch {
+      continue;
+    }
     studentId = candidate;
-    const { error: insertError } = await supabaseServer.from("students").insert({
-      uid: user.uid,
-      student_id: studentId,
-      full_name: fields.fullName,
-      gender: fields.gender,
-      institution: fields.institution,
-      hsc_batch: fields.hscBatch,
-      contact_number: fields.contactNumber,
-      email,
-      facebook_url: facebookUrl,
-      profile_picture_url: profilePictureUrl,
-      provider: "google",
-      created_at: now,
-      updated_at: now,
-    });
-    if (!insertError) {
+    try {
+      await query(
+        `INSERT INTO students
+          (uid, student_id, full_name, gender, institution, hsc_batch,
+           contact_number, email, facebook_url, profile_picture_url,
+           provider, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'google', NOW(), NOW())`,
+        [
+          user.uid,
+          studentId,
+          fields.fullName,
+          fields.gender,
+          fields.institution,
+          fields.hscBatch,
+          fields.contactNumber,
+          email,
+          facebookUrl,
+          profilePictureUrl,
+        ],
+      );
       saved = true;
       break;
-    }
-    // The student row could not be created (e.g. already registered) —
-    // free the reserved ID and stop.
-    await supabaseServer
-      .from("student_ids")
-      .delete()
-      .eq("student_id", studentId);
-    if (insertError.code === "23505") {
-      return NextResponse.json(
-        { error: "This account is already registered." },
-        { status: 409 },
-      );
+    } catch (insertError) {
+      await query("DELETE FROM student_ids WHERE student_id = ?", [studentId]);
+      if (
+        insertError instanceof Error &&
+        (insertError as { code?: string }).code === "ER_DUP_ENTRY"
+      ) {
+        return NextResponse.json(
+          { error: "This account is already registered." },
+          { status: 409 },
+        );
+      }
     }
   }
   if (!saved) {
@@ -204,7 +213,7 @@ export async function PATCH(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (!supabaseServer) {
+  if (!isMysqlConfigured) {
     return NextResponse.json(
       { error: "Database is not configured." },
       { status: 500 },
@@ -225,12 +234,6 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const update: Record<string, unknown> = {
-    full_name: fullName,
-    institution,
-    updated_at: new Date().toISOString(),
-  };
-
   const picture = formData.get("picture");
   if (picture instanceof File && picture.size > 0) {
     if (!picture.type.startsWith("image/")) {
@@ -239,36 +242,46 @@ export async function PATCH(request: NextRequest) {
         { status: 400 },
       );
     }
-    const extension = picture.name.includes(".")
-      ? `.${picture.name.split(".").pop()?.toLowerCase() ?? ""}`
-      : ".jpg";
-    const storagePath = `student-profiles/${user.uid}/profile-picture-${Date.now()}${extension}`;
-    const { error: uploadError } = await supabaseServer.storage
-      .from("student-profiles")
-      .upload(storagePath, picture);
-    if (uploadError) {
+    try {
+      const profilePictureUrl = await uploadProfilePicture(picture);
+      await query("UPDATE students SET profile_picture_url = ? WHERE uid = ?", [
+        profilePictureUrl,
+        user.uid,
+      ]);
+    } catch {
       return NextResponse.json(
         { error: "Could not upload the profile picture." },
         { status: 400 },
       );
     }
-    update.profile_picture_url = storagePublicUrl(
-      "student-profiles",
-      storagePath,
-    );
   }
 
-  const { data, error } = await supabaseServer
-    .from("students")
-    .update(update)
-    .eq("uid", user.uid)
-    .select("*")
-    .maybeSingle();
-  if (error || !data) {
+  try {
+    const result = await exec(
+      "UPDATE students SET full_name = ?, institution = ?, updated_at = NOW() WHERE uid = ?",
+      [fullName, institution, user.uid],
+    );
+    if (!result.affectedRows) {
+      return NextResponse.json(
+        { error: "Could not save your changes." },
+        { status: 500 },
+      );
+    }
+    const rows = await query<StudentRow[]>(
+      "SELECT * FROM students WHERE uid = ? LIMIT 1",
+      [user.uid],
+    );
+    if (!rows[0]) {
+      return NextResponse.json(
+        { error: "Could not save your changes." },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ profile: mapProfile(rows[0]) });
+  } catch {
     return NextResponse.json(
       { error: "Could not save your changes." },
       { status: 500 },
     );
   }
-  return NextResponse.json({ profile: mapProfile(data as StudentRow) });
 }

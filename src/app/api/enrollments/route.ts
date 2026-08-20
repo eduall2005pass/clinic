@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFirebaseUser } from "@/lib/auth-api";
-import { supabaseServer } from "@/lib/supabase";
+import { query, exec, parseDate, isMysqlConfigured } from "@/lib/mysql";
 import type { Enrollment } from "@/lib/enrollments";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +13,8 @@ type EnrollmentRow = {
   course_kind: "free" | "paid";
   fee: number;
   enrollment_status: "pending" | "active" | "cancelled" | "completed";
-  enrollment_date: string;
-  updated_at: string;
+  enrollment_date: Date | string;
+  updated_at: Date | string;
 };
 
 function mapEnrollment(row: EnrollmentRow): Enrollment {
@@ -26,30 +26,30 @@ function mapEnrollment(row: EnrollmentRow): Enrollment {
     courseKind: row.course_kind,
     fee: row.fee,
     enrollmentStatus: row.enrollment_status,
-    enrollmentDate: row.enrollment_date,
-    updatedAt: row.updated_at,
+    enrollmentDate: parseDate(row.enrollment_date),
+    updatedAt: parseDate(row.updated_at),
   };
 }
 
 export async function GET(request: NextRequest) {
   const user = await getFirebaseUser(request);
-  if (!user || !supabaseServer) {
+  if (!user || !isMysqlConfigured) {
     return NextResponse.json({ enrollments: [] });
   }
-  const { data, error } = await supabaseServer
-    .from("enrollments")
-    .select("*")
-    .eq("student_uid", user.uid)
-    .order("updated_at", { ascending: false });
-  if (error) {
+  try {
+    const rows = await query<EnrollmentRow[]>(
+      "SELECT * FROM enrollments WHERE student_uid = ? ORDER BY updated_at DESC",
+      [user.uid],
+    );
+    return NextResponse.json({
+      enrollments: rows.map(mapEnrollment),
+    });
+  } catch {
     return NextResponse.json(
       { error: "Could not load enrollments." },
       { status: 500 },
     );
   }
-  return NextResponse.json({
-    enrollments: (data ?? []).map((row) => mapEnrollment(row as EnrollmentRow)),
-  });
 }
 
 export async function POST(request: NextRequest) {
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (!supabaseServer) {
+  if (!isMysqlConfigured) {
     return NextResponse.json(
       { error: "Database is not configured." },
       { status: 500 },
@@ -75,8 +75,7 @@ export async function POST(request: NextRequest) {
   const courseName =
     typeof body?.courseName === "string" ? body.courseName : courseId;
   const courseType = body?.courseType === "Admission" ? "Admission" : "Academic";
-  const fee =
-    typeof body?.fee === "number" && body.fee > 0 ? body.fee : 0;
+  const fee = typeof body?.fee === "number" && body.fee > 0 ? body.fee : 0;
   if (!courseId) {
     return NextResponse.json(
       { error: "Missing course id." },
@@ -84,10 +83,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await supabaseServer.from("courses").upsert(
-    { course_id: courseId, kind: fee > 0 ? "paid" : "free" },
-    { onConflict: "course_id", ignoreDuplicates: true },
-  );
+  await query("INSERT IGNORE INTO courses (course_id, kind) VALUES (?, ?)", [
+    courseId,
+    fee > 0 ? "paid" : "free",
+  ]);
 
   const now = new Date().toISOString();
   const enrollment: Enrollment = {
@@ -101,33 +100,36 @@ export async function POST(request: NextRequest) {
     enrollmentDate: now,
     updatedAt: now,
   };
-  const { data, error } = await supabaseServer
-    .from("enrollments")
-    .upsert(
-      {
-        student_uid: user.uid,
-        course_id: courseId,
-        course_name: courseName,
-        course_type: courseType,
-        course_kind: enrollment.courseKind,
+  try {
+    const result = await exec(
+      `INSERT IGNORE INTO enrollments
+        (student_uid, course_id, course_name, course_type, course_kind,
+         fee, enrollment_status, enrollment_date, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [
+        user.uid,
+        courseId,
+        courseName,
+        courseType,
+        enrollment.courseKind,
         fee,
-        enrollment_status: enrollment.enrollmentStatus,
-        enrollment_date: now,
-        updated_at: now,
-      },
-      { onConflict: "student_uid,course_id", ignoreDuplicates: true },
-    )
-    .select("*")
-    .maybeSingle();
-  if (error) {
+        enrollment.enrollmentStatus,
+      ],
+    );
+    if (result.affectedRows === 0) {
+      const rows = await query<EnrollmentRow[]>(
+        "SELECT * FROM enrollments WHERE student_uid = ? AND course_id = ? LIMIT 1",
+        [user.uid, courseId],
+      );
+      if (rows[0]) {
+        return NextResponse.json({ enrollment: mapEnrollment(rows[0]) });
+      }
+    }
+  } catch {
     return NextResponse.json(
       { error: "Could not complete the enrollment." },
       { status: 500 },
     );
   }
-  return NextResponse.json({
-    enrollment: data
-      ? mapEnrollment(data as EnrollmentRow)
-      : enrollment,
-  });
+  return NextResponse.json({ enrollment });
 }

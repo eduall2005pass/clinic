@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useLogo } from "@/components/LogoProvider";
-import { saveActiveLogo } from "@/lib/logo-store";
+import type { LogoInfo } from "@/lib/logo";
 import { MAX_LOGO_FILE_SIZE } from "@/lib/logo";
 import { isFirebaseConfigured } from "@/lib/firebase";
 
@@ -60,9 +60,20 @@ export default function LogoUploadButton({
     }
     setUploading(true);
     try {
-      const dimensions = await readImageDimensions(file);
-      const saved = await saveActiveLogo(file, dimensions.width, dimensions.height);
-      setLogo(saved);
+      const formData = new FormData();
+      formData.append("logo", file);
+      const response = await fetch("/api/logo", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(data?.error ?? "Could not update the logo.");
+      }
+      const data = (await response.json()) as { logo: LogoInfo };
+      setLogo(data.logo);
     } catch (err) {
       showError(
         err instanceof Error
@@ -122,27 +133,4 @@ export default function LogoUploadButton({
       )}
     </div>
   );
-}
-
-function readImageDimensions(
-  file: File,
-): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const objectUrl = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      const { naturalWidth, naturalHeight } = image;
-      URL.revokeObjectURL(objectUrl);
-      if (!naturalWidth || !naturalHeight) {
-        reject(new Error("Could not read the image size."));
-        return;
-      }
-      resolve({ width: naturalWidth, height: naturalHeight });
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error("The selected file is not a valid image."));
-    };
-    image.src = objectUrl;
-  });
 }

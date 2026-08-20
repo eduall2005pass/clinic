@@ -18,8 +18,12 @@ export default function DashboardHome() {
     if (authLoading || !configured) return;
     if (!user) {
       router.replace("/login");
+      return;
     }
-  }, [user, authLoading, configured, router]);
+    if (!profileLoading && !profile) {
+      router.replace("/register");
+    }
+  }, [user, profile, profileLoading, authLoading, configured, router]);
 
   if (authLoading || profileLoading || !user || !profile) {
     return <AccessLoading label="Loading your dashboard..." />;

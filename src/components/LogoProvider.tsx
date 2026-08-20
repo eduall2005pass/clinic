@@ -10,7 +10,6 @@ import {
 import type { ReactNode } from "react";
 import type { LogoInfo } from "@/lib/logo";
 import { DEFAULT_LOGO } from "@/lib/logo";
-import { fetchActiveLogo } from "@/lib/logo-store";
 
 type LogoContextValue = {
   logo: LogoInfo;
@@ -40,11 +39,6 @@ export function LogoProvider({
   const [active, setActive] = useState<LogoInfo>(initialLogo ?? DEFAULT_LOGO);
 
   const refresh = useCallback(async () => {
-    const fromFirestore = await fetchActiveLogo();
-    if (fromFirestore) {
-      setActive(fromFirestore);
-      return;
-    }
     try {
       const response = await fetch("/api/logo", { cache: "no-store" });
       if (!response.ok) return;

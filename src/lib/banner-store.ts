@@ -1,4 +1,5 @@
-import { supabaseServer, storagePublicUrl } from "@/lib/supabase";
+import { query } from "@/lib/mysql";
+import { saveFile, removeFile } from "@/lib/storage";
 
 export const BANNER_COLLECTION = "banners";
 export const BANNER_DOCUMENT_ID = "active";
@@ -23,18 +24,22 @@ function parseUpdatedAt(raw: unknown): number {
 }
 
 export async function fetchCustomBanners(): Promise<CustomBanner[] | null> {
-  if (!supabaseServer) return null;
   try {
-    const { data, error } = await supabaseServer
-      .from("banners")
-      .select("slides")
-      .eq("id", BANNER_DOCUMENT_ID)
-      .maybeSingle();
-    if (error || !data) return null;
-    const rawSlides: unknown = data.slides;
-    if (!Array.isArray(rawSlides)) return null;
+    const rows = await query<{ slides: string | null }[]>(
+      "SELECT slides FROM banners WHERE id = ? LIMIT 1",
+      [BANNER_DOCUMENT_ID],
+    );
+    const rawSlides: unknown = rows[0]?.slides;
+    if (typeof rawSlides !== "string" || rawSlides.length === 0) return null;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawSlides);
+    } catch {
+      return null;
+    }
+    if (!Array.isArray(parsed)) return null;
     const slides: CustomBanner[] = [];
-    for (const raw of rawSlides) {
+    for (const raw of parsed) {
       if (
         typeof raw !== "object" ||
         raw === null ||
@@ -77,19 +82,15 @@ export async function saveCustomBanner(input: {
   width: number;
   height: number;
 }): Promise<CustomBanner[]> {
-  if (!supabaseServer) {
-    throw new Error("Supabase is not configured.");
-  }
   const extension = input.file.name.includes(".")
     ? `.${input.file.name.split(".").pop()?.toLowerCase() ?? ""}`
     : ".png";
   const storagePath = `${BANNER_STORAGE_DIR}/${input.id}-${Date.now()}${extension}`;
-  const fileRef = supabaseServer.storage.from(BANNER_STORAGE_DIR);
-  const { error: uploadError } = await fileRef.upload(storagePath, input.file);
-  if (uploadError) {
-    throw new Error(uploadError.message);
-  }
-  const url = storagePublicUrl(BANNER_STORAGE_DIR, storagePath);
+  const url = await saveFile(
+    BANNER_STORAGE_DIR,
+    storagePath.split("/").pop() ?? "",
+    await input.file.arrayBuffer(),
+  );
 
   const previous = await fetchCustomBanners();
   const previousSlide = previous?.find((slide) => slide.id === input.id);
@@ -106,55 +107,42 @@ export async function saveCustomBanner(input: {
     },
   ];
 
-  const { error: dbError } = await supabaseServer.from("banners").upsert({
-    id: BANNER_DOCUMENT_ID,
-    slides: next,
-    updated_at: new Date().toISOString(),
-  });
-  if (dbError) {
-    throw new Error(dbError.message);
-  }
+  await query(
+    `INSERT INTO banners (id, slides, updated_at)
+     VALUES (?, ?, NOW())
+     ON DUPLICATE KEY UPDATE
+      slides = VALUES(slides),
+      updated_at = NOW()`,
+    [BANNER_DOCUMENT_ID, JSON.stringify(next)],
+  );
 
   if (previousSlide?.storagePath) {
-    try {
-      await fileRef.remove([previousSlide.storagePath]);
-    } catch {
-      // Best-effort cleanup of the previous file.
-    }
+    await removeFile(previousSlide.storagePath);
   }
 
   return next;
 }
 
 export async function removeCustomBanner(id: string): Promise<CustomBanner[]> {
-  if (!supabaseServer) return [];
   try {
     const previous = await fetchCustomBanners();
     if (!previous) return [];
     const removed = previous.find((slide) => slide.id === id);
     const next = previous.filter((slide) => slide.id !== id);
     if (next.length === 0) {
-      const { error } = await supabaseServer
-        .from("banners")
-        .delete()
-        .eq("id", BANNER_DOCUMENT_ID);
-      if (error) throw error;
+      await query("DELETE FROM banners WHERE id = ?", [BANNER_DOCUMENT_ID]);
     } else {
-      const { error } = await supabaseServer.from("banners").upsert({
-        id: BANNER_DOCUMENT_ID,
-        slides: next,
-        updated_at: new Date().toISOString(),
-      });
-      if (error) throw error;
+      await query(
+        `INSERT INTO banners (id, slides, updated_at)
+         VALUES (?, ?, NOW())
+         ON DUPLICATE KEY UPDATE
+          slides = VALUES(slides),
+          updated_at = NOW()`,
+        [BANNER_DOCUMENT_ID, JSON.stringify(next)],
+      );
     }
     if (removed?.storagePath) {
-      try {
-        await supabaseServer.storage
-          .from(BANNER_STORAGE_DIR)
-          .remove([removed.storagePath]);
-      } catch {
-        // Best-effort cleanup of the removed file.
-      }
+      await removeFile(removed.storagePath);
     }
     return next;
   } catch {
