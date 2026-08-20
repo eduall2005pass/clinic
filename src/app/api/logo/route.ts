@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save the logo.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -60,6 +60,13 @@ export async function DELETE(request: NextRequest) {
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  await removeActiveLogo();
-  return NextResponse.json({ ok: true });
+  try {
+    await removeActiveLogo();
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json(
+      { error: "Could not restore the default logo." },
+      { status: 500 },
+    );
+  }
 }

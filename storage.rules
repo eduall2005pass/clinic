@@ -9,10 +9,9 @@ service firebase.storage {
     }
 
     // Website logo images: readable by everyone (displayed on every page).
-    // Uploads are handled server-side by the authorized admin flow
-    // (/api/logo), which stores files under public/uploads/website/logo.
-    // The legacy storage paths below are write-disabled entirely — no
-    // client can upload, replace, or delete logo files directly.
+    // Uploads/replacements/deletes happen server-side through the
+    // authorized admin flow (/api/logo) under website/logo/. Clients can
+    // never upload or modify logo files — write is disabled for everyone.
     match /website-logos/{fileName} {
       allow read: if true;
       allow write: if false;

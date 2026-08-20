@@ -112,11 +112,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Active website logo. Readable by everyone (it is displayed on every
-    // page). Logo configuration now lives server-side (MySQL `logos` table,
-    // managed through the /api/logo routes, which verify the caller is an
-    // authorized admin), so the legacy Firestore mirror below is
-    // write-disabled entirely — no client can modify it.
+    // Active website logo configuration — Firestore document
+    // `settings/website`. Readable by everyone (it is displayed on every
+    // page). The document is written only by the server-side admin flow
+    // (/api/logo, which verifies the caller is an authorized admin), so
+    // clients can never create or modify it.
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if settingId == "website"
+        && request.auth != null
+        && request.auth.token.admin == true;
+    }
+
+    // Legacy logo mirror (pre-Firestore migration). Write-disabled — the
+    // active configuration now lives in settings/website.
     match /logos/{logoId} {
       allow read: if true;
       allow write: if false;

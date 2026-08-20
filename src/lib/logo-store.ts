@@ -1,44 +1,60 @@
-import { query, parseDate } from "@/lib/mysql";
-import { saveFile, removeFile, isLocalUpload } from "@/lib/storage";
 import type { LogoInfo } from "@/lib/logo";
 import { DEFAULT_LOGO } from "@/lib/logo";
+import { FieldValue } from "firebase-admin/firestore";
+import {
+  getFirebaseAdminFirestore,
+  getFirebaseAdminStorage,
+  isFirebaseAdminConfigured,
+  resolveStorageBucket,
+} from "@/lib/firebase-admin";
 import { fetchAdminAccount } from "@/lib/admin";
 
-// Centralized website logo configuration. Mirrors the old
-// "settings/website" document: a single "active" row in the `logos`
-// table holds the live logo (logoUrl -> url, logoPath -> storage_path,
-// updatedAt -> updated_at, updatedBy -> updated_by). Every component
-// reads the logo through LogoProvider/Logo — nothing is hard-coded.
-export const LOGO_COLLECTION = "logos";
-export const LOGO_DOCUMENT_ID = "active";
+// Centralized website settings: Firestore document `settings/website`
+// holds the active logo configuration (logoUrl, logoPath, fileName,
+// width, height, updatedAt, updatedBy). Every component reads the logo
+// through LogoProvider/Logo — nothing is hard-coded.
+export const SETTINGS_COLLECTION = "settings";
+export const SETTINGS_DOCUMENT_ID = "website";
 export const LOGO_STORAGE_DIR = "website/logo";
-
-type LogoRow = {
-  url: string;
-  file_name: string;
-  width: number;
-  height: number;
-  storage_path: string;
-  updated_at: Date | string;
-  updated_by: string | null;
-};
 
 export const getActiveLogo = fetchActiveLogo;
 
+type SettingsData = {
+  logoUrl?: unknown;
+  logoPath?: unknown;
+  fileName?: unknown;
+  width?: unknown;
+  height?: unknown;
+  updatedAt?: unknown;
+  updatedBy?: unknown;
+};
+
+function parseMillis(raw: unknown): number {
+  if (raw && typeof raw === "object" && typeof (raw as { toMillis?: unknown }).toMillis === "function") {
+    return (raw as { toMillis: () => number }).toMillis();
+  }
+  if (typeof raw === "number") return raw;
+  if (typeof raw === "string") {
+    const parsed = Date.parse(raw);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+}
+
 export async function fetchActiveLogo(): Promise<LogoInfo | null> {
+  if (!isFirebaseAdminConfigured) return null;
   try {
-    const rows = await query<LogoRow[]>(
-      "SELECT url, file_name, width, height, storage_path, updated_at, updated_by FROM logos WHERE id = ? LIMIT 1",
-      [LOGO_DOCUMENT_ID],
-    );
-    const data = rows[0];
-    if (!data) return null;
-    const account = data.updated_by
-      ? await fetchAdminAccount(data.updated_by)
-      : null;
+    const snapshot = await getFirebaseAdminFirestore()
+      .doc(`${SETTINGS_COLLECTION}/${SETTINGS_DOCUMENT_ID}`)
+      .get();
+    if (!snapshot.exists) return null;
+    const data = snapshot.data() as SettingsData | undefined;
+    if (!data || typeof data.logoUrl !== "string" || data.logoUrl.length === 0) {
+      return null;
+    }
     return {
-      fileName: data.file_name,
-      url: data.url,
+      fileName: typeof data.fileName === "string" ? data.fileName : "logo",
+      url: data.logoUrl,
       width:
         typeof data.width === "number" && data.width > 0
           ? data.width
@@ -47,12 +63,46 @@ export async function fetchActiveLogo(): Promise<LogoInfo | null> {
         typeof data.height === "number" && data.height > 0
           ? data.height
           : DEFAULT_LOGO.height,
-      updatedAt: Date.parse(parseDate(data.updated_at)) || 0,
-      updatedBy:
-        account?.displayName ?? account?.email ?? (data.updated_by ?? null),
+      updatedAt: parseMillis(data.updatedAt),
+      updatedBy: typeof data.updatedBy === "string" ? data.updatedBy : null,
     };
   } catch {
     return null;
+  }
+}
+
+function buildDownloadUrl(bucket: string, path: string): string {
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
+}
+
+async function uploadLogoFile(
+  buffer: Buffer,
+  contentType: string,
+  fileName: string,
+): Promise<{ url: string; path: string; bucket: string }> {
+  const storage = getFirebaseAdminStorage();
+  const bucketName = resolveStorageBucket();
+  const bucket = bucketName ? storage.bucket(bucketName) : storage.bucket();
+  const path = `${LOGO_STORAGE_DIR}/${fileName}`;
+  const file = bucket.file(path);
+  await file.save(buffer, {
+    contentType,
+    resumable: false,
+    metadata: { cacheControl: "public, max-age=31536000, immutable" },
+  });
+  return { url: buildDownloadUrl(file.bucket.name, path), path, bucket: file.bucket.name };
+}
+
+async function deleteLogoFile(path: string | null | undefined): Promise<void> {
+  if (typeof path !== "string" || path.length === 0) return;
+  try {
+    const storage = getFirebaseAdminStorage();
+    const bucketName = resolveStorageBucket();
+    const bucket = bucketName ? storage.bucket(bucketName) : storage.bucket();
+    await bucket.file(path).delete();
+  } catch {
+    // Best-effort cleanup — an old file that fails to delete must not
+    // break the logo update.
   }
 }
 
@@ -62,47 +112,54 @@ export async function saveActiveLogo(
   height: number,
   adminUid: string,
 ): Promise<LogoInfo> {
+  if (!isFirebaseAdminConfigured) {
+    throw new Error("Firebase Storage is not configured.");
+  }
+
   const extension = file.name.includes(".")
     ? `.${file.name.split(".").pop()?.toLowerCase() ?? ""}`
     : ".png";
-  const storagePath = `${LOGO_STORAGE_DIR}/active-logo-${Date.now()}${extension}`;
-  const url = await saveFile(
-    LOGO_STORAGE_DIR,
-    storagePath.split("/").pop() ?? "",
-    await file.arrayBuffer(),
+  const fileName = `active-logo-${Date.now()}${extension}`;
+
+  const { url, path } = await uploadLogoFile(
+    Buffer.from(await file.arrayBuffer()),
+    file.type || "application/octet-stream",
+    fileName,
   );
 
-  let previousStoragePath: string | null = null;
+  const firestore = getFirebaseAdminFirestore();
+  const settingsRef = firestore.doc(
+    `${SETTINGS_COLLECTION}/${SETTINGS_DOCUMENT_ID}`,
+  );
+
+  let previousLogoPath: string | null | undefined;
   try {
-    const rows = await query<{ storage_path: string }[]>(
-      "SELECT storage_path FROM logos WHERE id = ? LIMIT 1",
-      [LOGO_DOCUMENT_ID],
-    );
-    const previousPath: unknown = rows[0]?.storage_path;
-    if (typeof previousPath === "string" && isLocalUpload(previousPath)) {
-      previousStoragePath = previousPath;
-    }
+    const previous = await settingsRef.get();
+    const rawPath = (previous.data() as SettingsData | undefined)?.logoPath;
+    previousLogoPath = typeof rawPath === "string" ? rawPath : null;
   } catch {
-    // Keep going — cleaning up the old file is best-effort only.
+    previousLogoPath = null;
   }
 
-  await query(
-    `INSERT INTO logos
-      (id, url, file_name, width, height, storage_path, updated_at, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
-     ON DUPLICATE KEY UPDATE
-      url = VALUES(url),
-      file_name = VALUES(file_name),
-      width = VALUES(width),
-      height = VALUES(height),
-      storage_path = VALUES(storage_path),
-      updated_at = NOW(),
-      updated_by = VALUES(updated_by)`,
-    [LOGO_DOCUMENT_ID, url, file.name, width, height, storagePath, adminUid],
-  );
+  try {
+    await settingsRef.set({
+      logoUrl: url,
+      logoPath: path,
+      fileName: file.name,
+      width,
+      height,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: adminUid,
+    });
+  } catch {
+    await deleteLogoFile(path);
+    throw new Error(
+      "The logo file uploaded, but saving its settings failed. Your previous logo is unchanged.",
+    );
+  }
 
-  if (previousStoragePath) {
-    await removeFile(previousStoragePath);
+  if (typeof previousLogoPath === "string" && previousLogoPath !== path) {
+    await deleteLogoFile(previousLogoPath);
   }
 
   const account = await fetchAdminAccount(adminUid);
@@ -117,15 +174,19 @@ export async function saveActiveLogo(
 }
 
 export async function removeActiveLogo(): Promise<void> {
+  if (!isFirebaseAdminConfigured) return;
+  const firestore = getFirebaseAdminFirestore();
+  const settingsRef = firestore.doc(
+    `${SETTINGS_COLLECTION}/${SETTINGS_DOCUMENT_ID}`,
+  );
   try {
-    const rows = await query<{ storage_path: string }[]>(
-      "SELECT storage_path FROM logos WHERE id = ? LIMIT 1",
-      [LOGO_DOCUMENT_ID],
-    );
-    const storagePath: unknown = rows[0]?.storage_path;
-    await query("DELETE FROM logos WHERE id = ?", [LOGO_DOCUMENT_ID]);
-    if (typeof storagePath === "string" && isLocalUpload(storagePath)) {
-      await removeFile(storagePath);
+    const snapshot = await settingsRef.get();
+    if (snapshot.exists) {
+      const rawPath = (snapshot.data() as SettingsData | undefined)?.logoPath;
+      await settingsRef.delete();
+      if (typeof rawPath === "string") {
+        await deleteLogoFile(rawPath);
+      }
     }
   } catch {
     // The logo is either already gone or could not be removed.
