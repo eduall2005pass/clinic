@@ -6,19 +6,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Authorized admins: document ID is the Firebase UID of the admin
-    // account (e.g. admins/abc123). Documents are provisioned manually
-    // by the project owner — clients can never create or edit them.
-    // Used to gate admin panel routes and admin-only writes below.
-    function isAdmin() {
-      return isSignedIn()
-        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    match /admins/{uid} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create, update, delete: if false;
-    }
-
     // A student can only read/write their own profile document.
     match /students/{uid} {
       allow create, read, update, delete: if isSignedIn() && request.auth.uid == uid;
@@ -128,11 +115,11 @@ service cloud.firestore {
     // Active website logo. Readable by everyone (it is displayed on every
     // page). Logo configuration now lives server-side (MySQL `logos` table,
     // managed through the /api/logo routes, which verify the caller is an
-    // authorized admin). The legacy Firestore mirror below accepts writes
-    // only from authorized admins — no client can modify it.
+    // authorized admin), so the legacy Firestore mirror below is
+    // write-disabled entirely — no client can modify it.
     match /logos/{logoId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
     // Hero banner slider. Readable by everyone (displayed on the homepage);

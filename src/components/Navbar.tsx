@@ -5,7 +5,6 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { loginHref } from "@/lib/nav-links";
 import { useAuth } from "@/lib/auth-context";
-import { useAdmin } from "@/lib/admin-context";
 
 const menuLinks: { label: string; href?: string }[] = [
   { label: "Home", href: "/" },
@@ -21,7 +20,6 @@ const menuLinks: { label: string; href?: string }[] = [
 
 export default function Navbar() {
   const { user } = useAuth();
-  const { isAdmin } = useAdmin();
   const actionHref = user ? "/dashboard" : loginHref;
   const actionLabel = user ? "Dashboard" : "Login";
   const [menuOpen, setMenuOpen] = useState(false);
@@ -137,16 +135,6 @@ export default function Navbar() {
                         </span>
                       </span>
                     ),
-                  )}
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-primary-400 transition hover:bg-primary-500/10 hover:text-primary-300"
-                    >
-                      Admin Panel
-                    </Link>
                   )}
                 </div>
               </>

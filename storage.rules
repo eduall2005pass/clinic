@@ -1,13 +1,5 @@
 rules_version = '2';
 service firebase.storage {
-  // Admin accounts live in Firestore (admins/{uid}) and are provisioned
-  // manually — clients can never create them. Only those UIDs may upload
-  // or delete website logo files.
-  function isAdmin() {
-    return request.auth != null
-      && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
-  }
-
   match /b/{bucket}/o {
     // Student profile pictures: readable by any authenticated user,
     // writable only by the owner of the profile (uid in path must match).
@@ -19,14 +11,15 @@ service firebase.storage {
     // Website logo images: readable by everyone (displayed on every page).
     // Uploads are handled server-side by the authorized admin flow
     // (/api/logo), which stores files under public/uploads/website/logo.
-    // Direct client uploads/replacements/deletes are admin-only.
+    // The legacy storage paths below are write-disabled entirely — no
+    // client can upload, replace, or delete logo files directly.
     match /website-logos/{fileName} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
     match /website/logo/{fileName} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
     // Hero banner images: readable by everyone (displayed on the homepage),

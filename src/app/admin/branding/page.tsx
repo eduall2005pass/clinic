@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { MAX_LOGO_FILE_SIZE } from "@/lib/logo";
 import { bannerSlides, MAX_BANNER_FILE_SIZE } from "@/lib/banners";
 import type { CustomBanner } from "@/lib/banner-store";
-import AdminGuard from "@/components/admin/AdminGuard";
+import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 
 type Notice = { kind: "success" | "error"; text: string };
 
@@ -21,27 +21,66 @@ type SlideState = {
 };
 
 export default function BrandingPage() {
-  return (
-    <AdminGuard>
-      <BrandingContent />
-    </AdminGuard>
-  );
-}
-
-function BrandingContent() {
   const { logo, isCustom, refresh } = useLogo();
-  const { user } = useAuth();
+  const { user, authLoading } = useAuth();
   const [selected, setSelected] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState<"save" | "remove" | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [adminStatus, setAdminStatus] = useState<
+    "checking" | "admin" | "denied"
+  >("checking");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let cancelled = false;
+    user
+      .getIdToken()
+      .then((token) =>
+        fetch("/api/admin", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }),
+      )
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { isAdmin?: boolean } | null) => {
+        if (cancelled) return;
+        setAdminStatus(data?.isAdmin ? "admin" : "denied");
+      })
+      .catch(() => {
+        if (!cancelled) setAdminStatus("denied");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
 
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  const adminCheck =
+    !authLoading && !user ? "denied" : adminStatus;
+
+  if (authLoading || adminCheck === "checking") {
+    return <AccessLoading label="Checking administrator access…" />;
+  }
+
+  if (adminCheck === "denied") {
+    return (
+      <AccessMessage
+        title="Administrators only"
+        message="The website logo and banner settings are restricted to authorized administrators. Your account does not have permission to change them."
+        actionLabel="Back to Home"
+        actionHref="/"
+        secondaryLabel="Go to Dashboard"
+        secondaryHref="/dashboard"
+      />
+    );
+  }
 
   function handleFileChange(file: File | undefined) {
     setNotice(null);

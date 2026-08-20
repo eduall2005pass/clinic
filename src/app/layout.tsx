@@ -6,7 +6,6 @@ import Footer from "@/components/Footer";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LogoProvider } from "@/components/LogoProvider";
 import { AuthProvider } from "@/lib/auth-context";
-import { AdminProvider } from "@/lib/admin-context";
 import { getActiveLogo } from "@/lib/logo-store";
 import "./globals.css";
 
@@ -48,12 +47,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <LogoProvider initialLogo={initialLogo}>
             <AuthProvider>
-              <AdminProvider>
-                <Navbar />
-                {children}
-                <Footer />
-                <BottomNav />
-              </AdminProvider>
+              <Navbar />
+              {children}
+              <Footer />
+              <BottomNav />
             </AuthProvider>
           </LogoProvider>
         </ThemeProvider>

@@ -1,12 +1,6 @@
 import { readFileSync } from "node:fs";
-import {
-  cert,
-  getApps,
-  initializeApp,
-  type App,
-} from "firebase-admin/app";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
-import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 const serviceAccountPath =
   process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? "";
@@ -42,7 +36,7 @@ const serviceAccount = getServiceAccount();
 
 export const isFirebaseAdminConfigured = serviceAccount !== null;
 
-export function getFirebaseAdminApp(): App {
+export function getFirebaseAdminAuth() {
   if (!serviceAccount) {
     throw new Error("Firebase Admin is not configured.");
   }
@@ -51,15 +45,7 @@ export function getFirebaseAdminApp(): App {
       credential: cert(serviceAccount as Parameters<typeof cert>[0]),
     });
   }
-  return getApps()[0];
-}
-
-export function getFirebaseAdminAuth() {
-  return getAuth(getFirebaseAdminApp());
-}
-
-export function getFirebaseAdminFirestore(): Firestore {
-  return getFirestore(getFirebaseAdminApp());
+  return getAuth();
 }
 
 /**

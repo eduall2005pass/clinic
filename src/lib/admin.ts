@@ -1,9 +1,6 @@
 import { NextRequest } from "next/server";
 import { getFirebaseUser } from "@/lib/auth-api";
-import {
-  getFirebaseAdminFirestore,
-  isFirebaseAdminConfigured,
-} from "@/lib/firebase-admin";
+import { query, isMysqlConfigured } from "@/lib/mysql";
 import type { DecodedIdToken } from "firebase-admin/auth";
 
 export type AdminAccount = {
@@ -13,19 +10,19 @@ export type AdminAccount = {
 };
 
 /**
- * Authorized admin accounts live in the Firestore `admins` collection
- * (document ID = Firebase UID). This is the single source of truth —
- * verified from Firestore, never from hard-coded frontend values.
- * Documents are provisioned manually (or by the project owner); the
- * Firestore security rules forbid clients from creating or editing them.
+ * Checks whether the given Firebase UID is an authorized admin.
+ * Admin accounts are stored in the `admins` table — see
+ * src/sql/logo-admin-migration.sql. Writes to website settings are
+ * rejected unless the caller resolves to an admin here.
  */
 export async function isAdminUid(uid: string): Promise<boolean> {
-  if (!isFirebaseAdminConfigured) return false;
+  if (!isMysqlConfigured) return false;
   try {
-    const document = await getFirebaseAdminFirestore()
-      .doc(`admins/${uid}`)
-      .get();
-    return document.exists;
+    const rows = await query<{ uid: string }[]>(
+      "SELECT uid FROM admins WHERE uid = ? LIMIT 1",
+      [uid],
+    );
+    return rows.length > 0;
   } catch {
     return false;
   }
@@ -34,23 +31,19 @@ export async function isAdminUid(uid: string): Promise<boolean> {
 export async function fetchAdminAccount(
   uid: string,
 ): Promise<AdminAccount | null> {
-  if (!isFirebaseAdminConfigured) return null;
+  if (!isMysqlConfigured) return null;
   try {
-    const document = await getFirebaseAdminFirestore()
-      .doc(`admins/${uid}`)
-      .get();
-    if (!document.exists) return null;
-    const data = document.data() ?? {};
-    return {
+    const rows = await query<
+      { uid: string; email: string | null; display_name: string | null }[]
+    >("SELECT uid, email, display_name FROM admins WHERE uid = ? LIMIT 1", [
       uid,
-      email:
-        typeof data.email === "string" && data.email.length > 0
-          ? data.email
-          : null,
-      displayName:
-        typeof data.displayName === "string" && data.displayName.length > 0
-          ? data.displayName
-          : null,
+    ]);
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      uid: row.uid,
+      email: row.email,
+      displayName: row.display_name,
     };
   } catch {
     return null;
