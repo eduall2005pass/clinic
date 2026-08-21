@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { FaqIcon } from "@/components/admin/icons";
+import FaqManager from "@/components/admin/FaqManager";
 
 export const metadata: Metadata = {
   title: "FAQ — MediSpark Admin",
@@ -8,5 +7,11 @@ export const metadata: Metadata = {
 };
 
 export default function ContentFaqPage() {
-  return <AdminPlaceholder title="FAQ" description="Manage FAQ entries shown on the website." icon={FaqIcon} />;
+  return (
+    <FaqManager
+      loadingLabel="Loading FAQs…"
+      heading="FAQ"
+      description="Manage FAQ entries shown on the website — add, edit, delete, enable or disable entries and change their display order. Changes go live immediately."
+    />
+  );
 }

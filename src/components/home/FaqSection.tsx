@@ -8,11 +8,15 @@ import type { Faq } from "@/lib/faq";
 export default  function FaqSection({
   title,
   description,
+  faqs: faqsProp,
 }: {
   title?: string;
   description?: string;
+  faqs?: Faq[];
 } = {}) {
-  const [faqs] = useState<Faq[]>(getPublishedFaqs);
+  const [faqs] = useState<Faq[]>(
+    () => faqsProp ?? getPublishedFaqs()
+  );
   const [openId, setOpenId] = useState<string | null>(
     faqs.length > 0 ? faqs[0].id : null
   );

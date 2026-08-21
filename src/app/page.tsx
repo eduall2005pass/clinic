@@ -10,6 +10,9 @@ import StudentReviews from "@/components/home/StudentReviews";
 import FaqSection from "@/components/home/FaqSection";
 import { fetchHomepageSections } from "@/lib/homepage-sections";
 import { fetchHeroSettings } from "@/lib/hero-settings";
+import { fetchPublishedReviewRecords } from "@/lib/reviews-store";
+import { fetchPublishedFaqs } from "@/lib/faq-store";
+import type { StudentReview } from "@/lib/reviews";
 import type { HomepageSection } from "@/lib/homepage-sections-constants";
 
 function renderSection(section: HomepageSection) {
@@ -45,11 +48,30 @@ function renderSection(section: HomepageSection) {
 }
 
 export default async function HomePage() {
-  const [sections, heroSettings] = await Promise.all([
+  const [sections, heroSettings, reviewRecords, publishedFaqs] = await Promise.all([
     fetchHomepageSections(),
     fetchHeroSettings(),
+    fetchPublishedReviewRecords(),
+    fetchPublishedFaqs(),
   ]);
   const activeSections = sections.filter((section) => section.isActive);
+
+  const publishedReviews: StudentReview[] = reviewRecords.map((record, index) => ({
+    id: record.id,
+    studentName: record.studentName,
+    studentAvatar: record.studentAvatar ?? "/avatars/student.svg",
+    courseName: record.courseName,
+    batchLabel: record.batchLabel,
+    rating: record.rating,
+    text: record.text,
+    createdAt: new Date(record.createdAt).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }),
+    order: index,
+    status: "published",
+  }));
 
   return (
     <main className="flex-1 bg-dark-950">
@@ -58,6 +80,26 @@ export default async function HomePage() {
           // Hero visibility is controlled from Admin → Website → Hero Section.
           if (!heroSettings.isActive) return null;
           return <Hero key={section.key} hero={heroSettings} />;
+        }
+        if (section.key === "reviews") {
+          return (
+            <StudentReviews
+              key={section.key}
+              reviews={publishedReviews}
+              title={section.title ?? undefined}
+              description={section.description ?? undefined}
+            />
+          );
+        }
+        if (section.key === "faq") {
+          return (
+            <FaqSection
+              key={section.key}
+              faqs={publishedFaqs}
+              title={section.title ?? undefined}
+              description={section.description ?? undefined}
+            />
+          );
         }
         return renderSection(section);
       })}
