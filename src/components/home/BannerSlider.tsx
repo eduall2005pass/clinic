@@ -23,17 +23,14 @@ export default function BannerSlider() {
         if (cancelled) return;
         const custom = data?.slides ?? [];
         if (custom.length === 0) return;
-        const customById = new Map(custom.map((slide) => [slide.id, slide]));
-        setSlides((defaults) =>
-          defaults.map((slide) => {
-            const override = customById.get(slide.id);
-            if (!override) return slide;
-            return {
-              ...slide,
-              image: override.url,
-              href: override.href ?? slide.href,
-            };
-          }),
+        // Database is the single source of truth once banners exist.
+        setSlides(
+          custom.map((slide) => ({
+            id: slide.id,
+            image: slide.url,
+            href: slide.href ?? undefined,
+            alt: slide.title ?? undefined,
+          })),
         );
       })
       .catch(() => {

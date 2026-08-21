@@ -236,7 +236,7 @@ export default function HeroBannerManagementPage() {
   }
 
   async function handleSaveAll() {
-    if (!user) return;
+    if (!user || !banners) return;
     setSaving(true);
     setNotice(null);
     try {

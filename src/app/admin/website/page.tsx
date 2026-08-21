@@ -89,6 +89,7 @@ export default function WebsiteSettingsPage() {
 }
 
 function HeroBannersSection() {
+  const { user } = useAuth();
   const [slides, setSlides] = useState<SlideState[]>(() =>
     bannerSlides.map((slide) => ({
       id: slide.id,
@@ -148,12 +149,14 @@ function HeroBannersSection() {
     }
     updateSlide(slide.id, { busy: "save", notice: null });
     try {
+      const token = user ? await user.getIdToken() : null;
       const formData = new FormData();
       formData.append("file", file);
       formData.append("id", slide.id);
       formData.append("href", slide.href);
       const response = await fetch("/api/banners", {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData,
       });
       const data = (await response.json()) as {
@@ -187,9 +190,13 @@ function HeroBannersSection() {
   async function handleRemove(slide: SlideState) {
     updateSlide(slide.id, { busy: "remove", notice: null });
     try {
+      const token = user ? await user.getIdToken() : null;
       const response = await fetch("/api/banners", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ id: slide.id }),
       });
       if (!response.ok) {
