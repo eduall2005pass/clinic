@@ -1,156 +1,181 @@
 import type { ComponentType, SVGProps } from "react";
 import {
-  ActivityLogIcon,
-  BookOpenIcon,
-  BookmarkIcon,
-  ChaptersIcon,
   CoursesIcon,
-  DashboardIcon,
-  EnrollmentsIcon,
   ExamsIcon,
-  FaqIcon,
-  FooterPanelIcon,
-  GraduationCapIcon,
-  HeaderPanelIcon,
-  HeroImageIcon,
-  KeyIcon,
+  LockIcon,
   MegaphoneIcon,
   MentorsIcon,
-  NotificationsIcon,
-  PanelLeftIcon,
-  QuestionBankIcon,
-  ResultsChartIcon,
-  ReviewsIcon,
-  RolesIcon,
-  SeoIcon,
-  SettingsIcon,
-  ShareIcon,
-  ShieldIcon,
+  ServerIcon,
   StudentsIcon,
-  TagIcon,
-  TicketIcon,
-  UserShieldIcon,
+  TargetIcon,
   WebsiteIcon,
-  JerseyIcon,
 } from "@/components/admin/icons";
 
-export type AdminNavItem = {
+export type AdminSubSection = {
   label: string;
   href: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
 };
 
-export type AdminNavGroup = {
-  label: string;
+export type AdminCategory = {
+  name: string;
+  href: string;
+  description: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
-  items: AdminNavItem[];
+  subsections: AdminSubSection[];
 };
 
-export const adminNavGroups: AdminNavGroup[] = [
+export const adminCategories: AdminCategory[] = [
   {
-    label: "Dashboard",
-    icon: DashboardIcon,
-    items: [
-      { label: "Dashboard", href: "/admin", icon: DashboardIcon },
-    ],
-  },
-  {
-    label: "Website Control",
+    name: "Website",
+    href: "/admin/website",
+    description: "Control the complete public website.",
     icon: WebsiteIcon,
-    items: [
-      { label: "General Settings", href: "/admin/settings", icon: SettingsIcon },
-      { label: "Logo & Favicon", href: "/admin/branding", icon: PanelLeftIcon },
-      { label: "Header / Navbar", href: "/admin/website/header", icon: HeaderPanelIcon },
-      { label: "Hero Section", href: "/admin/website/homepage/hero", icon: HeroImageIcon },
-      { label: "Courses Section", href: "/admin/homepage-courses", icon: BookOpenIcon },
-      { label: "Mentors Section", href: "/admin/website/homepage/mentors", icon: MentorsIcon },
-      { label: "Reviews Section", href: "/admin/website/homepage/reviews", icon: ReviewsIcon },
-      { label: "FAQ Section", href: "/admin/website/homepage/faq", icon: FaqIcon },
-      { label: "Footer", href: "/admin/website/footer", icon: FooterPanelIcon },
-      { label: "Social Links", href: "/admin/website/social-links", icon: ShareIcon },
-      { label: "SEO Settings", href: "/admin/website/seo", icon: SeoIcon },
+    subsections: [
+      { label: "General Settings", href: "/admin/settings" },
+      { label: "Logo & Favicon", href: "/admin/branding" },
+      { label: "Header & Navbar", href: "/admin/website/header" },
+      { label: "Homepage", href: "/admin/website/homepage" },
+      { label: "Hero Section", href: "/admin/website/homepage/hero" },
+      { label: "Courses Section", href: "/admin/homepage-courses" },
+      { label: "Mentor Section", href: "/admin/website/homepage/mentors" },
+      { label: "Reviews Section", href: "/admin/website/homepage/reviews" },
+      { label: "FAQ Section", href: "/admin/website/homepage/faq" },
+      { label: "Footer", href: "/admin/website/footer" },
+      { label: "Social Links", href: "/admin/website/social-links" },
+      { label: "SEO", href: "/admin/website/seo" },
+      { label: "Theme & Appearance", href: "/admin/website/theme" },
+      { label: "Popup / Announcement", href: "/admin/website/popup" },
     ],
   },
   {
-    label: "Courses",
+    name: "Courses",
+    href: "/admin/courses",
+    description: "Manage courses, subjects, chapters, classes and pricing.",
     icon: CoursesIcon,
-    items: [
-      { label: "All Courses", href: "/admin/courses", icon: CoursesIcon },
-      { label: "Academic Courses", href: "/admin/courses/academic", icon: GraduationCapIcon },
-      { label: "Admission Courses", href: "/admin/courses/admission", icon: TagIcon },
-      { label: "Categories", href: "/admin/courses/categories", icon: TagIcon },
-      { label: "Subjects", href: "/admin/courses/subjects", icon: BookmarkIcon },
-      { label: "Chapters", href: "/admin/courses/chapters", icon: ChaptersIcon },
-      { label: "Classes", href: "/admin/courses/classes", icon: GraduationCapIcon },
-      { label: "Pricing", href: "/admin/courses/pricing", icon: TagIcon },
-      { label: "Coupons", href: "/admin/courses/coupons", icon: TicketIcon },
+    subsections: [
+      { label: "All Courses", href: "/admin/courses/all" },
+      { label: "Academic Courses", href: "/admin/courses/academic" },
+      { label: "Admission Courses", href: "/admin/courses/admission" },
+      { label: "Categories", href: "/admin/courses/categories" },
+      { label: "Subjects", href: "/admin/courses/subjects" },
+      { label: "Chapters", href: "/admin/courses/chapters" },
+      { label: "Classes", href: "/admin/courses/classes" },
+      { label: "Pricing & Discounts", href: "/admin/courses/pricing" },
+      { label: "Coupons", href: "/admin/courses/coupons" },
     ],
   },
   {
-    label: "Students",
+    name: "Students",
+    href: "/admin/students",
+    description: "Manage students and their enrollments.",
     icon: StudentsIcon,
-    items: [
-      { label: "All Students", href: "/admin/students", icon: StudentsIcon },
-      { label: "Enrollments", href: "/admin/students/enrollments", icon: EnrollmentsIcon },
-      { label: "Student Accounts", href: "/admin/students/accounts", icon: UserShieldIcon },
+    subsections: [
+      { label: "All Students", href: "/admin/students/all" },
+      { label: "Enrollments", href: "/admin/students/enrollments" },
+      { label: "Student Activity", href: "/admin/students/activity" },
     ],
   },
   {
-    label: "Exams",
+    name: "Exams",
+    href: "/admin/exams",
+    description:
+      "Manage public exams, enrolled exams, questions and results.",
     icon: ExamsIcon,
-    items: [
-      { label: "Public Exams", href: "/admin/exams/public", icon: ExamsIcon },
-      { label: "Enrolled Exams", href: "/admin/exams/enrolled", icon: EnrollmentsIcon },
-      { label: "Question Bank", href: "/admin/exams/question-bank", icon: QuestionBankIcon },
-      { label: "Answer Keys", href: "/admin/exams/answer-keys", icon: KeyIcon },
-      { label: "Results", href: "/admin/exams/results", icon: ResultsChartIcon },
+    subsections: [
+      { label: "Public Exams", href: "/admin/exams/public" },
+      { label: "Enrolled Exams", href: "/admin/exams/enrolled" },
+      { label: "Question Bank", href: "/admin/exams/question-bank" },
+      { label: "Answer Keys", href: "/admin/exams/answer-keys" },
+      { label: "Results", href: "/admin/exams/results" },
+      { label: "Exam Settings", href: "/admin/exams/settings" },
     ],
   },
   {
-    label: "Mentors",
+    name: "Mentors",
+    href: "/admin/mentors",
+    description: "Manage mentor profiles and information.",
     icon: MentorsIcon,
-    items: [
-      { label: "All Mentors", href: "/admin/mentors", icon: MentorsIcon },
-      { label: "Mentor Profiles", href: "/admin/mentors/profiles", icon: UserShieldIcon },
+    subsections: [
+      { label: "All Mentors", href: "/admin/mentors/all" },
+      { label: "Mentor Profiles", href: "/admin/mentors/profiles" },
     ],
   },
   {
-    label: "Content",
-    icon: ReviewsIcon,
-    items: [
-      { label: "Reviews", href: "/admin/content/reviews", icon: ReviewsIcon },
-      { label: "FAQ", href: "/admin/content/faq", icon: FaqIcon },
-      { label: "Notifications", href: "/admin/content/notifications", icon: NotificationsIcon },
-      { label: "Announcements", href: "/admin/content/announcements", icon: MegaphoneIcon },
-      { label: "Jersey", href: "/admin/content/jersey", icon: JerseyIcon },
+    name: "Content",
+    href: "/admin/content",
+    description:
+      "Manage reviews, FAQ, notifications, announcements and media.",
+    icon: MegaphoneIcon,
+    subsections: [
+      { label: "Reviews", href: "/admin/content/reviews" },
+      { label: "FAQ", href: "/admin/content/faq" },
+      { label: "Announcements", href: "/admin/content/announcements" },
+      { label: "Notifications", href: "/admin/content/notifications" },
+      { label: "Jersey", href: "/admin/content/jersey" },
+      { label: "Media Library", href: "/admin/content/media-library" },
     ],
   },
   {
-    label: "Administration",
-    icon: ShieldIcon,
-    items: [
-      { label: "Admin Management", href: "/admin/administration/admins", icon: UserShieldIcon },
-      { label: "Roles & Permissions", href: "/admin/administration/roles", icon: RolesIcon },
-      { label: "Activity Logs", href: "/admin/administration/activity-logs", icon: ActivityLogIcon },
-      { label: "Admin Settings", href: "/admin/administration/settings", icon: SettingsIcon },
+    name: "Marketing",
+    href: "/admin/marketing",
+    description:
+      "Manage offers, promotional banners, featured courses and campaigns.",
+    icon: TargetIcon,
+    subsections: [
+      { label: "Promotional Banners", href: "/admin/marketing/banners" },
+      { label: "Featured Courses", href: "/admin/marketing/featured-courses" },
+      { label: "Offers", href: "/admin/marketing/offers" },
+      { label: "Coupons", href: "/admin/marketing/coupons" },
+      { label: "Campaigns", href: "/admin/marketing/campaigns" },
+    ],
+  },
+  {
+    name: "Administration",
+    href: "/admin/administration",
+    description: "Manage admins, permissions, security and activity logs.",
+    icon: LockIcon,
+    subsections: [
+      { label: "Admin Management", href: "/admin/administration/admins" },
+      { label: "Roles & Permissions", href: "/admin/administration/roles" },
+      { label: "Activity Logs", href: "/admin/administration/activity-logs" },
+      { label: "Security", href: "/admin/administration/security" },
+    ],
+  },
+  {
+    name: "System",
+    href: "/admin/system",
+    description:
+      "Manage system-level settings, storage, cache, backup and logs.",
+    icon: ServerIcon,
+    subsections: [
+      { label: "System Status", href: "/admin/system/status" },
+      { label: "Storage", href: "/admin/system/storage" },
+      { label: "Cache", href: "/admin/system/cache" },
+      { label: "Backup", href: "/admin/system/backup" },
+      { label: "System Logs", href: "/admin/system/logs" },
     ],
   },
 ];
 
-export function findActiveAdminNav(pathname: string): AdminNavItem | null {
-  let best: AdminNavItem | null = null;
-  let bestLen = 0;
-  for (const group of adminNavGroups) {
-    for (const item of group.items) {
-      const normalized = item.href === "/admin" ? "/admin" : item.href;
-      if (
-        pathname === normalized ||
-        (pathname.startsWith(normalized + "/") && normalized.length > bestLen)
-      ) {
-        best = item;
-        bestLen = normalized.length;
-      }
+export function findAdminCategory(pathname: string): AdminCategory | null {
+  for (const category of adminCategories) {
+    if (pathname === category.href || pathname.startsWith(category.href + "/")) {
+      return category;
     }
   }
-  return best;
+  return null;
+}
+
+export function findActiveAdminNav(pathname: string): {
+  title: string;
+} | null {
+  if (pathname === "/admin") return { title: "Dashboard" };
+  const category = findAdminCategory(pathname);
+  if (!category) return null;
+  const sub = category.subsections.find(
+    (item) =>
+      pathname === item.href ||
+      (pathname.startsWith(item.href + "/") && item.href !== category.href)
+  );
+  return { title: sub ? sub.label : `${category.name} Management` };
 }

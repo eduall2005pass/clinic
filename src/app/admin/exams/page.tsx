@@ -1,12 +1,14 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+import type { Metadata } from "next";
+import AdminCategoryPage from "@/components/admin/AdminCategoryPage";
+import { adminCategories } from "@/lib/admin-nav";
 
-export const metadata = { title: "Exams" };
+export const metadata: Metadata = {
+  title: "Exams Management — MediSpark Admin",
+  description: "Manage public exams, enrolled exams, questions and results.",
+};
 
-export default function AdminExamsPage() {
-  return (
-    <AdminPlaceholder
-      title="Exams"
-      description="Create exams, manage questions and review results."
-    />
-  );
+const category = adminCategories.find((c) => c.href === "/admin/exams")!;
+
+export default function ExamsManagementPage() {
+  return <AdminCategoryPage category={category} />;
 }

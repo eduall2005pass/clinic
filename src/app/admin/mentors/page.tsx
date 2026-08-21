@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { MentorsIcon } from "@/components/admin/icons";
+import AdminCategoryPage from "@/components/admin/AdminCategoryPage";
+import { adminCategories } from "@/lib/admin-nav";
 
 export const metadata: Metadata = {
-  title: "All Mentors — MediSpark Admin",
-  description: "View and manage all mentors on the platform.",
+  title: "Mentors Management — MediSpark Admin",
+  description: "Manage mentor profiles and information.",
 };
 
-export default function AllMentorsPage() {
-  return <AdminPlaceholder title="All Mentors" description="View and manage all mentors on the platform." icon={MentorsIcon} />;
+const category = adminCategories.find((c) => c.href === "/admin/mentors")!;
+
+export default function MentorsManagementPage() {
+  return <AdminCategoryPage category={category} />;
 }

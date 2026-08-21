@@ -3,12 +3,12 @@ import AdminCategoryPage from "@/components/admin/AdminCategoryPage";
 import { adminCategories } from "@/lib/admin-nav";
 
 export const metadata: Metadata = {
-  title: "Students Management — MediSpark Admin",
-  description: "Manage students and their enrollments.",
+  title: "System Management — MediSpark Admin",
+  description: "Manage system-level settings, storage, cache, backup and logs.",
 };
 
-const category = adminCategories.find((c) => c.href === "/admin/students")!;
+const category = adminCategories.find((c) => c.href === "/admin/system")!;
 
-export default function StudentsManagementPage() {
+export default function SystemManagementPage() {
   return <AdminCategoryPage category={category} />;
 }

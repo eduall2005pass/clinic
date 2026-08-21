@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { CoursesIcon } from "@/components/admin/icons";
+import AdminCategoryPage from "@/components/admin/AdminCategoryPage";
+import { adminCategories } from "@/lib/admin-nav";
 
 export const metadata: Metadata = {
-  title: "All Courses — MediSpark Admin",
-  description: "Create and manage every course on the platform.",
+  title: "Courses Management — MediSpark Admin",
+  description: "Manage courses, subjects, chapters, classes and pricing.",
 };
 
-export default function AllCoursesPage() {
-  return <AdminPlaceholder title="All Courses" description="Create and manage every course on the platform." icon={CoursesIcon} />;
+const category = adminCategories.find((c) => c.href === "/admin/courses")!;
+
+export default function CoursesManagementPage() {
+  return <AdminCategoryPage category={category} />;
 }

@@ -1,134 +1,45 @@
-import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ActivityLogIcon,
-  ArrowUpRightIcon,
-  BookOpenIcon,
-  CalendarIcon,
-  EnrollmentsIcon,
-  ExamsIcon,
-  MentorsIcon,
-  StudentsIcon,
-} from "@/components/admin/icons";
+import { adminCategories } from "@/lib/admin-nav";
+import { ArrowRightIcon } from "@/components/admin/icons";
 
-export const metadata: Metadata = {
-  title: "Dashboard — MediSpark Admin",
-  description:
-    "MediSpark admin control center overview — students, courses, enrollments, exams and mentors at a glance.",
-};
-
-const stats = [
-  { label: "Total Students", value: "—", icon: StudentsIcon },
-  { label: "Total Courses", value: "—", icon: BookOpenIcon },
-  { label: "Total Enrollments", value: "—", icon: EnrollmentsIcon },
-  { label: "Total Exams", value: "—", icon: ExamsIcon },
-  { label: "Active Mentors", value: "—", icon: MentorsIcon },
-  { label: "Upcoming Exams", value: "—", icon: CalendarIcon },
-];
-
-const recentSections = [
-  {
-    title: "Recent Enrollments",
-    description:
-      "Latest course enrollments will appear here once enrollment data is connected.",
-    icon: EnrollmentsIcon,
-  },
-  {
-    title: "Recent Students",
-    description:
-      "Newly registered students will appear here once student data is connected.",
-    icon: StudentsIcon,
-  },
-  {
-    title: "Recent Activity",
-    description:
-      "Admin and website activity logs will appear here once logging is connected.",
-    icon: ActivityLogIcon,
-  },
-];
-
-export default function AdminDashboardPage() {
+export default function AdminHome() {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-      {/* Page intro */}
-      <div className="rounded-2xl border border-primary-600/30 bg-primary-600/10 p-6 shadow-lg shadow-black/20 sm:p-8">
-        <h2 className="text-xl font-extrabold text-heading sm:text-2xl">
-          Website Control Center
+    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+      {/* Welcome */}
+      <div>
+        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl">
+          Welcome back, Admin 👋
         </h2>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-400">
-          Control the entire MediSpark website from one place — content,
-          courses, students, exams and mentors. Data will flow from here
-          through MySQL to the live website, so changes go live without
-          touching code.
+        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 sm:text-base">
+          Manage and control your entire MediSpark website from one place.
         </p>
       </div>
 
-      {/* Stat cards */}
-      <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
+      {/* Category cards */}
+      <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {adminCategories.map((category) => (
+          <Link
+            key={category.href}
+            href={category.href}
+            className="group flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-primary-600/50 hover:shadow-xl hover:shadow-black/10"
           >
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-500">
-                <stat.icon className="h-5 w-5" />
-              </span>
-              <span className="text-2xl font-extrabold tabular-nums text-heading">
-                {stat.value}
-              </span>
-            </div>
-            <p className="mt-3 truncate text-sm font-semibold text-neutral-400">
-              {stat.label}
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600/10 text-primary-600 transition duration-300 group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-primary-900/30">
+              <category.icon className="h-7 w-7" />
+            </span>
+
+            <h3 className="mt-5 text-lg font-extrabold text-zinc-900 transition group-hover:text-primary-700">
+              {category.name}
+            </h3>
+            <p className="mt-1.5 flex-1 text-sm leading-relaxed text-zinc-500">
+              {category.description}
             </p>
-          </div>
-        ))}
-      </div>
 
-      {/* Recent sections */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        {recentSections.map((section) => (
-          <div
-            key={section.title}
-            className="flex flex-col rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20"
-          >
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-500">
-                <section.icon className="h-5 w-5" />
-              </span>
-              <h3 className="text-base font-bold text-heading">
-                {section.title}
-              </h3>
-            </div>
-            <div className="mt-5 flex flex-1 items-center justify-center rounded-xl border border-dashed border-ink/15 bg-dark-950/60 px-4 py-8 text-center">
-              <p className="text-xs leading-relaxed text-neutral-500">
-                {section.description}
-              </p>
-            </div>
-          </div>
+            <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-primary-600">
+              Manage
+              <ArrowRightIcon className="h-4 w-4 transition duration-300 group-hover:translate-x-1" />
+            </span>
+          </Link>
         ))}
-      </div>
-
-      {/* Quick links */}
-      <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
-        <h3 className="text-base font-bold text-heading">Quick Actions</h3>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "General Settings", href: "/admin/settings" },
-            { label: "Logo & Favicon", href: "/admin/branding" },
-            { label: "Courses Section", href: "/admin/homepage-courses" },
-            { label: "All Courses", href: "/admin/courses" },
-          ].map((action) => (
-            <Link
-              key={action.href}
-              href={action.href}
-              className="group flex items-center justify-between gap-3 rounded-xl border border-ink/15 bg-ink/5 px-4 py-3 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
-            >
-              {action.label}
-              <ArrowUpRightIcon className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:text-primary-400" />
-            </Link>
-          ))}
-        </div>
       </div>
     </section>
   );
