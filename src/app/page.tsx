@@ -8,6 +8,7 @@ import JerseyGallery from "@/components/home/JerseyGallery";
 import Mentors from "@/components/home/Mentors";
 import StudentReviews from "@/components/home/StudentReviews";
 import FaqSection from "@/components/home/FaqSection";
+import PromotionsSection from "@/components/home/PromotionsSection";
 import { fetchHomepageSections } from "@/lib/homepage-sections";
 import { fetchHeroSettings } from "@/lib/hero-settings";
 import { fetchPublishedReviewRecords } from "@/lib/reviews-store";
@@ -75,6 +76,7 @@ export default async function HomePage() {
 
   return (
     <main className="flex-1 bg-dark-950">
+      <PromotionsSection />
       {activeSections.map((section) => {
         if (section.key === "hero") {
           // Hero visibility is controlled from Admin → Website → Hero Section.

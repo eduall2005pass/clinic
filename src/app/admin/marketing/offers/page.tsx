@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { TagIcon } from "@/components/admin/icons";
+import PromotionManager from "@/components/admin/PromotionManager";
 
 export const metadata: Metadata = {
   title: "Offers — MediSpark Admin",
-  description: "Create and manage special offers for students.",
+  description: "Manage promotional offers shown on the website.",
 };
 
 export default function OffersPage() {
-  return <AdminPlaceholder title="Offers" description="Create and manage special offers for students." icon={TagIcon} />;
+  return (
+    <PromotionManager
+      kind="offer"
+      loadingLabel="Loading offers…"
+      heading="Offers"
+      description="Create promotional offers with links, start/end dates and active status. Only active offers within their date window appear on the live website."
+    />
+  );
 }

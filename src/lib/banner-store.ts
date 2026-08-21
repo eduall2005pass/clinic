@@ -12,6 +12,8 @@ export type CustomBanner = {
   fileName: string;
   storagePath: string;
   updatedAt: number;
+  startAt: string | null;
+  endAt: string | null;
 };
 
 type BannerRow = {
@@ -23,6 +25,8 @@ type BannerRow = {
   file_name: string;
   storage_path: string;
   updated_at: Date | string;
+  start_at?: Date | string | null;
+  end_at?: Date | string | null;
 };
 
 const SEED_BANNERS: Array<{ id: string; url: string; href: string; title: string }> = [
@@ -73,6 +77,8 @@ async function ensureBannersTable(): Promise<void> {
     await exec(
       "ALTER TABLE banners ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1",
     );
+    await exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS start_at DATETIME NULL");
+    await exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS end_at DATETIME NULL");
   } catch {
     // Best effort — column may already exist.
   }
@@ -102,6 +108,12 @@ async function ensureSchema(): Promise<void> {
   await seedDefaultBanners();
 }
 
+function toIso(value: Date | string | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 function rowToBanner(row: BannerRow): CustomBanner {
   return {
     id: row.id,
@@ -116,7 +128,18 @@ function rowToBanner(row: BannerRow): CustomBanner {
         ? row.updated_at.toISOString()
         : String(row.updated_at),
     ),
+    startAt: toIso(row.start_at),
+    endAt: toIso(row.end_at),
   };
+}
+
+function isWithinDateWindow(
+  banner: Pick<CustomBanner, "startAt" | "endAt">,
+  now: number,
+): boolean {
+  if (banner.startAt && Date.parse(banner.startAt) > now) return false;
+  if (banner.endAt && Date.parse(banner.endAt) < now) return false;
+  return true;
 }
 
 async function deleteBannerFile(
@@ -138,7 +161,8 @@ export async function fetchAllBanners(): Promise<CustomBanner[]> {
   try {
     await ensureSchema();
     const rows = await query<BannerRow[]>(
-      `SELECT id, url, href, title, is_active, file_name, storage_path, updated_at
+      `SELECT id, url, href, title, is_active, file_name, storage_path, updated_at,
+              start_at, end_at
        FROM banners ORDER BY sort_order ASC, created_at ASC`,
     );
     return rows.map(rowToBanner);
@@ -147,15 +171,19 @@ export async function fetchAllBanners(): Promise<CustomBanner[]> {
   }
 }
 
-/** Active banners only — used by the live homepage slider. */
+/** Active banners within their date window — used by the live homepage slider. */
 export async function fetchActiveBanners(): Promise<CustomBanner[] | null> {
   try {
     await ensureSchema();
     const rows = await query<BannerRow[]>(
-      `SELECT id, url, href, title, is_active, file_name, storage_path, updated_at
+      `SELECT id, url, href, title, is_active, file_name, storage_path, updated_at,
+              start_at, end_at
        FROM banners WHERE is_active = 1 ORDER BY sort_order ASC, created_at ASC`,
     );
-    const slides = rows.map(rowToBanner);
+    const now = Date.now();
+    const slides = rows
+      .map(rowToBanner)
+      .filter((banner) => isWithinDateWindow(banner, now));
     return slides.length > 0 ? slides : null;
   } catch {
     return null;
@@ -174,6 +202,8 @@ export async function saveCustomBanner(input: {
   title?: string | null;
   width?: number;
   height?: number;
+  startAt?: string | null;
+  endAt?: string | null;
 }): Promise<CustomBanner[]> {
   const isNew = !input.file || !input.id;
 
@@ -222,15 +252,27 @@ export async function saveCustomBanner(input: {
   }
 
   await exec(
-    `INSERT INTO banners (id, url, href, title, is_active, file_name, storage_path, sort_order)
-     VALUES (?, ?, ?, ?, 1, ?, ?, ?)
+    `INSERT INTO banners (id, url, href, title, is_active, file_name, storage_path, sort_order, start_at, end_at)
+     VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
       url = VALUES(url),
       href = VALUES(href),
       title = VALUES(title),
       file_name = VALUES(file_name),
-      storage_path = VALUES(storage_path)`,
-    [id, url, input.href, input.title ?? null, input.file.name, storagePath, sortOrder],
+      storage_path = VALUES(storage_path),
+      start_at = VALUES(start_at),
+      end_at = VALUES(end_at)`,
+    [
+      id,
+      url,
+      input.href,
+      input.title ?? null,
+      input.file.name,
+      storagePath,
+      sortOrder,
+      parseDateInput(input.startAt),
+      parseDateInput(input.endAt),
+    ],
   );
 
   if (previousPath && previousPath !== storagePath) {
@@ -244,10 +286,18 @@ function generateBannerId(): string {
   return `banner-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function parseDateInput(value: string | null | undefined): string | null {
+  if (!value || value.trim().length === 0) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 19).replace("T", " ");
+}
+
 export type BannerMetaPatch = {
   title?: string | null;
   href?: string | null;
   isActive?: boolean;
+  startAt?: string | null;
+  endAt?: string | null;
 };
 
 export async function updateBannerMeta(
@@ -269,6 +319,14 @@ export async function updateBannerMeta(
   if (patch.isActive !== undefined) {
     sets.push("is_active = ?");
     values.push(patch.isActive ? 1 : 0);
+  }
+  if (patch.startAt !== undefined) {
+    sets.push("start_at = ?");
+    values.push(parseDateInput(patch.startAt));
+  }
+  if (patch.endAt !== undefined) {
+    sets.push("end_at = ?");
+    values.push(parseDateInput(patch.endAt));
   }
 
   if (sets.length > 0) {

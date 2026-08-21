@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
   const rawId = formData.get("id");
   const rawHref = formData.get("href");
   const rawTitle = formData.get("title");
+  const rawStartAt = formData.get("start_at");
+  const rawEndAt = formData.get("end_at");
 
   if (!(file instanceof File)) {
     return NextResponse.json(
@@ -94,6 +96,8 @@ export async function POST(request: NextRequest) {
       title,
       width,
       height,
+      startAt: typeof rawStartAt === "string" ? rawStartAt : null,
+      endAt: typeof rawEndAt === "string" ? rawEndAt : null,
     });
     return NextResponse.json({ slides });
   } catch (error) {
@@ -135,6 +139,12 @@ export async function PUT(request: NextRequest) {
         }
         if (typeof entry.isActive === "boolean") {
           patch.isActive = entry.isActive;
+        }
+        if (typeof entry.startAt === "string" || entry.startAt === null) {
+          patch.startAt = entry.startAt as string | null;
+        }
+        if (typeof entry.endAt === "string" || entry.endAt === null) {
+          patch.endAt = entry.endAt as string | null;
         }
         slides = await updateBannerMeta(entry.id, patch);
       }

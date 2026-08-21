@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { TargetIcon } from "@/components/admin/icons";
+import PromotionManager from "@/components/admin/PromotionManager";
 
 export const metadata: Metadata = {
   title: "Campaigns — MediSpark Admin",
-  description: "Plan and manage marketing campaigns.",
+  description: "Manage marketing campaigns shown on the website.",
 };
 
 export default function CampaignsPage() {
-  return <AdminPlaceholder title="Campaigns" description="Plan and manage marketing campaigns." icon={TargetIcon} />;
+  return (
+    <PromotionManager
+      kind="campaign"
+      loadingLabel="Loading campaigns…"
+      heading="Campaigns"
+      description="Run marketing campaigns with links, start/end dates and active status. Only active campaigns within their date window appear on the live website."
+    />
+  );
 }
