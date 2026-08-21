@@ -183,11 +183,13 @@ export default function BrandingPage() {
 
             <div className="mt-5 flex min-h-44 items-center justify-center rounded-xl bg-dark-850 p-6">
               <Image
+                key={logo.url}
                 src={logo.url}
                 alt="Active website logo"
                 width={logo.width}
                 height={logo.height}
                 priority
+                unoptimized={logo.url.startsWith("/uploads/")}
                 className="max-h-40 w-auto object-contain"
               />
             </div>

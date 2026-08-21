@@ -1,5 +1,6 @@
 import BannerSlider from "@/components/home/BannerSlider";
 import Hero from "@/components/home/Hero";
+import HomepageCourses from "@/components/home/HomepageCourses";
 import FeaturedCourses from "@/components/home/FeaturedCourses";
 import WhyMediSpark from "@/components/home/WhyMediSpark";
 import OurSuccess from "@/components/home/OurSuccess";
@@ -13,6 +14,7 @@ export default function HomePage() {
     <main className="flex-1 bg-dark-950">
       <BannerSlider />
       <Hero />
+      <HomepageCourses />
       <FeaturedCourses />
       <WhyMediSpark />
       <OurSuccess />

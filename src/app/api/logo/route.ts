@@ -10,9 +10,15 @@ import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  Pragma: "no-cache",
+  Expires: "0",
+};
+
 export async function GET() {
   const logo = await fetchActiveLogo();
-  return NextResponse.json({ logo });
+  return NextResponse.json({ logo }, { headers: NO_CACHE_HEADERS });
 }
 
 export async function POST(request: NextRequest) {
@@ -46,8 +52,10 @@ export async function POST(request: NextRequest) {
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const { width, height } = parseImageDimensions(bytes, extension);
-    const logo = await saveActiveLogo(file, width, height, admin.uid);
-    return NextResponse.json({ logo });
+    // Re-create File from bytes — original File's buffer was consumed by arrayBuffer()
+    const freshFile = new File([bytes], file.name, { type: file.type });
+    const logo = await saveActiveLogo(freshFile, width, height, admin.uid);
+    return NextResponse.json({ logo }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save the logo.";
@@ -62,7 +70,7 @@ export async function DELETE(request: NextRequest) {
   }
   try {
     await removeActiveLogo();
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, { headers: NO_CACHE_HEADERS });
   } catch {
     return NextResponse.json(
       { error: "Could not restore the default logo." },

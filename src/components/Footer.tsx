@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { mainNavLinks, loginHref } from "@/lib/nav-links";
+import { getWebsiteSettingsWithFallback } from "@/lib/website-settings";
 
-export default function Footer() {
+export default async function Footer() {
+  const settings = await getWebsiteSettingsWithFallback();
   return (
     <footer className="relative overflow-hidden border-t border-ink/10 bg-dark-950 text-neutral-400">
       <div className="pointer-events-none absolute inset-0 bg-medical-cross opacity-60" />
@@ -11,10 +13,7 @@ export default function Footer() {
       <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         <div>
           <Logo />
-          <p className="mt-4 text-sm leading-relaxed">
-            HSC academic &amp; medical admission preparation platform built for
-            future medical students.
-          </p>
+          <p className="mt-4 text-sm leading-relaxed">{settings.tagline}</p>
         </div>
 
         <div>
@@ -54,14 +53,38 @@ export default function Footer() {
         <div>
           <h3 className="text-sm font-semibold text-heading">Contact</h3>
           <ul className="mt-4 space-y-2.5 text-sm">
-            <li>support@medispark.com</li>
-            <li>hello@medispark.com</li>
+            {settings.contactEmail && <li>{settings.contactEmail}</li>}
+            {settings.contactPhone && <li>{settings.contactPhone}</li>}
+            {settings.facebookUrl && (
+              <li>
+                <a
+                  href={settings.facebookUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="transition hover:text-primary-400"
+                >
+                  Facebook
+                </a>
+              </li>
+            )}
+            {settings.youtubeUrl && (
+              <li>
+                <a
+                  href={settings.youtubeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="transition hover:text-primary-400"
+                >
+                  YouTube
+                </a>
+              </li>
+            )}
           </ul>
         </div>
       </div>
 
       <div className="relative border-t border-ink/10 py-6 text-center text-sm text-neutral-500">
-        © {new Date().getFullYear()} MediSpark. All rights reserved.
+        © {new Date().getFullYear()} {settings.siteName}. All rights reserved.
       </div>
     </footer>
   );
