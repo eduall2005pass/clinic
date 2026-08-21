@@ -19,6 +19,21 @@ User communicates in Bengali/Banglish — reply in the same style.
 - **Secrets:** all credentials live in `~/deploy.env` (never commit secrets).
   Vercel env vars are set in production (MYSQL_*, FIREBASE_*).
 
+## Collaboration rule (IMPORTANT — do this FIRST)
+Two people work on this repo independently and both commit/push, so local
+codebases drift apart. **Before starting ANY work, always sync first:**
+
+```bash
+git pull clinic main
+```
+
+- If there are local uncommitted changes, stash or commit them before pulling.
+- Prefer fast-forward pulls; if diverged, rebase local commits on top:
+  `git pull --rebase clinic main`
+- Never force-push. If a push is rejected, pull --rebase first, then push again.
+- After finishing any change: commit + `git push clinic main` immediately so
+  the other person gets it and Vercel auto-deploys.
+
 ## Deploy flow (IMPORTANT)
 - Git remote `clinic` = https://github.com/eduall2005pass/clinic → connected to Vercel.
 - **`git push clinic main` triggers automatic production deploy.**
