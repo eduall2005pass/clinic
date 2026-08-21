@@ -1,16 +1,20 @@
 import Link from "next/link";
 import CourseCard from "@/components/CourseCard";
 import SectionHeader from "@/components/SectionHeader";
-import { getFeaturedCourses } from "@/lib/courses";
+import { getCourse } from "@/lib/courses";
+import { fetchActiveFeaturedSlugs } from "@/lib/featured-courses";
 
-export default  function FeaturedCourses({
+export default async function FeaturedCourses({
   title,
   description,
 }: {
   title?: string;
   description?: string;
 } = {}) {
-  const featured = getFeaturedCourses().slice(0, 2);
+  const slugs = await fetchActiveFeaturedSlugs();
+  const featured = slugs
+    .map((slug) => getCourse(slug))
+    .filter((course) => course !== undefined);
 
   return (
     <section id="featured-courses" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
@@ -18,10 +22,14 @@ export default  function FeaturedCourses({
         <SectionHeader
           label="Featured Courses"
           title={title ?? "Start with a featured course"}
-          description={description ?? "Two popular courses to begin your preparation — more will be added step by step."}
+          description={description ?? "Hand-picked courses to begin your preparation — more will be added step by step."}
         />
 
-        <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:grid-cols-2">
+        <div
+          className={`mx-auto mt-12 grid gap-6 ${
+            featured.length > 2 ? "max-w-5xl sm:grid-cols-2 lg:grid-cols-3" : "max-w-4xl sm:grid-cols-2"
+          }`}
+        >
           {featured.map((course) => (
             <CourseCard key={course.slug} course={course} />
           ))}
