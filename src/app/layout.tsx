@@ -8,6 +8,7 @@ import { LogoProvider } from "@/components/LogoProvider";
 import { WebsiteSettingsProvider } from "@/components/WebsiteSettingsProvider";
 import { AuthProvider } from "@/lib/auth-context";
 import HideOnAdmin from "@/components/admin/HideOnAdmin";
+import AnnouncementBar from "@/components/home/AnnouncementBar";
 import { getActiveLogo } from "@/lib/logo-store";
 import { getWebsiteSettingsWithFallback } from "@/lib/website-settings";
 import { fetchNavbarConfig } from "@/lib/navbar";
@@ -64,6 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <LogoProvider initialLogo={initialLogo}>
               <AuthProvider>
                 <HideOnAdmin>
+                  <AnnouncementBar />
                   <Navbar config={navbarConfig} />
                 </HideOnAdmin>
                 {children}
