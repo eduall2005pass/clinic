@@ -102,9 +102,13 @@ function EnrollmentCard({ enrollment }: { enrollment: Enrollment }) {
 export default function EnrolledCoursesList() {
   const { enrollments } = useAuth();
 
+  // Only valid (active) enrollments appear as courses on the dashboard.
   const visible = enrollments.filter(
-    (enrollment) => enrollment.enrollmentStatus !== "cancelled",
+    (enrollment) => enrollment.enrollmentStatus === "active",
   );
+  const pendingCount = enrollments.filter(
+    (enrollment) => enrollment.enrollmentStatus === "pending",
+  ).length;
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -124,6 +128,12 @@ export default function EnrolledCoursesList() {
           Explore Courses
         </Link>
       </div>
+
+      {pendingCount > 0 && (
+        <p className="mt-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs leading-relaxed text-yellow-200/80">
+          You have {pendingCount} pending enrollment request{pendingCount === 1 ? "" : "s"} waiting for payment/approval. Pending courses will appear here once approved.
+        </p>
+      )}
 
       {visible.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-12 text-center">
