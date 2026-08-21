@@ -5,24 +5,23 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { loginHref } from "@/lib/nav-links";
 import { useAuth } from "@/lib/auth-context";
+import ThemeToggle from "@/components/ThemeToggle";
+import {
+  DEFAULT_NAVBAR_CONFIG,
+  type NavbarConfig,
+} from "@/lib/navbar-constants";
 
-const menuLinks: { label: string; href?: string }[] = [
-  { label: "Home", href: "/" },
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Course", href: "/courses" },
-  { label: "Public Exam", href: "/exam" },
-  { label: "Our Success", href: "/#our-success" },
-  { label: "Jersey" },
-  { label: "Mentor", href: "/#mentors" },
-  { label: "Review", href: "/#reviews" },
-  { label: "FAQ", href: "/#faq" },
-];
-
-export default function Navbar() {
+export default function Navbar({ config }: { config?: NavbarConfig }) {
+  const settings = config ?? DEFAULT_NAVBAR_CONFIG;
   const { user } = useAuth();
   const actionHref = user ? "/dashboard" : loginHref;
   const actionLabel = user ? "Dashboard" : "Login";
   const [menuOpen, setMenuOpen] = useState(false);
+
+  if (!settings.showNavbar) return null;
+
+  const menuItems = settings.items.filter((item) => item.isActive);
+
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
@@ -34,6 +33,8 @@ export default function Navbar() {
         </Link>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          {settings.showThemeToggle && <ThemeToggle />}
+
           <Link
             href="/dashboard/notifications"
             aria-label="Notifications"
@@ -54,40 +55,13 @@ export default function Navbar() {
             <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary-500" />
           </Link>
 
-          <Link
-            href={actionHref}
-            className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] sm:px-4"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              viewBox="0 0 24 24"
-            >
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span>{actionLabel}</span>
-          </Link>
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-label="Menu"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
-                menuOpen
-                  ? "border-primary-500/50 bg-primary-500/10 text-heading"
-                  : "border-ink/10 bg-ink/5 text-neutral-300 hover:border-primary-500/50 hover:bg-primary-500/10 hover:text-heading"
-              }`}
+          {settings.showLoginButton && (
+            <Link
+              href={actionHref}
+              className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] sm:px-4"
             >
               <svg
-                className="h-5 w-5"
+                className="h-4 w-4"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -95,51 +69,82 @@ export default function Navbar() {
                 strokeLinejoin="round"
                 viewBox="0 0 24 24"
               >
-                <path d="M4 6h16M4 12h16M4 18h16" />
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
-            </button>
+              <span>{actionLabel}</span>
+            </Link>
+          )}
 
-            {menuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setMenuOpen(false)}
-                  aria-hidden="true"
-                />
-                <div
-                  role="menu"
-                  aria-label="Menu"
-                  className="absolute right-0 top-full z-50 mt-2 min-w-52 rounded-xl border border-ink/10 bg-dark-950/95 p-1.5 shadow-2xl shadow-black/40 backdrop-blur"
+          {settings.showMoreMenu && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((open) => !open)}
+                aria-label="Menu"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
+                  menuOpen
+                    ? "border-primary-500/50 bg-primary-500/10 text-heading"
+                    : "border-ink/10 bg-ink/5 text-neutral-300 hover:border-primary-500/50 hover:bg-primary-500/10 hover:text-heading"
+                }`}
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
                 >
-                  {menuLinks.map((link) =>
-                    link.href ? (
-                      <Link
-                        key={link.label}
-                        href={link.href}
-                        role="menuitem"
-                        onClick={() => setMenuOpen(false)}
-                        className="block rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 transition hover:bg-primary-500/10 hover:text-heading"
-                      >
-                        {link.label}
-                      </Link>
-                    ) : (
-                      <span
-                        key={link.label}
-                        role="menuitem"
-                        aria-disabled="true"
-                        className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-neutral-600"
-                      >
-                        {link.label}
-                        <span className="rounded-full border border-ink/10 bg-ink/5 px-2 py-0.5 text-[10px] font-semibold text-neutral-500">
-                          Soon
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+
+              {menuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setMenuOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div
+                    role="menu"
+                    aria-label="Menu"
+                    className="absolute right-0 top-full z-50 mt-2 min-w-52 rounded-xl border border-ink/10 bg-dark-950/95 p-1.5 shadow-2xl shadow-black/40 backdrop-blur"
+                  >
+                    {menuItems.map((item) =>
+                      item.href ? (
+                        <Link
+                          key={item.key}
+                          href={item.href}
+                          role="menuitem"
+                          onClick={() => setMenuOpen(false)}
+                          className="block rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 transition hover:bg-primary-500/10 hover:text-heading"
+                        >
+                          {item.label}
+                        </Link>
+                      ) : (
+                        <span
+                          key={item.key}
+                          role="menuitem"
+                          aria-disabled="true"
+                          className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-neutral-600"
+                        >
+                          {item.label}
+                          <span className="rounded-full border border-ink/10 bg-ink/5 px-2 py-0.5 text-[10px] font-semibold text-neutral-500">
+                            Soon
+                          </span>
                         </span>
-                      </span>
-                    ),
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+                      ),
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </nav>
     </header>

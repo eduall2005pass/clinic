@@ -10,6 +10,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import HideOnAdmin from "@/components/admin/HideOnAdmin";
 import { getActiveLogo } from "@/lib/logo-store";
 import { getWebsiteSettingsWithFallback } from "@/lib/website-settings";
+import { fetchNavbarConfig } from "@/lib/navbar";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +37,10 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [initialLogo, initialSettings] = await Promise.all([
+  const [initialLogo, initialSettings, navbarConfig] = await Promise.all([
     getActiveLogo(),
     getWebsiteSettingsWithFallback(),
+    fetchNavbarConfig(),
   ]);
   return (
     <html
@@ -62,7 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <LogoProvider initialLogo={initialLogo}>
               <AuthProvider>
                 <HideOnAdmin>
-                  <Navbar />
+                  <Navbar config={navbarConfig} />
                 </HideOnAdmin>
                 {children}
                 <HideOnAdmin>
