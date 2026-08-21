@@ -45,3 +45,24 @@ User communicates in Bengali/Banglish — reply in the same style.
 - Admin API writes go through `requireAdmin()` (Firebase token → admins table lookup).
 - Student IDs: `MS-XXXXXX` generated in `src/lib/student-id.ts`, uniqueness via `student_ids` table.
 - Logo/banner/settings state flows through MySQL-backed store libs in `src/lib/*-store.ts`.
+
+## Termux (Android phone) setup
+A collaborator runs opencode from Termux. Secret files live in phone storage,
+NOT in the repo. Paths on the phone:
+
+- `/sdcard/Download/deploy.env`   → all credentials (MySQL/Firebase/Vercel/GitHub)
+- `/sdcard/Download/kali_key.pem` → Azure VM SSH key
+- AGENTS.md                       → comes with this repo automatically
+
+One-time setup in Termux:
+```bash
+termux-setup-storage                        # grant storage access
+cp /sdcard/Download/kali_key.pem ~/         # /sdcard is world-readable,
+chmod 600 ~/kali_key.pem                    # SSH rejects group/world-readable keys
+cp /sdcard/Download/deploy.env ~/
+set -a; source ~/deploy.env; set +a         # load env vars in each session
+```
+
+Then SSH to Azure VM with: `ssh -i ~/kali_key.pem azureuser@52.184.98.228`
+When applying DB migrations from Termux, pipe them over SSH the same way as above.
+
