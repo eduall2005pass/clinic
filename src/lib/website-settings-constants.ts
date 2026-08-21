@@ -8,8 +8,10 @@ export type WebsiteSettings = {
   tagline: string;
   contactEmail: string;
   contactPhone: string;
+  address: string;
   facebookUrl: string;
   youtubeUrl: string;
+  otherContactLinks: FooterLink[] | null;
   faviconUrl: string | null;
   faviconFileName: string | null;
   faviconUpdatedAt: number | null;
@@ -28,8 +30,10 @@ export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
     "HSC academic & medical admission preparation platform built for future medical students.",
   contactEmail: "support@medispark.com",
   contactPhone: "",
+  address: "",
   facebookUrl: "",
   youtubeUrl: "",
+  otherContactLinks: null,
   faviconUrl: null,
   faviconFileName: null,
   faviconUpdatedAt: null,

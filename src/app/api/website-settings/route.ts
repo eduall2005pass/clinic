@@ -18,6 +18,19 @@ import {
 
 export const dynamic = "force-dynamic";
 
+
+function parseOtherLinks(
+  raw: string,
+): Array<{ label?: unknown; href?: unknown }> | null | undefined {
+  try {
+    const parsed = raw === "" ? null : JSON.parse(raw);
+    if (parsed === null) return null;
+    return Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function GET() {
   const settings = await getWebsiteSettingsWithFallback();
   return NextResponse.json({ settings });
@@ -38,6 +51,8 @@ export async function POST(request: NextRequest) {
   let youtubeUrl: string | undefined;
   let faviconFile: File | null = null;
   let logoFile: File | null = null;
+  let address: string | undefined;
+  let otherContactLinksJson: string | undefined;
   let copyrightText: string | undefined;
   let footerLinksJson: string | undefined;
   let showExplore: boolean | undefined;
@@ -62,6 +77,9 @@ export async function POST(request: NextRequest) {
     if (rawFavicon instanceof File && rawFavicon.size > 0) faviconFile = rawFavicon;
     const rawLogo = formData.get("logo");
     if (rawLogo instanceof File && rawLogo.size > 0) logoFile = rawLogo;
+    address = asString(formData.get("address"));
+    const rawOtherLinks = formData.get("other_contact_links");
+    if (typeof rawOtherLinks === "string") otherContactLinksJson = rawOtherLinks;
     copyrightText = asString(formData.get("copyright_text"));
     footerLinksJson = asString(formData.get("footer_links"));
     showExplore = asOptionalBool(formData.get("show_explore"));
@@ -78,6 +96,12 @@ export async function POST(request: NextRequest) {
     contactPhone = asString(body.contact_phone ?? body.contactPhone);
     facebookUrl = asString(body.facebook_url ?? body.facebookUrl);
     youtubeUrl = asString(body.youtube_url ?? body.youtubeUrl);
+    address = asString(body.address);
+    if (typeof body.other_contact_links === "string") {
+      otherContactLinksJson = body.other_contact_links;
+    } else if (Array.isArray(body.otherContactLinks)) {
+      otherContactLinksJson = JSON.stringify(body.otherContactLinks);
+    }
     copyrightText = asString(body.copyright_text ?? body.copyrightText);
     const rawLinks =
       typeof body.footer_links === "string"
@@ -174,10 +198,15 @@ export async function POST(request: NextRequest) {
         tagline: tagline ?? undefined,
         contactEmail: contactEmail ?? undefined,
         contactPhone: contactPhone ?? undefined,
+        address: address !== undefined ? address : undefined,
         facebookUrl: facebookUrl ?? undefined,
         youtubeUrl: youtubeUrl ?? undefined,
         copyrightText: copyrightText !== undefined ? copyrightText : undefined,
         footerLinks: parsedFooterLinks === undefined ? undefined : parsedFooterLinks,
+        otherContactLinks:
+          otherContactLinksJson === undefined
+            ? undefined
+            : parseOtherLinks(otherContactLinksJson),
         showExplore,
         showPrograms,
         showContact,

@@ -16,6 +16,7 @@ type WebsiteSettingsRow = {
   tagline: string | null;
   contact_email: string | null;
   contact_phone: string | null;
+  address?: string | null;
   facebook_url: string | null;
   youtube_url: string | null;
   favicon_url: string | null;
@@ -28,6 +29,7 @@ type WebsiteSettingsRow = {
   show_explore?: number | boolean | null;
   show_programs?: number | boolean | null;
   show_contact?: number | boolean | null;
+  other_contact_links?: string | null;
 };
 
 function mapRow(row: WebsiteSettingsRow, adminDisplayName: string | null): WebsiteSettings {
@@ -42,6 +44,10 @@ function mapRow(row: WebsiteSettingsRow, adminDisplayName: string | null): Websi
     tagline: row.tagline ?? DEFAULT_WEBSITE_SETTINGS.tagline,
     contactEmail: row.contact_email ?? DEFAULT_WEBSITE_SETTINGS.contactEmail,
     contactPhone: row.contact_phone ?? "",
+    address:
+      typeof row.address === "string" && row.address.trim().length > 0
+        ? row.address
+        : "",
     facebookUrl: row.facebook_url ?? "",
     youtubeUrl: row.youtube_url ?? "",
     faviconUrl: row.favicon_url ?? null,
@@ -54,6 +60,7 @@ function mapRow(row: WebsiteSettingsRow, adminDisplayName: string | null): Websi
         ? row.copyright_text
         : null,
     footerLinks: parseFooterLinks(row.footer_links),
+    otherContactLinks: parseContactLinks(row.other_contact_links),
     showExplore: row.show_explore === undefined || row.show_explore === null ? true : Boolean(row.show_explore),
     showPrograms: row.show_programs === undefined || row.show_programs === null ? true : Boolean(row.show_programs),
     showContact: row.show_contact === undefined || row.show_contact === null ? true : Boolean(row.show_contact),
@@ -79,6 +86,25 @@ function parseFooterLinks(raw: string | null | undefined): FooterLink[] | null {
 }
 
 const FOOTER_COLUMNS = `, copyright_text, footer_links, show_explore, show_programs, show_contact`;
+const CONTACT_COLUMNS = `, address, other_contact_links`;
+
+function parseContactLinks(raw: string | null | undefined): FooterLink[] | null {
+  if (!raw || typeof raw !== "string") return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const links = parsed
+      .map((item) => ({
+        label: typeof item?.label === "string" ? item.label.trim() : "",
+        href: typeof item?.href === "string" ? item.href.trim() : "",
+      }))
+      .filter((item) => item.label.length > 0 && item.href.length > 0)
+      .slice(0, 20);
+    return links.length > 0 ? links : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function fetchWebsiteSettings(): Promise<WebsiteSettings | null> {
   try {
@@ -86,7 +112,7 @@ export async function fetchWebsiteSettings(): Promise<WebsiteSettings | null> {
     try {
       rows = await query<WebsiteSettingsRow[]>(
         `SELECT site_name, tagline, contact_email, contact_phone, facebook_url, youtube_url,
-                favicon_url, favicon_file_name, favicon_updated_at, updated_at, updated_by${FOOTER_COLUMNS}
+                favicon_url, favicon_file_name, favicon_updated_at, updated_at, updated_by${FOOTER_COLUMNS}${CONTACT_COLUMNS}
          FROM website_settings WHERE id = ? LIMIT 1`,
         [WEBSITE_SETTINGS_ID],
       );
@@ -124,8 +150,10 @@ type SaveInput = {
   tagline?: string;
   contactEmail?: string;
   contactPhone?: string;
+  address?: string;
   facebookUrl?: string;
   youtubeUrl?: string;
+  otherContactLinks?: FooterLinkInput[] | null;
   copyrightText?: string | null;
   footerLinks?: FooterLinkInput[] | null;
   showExplore?: boolean;
@@ -167,6 +195,37 @@ export async function saveWebsiteSettings(
   const tagline = input.tagline !== undefined ? input.tagline.trim() : (existingRow?.tagline ?? DEFAULT_WEBSITE_SETTINGS.tagline);
   const contactEmail = input.contactEmail !== undefined ? input.contactEmail.trim() : (existingRow?.contact_email ?? DEFAULT_WEBSITE_SETTINGS.contactEmail);
   const contactPhone = input.contactPhone !== undefined ? input.contactPhone.trim() : (existingRow?.contact_phone ?? "");
+  const address =
+    input.address !== undefined
+      ? input.address.trim().slice(0, 500)
+      : (existingRow?.address ?? "");
+  let otherContactLinksJson: string | null = null;
+  if (input.otherContactLinks !== undefined) {
+    if (input.otherContactLinks === null) {
+      otherContactLinksJson = null;
+    } else {
+      const links: FooterLink[] = [];
+      for (const raw of input.otherContactLinks) {
+        const label = typeof raw?.label === "string" ? raw.label.trim() : "";
+        const href = typeof raw?.href === "string" ? raw.href.trim() : "";
+        if (!label || !href) {
+          throw new Error("Each contact link needs a label and a link.");
+        }
+        if (label.length > 100) {
+          throw new Error("Contact link labels must be under 100 characters.");
+        }
+        if (!isValidFooterHref(href)) {
+          throw new Error(
+            "Contact links must be an internal path (/contact) or a full URL.",
+          );
+        }
+        links.push({ label, href: href.slice(0, 500) });
+      }
+      otherContactLinksJson = links.length > 0 ? JSON.stringify(links) : null;
+    }
+  } else if (typeof existingRow?.other_contact_links === "string") {
+    otherContactLinksJson = existingRow.other_contact_links;
+  }
   const facebookUrl = input.facebookUrl !== undefined ? input.facebookUrl.trim() : (existingRow?.facebook_url ?? "");
   const youtubeUrl = input.youtubeUrl !== undefined ? input.youtubeUrl.trim() : (existingRow?.youtube_url ?? "");
 
@@ -287,8 +346,9 @@ export async function saveWebsiteSettings(
       `INSERT INTO website_settings
         (id, site_name, tagline, contact_email, contact_phone, facebook_url, youtube_url,
          favicon_url, favicon_storage_path, favicon_file_name, favicon_updated_at, updated_at, updated_by, created_at,
-         copyright_text, footer_links, show_explore, show_programs, show_contact)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, NOW(), ?, ?, ?, ?, ?)
+         copyright_text, footer_links, show_explore, show_programs, show_contact,
+         address, other_contact_links)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, NOW(), ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          site_name = VALUES(site_name),
          tagline = VALUES(tagline),
@@ -305,7 +365,9 @@ export async function saveWebsiteSettings(
          footer_links = VALUES(footer_links),
          show_explore = VALUES(show_explore),
          show_programs = VALUES(show_programs),
-         show_contact = VALUES(show_contact)`,
+         show_contact = VALUES(show_contact),
+         address = VALUES(address),
+         other_contact_links = VALUES(other_contact_links)`,
       [
         WEBSITE_SETTINGS_ID,
         siteName,
@@ -323,6 +385,8 @@ export async function saveWebsiteSettings(
         showExplore ? 1 : 0,
         showPrograms ? 1 : 0,
         showContact ? 1 : 0,
+        address || null,
+        otherContactLinksJson,
       ],
     );
   } catch (error) {
@@ -372,8 +436,13 @@ export async function saveWebsiteSettings(
     tagline: tagline || "",
     contactEmail: contactEmail || "",
     contactPhone: contactPhone || "",
+    address,
     facebookUrl: facebookUrl || "",
     youtubeUrl: youtubeUrl || "",
+    otherContactLinks:
+      otherContactLinksJson !== undefined
+        ? parseContactLinks(otherContactLinksJson)
+        : parseContactLinks(typeof existingRow?.other_contact_links === "string" ? existingRow.other_contact_links : null),
     faviconUrl,
     faviconFileName,
     faviconUpdatedAt: faviconFile ? Date.now() : (existingRow?.favicon_updated_at ? Date.parse(parseDate(existingRow.favicon_updated_at)) || Date.now() : null),
@@ -430,8 +499,15 @@ export async function removeFavicon(adminUid: string): Promise<WebsiteSettings> 
     tagline: existingRow?.tagline ?? DEFAULT_WEBSITE_SETTINGS.tagline,
     contactEmail: existingRow?.contact_email ?? DEFAULT_WEBSITE_SETTINGS.contactEmail,
     contactPhone: existingRow?.contact_phone ?? "",
+    address:
+      typeof existingRow?.address === "string" && existingRow.address.trim().length > 0
+        ? existingRow.address
+        : "",
     facebookUrl: existingRow?.facebook_url ?? "",
     youtubeUrl: existingRow?.youtube_url ?? "",
+    otherContactLinks: parseContactLinks(
+      typeof existingRow?.other_contact_links === "string" ? existingRow.other_contact_links : null,
+    ),
     faviconUrl: null,
     faviconFileName: null,
     faviconUpdatedAt: null,

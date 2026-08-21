@@ -76,6 +76,7 @@ export default async function Footer() {
             <ul className="mt-4 space-y-2.5 text-sm">
               {settings.contactEmail && <li>{settings.contactEmail}</li>}
               {settings.contactPhone && <li>{settings.contactPhone}</li>}
+              {settings.address && <li>{settings.address}</li>}
               {settings.facebookUrl && (
                 <li>
                   <a
@@ -100,6 +101,27 @@ export default async function Footer() {
                   </a>
                 </li>
               )}
+              {(settings.otherContactLinks ?? []).map((link) => (
+                <li key={link.href + link.label}>
+                  {link.href.startsWith("/") ? (
+                    <Link
+                      href={link.href}
+                      className="transition hover:text-primary-400"
+                    >
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="transition hover:text-primary-400"
+                    >
+                      {link.label}
+                    </a>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
         )}
