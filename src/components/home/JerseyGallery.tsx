@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import SectionHeader from "@/components/SectionHeader";
 import { jerseys } from "@/lib/jerseys";
 
-export default function JerseyGallery() {
+export default  function JerseyGallery({
+  title,
+  description,
+}: {
+  title?: string;
+  description?: string;
+} = {}) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
@@ -33,8 +39,8 @@ export default function JerseyGallery() {
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
           label="Premium Jersey"
-          title="Jersey of MediSpark"
-          description="Wear the spirit of MediSpark — our premium jersey, designed for champions."
+          title={title ?? "Jersey of MediSpark"}
+          description={description ?? "Wear the spirit of MediSpark — our premium jersey, designed for champions."}
         />
 
         <div className="mx-auto mt-12 max-w-xl">

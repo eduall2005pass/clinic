@@ -5,7 +5,13 @@ import SectionHeader from "@/components/SectionHeader";
 import { getPublishedFaqs } from "@/lib/faq";
 import type { Faq } from "@/lib/faq";
 
-export default function FaqSection() {
+export default  function FaqSection({
+  title,
+  description,
+}: {
+  title?: string;
+  description?: string;
+} = {}) {
   const [faqs] = useState<Faq[]>(getPublishedFaqs);
   const [openId, setOpenId] = useState<string | null>(
     faqs.length > 0 ? faqs[0].id : null
@@ -16,8 +22,8 @@ export default function FaqSection() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
           label="FAQ"
-          title="Frequently asked questions"
-          description="Quick answers to the most common questions about MediSpark."
+          title={title ?? "Frequently asked questions"}
+          description={description ?? "Quick answers to the most common questions about MediSpark."}
         />
 
         <div className="mx-auto mt-10 flex max-w-3xl flex-col gap-3">

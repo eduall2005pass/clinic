@@ -122,7 +122,13 @@ const successIcons: Record<SuccessIcon, (props: SuccessIconProps) => React.JSX.E
   chart: ChartIcon,
 };
 
-export default function OurSuccess() {
+export default  function OurSuccess({
+  title,
+  description,
+}: {
+  title?: string;
+  description?: string;
+} = {}) {
   const items = getPublishedSuccessItems();
 
   return (
@@ -132,8 +138,8 @@ export default function OurSuccess() {
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
           label="Our Success"
-          title="Milestones that drive us forward"
-          description="A snapshot of what we have achieved together on the road to medical admission."
+          title={title ?? "Milestones that drive us forward"}
+          description={description ?? "A snapshot of what we have achieved together on the road to medical admission."}
         />
 
         {items.length > 0 ? (

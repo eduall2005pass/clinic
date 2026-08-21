@@ -28,7 +28,13 @@ function RatingStars({ rating }: { rating: number }) {
   );
 }
 
-export default function StudentReviews() {
+export default  function StudentReviews({
+  title,
+  description,
+}: {
+  title?: string;
+  description?: string;
+} = {}) {
   const [reviews] = useState<StudentReview[]>(getPublishedReviews);
 
   return (
@@ -36,8 +42,8 @@ export default function StudentReviews() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
           label="Student Reviews"
-          title="What students say"
-          description="Real reviews from MediSpark students, verified and published after approval."
+          title={title ?? "What students say"}
+          description={description ?? "Real reviews from MediSpark students, verified and published after approval."}
         />
 
         {reviews.length > 0 ? (

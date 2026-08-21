@@ -3,7 +3,13 @@ import SectionHeader from "@/components/SectionHeader";
 import { fetchHomepageCourses } from "@/lib/homepage-courses";
 import { HOMEPAGE_COURSE_DEFAULTS } from "@/lib/homepage-courses-constants";
 
-export default async function HomepageCourses() {
+export default async  function HomepageCourses({
+  title,
+  description,
+}: {
+  title?: string;
+  description?: string;
+} = {}) {
   const cards = await fetchHomepageCourses();
   const activeCards = cards.filter((c) => c.isActive);
 
@@ -18,8 +24,8 @@ export default async function HomepageCourses() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
           label="Our Courses"
-          title="Explore Our Courses"
-          description="Choose your track — SSC, HSC or Medical Admission. Every course is built for your next achievement."
+          title={title ?? "Explore Our Courses"}
+          description={description ?? "Choose your track — SSC, HSC or Medical Admission. Every course is built for your next achievement."}
         />
 
         <div className="mx-auto mt-12 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">

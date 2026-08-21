@@ -106,7 +106,13 @@ const benefits: Benefit[] = [
   },
 ];
 
-export default function WhyMediSpark() {
+export default  function WhyMediSpark({
+  title,
+  description,
+}: {
+  title?: string;
+  description?: string;
+} = {}) {
   return (
     <section className="relative overflow-hidden border-t border-ink/5 bg-dark-900">
       <div className="pointer-events-none absolute inset-0 bg-grid-lines" />
@@ -114,8 +120,8 @@ export default function WhyMediSpark() {
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <SectionHeader
           label="Why MediSpark"
-          title="Learn smarter with MediSpark"
-          description="One platform for your HSC academics and medical admission journey."
+          title={title ?? "Learn smarter with MediSpark"}
+          description={description ?? "One platform for your HSC academics and medical admission journey."}
         />
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
