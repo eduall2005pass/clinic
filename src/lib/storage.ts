@@ -34,5 +34,10 @@ export async function removeFile(storagePath: string): Promise<void> {
 }
 
 export function isLocalUpload(url: string): boolean {
-  return url.startsWith(`${UPLOADS_BASE_URL}/`);
+  // Accepts both "/uploads/..." URLs and raw relative paths like "website/logo/..." or "admin-content/..."
+  // while rejecting legacy Firebase Storage URLs (https://firebasestorage.googleapis.com/...)
+  if (url.startsWith(`${UPLOADS_BASE_URL}/`)) return true;
+  if (url.startsWith("https://")) return false;
+  // Local relative paths used as storage_path in DB (e.g. "website/logo/active-logo-...png", "admin-content/mentors/...")
+  return url.includes("/") && !url.startsWith("http");
 }

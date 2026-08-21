@@ -7,7 +7,6 @@ import {
 } from "firebase-admin/app";
 import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
-import { getStorage, type Storage } from "firebase-admin/storage";
 
 const serviceAccountPath =
   process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? "";
@@ -61,22 +60,6 @@ export function getFirebaseAdminAuth() {
 
 export function getFirebaseAdminFirestore(): Firestore {
   return getFirestore(getFirebaseAdminApp());
-}
-
-export function getFirebaseAdminStorage(): Storage {
-  return getStorage(getFirebaseAdminApp());
-}
-
-/**
- * Resolves the Firebase Storage bucket name: explicit env override wins,
- * otherwise the project default bucket from the service account.
- */
-export function resolveStorageBucket(): string {
-  return (
-    process.env.FIREBASE_STORAGE_BUCKET ??
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ??
-    ""
-  );
 }
 
 /**
