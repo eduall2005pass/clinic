@@ -169,7 +169,9 @@ export function findAdminCategory(pathname: string): AdminCategory | null {
 export function findActiveAdminNav(pathname: string): {
   title: string;
 } | null {
-  if (pathname === "/admin") return { title: "Dashboard" };
+  if (pathname === "/admin") return { title: "Home" };
+  if (pathname === "/admin/profile" || pathname.startsWith("/admin/profile/"))
+    return { title: "Admin Profile" };
   const category = findAdminCategory(pathname);
   if (!category) return null;
   const sub = category.subsections.find(

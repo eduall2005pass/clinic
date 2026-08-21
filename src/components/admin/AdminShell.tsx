@@ -17,6 +17,7 @@ import {
   LogoutIcon,
   WebsiteIcon,
   PanelLeftIcon,
+  UserShieldIcon,
 } from "@/components/admin/icons";
 import { AdminThemeProvider, useAdminTheme } from "@/components/admin/AdminThemeProvider";
 import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
@@ -107,7 +108,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         <Link
           href="/admin"
-          title={collapsed ? "Dashboard" : undefined}
+          title={collapsed ? "Home" : undefined}
           onClick={closeOverlays}
           className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 ${
             collapsed ? "justify-center" : ""
@@ -118,7 +119,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           }`}
         >
           <DashboardIcon className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Dashboard</span>}
+          {!collapsed && <span>Home</span>}
         </Link>
 
         <p
@@ -152,6 +153,30 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
+
+        <p
+          className={`px-3 pb-1 pt-5 text-[11px] font-bold uppercase tracking-widest text-zinc-600 ${
+            collapsed ? "text-center" : ""
+          }`}
+        >
+          {collapsed ? "•••" : "Account"}
+        </p>
+
+        <Link
+          href="/admin/profile"
+          title={collapsed ? "Admin Profile" : undefined}
+          onClick={closeOverlays}
+          className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 ${
+            collapsed ? "justify-center" : ""
+          } ${
+            pathname.startsWith("/admin/profile")
+              ? "bg-primary-600 text-white shadow-md shadow-primary-900/40"
+              : "text-zinc-400 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <UserShieldIcon className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>Admin Profile</span>}
+        </Link>
       </nav>
 
       <div className="shrink-0 border-t border-white/10 p-3">
@@ -220,7 +245,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           </button>
 
           <h1 className="min-w-0 truncate text-base font-bold text-zinc-900 transition-colors duration-300 sm:text-lg admin-dark:text-zinc-50">
-            {active?.title ?? "Dashboard"}
+            {active?.title ?? "Home"}
           </h1>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">

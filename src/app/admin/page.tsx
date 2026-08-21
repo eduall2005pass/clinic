@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { adminCategories } from "@/lib/admin-nav";
-import { ArrowRightIcon, DashboardIcon } from "@/components/admin/icons";
+import { ArrowRightIcon, UserShieldIcon } from "@/components/admin/icons";
 
-const dashboardCard = {
-  name: "Dashboard",
-  href: "/admin",
-  description: "Overview of the entire platform at a glance.",
-  icon: DashboardIcon,
+const adminProfileCard = {
+  name: "Admin Profile",
+  href: "/admin/profile",
+  description: "View and manage your administrator account.",
+  icon: UserShieldIcon,
 };
 
 export default function AdminHome() {
-  const cards = [dashboardCard, ...adminCategories];
+  const cards = [...adminCategories, adminProfileCard];
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
