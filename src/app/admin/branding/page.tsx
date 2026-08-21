@@ -189,7 +189,7 @@ export default function BrandingPage() {
                 width={logo.width}
                 height={logo.height}
                 priority
-                unoptimized={logo.url.startsWith("/uploads/")}
+                unoptimized={logo.url.startsWith("/api/files/") || logo.url.startsWith("/uploads/")}
                 className="max-h-40 w-auto object-contain"
               />
             </div>

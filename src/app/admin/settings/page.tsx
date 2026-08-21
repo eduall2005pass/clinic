@@ -345,7 +345,7 @@ export default function WebsiteSettingsPage() {
                 width={logo.width}
                 height={logo.height}
                 priority
-                unoptimized={(logoPreviewUrl ?? logo.url).startsWith("/uploads/") || Boolean(logoPreviewUrl?.startsWith("blob:"))}
+                unoptimized={(logoPreviewUrl ?? logo.url).startsWith("/api/files/") || (logoPreviewUrl ?? logo.url).startsWith("/uploads/") || Boolean(logoPreviewUrl?.startsWith("blob:"))}
                 className="max-h-40 w-auto object-contain"
               />
             </div>

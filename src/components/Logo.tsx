@@ -33,7 +33,7 @@ export default function Logo({ size = "default" }: { size?: "default" | "large" 
         width={active.width}
         height={active.height}
         priority
-        unoptimized={displayUrl.startsWith("/uploads/")}
+        unoptimized={displayUrl.startsWith("/api/files/") || displayUrl.startsWith("/uploads/")}
         onError={() => setFailedSource(logoSource)}
         className={imageClass}
       />

@@ -1,12 +1,6 @@
-import { FieldValue } from "firebase-admin/firestore";
-import {
-  getFirebaseAdminFirestore,
-  isFirebaseAdminConfigured,
-} from "@/lib/firebase-admin";
+import { exec, query } from "@/lib/mysql";
 import { saveFile, removeFile } from "@/lib/storage";
 
-export const BANNER_COLLECTION = "banners";
-export const BANNER_DOCUMENT_ID = "active";
 export const BANNER_STORAGE_DIR = "website-banners";
 
 export type CustomBanner = {
@@ -18,68 +12,49 @@ export type CustomBanner = {
   updatedAt: number;
 };
 
-type BannerDoc = {
-  slides?: unknown;
+type BannerRow = {
+  id: string;
+  url: string;
+  href: string | null;
+  file_name: string;
+  storage_path: string;
+  updated_at: Date | string;
 };
 
-function parseUpdatedAt(raw: unknown): number {
-  if (raw && typeof raw === "object" && typeof (raw as { toMillis?: unknown }).toMillis === "function") {
-    return (raw as { toMillis: () => number }).toMillis();
-  }
-  if (typeof raw === "number") return raw;
-  if (typeof raw === "string") {
-    const parsed = Date.parse(raw);
-    return Number.isNaN(parsed) ? 0 : parsed;
-  }
-  return 0;
+async function ensureBannersTable(): Promise<void> {
+  await exec(
+    `CREATE TABLE IF NOT EXISTS banners (
+      id VARCHAR(191) NOT NULL PRIMARY KEY,
+      url VARCHAR(1024) NOT NULL,
+      href VARCHAR(1024) NULL,
+      file_name VARCHAR(255) NOT NULL,
+      storage_path VARCHAR(1024) NOT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  );
 }
 
-function parseSlides(raw: unknown): CustomBanner[] {
-  if (!Array.isArray(raw)) return [];
-  const slides: CustomBanner[] = [];
-  for (const item of raw) {
-    if (typeof item !== "object" || item === null) continue;
-    const slide = item as {
-      id?: unknown;
-      url?: unknown;
-      href?: unknown;
-      fileName?: unknown;
-      storagePath?: unknown;
-      updatedAt?: unknown;
-    };
-    if (typeof slide.id !== "string" || typeof slide.url !== "string") continue;
-    slides.push({
-      id: slide.id,
-      url: slide.url,
-      href:
-        typeof slide.href === "string" && slide.href.length > 0
-          ? slide.href
-          : null,
-      fileName: typeof slide.fileName === "string" ? slide.fileName : "",
-      storagePath:
-        typeof slide.storagePath === "string" ? slide.storagePath : "",
-      updatedAt: parseUpdatedAt(slide.updatedAt),
-    });
-  }
-  return slides;
+function rowToBanner(row: BannerRow): CustomBanner {
+  return {
+    id: row.id,
+    url: row.url,
+    href: row.href ?? null,
+    fileName: row.file_name,
+    storagePath: row.storage_path,
+    updatedAt: Date.parse(
+      row.updated_at instanceof Date
+        ? row.updated_at.toISOString()
+        : String(row.updated_at),
+    ),
+  };
 }
 
-async function uploadBannerFile(
-  file: File,
-  storagePath: string,
-): Promise<string> {
-  // Interserver hosting: save to public/uploads/<dir>/<file> and return /uploads/... URL
-  const fileName = storagePath.split("/").pop() ?? storagePath;
-  const dir = storagePath.substring(0, storagePath.length - fileName.length - 1);
-  return saveFile(dir || BANNER_STORAGE_DIR, fileName, await file.arrayBuffer());
-}
-
-async function deleteBannerFile(storagePath: string | null | undefined): Promise<void> {
+async function deleteBannerFile(
+  storagePath: string | null | undefined,
+): Promise<void> {
   if (typeof storagePath !== "string" || storagePath.length === 0) return;
-  // Legacy Firebase Storage URLs (https://firebasestorage.googleapis.com/...) are ignored
-  // — they require Firebase Storage credentials which are no longer used.
-  // Local uploads ("/uploads/..." or "website-banners/...") are deleted from public/uploads.
-  if (storagePath.startsWith("https://")) return;
   try {
     await removeFile(storagePath);
   } catch {
@@ -88,14 +63,12 @@ async function deleteBannerFile(storagePath: string | null | undefined): Promise
 }
 
 export async function fetchCustomBanners(): Promise<CustomBanner[] | null> {
-  if (!isFirebaseAdminConfigured) return null;
   try {
-    const snapshot = await getFirebaseAdminFirestore()
-      .doc(`${BANNER_COLLECTION}/${BANNER_DOCUMENT_ID}`)
-      .get();
-    if (!snapshot.exists) return null;
-    const data = snapshot.data() as BannerDoc | undefined;
-    const slides = parseSlides(data?.slides);
+    await ensureBannersTable();
+    const rows = await query<BannerRow[]>(
+      "SELECT id, url, href, file_name, storage_path, updated_at FROM banners ORDER BY sort_order ASC, created_at ASC",
+    );
+    const slides = rows.map(rowToBanner);
     return slides.length > 0 ? slides : null;
   } catch {
     return null;
@@ -109,62 +82,59 @@ export async function saveCustomBanner(input: {
   width: number;
   height: number;
 }): Promise<CustomBanner[]> {
-  if (!isFirebaseAdminConfigured) {
-    throw new Error("Firebase Storage is not configured.");
-  }
   const extension = input.file.name.includes(".")
     ? `.${input.file.name.split(".").pop()?.toLowerCase() ?? ""}`
     : ".png";
-  const storagePath = `${BANNER_STORAGE_DIR}/${input.id}-${Date.now()}${extension}`;
-  const url = await uploadBannerFile(input.file, storagePath);
+  const fileName = `${input.id}-${Date.now()}${extension}`;
+  const url = await saveFile(
+    BANNER_STORAGE_DIR,
+    fileName,
+    await input.file.arrayBuffer(),
+  );
+  const storagePath = `${BANNER_STORAGE_DIR}/${fileName}`;
 
-  const previous = (await fetchCustomBanners()) ?? [];
-  const previousSlide = previous.find((slide) => slide.id === input.id);
+  await ensureBannersTable();
 
-  const next: CustomBanner[] = [
-    ...previous.filter((slide) => slide.id !== input.id),
-    {
-      id: input.id,
-      url,
-      href: input.href,
-      fileName: input.file.name,
-      storagePath,
-      updatedAt: Date.now(),
-    },
-  ];
+  const previousRows = await query<{ storage_path: string }[]>(
+    "SELECT storage_path FROM banners WHERE id = ? LIMIT 1",
+    [input.id],
+  );
+  const previousPath = previousRows[0]?.storage_path;
 
-  await getFirebaseAdminFirestore()
-    .doc(`${BANNER_COLLECTION}/${BANNER_DOCUMENT_ID}`)
-    .set({
-      slides: next,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+  const maxRow = await query<{ next_order: number }[]>(
+    "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM banners",
+  );
+  const sortOrder = Number(maxRow[0]?.next_order ?? 1);
 
-  if (previousSlide?.storagePath && previousSlide.storagePath !== storagePath) {
-    await deleteBannerFile(previousSlide.storagePath);
+  await exec(
+    `INSERT INTO banners (id, url, href, file_name, storage_path, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+      url = VALUES(url),
+      href = VALUES(href),
+      file_name = VALUES(file_name),
+      storage_path = VALUES(storage_path)`,
+    [input.id, url, input.href, input.file.name, storagePath, sortOrder],
+  );
+
+  if (previousPath && previousPath !== storagePath) {
+    await deleteBannerFile(previousPath);
   }
 
-  return next;
+  return (await fetchCustomBanners()) ?? [];
 }
 
 export async function removeCustomBanner(id: string): Promise<CustomBanner[]> {
-  if (!isFirebaseAdminConfigured) return [];
   try {
-    const previous = (await fetchCustomBanners()) ?? [];
-    const removed = previous.find((slide) => slide.id === id);
-    const next = previous.filter((slide) => slide.id !== id);
-    const ref = getFirebaseAdminFirestore().doc(
-      `${BANNER_COLLECTION}/${BANNER_DOCUMENT_ID}`,
+    const rows = await query<{ storage_path: string }[]>(
+      "SELECT storage_path FROM banners WHERE id = ? LIMIT 1",
+      [id],
     );
-    if (next.length === 0) {
-      await ref.delete();
-    } else {
-      await ref.set({ slides: next, updatedAt: FieldValue.serverTimestamp() });
+    await exec("DELETE FROM banners WHERE id = ?", [id]);
+    if (rows[0]?.storage_path) {
+      await deleteBannerFile(rows[0].storage_path);
     }
-    if (removed?.storagePath) {
-      await deleteBannerFile(removed.storagePath);
-    }
-    return next;
+    return (await fetchCustomBanners()) ?? [];
   } catch {
     return [];
   }
