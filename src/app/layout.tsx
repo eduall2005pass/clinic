@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { LogoProvider } from "@/components/LogoProvider";
 import { WebsiteSettingsProvider } from "@/components/WebsiteSettingsProvider";
 import { AuthProvider } from "@/lib/auth-context";
+import HideOnAdmin from "@/components/admin/HideOnAdmin";
 import { getActiveLogo } from "@/lib/logo-store";
 import { getWebsiteSettingsWithFallback } from "@/lib/website-settings";
 import "./globals.css";
@@ -60,10 +61,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <WebsiteSettingsProvider initialSettings={initialSettings}>
             <LogoProvider initialLogo={initialLogo}>
               <AuthProvider>
-                <Navbar />
+                <HideOnAdmin>
+                  <Navbar />
+                </HideOnAdmin>
                 {children}
-                <Footer />
-                <BottomNav />
+                <HideOnAdmin>
+                  <Footer />
+                  <BottomNav />
+                </HideOnAdmin>
               </AuthProvider>
             </LogoProvider>
           </WebsiteSettingsProvider>
