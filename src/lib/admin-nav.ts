@@ -8,6 +8,7 @@ import {
   ServerIcon,
   StudentsIcon,
   TargetIcon,
+  UserShieldIcon,
   WebsiteIcon,
 } from "@/components/admin/icons";
 
@@ -35,16 +36,17 @@ export const adminCategories: AdminCategory[] = [
       { label: "Logo & Favicon", href: "/admin/website" },
       { label: "Header & Navbar", href: "/admin/website/header" },
       { label: "Homepage", href: "/admin/website/homepage" },
-      { label: "Hero Section", href: "/admin/website/homepage/hero" },
+      { label: "Hero / Banner", href: "/admin/website/homepage/hero" },
       { label: "Courses Section", href: "/admin/homepage-courses" },
       { label: "Mentor Section", href: "/admin/website/homepage/mentors" },
       { label: "Reviews Section", href: "/admin/website/homepage/reviews" },
       { label: "FAQ Section", href: "/admin/website/homepage/faq" },
       { label: "Footer", href: "/admin/website/footer" },
       { label: "Social Links", href: "/admin/website/social-links" },
-      { label: "SEO", href: "/admin/website/seo" },
+      { label: "SEO Settings", href: "/admin/website/seo" },
       { label: "Theme & Appearance", href: "/admin/website/theme" },
       { label: "Popup / Announcement", href: "/admin/website/popup" },
+      { label: "Contact Information", href: "/admin/website/contact" },
     ],
   },
   {
@@ -60,18 +62,21 @@ export const adminCategories: AdminCategory[] = [
       { label: "Subjects", href: "/admin/courses/subjects" },
       { label: "Chapters", href: "/admin/courses/chapters" },
       { label: "Classes", href: "/admin/courses/classes" },
-      { label: "Pricing & Discounts", href: "/admin/courses/pricing" },
+      { label: "Pricing", href: "/admin/courses/pricing" },
+      { label: "Discounts", href: "/admin/courses/discounts" },
       { label: "Coupons", href: "/admin/courses/coupons" },
     ],
   },
   {
     name: "Students",
     href: "/admin/students",
-    description: "Manage students and their enrollments.",
+    description: "Manage students, enrollments and account activity.",
     icon: StudentsIcon,
     subsections: [
       { label: "All Students", href: "/admin/students/all" },
+      { label: "Student Details", href: "/admin/students/details" },
       { label: "Enrollments", href: "/admin/students/enrollments" },
+      { label: "Account Status", href: "/admin/students/account-status" },
       { label: "Student Activity", href: "/admin/students/activity" },
     ],
   },
@@ -125,8 +130,8 @@ export const adminCategories: AdminCategory[] = [
       { label: "Promotional Banners", href: "/admin/marketing/banners" },
       { label: "Featured Courses", href: "/admin/marketing/featured-courses" },
       { label: "Offers", href: "/admin/marketing/offers" },
-      { label: "Coupons", href: "/admin/marketing/coupons" },
       { label: "Campaigns", href: "/admin/marketing/campaigns" },
+      { label: "Coupons", href: "/admin/marketing/coupons" },
     ],
   },
   {
@@ -157,8 +162,22 @@ export const adminCategories: AdminCategory[] = [
   },
 ];
 
+export const adminProfileCategory: AdminCategory = {
+  name: "Admin Profile",
+  href: "/admin/profile",
+  description: "View and manage your administrator account.",
+  icon: UserShieldIcon,
+  subsections: [
+    { label: "Profile Information", href: "/admin/profile" },
+    { label: "Profile Picture", href: "/admin/profile/picture" },
+    { label: "Account Settings", href: "/admin/profile/account" },
+    { label: "Password & Security", href: "/admin/profile/security" },
+    { label: "Login Activity", href: "/admin/profile/login-activity" },
+  ],
+};
+
 export function findAdminCategory(pathname: string): AdminCategory | null {
-  for (const category of adminCategories) {
+  for (const category of [...adminCategories, adminProfileCategory]) {
     if (pathname === category.href || pathname.startsWith(category.href + "/")) {
       return category;
     }
@@ -166,18 +185,48 @@ export function findAdminCategory(pathname: string): AdminCategory | null {
   return null;
 }
 
+export type AdminBreadcrumb = {
+  label: string;
+  href: string;
+};
+
 export function findActiveAdminNav(pathname: string): {
   title: string;
-} | null {
-  if (pathname === "/admin") return { title: "Home" };
-  if (pathname === "/admin/profile" || pathname.startsWith("/admin/profile/"))
-    return { title: "Admin Profile" };
+  breadcrumbs: AdminBreadcrumb[];
+} {
+  if (pathname === "/admin") {
+    return {
+      title: "Home",
+      breadcrumbs: [
+        { label: "Home", href: "/admin" },
+      ],
+    };
+  }
+
   const category = findAdminCategory(pathname);
-  if (!category) return null;
+  if (!category) {
+    return {
+      title: "Admin Panel",
+      breadcrumbs: [{ label: "Home", href: "/admin" }],
+    };
+  }
+
   const sub = category.subsections.find(
     (item) =>
       pathname === item.href ||
       (pathname.startsWith(item.href + "/") && item.href !== category.href)
   );
-  return { title: sub ? sub.label : `${category.name} Management` };
+
+  const breadcrumbs: AdminBreadcrumb[] = [
+    { label: "Home", href: "/admin" },
+    { label: category.name, href: category.href },
+  ];
+  if (sub) {
+    breadcrumbs.push({ label: sub.label, href: sub.href });
+  }
+
+  return {
+    title: sub ? sub.label : `${category.name} Management`,
+    breadcrumbs,
+  };
 }

@@ -5,10 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   adminCategories,
+  adminProfileCategory,
+  findAdminCategory,
   findActiveAdminNav,
 } from "@/lib/admin-nav";
 import {
   CloseIcon,
+  ChevronDownIcon,
   DashboardIcon,
   MenuIcon,
   SearchIcon,
@@ -17,7 +20,6 @@ import {
   LogoutIcon,
   WebsiteIcon,
   PanelLeftIcon,
-  UserShieldIcon,
 } from "@/components/admin/icons";
 import { AdminThemeProvider, useAdminTheme } from "@/components/admin/AdminThemeProvider";
 import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
@@ -38,6 +40,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [manualOpenSection, setManualOpenSection] = useState<string | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,6 +84,89 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   };
 
   const active = findActiveAdminNav(pathname);
+  const activeSectionHref = findAdminCategory(pathname)?.href ?? null;
+  const openSection = manualOpenSection !== null ? manualOpenSection : activeSectionHref;
+
+  const toggleSection = (href: string) => {
+    setManualOpenSection(openSection === href ? "" : href);
+  };
+
+  const renderSection = (category: (typeof adminCategories)[number]) => {
+    const isActive = activeSectionHref === category.href;
+    const isOpen = !collapsed && openSection === category.href;
+    return (
+      <li key={category.href}>
+        <div
+          className={`flex items-center rounded-xl transition duration-200 ${
+            isActive && !isOpen
+              ? "bg-primary-600 text-white shadow-md shadow-primary-900/40"
+              : "hover:bg-white/5"
+          }`}
+        >
+          <Link
+            href={category.href}
+            title={collapsed ? category.name : undefined}
+            onClick={() => {
+              closeOverlays();
+              setManualOpenSection(category.href);
+            }}
+            className={`group flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-sm font-medium transition duration-200 ${
+              collapsed ? "justify-center" : ""
+            } ${
+              isActive && !isOpen
+                ? "text-white"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <category.icon className="h-5 w-5 shrink-0" />
+            {!collapsed && <span className="truncate">{category.name}</span>}
+          </Link>
+          {!collapsed && (
+            <button
+              type="button"
+              aria-label={isOpen ? `Collapse ${category.name}` : `Expand ${category.name}`}
+              aria-expanded={isOpen}
+              onClick={() => toggleSection(category.href)}
+              className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-white"
+            >
+              <ChevronDownIcon
+                className={`h-4 w-4 transition-transform duration-200 ${
+                  isOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          )}
+        </div>
+
+        {isOpen && (
+          <ul className="mt-1 space-y-0.5 border-l border-white/10 pb-1 pl-4 ml-5">
+            {category.subsections.map((sub) => {
+              const subActive =
+                pathname === sub.href ||
+                (sub.href !== category.href &&
+                  pathname.startsWith(sub.href + "/"));
+              return (
+                <li key={sub.label + sub.href}>
+                  <Link
+                    href={sub.href}
+                    onClick={closeOverlays}
+                    aria-current={subActive ? "page" : undefined}
+                    className={`block truncate rounded-lg px-3 py-1.5 text-[13px] font-medium transition duration-150 ${
+                      subActive
+                        ? "bg-primary-600/15 text-primary-400"
+                        : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
+                    }`}
+                  >
+                    {sub.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </li>
+    );
+  };
 
   const sidebarContent = (
     <>
@@ -130,29 +216,9 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           {collapsed ? "•••" : "Management"}
         </p>
 
-        {adminCategories.map((category) => {
-          const isActive =
-            pathname === category.href ||
-            pathname.startsWith(category.href + "/");
-          return (
-            <Link
-              key={category.href}
-              href={category.href}
-              title={collapsed ? category.name : undefined}
-              onClick={closeOverlays}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 ${
-                collapsed ? "justify-center" : ""
-              } ${
-                isActive
-                  ? "bg-primary-600 text-white shadow-md shadow-primary-900/40"
-                  : "text-zinc-400 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <category.icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span className="truncate">{category.name}</span>}
-            </Link>
-          );
-        })}
+        <ul className="space-y-1">
+          {adminCategories.map(renderSection)}
+        </ul>
 
         <p
           className={`px-3 pb-1 pt-5 text-[11px] font-bold uppercase tracking-widest text-zinc-600 ${
@@ -162,21 +228,9 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           {collapsed ? "•••" : "Account"}
         </p>
 
-        <Link
-          href="/admin/profile"
-          title={collapsed ? "Admin Profile" : undefined}
-          onClick={closeOverlays}
-          className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 ${
-            collapsed ? "justify-center" : ""
-          } ${
-            pathname.startsWith("/admin/profile")
-              ? "bg-primary-600 text-white shadow-md shadow-primary-900/40"
-              : "text-zinc-400 hover:bg-white/5 hover:text-white"
-          }`}
-        >
-          <UserShieldIcon className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Admin Profile</span>}
-        </Link>
+        <ul className="space-y-1">
+          {renderSection(adminProfileCategory)}
+        </ul>
       </nav>
 
       <div className="shrink-0 border-t border-white/10 p-3">
@@ -244,9 +298,28 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
             <MenuIcon className="h-5 w-5" />
           </button>
 
-          <h1 className="min-w-0 truncate text-base font-bold text-zinc-900 transition-colors duration-300 sm:text-lg admin-dark:text-zinc-50">
-            {active?.title ?? "Home"}
-          </h1>
+          <div className="min-w-0 flex-1">
+            {active.breadcrumbs.length > 1 && (
+              <nav aria-label="Breadcrumb" className="hidden sm:block">
+                <ol className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500">
+                  {active.breadcrumbs.slice(0, -1).map((crumb, index) => (
+                    <li key={crumb.href + index} className="flex items-center gap-1.5">
+                      <Link
+                        href={crumb.href}
+                        className="transition hover:text-primary-400"
+                      >
+                        {crumb.label}
+                      </Link>
+                      <span className="text-zinc-700">/</span>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
+            <h1 className="truncate text-base font-bold text-zinc-900 transition-colors duration-300 sm:text-lg admin-dark:text-zinc-50">
+              {active.title}
+            </h1>
+          </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             {/* Search */}
