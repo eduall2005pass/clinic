@@ -31,11 +31,13 @@ function RatingStars({ rating }: { rating: number }) {
 export default  function StudentReviews({
   title,
   description,
+  reviews: providedReviews,
 }: {
   title?: string;
   description?: string;
+  reviews?: StudentReview[];
 } = {}) {
-  const [reviews] = useState<StudentReview[]>(getPublishedReviews);
+  const [reviews] = useState<StudentReview[]>(() => providedReviews ?? getPublishedReviews());
 
   return (
     <section id="reviews" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
