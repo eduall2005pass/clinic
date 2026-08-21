@@ -12,6 +12,10 @@ import AnnouncementBar from "@/components/home/AnnouncementBar";
 import { getActiveLogo } from "@/lib/logo-store";
 import { getWebsiteSettingsWithFallback } from "@/lib/website-settings";
 import { fetchNavbarConfig } from "@/lib/navbar";
+import {
+  fetchThemeSettings,
+  buildThemeOverrideCss,
+} from "@/lib/theme-settings";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -38,23 +42,31 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [initialLogo, initialSettings, navbarConfig] = await Promise.all([
-    getActiveLogo(),
-    getWebsiteSettingsWithFallback(),
-    fetchNavbarConfig(),
-  ]);
+  const [initialLogo, initialSettings, navbarConfig, themeSettings] =
+    await Promise.all([
+      getActiveLogo(),
+      getWebsiteSettingsWithFallback(),
+      fetchNavbarConfig(),
+      fetchThemeSettings(),
+    ]);
+  const themeOverrideCss = buildThemeOverrideCss(themeSettings);
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-button-style={themeSettings.buttonStyle}
+      data-radius={themeSettings.borderRadius}
       suppressHydrationWarning
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("medispark-theme");document.documentElement.setAttribute("data-theme",(t==="light"||t==="dark")?t:"dark");}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("medispark-theme");if(t!=="light"&&t!=="dark"){t="${themeSettings.themeMode}";}document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","${themeSettings.themeMode}");}})();`,
           }}
         />
+        {themeOverrideCss && (
+          <style dangerouslySetInnerHTML={{ __html: themeOverrideCss }} />
+        )}
         {initialSettings.faviconUrl && (
           <link rel="icon" href={initialSettings.faviconUrl} />
         )}

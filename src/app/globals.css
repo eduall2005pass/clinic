@@ -61,22 +61,59 @@ html[data-theme-transition="true"] *::after {
     box-shadow 0.3s ease !important;
 }
 
+/* Runtime color palette (overridable per-request by Admin → Website → Theme & Appearance).
+   The @theme block below routes Tailwind utilities through these variables. */
+:root {
+  --primary-50: #fef2f2;
+  --primary-100: #fee2e2;
+  --primary-200: #fecaca;
+  --primary-300: #fca5a5;
+  --primary-400: #f87171;
+  --primary-500: #ff3540;
+  --primary-600: #e50914;
+  --primary-700: #c00812;
+  --primary-800: #9b0610;
+  --primary-900: #7f0710;
+
+  --secondary-50: #eff6ff;
+  --secondary-100: #dbeafe;
+  --secondary-200: #bfdbfe;
+  --secondary-300: #93c5fd;
+  --secondary-400: #60a5fa;
+  --secondary-500: #3b82f6;
+  --secondary-600: #2563eb;
+  --secondary-700: #1d4ed8;
+  --secondary-800: #1e40af;
+  --secondary-900: #1e3a8a;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  --color-primary-50: #fef2f2;
-  --color-primary-100: #fee2e2;
-  --color-primary-200: #fecaca;
-  --color-primary-300: #fca5a5;
-  --color-primary-400: #f87171;
-  --color-primary-500: #ff3540;
-  --color-primary-600: #e50914;
-  --color-primary-700: #c00812;
-  --color-primary-800: #9b0610;
-  --color-primary-900: #7f0710;
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+
+  --color-secondary-50: var(--secondary-50);
+  --color-secondary-100: var(--secondary-100);
+  --color-secondary-200: var(--secondary-200);
+  --color-secondary-300: var(--secondary-300);
+  --color-secondary-400: var(--secondary-400);
+  --color-secondary-500: var(--secondary-500);
+  --color-secondary-600: var(--secondary-600);
+  --color-secondary-700: var(--secondary-700);
+  --color-secondary-800: var(--secondary-800);
+  --color-secondary-900: var(--secondary-900);
 
   --color-dark-600: var(--surface-600);
   --color-dark-700: var(--surface-700);
@@ -94,6 +131,50 @@ html[data-theme-transition="true"] *::after {
 
   --animate-fade-up: fade-up 0.7s ease-out both;
   --animate-fade-in: fade-in 0.8s ease-out both;
+}
+
+/* ============ Website Theme & Appearance (Admin-controlled) ============ */
+/* Scoped with :not(:has([data-admin-theme])) so the Admin Panel is never affected.
+   The html data-* attributes are set server-side from the theme_settings table. */
+
+/* Border radius scale overrides (Tailwind v4 radius utilities read these vars). */
+html:not(:has([data-admin-theme]))[data-radius="small"] {
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.625rem;
+  --radius-3xl: 0.875rem;
+}
+
+html:not(:has([data-admin-theme]))[data-radius="large"] {
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+}
+
+html:not(:has([data-admin-theme]))[data-radius="sharp"] {
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+}
+
+/* Button style overrides — apply to real <button> elements on the public site. */
+html:not(:has([data-admin-theme]))[data-button-style="pill"] button {
+  border-radius: 9999px !important;
+}
+
+html:not(:has([data-admin-theme]))[data-button-style="square"] button {
+  border-radius: 0 !important;
 }
 
 @keyframes fade-up {
