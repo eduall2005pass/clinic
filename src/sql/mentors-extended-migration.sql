@@ -1,0 +1,9 @@
+-- Mentors — extended profile fields for full Admin Panel management.
+
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS photo_url VARCHAR(1024) NULL;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS photo_storage_path VARCHAR(1024) NULL;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS bio TEXT NULL;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_facebook VARCHAR(1024) NULL;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_instagram VARCHAR(1024) NULL;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_linkedin VARCHAR(1024) NULL;
+ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_youtube VARCHAR(1024) NULL;
