@@ -38,7 +38,10 @@ export function LogoProvider({
 
   // Keep SSR initialLogo in sync if server renders a newer logo on navigation/refresh
   useEffect(() => {
-    if (initialLogo) setActive(initialLogo);
+    if (!initialLogo) return;
+    queueMicrotask(() => {
+      setActive(initialLogo);
+    });
   }, [initialLogo]);
 
   const refresh = useCallback(async () => {
