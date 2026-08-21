@@ -9,6 +9,7 @@ import Mentors from "@/components/home/Mentors";
 import StudentReviews from "@/components/home/StudentReviews";
 import FaqSection from "@/components/home/FaqSection";
 import { fetchHomepageSections } from "@/lib/homepage-sections";
+import { fetchHeroSettings } from "@/lib/hero-settings";
 import type { HomepageSection } from "@/lib/homepage-sections-constants";
 
 function renderSection(section: HomepageSection) {
@@ -44,12 +45,22 @@ function renderSection(section: HomepageSection) {
 }
 
 export default async function HomePage() {
-  const sections = await fetchHomepageSections();
+  const [sections, heroSettings] = await Promise.all([
+    fetchHomepageSections(),
+    fetchHeroSettings(),
+  ]);
   const activeSections = sections.filter((section) => section.isActive);
 
   return (
     <main className="flex-1 bg-dark-950">
-      {activeSections.map((section) => renderSection(section))}
+      {activeSections.map((section) => {
+        if (section.key === "hero") {
+          // Hero visibility is controlled from Admin → Website → Hero Section.
+          if (!heroSettings.isActive) return null;
+          return <Hero key={section.key} hero={heroSettings} />;
+        }
+        return renderSection(section);
+      })}
     </main>
   );
 }
