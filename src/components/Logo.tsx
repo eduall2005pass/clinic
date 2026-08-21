@@ -1,24 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { useLogo } from "@/components/LogoProvider";
 import { DEFAULT_LOGO } from "@/lib/logo";
 
 export default function Logo({ size = "default" }: { size?: "default" | "large" }) {
   const { logo } = useLogo();
-  const [failed, setFailed] = useState(false);
+  const [failedSource, setFailedSource] = useState<string | null>(null);
   const imageClass =
     size === "large"
       ? "h-auto w-full object-contain"
       : "h-9 w-auto object-contain sm:h-10";
-
-  // Reset fallback if logo changes (e.g., admin uploads a new valid logo)
-  useEffect(() => {
-    setFailed(false);
-  }, [logo.url, logo.updatedAt]);
-
-  const active = failed ? DEFAULT_LOGO : logo;
+  const logoSource = `${logo.url}:${logo.updatedAt}`;
+  const active = failedSource === logoSource ? DEFAULT_LOGO : logo;
   // Ensure browser cache bust: active.url already contains ?v= on MySQL path,
   // but defensively add if missing and updatedAt exists.
   const displayUrl =
@@ -39,7 +34,7 @@ export default function Logo({ size = "default" }: { size?: "default" | "large" 
         height={active.height}
         priority
         unoptimized={displayUrl.startsWith("/uploads/")}
-        onError={() => setFailed(true)}
+        onError={() => setFailedSource(logoSource)}
         className={imageClass}
       />
     </span>
