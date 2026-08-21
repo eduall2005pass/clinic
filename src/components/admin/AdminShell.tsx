@@ -18,11 +18,22 @@ import {
   WebsiteIcon,
   PanelLeftIcon,
 } from "@/components/admin/icons";
+import { AdminThemeProvider, useAdminTheme } from "@/components/admin/AdminThemeProvider";
+import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
 
 const SIDEBAR_STORAGE_KEY = "medispark-admin-sidebar-collapsed";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
+  return (
+    <AdminThemeProvider>
+      <AdminShellInner>{children}</AdminShellInner>
+    </AdminThemeProvider>
+  );
+}
+
+function AdminShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { theme } = useAdminTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -159,7 +170,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   );
 
   return (
-    <div className="flex min-h-screen bg-neutral-100">
+    <div
+      data-admin-theme={theme}
+      className="flex min-h-screen bg-neutral-100 transition-colors duration-300 admin-dark:bg-zinc-950"
+    >
       {/* Desktop sidebar */}
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-zinc-950 lg:flex ${
@@ -195,36 +209,39 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top header */}
-        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-neutral-200 bg-white px-4 sm:px-6">
+        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-neutral-200 bg-white px-4 transition-colors duration-300 sm:px-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900">
           <button
             type="button"
             aria-label="Open menu"
             onClick={() => setMobileOpen(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 text-zinc-700 transition hover:border-primary-500/60 hover:bg-neutral-50 lg:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 text-zinc-700 transition hover:border-primary-500/60 hover:bg-neutral-50 lg:hidden admin-dark:border-zinc-700 admin-dark:text-zinc-200 admin-dark:hover:bg-zinc-800"
           >
             <MenuIcon className="h-5 w-5" />
           </button>
 
-          <h1 className="min-w-0 truncate text-base font-bold text-zinc-900 sm:text-lg">
+          <h1 className="min-w-0 truncate text-base font-bold text-zinc-900 transition-colors duration-300 sm:text-lg admin-dark:text-zinc-50">
             {active?.title ?? "Dashboard"}
           </h1>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             {/* Search */}
-            <label className="hidden items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 transition focus-within:border-primary-500/60 focus-within:bg-white md:flex">
+            <label className="hidden items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 transition focus-within:border-primary-500/60 focus-within:bg-white md:flex admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:focus-within:bg-zinc-800">
               <SearchIcon className="h-4 w-4 shrink-0 text-zinc-400" />
               <input
                 type="search"
                 placeholder="Search..."
-                className="w-36 bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400 lg:w-48"
+                className="w-36 bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400 lg:w-48 admin-dark:text-zinc-100"
               />
             </label>
+
+            {/* Theme toggle — Admin Panel only */}
+            <AdminThemeToggle />
 
             {/* Notifications */}
             <button
               type="button"
               aria-label="Notifications"
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 text-zinc-700 transition hover:border-primary-500/60 hover:bg-neutral-50"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 text-zinc-700 transition hover:border-primary-500/60 hover:bg-neutral-50 admin-dark:border-zinc-700 admin-dark:text-zinc-200 admin-dark:hover:bg-zinc-800"
             >
               <NotificationsIcon className="h-5 w-5" />
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary-600" />
@@ -235,13 +252,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               <button
                 type="button"
                 onClick={() => setProfileOpen((open) => !open)}
-                className="flex items-center gap-2.5 rounded-xl border border-neutral-200 py-1.5 pl-1.5 pr-2.5 transition hover:border-primary-500/60 hover:bg-neutral-50 sm:pr-3"
+                className="flex items-center gap-2.5 rounded-xl border border-neutral-200 py-1.5 pl-1.5 pr-2.5 transition hover:border-primary-500/60 hover:bg-neutral-50 sm:pr-3 admin-dark:border-zinc-700 admin-dark:hover:bg-zinc-800"
               >
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-600 text-xs font-bold text-white">
                   A
                 </span>
                 <span className="hidden text-left sm:block">
-                  <span className="block text-xs font-bold leading-tight text-zinc-900">
+                  <span className="block text-xs font-bold leading-tight text-zinc-900 admin-dark:text-zinc-50">
                     Admin
                   </span>
                   <span className="block text-[10px] leading-tight text-zinc-500">
@@ -251,15 +268,17 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               </button>
 
               {profileOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/10">
-                  <div className="border-b border-neutral-100 px-4 py-3">
-                    <p className="text-sm font-bold text-zinc-900">Admin</p>
+                <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/10 admin-dark:border-zinc-700 admin-dark:bg-zinc-900">
+                  <div className="border-b border-neutral-100 px-4 py-3 admin-dark:border-zinc-800">
+                    <p className="text-sm font-bold text-zinc-900 admin-dark:text-zinc-50">
+                      Admin
+                    </p>
                     <p className="text-xs text-zinc-500">admin@medispark.com</p>
                   </div>
                   <Link
                     href="/admin/administration/admins"
                     onClick={closeOverlays}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-neutral-50"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-neutral-50 admin-dark:text-zinc-200 admin-dark:hover:bg-zinc-800"
                   >
                     <SettingsIcon className="h-4 w-4 text-zinc-400" />
                     Profile Settings
@@ -267,7 +286,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                   <button
                     type="button"
                     onClick={closeOverlays}
-                    className="flex w-full items-center gap-2.5 border-t border-neutral-100 px-4 py-2.5 text-sm font-medium text-primary-700 transition hover:bg-primary-600/5"
+                    className="flex w-full items-center gap-2.5 border-t border-neutral-100 px-4 py-2.5 text-sm font-medium text-primary-700 transition hover:bg-primary-600/5 admin-dark:border-zinc-800 admin-dark:text-primary-400"
                   >
                     <LogoutIcon className="h-4 w-4" />
                     Logout

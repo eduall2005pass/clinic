@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* ============ Admin Panel theme variant ============ */
+/* Scoped to the admin shell only — never affects the main website. */
+@custom-variant admin-dark (&:where([data-admin-theme="dark"] *, [data-admin-theme="dark"]));
+
 /* ============ Theme tokens ============ */
 /* Dark Mode is the default theme. */
 :root,

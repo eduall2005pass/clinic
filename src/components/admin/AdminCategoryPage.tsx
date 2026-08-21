@@ -15,10 +15,10 @@ export default function AdminCategoryPage({
           <category.icon className="h-7 w-7" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-xl font-extrabold tracking-tight text-zinc-900 sm:text-2xl">
+          <h2 className="text-xl font-extrabold tracking-tight text-zinc-900 transition-colors duration-300 sm:text-2xl admin-dark:text-zinc-50">
             {category.name} Management
           </h2>
-          <p className="mt-0.5 text-sm text-zinc-500">
+          <p className="mt-0.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
             {category.description}
           </p>
         </div>
@@ -30,17 +30,17 @@ export default function AdminCategoryPage({
           <Link
             key={sub.href + sub.label}
             href={sub.href}
-            className="group flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white px-5 py-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/50 hover:shadow-lg hover:shadow-black/10"
+            className="group flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white px-5 py-4 shadow-sm transition-colors duration-300 admin-dark:border-zinc-800 admin-dark:bg-zinc-900 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/50 hover:shadow-lg hover:shadow-black/10"
           >
             <span className="min-w-0">
-              <span className="block truncate text-sm font-bold text-zinc-900 transition group-hover:text-primary-700">
+              <span className="block truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-50 transition group-hover:text-primary-700">
                 {sub.label}
               </span>
-              <span className="mt-0.5 block text-xs text-zinc-400">
+              <span className="mt-0.5 block text-xs text-zinc-400 admin-dark:text-zinc-500">
                 Manage {sub.label.toLowerCase()}
               </span>
             </span>
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-zinc-500 transition duration-300 group-hover:bg-primary-600 group-hover:text-white">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400 transition duration-300 group-hover:bg-primary-600 group-hover:text-white">
               <ArrowUpRightIcon className="h-4 w-4" />
             </span>
           </Link>
@@ -48,7 +48,7 @@ export default function AdminCategoryPage({
       </div>
 
       {/* Coming soon note */}
-      <p className="mt-10 rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-5 py-4 text-center text-xs leading-relaxed text-zinc-500">
+      <p className="mt-10 rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-5 py-4 text-center text-xs leading-relaxed text-zinc-500 admin-dark:border-zinc-700 admin-dark:bg-zinc-900/60 admin-dark:text-zinc-400">
         These sections are part of the new Website Control Center. Data
         management will be connected to MySQL in upcoming steps — website
         content will then update live from this panel.
