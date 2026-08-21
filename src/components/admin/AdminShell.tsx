@@ -23,6 +23,8 @@ import {
 } from "@/components/admin/icons";
 import { AdminThemeProvider, useAdminTheme } from "@/components/admin/AdminThemeProvider";
 import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
+import AdminToastProvider from "@/components/admin/AdminToastProvider";
+import AdminSearch from "@/components/admin/AdminSearch";
 
 const SIDEBAR_STORAGE_KEY = "medispark-admin-sidebar-collapsed";
 
@@ -41,6 +43,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [manualOpenSection, setManualOpenSection] = useState<string | null>(null);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -249,10 +252,11 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div
-      data-admin-theme={theme}
-      className="flex min-h-screen bg-neutral-100 transition-colors duration-300 admin-dark:bg-zinc-950"
-    >
+    <AdminToastProvider>
+      <div
+        data-admin-theme={theme}
+        className="flex min-h-screen bg-neutral-100 transition-colors duration-300 admin-dark:bg-zinc-950"
+      >
       {/* Desktop sidebar */}
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-zinc-950 lg:flex ${
@@ -322,15 +326,19 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            {/* Search */}
-            <label className="hidden items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 transition focus-within:border-primary-500/60 focus-within:bg-white md:flex admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:focus-within:bg-zinc-800">
-              <SearchIcon className="h-4 w-4 shrink-0 text-zinc-400" />
-              <input
-                type="search"
-                placeholder="Search..."
-                className="w-36 bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400 lg:w-48 admin-dark:text-zinc-100"
-              />
-            </label>
+            {/* Search — desktop dropdown */}
+            <div className="hidden w-40 md:block lg:w-52 xl:w-64">
+              <AdminSearch />
+            </div>
+            {/* Search toggle — mobile */}
+            <button
+              type="button"
+              aria-label="Search sections"
+              onClick={() => setMobileSearchOpen((open) => !open)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 text-zinc-700 transition hover:border-primary-500/60 hover:bg-neutral-50 md:hidden admin-dark:border-zinc-700 admin-dark:text-zinc-200 admin-dark:hover:bg-zinc-800"
+            >
+              <SearchIcon className="h-5 w-5" />
+            </button>
 
             {/* Theme toggle — Admin Panel only */}
             <AdminThemeToggle />
@@ -395,8 +403,19 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
+        {/* Mobile search panel */}
+        {mobileSearchOpen && (
+          <div className="sticky top-16 z-30 border-b border-neutral-200 bg-white px-4 py-3 transition-colors duration-300 md:hidden admin-dark:border-zinc-800 admin-dark:bg-zinc-900">
+            <AdminSearch
+              autoFocus
+              onNavigate={() => setMobileSearchOpen(false)}
+            />
+          </div>
+        )}
+
         <main className="flex-1">{children}</main>
       </div>
-    </div>
+      </div>
+    </AdminToastProvider>
   );
 }

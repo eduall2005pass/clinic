@@ -33,7 +33,7 @@ export const adminCategories: AdminCategory[] = [
     icon: WebsiteIcon,
     subsections: [
       { label: "General Settings", href: "/admin/settings" },
-      { label: "Logo & Favicon", href: "/admin/website" },
+      { label: "Logo & Favicon", href: "/admin/website/logo-favicon" },
       { label: "Header & Navbar", href: "/admin/website/header" },
       { label: "Homepage", href: "/admin/website/homepage" },
       { label: "Hero / Banner", href: "/admin/website/homepage/hero" },
