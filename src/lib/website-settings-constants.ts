@@ -1,3 +1,8 @@
+export type FooterLink = {
+  label: string;
+  href: string;
+};
+
 export type WebsiteSettings = {
   siteName: string;
   tagline: string;
@@ -10,6 +15,11 @@ export type WebsiteSettings = {
   faviconUpdatedAt: number | null;
   updatedAt: number | null;
   updatedBy: string | null;
+  copyrightText: string | null;
+  footerLinks: FooterLink[] | null;
+  showExplore: boolean;
+  showPrograms: boolean;
+  showContact: boolean;
 };
 
 export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
@@ -25,6 +35,11 @@ export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
   faviconUpdatedAt: null,
   updatedAt: null,
   updatedBy: null,
+  copyrightText: null,
+  footerLinks: null,
+  showExplore: true,
+  showPrograms: true,
+  showContact: true,
 };
 
 export const MAX_FAVICON_FILE_SIZE = 5 * 1024 * 1024;

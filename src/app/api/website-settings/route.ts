@@ -38,6 +38,17 @@ export async function POST(request: NextRequest) {
   let youtubeUrl: string | undefined;
   let faviconFile: File | null = null;
   let logoFile: File | null = null;
+  let copyrightText: string | undefined;
+  let footerLinksJson: string | undefined;
+  let showExplore: boolean | undefined;
+  let showPrograms: boolean | undefined;
+  let showContact: boolean | undefined;
+
+  function asOptionalBool(value: FormDataEntryValue | string | null): boolean | undefined {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return undefined;
+  }
 
   if (contentType.includes("multipart/form-data")) {
     const formData = await request.formData();
@@ -51,6 +62,11 @@ export async function POST(request: NextRequest) {
     if (rawFavicon instanceof File && rawFavicon.size > 0) faviconFile = rawFavicon;
     const rawLogo = formData.get("logo");
     if (rawLogo instanceof File && rawLogo.size > 0) logoFile = rawLogo;
+    copyrightText = asString(formData.get("copyright_text"));
+    footerLinksJson = asString(formData.get("footer_links"));
+    showExplore = asOptionalBool(formData.get("show_explore"));
+    showPrograms = asOptionalBool(formData.get("show_programs"));
+    showContact = asOptionalBool(formData.get("show_contact"));
   } else {
     const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body) {
@@ -62,6 +78,29 @@ export async function POST(request: NextRequest) {
     contactPhone = asString(body.contact_phone ?? body.contactPhone);
     facebookUrl = asString(body.facebook_url ?? body.facebookUrl);
     youtubeUrl = asString(body.youtube_url ?? body.youtubeUrl);
+    copyrightText = asString(body.copyright_text ?? body.copyrightText);
+    const rawLinks =
+      typeof body.footer_links === "string"
+        ? body.footer_links
+        : Array.isArray(body.footerLinks)
+          ? JSON.stringify(body.footerLinks)
+          : undefined;
+    footerLinksJson = rawLinks;
+    showExplore = asOptionalBool(
+      typeof body.show_explore === "boolean"
+        ? String(body.show_explore)
+        : (body.show_explore as string | null) ?? null,
+    );
+    showPrograms = asOptionalBool(
+      typeof body.show_programs === "boolean"
+        ? String(body.show_programs)
+        : (body.show_programs as string | null) ?? null,
+    );
+    showContact = asOptionalBool(
+      typeof body.show_contact === "boolean"
+        ? String(body.show_contact)
+        : (body.show_contact as string | null) ?? null,
+    );
   }
 
   // Handle logo upload through the existing central logo pipeline so LogoProvider refreshes everywhere.
@@ -116,6 +155,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    let parsedFooterLinks: Array<{ label?: unknown; href?: unknown }> | null | undefined;
+    if (footerLinksJson !== undefined) {
+      try {
+        const parsed = footerLinksJson === null ? null : JSON.parse(footerLinksJson);
+        parsedFooterLinks = parsed === null ? null : Array.isArray(parsed) ? parsed : undefined;
+      } catch {
+        return NextResponse.json(
+          { error: "footer_links must be valid JSON." },
+          { status: 400 },
+        );
+      }
+    }
+
     const settings = await saveWebsiteSettings(
       {
         siteName: siteName ?? undefined,
@@ -124,6 +176,11 @@ export async function POST(request: NextRequest) {
         contactPhone: contactPhone ?? undefined,
         facebookUrl: facebookUrl ?? undefined,
         youtubeUrl: youtubeUrl ?? undefined,
+        copyrightText: copyrightText !== undefined ? copyrightText : undefined,
+        footerLinks: parsedFooterLinks === undefined ? undefined : parsedFooterLinks,
+        showExplore,
+        showPrograms,
+        showContact,
       },
       faviconFile,
       admin.uid,
