@@ -66,7 +66,7 @@ const ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".sv
 export { ALLOWED_IMAGE_EXTENSIONS as ALLOWED_CATEGORY_IMAGE_EXTENSIONS };
 export const MAX_CATEGORY_IMAGE_SIZE = 5 * 1024 * 1024;
 
-async function ensureSchema(): Promise<void> {
+export async function ensureSchema(): Promise<void> {
   await exec(
     `CREATE TABLE IF NOT EXISTS course_categories (
       id VARCHAR(191) NOT NULL PRIMARY KEY,

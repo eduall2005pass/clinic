@@ -360,12 +360,10 @@ type TaxonomyRow = {
 };
 
 async function ensureTaxonomyTables(): Promise<void> {
-  await exec(`CREATE TABLE IF NOT EXISTS course_categories (
-    id VARCHAR(64) NOT NULL PRIMARY KEY,
-    name VARCHAR(191) NOT NULL,
-    is_active TINYINT(1) NOT NULL DEFAULT 1,
-    sort_order INT NOT NULL DEFAULT 0
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // course_categories is owned by @/lib/course-categories-store — reuse its
+  // schema so both modules never create conflicting table definitions.
+  const { ensureSchema } = await import("@/lib/course-categories-store");
+  await ensureSchema();
   await exec(`CREATE TABLE IF NOT EXISTS course_subjects (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     name VARCHAR(191) NOT NULL,
