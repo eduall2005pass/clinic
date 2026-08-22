@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Metadata } from "next";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 
@@ -14,11 +13,6 @@ type SeoSettings = {
   ogTitle: string;
   ogDescription: string;
   ogImageUrl: string;
-};
-
-export const metadata: Metadata = {
-  title: "SEO Settings — MediSpark Admin",
-  description: "Control website meta titles, descriptions and search engine settings.",
 };
 
 const inputClass =
