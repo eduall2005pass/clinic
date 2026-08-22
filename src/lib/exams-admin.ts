@@ -16,6 +16,7 @@ export type Exam = {
   kind: ExamKind;
   batchId: string;
   subject: string;
+  courseType: "Academic" | "Admission";
   durationMinutes: number;
   totalMarks: number;
   negativeMarks: number;
@@ -69,6 +70,7 @@ type ExamRow = {
   kind: string;
   batch_id: string;
   subject: string;
+  course_type: string;
   duration_minutes: number;
   total_marks: number;
   negative_marks: string | number;
@@ -120,6 +122,7 @@ function rowToExam(row: ExamRow): Exam {
     kind: row.kind === "practice" ? "practice" : "public",
     batchId: row.batch_id ?? "",
     subject: row.subject ?? "",
+    courseType: row.course_type === "Admission" ? "Admission" : "Academic",
     durationMinutes: row.duration_minutes ?? 30,
     totalMarks: row.total_marks ?? 0,
     negativeMarks: toNumber(row.negative_marks),
@@ -163,6 +166,7 @@ async function ensureTables(): Promise<void> {
     kind ENUM('public','practice') NOT NULL DEFAULT 'public',
     batch_id VARCHAR(32) NOT NULL DEFAULT '',
     subject VARCHAR(191) NOT NULL DEFAULT '',
+    course_type ENUM('Academic','Admission') NOT NULL DEFAULT 'Academic',
     duration_minutes INT NOT NULL DEFAULT 30,
     total_marks INT NOT NULL DEFAULT 0,
     negative_marks DECIMAL(4,2) NOT NULL DEFAULT 0,
@@ -188,8 +192,8 @@ async function ensureTables(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 }
 
-const EXAM_COLUMNS = `id, title, kind, batch_id, subject, duration_minutes, total_marks,
-  negative_marks, question_count, status, scheduled_at, answer_key`;
+const EXAM_COLUMNS = `id, title, kind, batch_id, subject, course_type, duration_minutes,
+  total_marks, negative_marks, question_count, status, scheduled_at, answer_key`;
 
 // ── Exams CRUD ───────────────────────────────────────────────────────────
 
@@ -239,10 +243,10 @@ export async function saveExam(
   }
 
   await exec(
-    `INSERT INTO exams (${EXAM_COLUMNS.replace("answer_key", "answer_key").replace(/, /g, ", ")}, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO exams (${EXAM_COLUMNS}, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE title = VALUES(title), kind = VALUES(kind), batch_id = VALUES(batch_id),
-       subject = VALUES(subject), duration_minutes = VALUES(duration_minutes),
+       subject = VALUES(subject), course_type = VALUES(course_type), duration_minutes = VALUES(duration_minutes),
        total_marks = VALUES(total_marks), negative_marks = VALUES(negative_marks),
        question_count = VALUES(question_count), status = VALUES(status),
        scheduled_at = VALUES(scheduled_at), answer_key = VALUES(answer_key), created_by = VALUES(created_by)`,
@@ -252,6 +256,7 @@ export async function saveExam(
       input.kind === "practice" ? "practice" : "public",
       asString(input.batchId),
       asString(input.subject),
+      input.courseType === "Admission" ? "Admission" : "Academic",
       Math.max(1, Number(input.durationMinutes) || 30),
       Number(totals[0]?.marks ?? input.totalMarks) || 0,
       Math.max(0, Number(input.negativeMarks) || 0),

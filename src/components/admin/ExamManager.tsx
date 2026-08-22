@@ -21,6 +21,7 @@ export type Exam = {
   kind: "public" | "practice";
   batchId: string;
   subject: string;
+  courseType: "Academic" | "Admission";
   durationMinutes: number;
   totalMarks: number;
   negativeMarks: number;
@@ -36,6 +37,7 @@ const EMPTY = {
   kind: "public" as "public" | "practice",
   batchId: "hsc-28",
   subject: "",
+  courseType: "Academic" as "Academic" | "Admission",
   durationMinutes: "30",
   negativeMarks: "0.25",
   status: "draft" as "draft" | "published" | "closed",
@@ -97,6 +99,7 @@ export default function ExamManager({
       kind: exam.kind,
       batchId: exam.batchId || "hsc-28",
       subject: exam.subject,
+      courseType: exam.courseType,
       durationMinutes: String(exam.durationMinutes),
       negativeMarks: String(exam.negativeMarks),
       status: exam.status,
@@ -264,6 +267,16 @@ export default function ExamManager({
                 <label className={labelClass} htmlFor="ex-subject">Subject</label>
                 <input id="ex-subject" className={inputClass} value={form.subject}
                   onChange={(event) => setForm({ ...form, subject: event.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="ex-course-type">Course type</label>
+                <select id="ex-course-type" className={inputClass} value={form.courseType}
+                  onChange={(event) =>
+                    setForm({ ...form, courseType: event.target.value as "Academic" | "Admission" })
+                  }>
+                  <option value="Academic">Academic</option>
+                  <option value="Admission">Admission</option>
+                </select>
               </div>
               <div>
                 <label className={labelClass} htmlFor="ex-duration">Duration (minutes)</label>
