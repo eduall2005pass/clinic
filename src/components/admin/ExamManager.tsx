@@ -13,6 +13,7 @@ import {
   buttonDangerClass,
   type Notice,
 } from "@/components/admin/admin-ui";
+import ExamQuestions from "@/components/admin/ExamQuestions";
 
 export type Exam = {
   id: string;
@@ -57,6 +58,7 @@ export default function ExamManager({
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [questionsExam, setQuestionsExam] = useState<Exam | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -193,6 +195,9 @@ export default function ExamManager({
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
+                  <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonSecondaryClass}>
+                    Questions ({exam.questionCount})
+                  </button>
                   <button type="button" onClick={() => startEdit(exam)} className={buttonSecondaryClass}>Edit</button>
                   <button type="button" onClick={() => void remove(exam.id, exam.title)} disabled={busy}
                     aria-label={`Delete ${exam.title}`} className={buttonDangerClass}>✕</button>
@@ -282,6 +287,15 @@ export default function ExamManager({
             </form>
           </div>
         </div>
+      )}
+
+      {questionsExam && (
+        <ExamQuestions
+          exam={{ id: questionsExam.id, title: questionsExam.title, subject: questionsExam.subject }}
+          authHeaders={gate.headers}
+          onClose={() => setQuestionsExam(null)}
+          onChanged={() => void load()}
+        />
       )}
 
       {notice && <p role="status" className={noticeClass(notice)}>{notice.text}</p>}
