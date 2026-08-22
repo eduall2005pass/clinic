@@ -79,6 +79,47 @@ function ChartIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+function VideoIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"
+      />
+    </svg>
+  );
+}
+
+function MentorIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"
+      />
+    </svg>
+  );
+}
+
 const benefits: Benefit[] = [
   {
     title: "Structured Courses",
@@ -104,6 +145,18 @@ const benefits: Benefit[] = [
       "Monitor your preparation and stay on top of your study goals.",
     Icon: ChartIcon,
   },
+  {
+    title: "Recorded Video Classes",
+    description:
+      "Watch classes anytime and revise every topic at your own pace.",
+    Icon: VideoIcon,
+  },
+  {
+    title: "Mentor Support",
+    description:
+      "Guidance from experienced mentors at every step of your journey.",
+    Icon: MentorIcon,
+  },
 ];
 
 export default  function WhyMediSpark({
@@ -124,14 +177,14 @@ export default  function WhyMediSpark({
           description={description ?? "One platform for your HSC academics and medical admission journey."}
         />
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4">
           {benefits.map((benefit) => (
             <div
               key={benefit.title}
-              className="group flex items-center gap-4 rounded-2xl border border-ink/10 bg-dark-950/60 p-4 shadow-lg shadow-black/20 transition duration-300 hover:border-primary-600/60 hover:shadow-primary-900/30"
+              className="group flex items-center gap-3 rounded-2xl border border-ink/10 bg-dark-950/60 p-3 shadow-lg shadow-black/20 transition duration-300 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:gap-4 sm:p-4"
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50">
-                <benefit.Icon className="h-6 w-6" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50 sm:h-11 sm:w-11">
+                <benefit.Icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </span>
               <div className="min-w-0">
                 <h3 className="font-bold leading-snug text-heading">
