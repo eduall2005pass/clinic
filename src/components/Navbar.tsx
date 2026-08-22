@@ -5,7 +5,6 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import { loginHref } from "@/lib/nav-links";
 import { useAuth } from "@/lib/auth-context";
-import ThemeToggle from "@/components/ThemeToggle";
 import {
   DEFAULT_NAVBAR_CONFIG,
   type NavbarConfig,
@@ -33,8 +32,6 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
         </Link>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          {settings.showThemeToggle && <ThemeToggle />}
-
           <Link
             href="/dashboard/notifications"
             aria-label="Notifications"
