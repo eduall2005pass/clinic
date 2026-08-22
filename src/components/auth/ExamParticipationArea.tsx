@@ -41,7 +41,7 @@ export default function ExamParticipationArea({
 }) {
   const examHref = `/exam/${examId}`;
   const loginHref = `/login?next=${encodeURIComponent(examHref)}`;
-  const { user, access, authLoading, profileLoading } = useAuth();
+  const { user, authLoading, profileLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -127,6 +127,7 @@ export default function ExamParticipationArea({
   useEffect(() => {
     if (secondsLeft === null || outcome) return;
     if (secondsLeft <= 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-submit on timeout
       void submit();
       return;
     }
@@ -155,19 +156,7 @@ export default function ExamParticipationArea({
     );
   }
 
-  if (!access.registered) {
-    return (
-      <AccessMessage
-        title="Complete Your Registration"
-        message="Finish creating your student profile before starting an exam."
-        actionLabel="Go to Dashboard"
-        actionHref="/dashboard"
-        secondaryLabel="Back to Public Exams"
-        secondaryHref="/exam"
-      />
-    );
-  }
-
+  // Any signed-in user can attempt public exams — no student-profile gate.
   if (loading) {
     return <AccessLoading label="Loading exam…" />;
   }
