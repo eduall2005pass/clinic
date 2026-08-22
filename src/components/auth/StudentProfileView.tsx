@@ -19,6 +19,26 @@ type InfoField = {
   href?: string;
 };
 
+const STUDENT_LEVELS = [
+  "SSC Academic",
+  "HSC Academic",
+  "Medical Admission",
+  "Varsity Admission",
+] as const;
+
+function resolveStudentLevel(profile: {
+  studentLevel?: string;
+  hscBatch?: string;
+}): string {
+  if (profile.studentLevel && STUDENT_LEVELS.includes(profile.studentLevel as (typeof STUDENT_LEVELS)[number])) {
+    return profile.studentLevel;
+  }
+  const batch = (profile.hscBatch ?? "").toLowerCase();
+  if (batch.startsWith("ssc")) return "SSC Academic";
+  if (batch.startsWith("varsity")) return "Varsity Admission";
+  return "HSC Academic";
+}
+
 export default function StudentProfileView() {
   const router = useRouter();
   const { user, profile, authLoading, profileLoading, configured, refreshProfile, logout } =
@@ -27,10 +47,12 @@ export default function StudentProfileView() {
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState("");
   const [institution, setInstitution] = useState("");
+  const [facebookId, setFacebookId] = useState("");
   const [pictureUrl, setPictureUrl] = useState("");
   const [pictureFile, setPictureFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -42,12 +64,11 @@ export default function StudentProfileView() {
 
   useEffect(() => {
     if (profile) {
-      // Sync editable fields with the latest Firestore profile.
+      // Sync editable fields with the latest MySQL profile (/api/me).
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFullName(profile.fullName);
-       
       setInstitution(profile.institution);
-       
+      setFacebookId(profile.facebookUrl ?? "");
       setPictureUrl(profile.profilePictureUrl);
     }
   }, [profile]);
@@ -84,6 +105,7 @@ export default function StudentProfileView() {
     if (!user) return;
     const trimmedName = fullName.trim();
     const trimmedInstitution = institution.trim();
+    const trimmedFacebookId = facebookId.trim();
     if (!trimmedName || !trimmedInstitution) {
       setError("Name and institution cannot be empty.");
       return;
@@ -91,6 +113,7 @@ export default function StudentProfileView() {
 
     setSaving(true);
     setError(null);
+    setSuccess(null);
     try {
       await updateStudentProfile(
         user,
@@ -101,7 +124,7 @@ export default function StudentProfileView() {
           hscBatch: profile.hscBatch,
           contactNumber: profile.contactNumber,
           email: profile.email,
-          facebookUrl: profile.facebookUrl,
+          facebookUrl: trimmedFacebookId,
         },
         pictureFile,
       );
@@ -109,6 +132,7 @@ export default function StudentProfileView() {
       await refreshProfile();
       setPictureFile(null);
       setEditing(false);
+      setSuccess("Profile updated successfully.");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not save your changes. Please try again.",
@@ -120,19 +144,16 @@ export default function StudentProfileView() {
 
   const infoFields: InfoField[] = [
     { label: "Student ID", value: profile.studentId },
-    { label: "Gender", value: profile.gender },
-    { label: "HSC Batch", value: profile.hscBatch },
-    { label: "Contact Number", value: profile.contactNumber },
+    { label: "Student Level", value: resolveStudentLevel(profile) },
+    { label: "Academic/Admission Batch", value: profile.hscBatch || "Not provided" },
+    { label: "Institution", value: profile.institution },
+    { label: "Contact Number", value: profile.contactNumber || "Not provided" },
     { label: "Email", value: profile.email },
     {
-      label: "Facebook Account",
+      label: "Facebook ID",
       value: profile.facebookUrl || "Not provided",
       href: profile.facebookUrl || undefined,
     },
-  ];
-
-  const editableFields: InfoField[] = [
-    { label: "Institution", value: editing ? institution : profile.institution },
   ];
 
   return (
@@ -185,9 +206,11 @@ export default function StudentProfileView() {
                     onClick={() => {
                       setFullName(profile.fullName);
                       setInstitution(profile.institution);
+                      setFacebookId(profile.facebookUrl ?? "");
                       setPictureUrl(profile.profilePictureUrl);
                       setPictureFile(null);
                       setError(null);
+                      setSuccess(null);
                       setEditing(true);
                     }}
                     className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-primary-600/15 hover:text-primary-400"
@@ -206,7 +229,7 @@ export default function StudentProfileView() {
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              {[...editableFields, ...infoFields].map((field) => (
+              {infoFields.map((field) => (
                 <div key={field.label}>
                   <p className={labelClass}>{field.label}</p>
                   {field.href ? (
@@ -224,6 +247,15 @@ export default function StudentProfileView() {
                 </div>
               ))}
             </div>
+
+            {success && !editing && (
+              <p
+                role="status"
+                className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-400"
+              >
+                {success}
+              </p>
+            )}
 
             {editing && (
               <form
@@ -304,6 +336,20 @@ export default function StudentProfileView() {
                   />
                 </div>
 
+                <div className="mt-4">
+                  <label htmlFor="editFacebook" className={labelClass}>
+                    Facebook ID
+                  </label>
+                  <input
+                    id="editFacebook"
+                    type="text"
+                    value={facebookId}
+                    onChange={(event) => setFacebookId(event.target.value)}
+                    placeholder="Your Facebook profile link or ID"
+                    className={inputClass}
+                  />
+                </div>
+
                 {error && (
                   <p className="mt-4 rounded-xl border border-primary-500/30 bg-primary-500/10 p-3 text-center text-sm text-primary-300">
                     {error}
@@ -326,6 +372,7 @@ export default function StudentProfileView() {
                       setPictureFile(null);
                       setFullName(profile.fullName);
                       setInstitution(profile.institution);
+                      setFacebookId(profile.facebookUrl ?? "");
                       setPictureUrl(profile.profilePictureUrl);
                     }}
                     className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-primary-600/15 hover:text-primary-400"
