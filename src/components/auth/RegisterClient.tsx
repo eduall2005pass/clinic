@@ -6,17 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 import { saveProfileWithUniqueStudentId } from "@/lib/student-id";
+import {
+  STUDENT_LEVELS,
+  batchLabelFor,
+  batchYearOptions,
+} from "@/lib/student-categories";
 
 const GENDERS = ["Male", "Female", "Other"];
-
-function hscBatches(): string[] {
-  const currentYear = new Date().getFullYear();
-  const years: string[] = [];
-  for (let year = currentYear - 6; year <= currentYear + 2; year++) {
-    years.push(String(year));
-  }
-  return years;
-}
 
 const inputClass =
   "w-full rounded-xl border border-ink/15 bg-dark-950 px-4 py-3 text-sm text-heading placeholder-neutral-500 outline-none transition focus:border-primary-500/70 focus:ring-2 focus:ring-primary-500/20";
@@ -33,6 +29,7 @@ export default function RegisterClient() {
   const [gender, setGender] = useState("");
   const [institution, setInstitution] = useState("");
   const [hscBatch, setHscBatch] = useState("");
+  const [studentLevel, setStudentLevel] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
   const [pictureUrl, setPictureUrl] = useState("");
@@ -83,7 +80,7 @@ export default function RegisterClient() {
     const trimmedContact = contactNumber.trim();
     const trimmedFacebook = facebookUrl.trim();
 
-    if (!trimmedName || !gender || !trimmedInstitution || !hscBatch || !trimmedContact) {
+    if (!trimmedName || !gender || !trimmedInstitution || !studentLevel || !hscBatch || !trimmedContact) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -98,6 +95,7 @@ export default function RegisterClient() {
           gender,
           institution: trimmedInstitution,
           hscBatch,
+          studentLevel,
           contactNumber: trimmedContact,
           email: user.email ?? "",
           facebookUrl: trimmedFacebook,
@@ -228,8 +226,29 @@ export default function RegisterClient() {
             </div>
 
             <div>
+              <label htmlFor="studentLevel" className={labelClass}>
+                Student Level *
+              </label>
+              <select
+                id="studentLevel"
+                value={studentLevel}
+                onChange={(event) => setStudentLevel(event.target.value)}
+                className={inputClass}
+              >
+                <option value="" disabled>
+                  Select your category
+                </option>
+                {STUDENT_LEVELS.map((level) => (
+                  <option key={level} value={level}>
+                    {level}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label htmlFor="hscBatch" className={labelClass}>
-                HSC Batch *
+                {studentLevel ? `${batchLabelFor(studentLevel)} *` : "Batch *"}
               </label>
               <select
                 id="hscBatch"
@@ -240,7 +259,7 @@ export default function RegisterClient() {
                 <option value="" disabled>
                   Select batch year
                 </option>
-                {hscBatches().map((year) => (
+                {batchYearOptions().map((year) => (
                   <option key={year} value={year}>
                     {year}
                   </option>

@@ -30,6 +30,7 @@ export type StudentProfile = {
   gender: string;
   institution: string;
   hscBatch: string;
+  studentLevel?: string;
   contactNumber: string;
   email: string;
   facebookUrl: string;

@@ -31,6 +31,9 @@ async function profileRequest(
   formData.append("gender", data.gender);
   formData.append("institution", data.institution);
   formData.append("hscBatch", data.hscBatch);
+  if (data.studentLevel) {
+    formData.append("studentLevel", data.studentLevel);
+  }
   formData.append("contactNumber", data.contactNumber);
   formData.append("email", data.email);
   formData.append("facebookUrl", data.facebookUrl);

@@ -16,6 +16,7 @@ type StudentRow = {
   gender: string;
   institution: string;
   hsc_batch: string;
+  student_level: string;
   contact_number: string;
   email: string;
   facebook_url: string;
@@ -33,6 +34,7 @@ function mapProfile(row: StudentRow): StudentProfile {
     gender: row.gender,
     institution: row.institution,
     hscBatch: row.hsc_batch,
+    studentLevel: row.student_level ?? "",
     contactNumber: row.contact_number,
     email: row.email,
     facebookUrl: row.facebook_url,
@@ -73,12 +75,35 @@ const REQUIRED_FIELDS = [
   "contactNumber",
 ] as const;
 
+const STUDENT_LEVELS = [
+  "SSC Academic",
+  "HSC Academic",
+  "Medical Admission",
+  "Varsity Admission",
+] as const;
+
 async function uploadProfilePicture(picture: File) {
   const extension = picture.name.includes(".")
     ? `.${picture.name.split(".").pop()?.toLowerCase() ?? ""}`
     : ".jpg";
   const fileName = `profile-picture-${Date.now()}${extension}`;
   return saveFile(PROFILE_PICTURE_DIR, fileName, await picture.arrayBuffer());
+}
+
+/** Best-effort: make sure the student_level column exists before writing. */
+let levelSchemaReady: Promise<void> | null = null;
+function ensureLevelColumn(): Promise<void> {
+  if (!levelSchemaReady) {
+    levelSchemaReady = exec(
+      `ALTER TABLE students ADD COLUMN IF NOT EXISTS student_level VARCHAR(32) NOT NULL DEFAULT '' AFTER hsc_batch`,
+    )
+      .then(() => undefined)
+      .catch((error) => {
+        levelSchemaReady = null;
+        throw error;
+      });
+  }
+  return levelSchemaReady;
 }
 
 export async function POST(request: NextRequest) {
@@ -114,6 +139,12 @@ export async function POST(request: NextRequest) {
 
   const email = readField("email");
   const facebookUrl = readField("facebookUrl");
+  // Student level/category — defaults to HSC Academic for legacy clients.
+  const rawStudentLevel = readField("studentLevel");
+  const studentLevel =
+    (STUDENT_LEVELS as readonly string[]).includes(rawStudentLevel)
+      ? rawStudentLevel
+      : "HSC Academic";
 
   let profilePictureUrl = "";
   const picture = formData.get("picture");
@@ -137,6 +168,12 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString();
   let studentId = "";
   let saved = false;
+  try {
+    await ensureLevelColumn();
+  } catch {
+    // Column may already exist or DB may not allow DDL — the insert will
+    // surface a real error if the column is genuinely missing.
+  }
   for (let attempt = 0; attempt < 8; attempt++) {
     const candidate = randomStudentId();
     try {
@@ -152,9 +189,9 @@ export async function POST(request: NextRequest) {
       await query(
         `INSERT INTO students
           (uid, student_id, full_name, gender, institution, hsc_batch,
-           contact_number, email, facebook_url, profile_picture_url,
+           student_level, contact_number, email, facebook_url, profile_picture_url,
            provider, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'google', NOW(), NOW())`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'google', NOW(), NOW())`,
         [
           user.uid,
           studentId,
@@ -162,6 +199,7 @@ export async function POST(request: NextRequest) {
           fields.gender,
           fields.institution,
           fields.hscBatch,
+          studentLevel,
           fields.contactNumber,
           email,
           facebookUrl,
@@ -197,6 +235,7 @@ export async function POST(request: NextRequest) {
     gender: fields.gender,
     institution: fields.institution,
     hscBatch: fields.hscBatch,
+    studentLevel,
     contactNumber: fields.contactNumber,
     email,
     facebookUrl,
@@ -233,6 +272,7 @@ export async function PATCH(request: NextRequest) {
       { status: 400 },
     );
   }
+  const facebookUrl = readField("facebookUrl");
 
   const picture = formData.get("picture");
   if (picture instanceof File && picture.size > 0) {
@@ -258,8 +298,8 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const result = await exec(
-      "UPDATE students SET full_name = ?, institution = ?, updated_at = NOW() WHERE uid = ?",
-      [fullName, institution, user.uid],
+      "UPDATE students SET full_name = ?, institution = ?, facebook_url = ?, updated_at = NOW() WHERE uid = ?",
+      [fullName, institution, facebookUrl, user.uid],
     );
     if (!result.affectedRows) {
       return NextResponse.json(
