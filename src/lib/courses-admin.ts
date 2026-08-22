@@ -8,12 +8,14 @@ import { removeFile, isLocalUpload } from "@/lib/storage";
 export type CatalogCourseCategory =
   | "SSC Academic"
   | "HSC Academic"
-  | "Medical Admission";
+  | "Medical Admission"
+  | "Varsity Admission";
 
 const CATALOG_COURSE_CATEGORIES: CatalogCourseCategory[] = [
   "SSC Academic",
   "HSC Academic",
   "Medical Admission",
+  "Varsity Admission",
 ];
 
 export function normalizeCatalogCategory(value: unknown): CatalogCourseCategory {
@@ -116,7 +118,7 @@ async function ensureTables(): Promise<void> {
   await exec(`CREATE TABLE IF NOT EXISTS catalog_courses (
     slug VARCHAR(191) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    category ENUM('SSC Academic','HSC Academic','Medical Admission') NOT NULL DEFAULT 'HSC Academic',
+    category ENUM('SSC Academic','HSC Academic','Medical Admission','Varsity Admission') NOT NULL DEFAULT 'HSC Academic',
     batch_id VARCHAR(32) NOT NULL DEFAULT 'hsc-28',
     image_url VARCHAR(1024) NULL,
     short_description TEXT NULL,
@@ -154,7 +156,7 @@ async function ensureTables(): Promise<void> {
   // Each statement is idempotent and fails harmlessly once applied.
   try {
     await exec(
-      `ALTER TABLE catalog_courses MODIFY COLUMN category ENUM('SSC Academic','HSC Academic','Medical Admission','Academic','Admission') NOT NULL DEFAULT 'HSC Academic'`,
+      `ALTER TABLE catalog_courses MODIFY COLUMN category ENUM('SSC Academic','HSC Academic','Medical Admission','Varsity Admission','Academic','Admission') NOT NULL DEFAULT 'HSC Academic'`,
     );
     await exec(
       `UPDATE catalog_courses SET category='Medical Admission' WHERE category='Admission'`,
@@ -163,7 +165,7 @@ async function ensureTables(): Promise<void> {
       `UPDATE catalog_courses SET category='HSC Academic' WHERE category IN ('Academic','')`,
     );
     await exec(
-      `ALTER TABLE catalog_courses MODIFY COLUMN category ENUM('SSC Academic','HSC Academic','Medical Admission') NOT NULL DEFAULT 'HSC Academic'`,
+      `ALTER TABLE catalog_courses MODIFY COLUMN category ENUM('SSC Academic','HSC Academic','Medical Admission','Varsity Admission') NOT NULL DEFAULT 'HSC Academic'`,
     );
   } catch {
     // Best effort — already migrated or no permission.

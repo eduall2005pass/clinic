@@ -59,6 +59,7 @@ export const adminCategories: AdminCategory[] = [
       { label: "SSC Academic", href: "/admin/courses/ssc" },
       { label: "HSC Academic", href: "/admin/courses/academic" },
       { label: "Medical Admission", href: "/admin/courses/admission" },
+      { label: "Varsity Admission", href: "/admin/courses/varsity" },
       { label: "Categories", href: "/admin/courses/categories" },
       { label: "Subjects", href: "/admin/courses/subjects" },
       { label: "Chapters", href: "/admin/courses/chapters" },

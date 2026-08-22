@@ -6,7 +6,8 @@ export type Batch = {
 export type CourseType =
   | "SSC Academic"
   | "HSC Academic"
-  | "Medical Admission";
+  | "Medical Admission"
+  | "Varsity Admission";
 
 export type CourseCategory = CourseType;
 
@@ -49,6 +50,7 @@ export const courseTypes: CourseType[] = [
   "SSC Academic",
   "HSC Academic",
   "Medical Admission",
+  "Varsity Admission",
 ];
 
 export const courses: Course[] = [

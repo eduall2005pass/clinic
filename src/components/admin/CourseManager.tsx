@@ -371,6 +371,7 @@ export default function CourseManager({
                   <option value="SSC Academic">SSC Academic</option>
                   <option value="HSC Academic">HSC Academic</option>
                   <option value="Medical Admission">Medical Admission</option>
+                  <option value="Varsity Admission">Varsity Admission</option>
                 </select>
               </div>
               <div>
