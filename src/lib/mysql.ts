@@ -29,6 +29,9 @@ export function getMysqlPool(): mysql.Pool | null {
       connectionLimit: 5,
       connectTimeout: 10000,
       waitForConnections: true,
+      // Report matched rows (not just changed rows) so "affectedRows > 0"
+      // stays true when an UPDATE sets a column to its current value.
+      flags: ["FOUND_ROWS"],
     });
   }
   return pool;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getAuth, onIdTokenChanged } from "firebase/auth";
 import { useAuth } from "@/lib/auth-context";
 
 export type AdminGate = {
@@ -17,32 +18,38 @@ export function useAdminGate(): AdminGate {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
+  // Admin check — runs once per signed-in user.
   useEffect(() => {
     if (authLoading || !user) return;
     let cancelled = false;
-    user
-      .getIdToken()
-      .then((idToken) => {
-        if (cancelled) return null;
-        setToken(idToken);
-        return fetch("/api/admin", {
+    void (async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch("/api/admin", {
           headers: { Authorization: `Bearer ${idToken}` },
           cache: "no-store",
         });
-      })
-      .then((response) =>
-        response ? (response.ok ? response.json() : null) : null,
-      )
-      .then((data: { isAdmin?: boolean } | null) => {
-        if (!cancelled) setIsAdmin(Boolean(data?.isAdmin));
-      })
-      .catch(() => {
+        const data = (await response.json().catch(() => null)) as
+          | { isAdmin?: boolean }
+          | null;
+        if (!cancelled) setIsAdmin(Boolean(response.ok && data?.isAdmin));
+      } catch {
         if (!cancelled) setIsAdmin(false);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
   }, [user, authLoading]);
+
+  // Keep the token fresh: Firebase rotates ID tokens hourly, and a stale
+  // token in state made every admin write fail with 401 after an hour.
+  useEffect(() => {
+    if (!user) return;
+    return onIdTokenChanged(getAuth(), (refreshed) => {
+      void refreshed?.getIdToken().then(setToken).catch(() => setToken(null));
+    });
+  }, [user]);
 
   const denied =
     (!authLoading && !user) || (authLoading === false && isAdmin === false);

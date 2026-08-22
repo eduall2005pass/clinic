@@ -147,6 +147,27 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — column may already exist.
   }
+  // Databases created by older migrations have the legacy enum
+  // ('Academic','Admission') which rejects the current category values
+  // with "Data truncated for column 'category'" on every save. Widen the
+  // enum first, migrate any legacy rows, then shrink back to 3 values.
+  // Each statement is idempotent and fails harmlessly once applied.
+  try {
+    await exec(
+      `ALTER TABLE catalog_courses MODIFY COLUMN category ENUM('SSC Academic','HSC Academic','Medical Admission','Academic','Admission') NOT NULL DEFAULT 'HSC Academic'`,
+    );
+    await exec(
+      `UPDATE catalog_courses SET category='Medical Admission' WHERE category='Admission'`,
+    );
+    await exec(
+      `UPDATE catalog_courses SET category='HSC Academic' WHERE category IN ('Academic','')`,
+    );
+    await exec(
+      `ALTER TABLE catalog_courses MODIFY COLUMN category ENUM('SSC Academic','HSC Academic','Medical Admission') NOT NULL DEFAULT 'HSC Academic'`,
+    );
+  } catch {
+    // Best effort — already migrated or no permission.
+  }
 }
 
 export async function fetchCatalogCourses(): Promise<CatalogCourse[]> {
