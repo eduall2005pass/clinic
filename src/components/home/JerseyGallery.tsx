@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import SectionHeader from "@/components/SectionHeader";
-import { jerseys } from "@/lib/jerseys";
+import type { JerseyItem } from "@/lib/content-admin";
 
-export default  function JerseyGallery({
+export default function JerseyGallery({
+  jerseys,
   title,
   description,
 }: {
+  jerseys: JerseyItem[];
   title?: string;
   description?: string;
-} = {}) {
+}) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
@@ -26,9 +28,11 @@ export default  function JerseyGallery({
     };
   }, [lightboxOpen]);
 
-  if (jerseys.length === 0) return null;
+  // Nothing published yet — the section stays hidden.
+  if (!jerseys || jerseys.length === 0) return null;
 
   const jersey = jerseys[0];
+  const hasLink = Boolean(jersey.link);
 
   return (
     <section
@@ -44,32 +48,51 @@ export default  function JerseyGallery({
         />
 
         <div className="mx-auto mt-12 max-w-xl">
-          <button
-            type="button"
-            onClick={() => setLightboxOpen(true)}
-            aria-label={`View the ${jersey.name} in larger size`}
-            className="group block w-full cursor-zoom-in rounded-3xl border border-ink/10 bg-dark-900 p-6 text-left shadow-lg shadow-black/20 transition duration-300 hover:border-primary-600/60 hover:shadow-primary-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 sm:p-8"
-          >
-            <div className="flex aspect-[4/5] items-center justify-center rounded-2xl bg-gradient-to-b from-dark-850 to-dark-950 p-4 transition duration-300 group-hover:from-primary-950/40 sm:aspect-[5/4] sm:p-8">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={jersey.image}
-                alt={jersey.name}
-                className="h-full w-full object-contain drop-shadow-[0_20px_40px_rgba(229,9,20,0.3)]"
-              />
-            </div>
+          <div className="group rounded-3xl border border-ink/10 bg-dark-900 p-6 text-left shadow-lg shadow-black/20 transition duration-300 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:p-8">
+            {jersey.image && (
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                aria-label={`View the ${jersey.name} in larger size`}
+                className="block w-full cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              >
+                <span className="flex aspect-[4/5] items-center justify-center rounded-2xl bg-gradient-to-b from-dark-850 to-dark-950 p-4 transition duration-300 group-hover:bg-primary-950/40 sm:aspect-[5/4] sm:p-8">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={jersey.image}
+                    alt={jersey.name}
+                    className="h-full w-full object-contain drop-shadow-[0_20px_40px_rgba(229,9,20,0.3)]"
+                  />
+                </span>
+              </button>
+            )}
             <div className="mt-6 flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-bold text-heading sm:text-xl">
                   {jersey.name}
                 </h3>
-                <p className="mt-1 text-sm leading-relaxed text-neutral-400">
-                  {jersey.note}
-                </p>
+                {jersey.note && (
+                  <p className="mt-1 text-sm leading-relaxed text-neutral-400">
+                    {jersey.note}
+                  </p>
+                )}
               </div>
-              <span className="hidden shrink-0 items-center gap-1.5 rounded-full border border-primary-600/40 bg-primary-600/10 px-3.5 py-1.5 text-xs font-semibold text-primary-400 sm:inline-flex">
+              {jersey.price > 0 && (
+                <span className="hidden shrink-0 items-center gap-1.5 rounded-full border border-primary-600/40 bg-primary-600/10 px-3.5 py-1.5 text-xs font-semibold text-primary-400 sm:inline-flex">
+                  ৳ {jersey.price.toLocaleString("en-IN")}
+                </span>
+              )}
+            </div>
+            {hasLink && (
+              <a
+                href={jersey.link ?? "#"}
+                target={jersey.link?.startsWith("/") ? undefined : "_blank"}
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white transition duration-300 hover:bg-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              >
+                Order Now
                 <svg
-                  className="h-3.5 w-3.5"
+                  className="h-4 w-4"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
@@ -77,17 +100,15 @@ export default  function JerseyGallery({
                   strokeLinejoin="round"
                   viewBox="0 0 24 24"
                 >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="M21 21l-4.35-4.35" />
+                  <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
-                Click to view
-              </span>
-            </div>
-          </button>
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
-      {lightboxOpen && (
+      {lightboxOpen && jersey.image && (
         <div
           role="dialog"
           aria-modal="true"
@@ -126,9 +147,11 @@ export default  function JerseyGallery({
             />
             <figcaption className="mt-4 text-center">
               <span className="font-bold text-heading">{jersey.name}</span>
-              <span className="mt-1 block text-sm text-neutral-400">
-                {jersey.note}
-              </span>
+              {jersey.note && (
+                <span className="mt-1 block text-sm text-neutral-400">
+                  {jersey.note}
+                </span>
+              )}
             </figcaption>
           </figure>
         </div>

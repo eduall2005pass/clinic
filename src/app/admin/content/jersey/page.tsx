@@ -13,9 +13,9 @@ import {
 } from "@/components/admin/admin-ui";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
 
-type Jersey = { id: string; name: string; note: string | null; image: string | null; price: number; isActive: boolean };
+type Jersey = { id: string; name: string; note: string | null; image: string | null; link: string | null; price: number; isActive: boolean };
 
-const EMPTY = { name: "", note: "", image: "", price: "0" };
+const EMPTY = { id: "", name: "", note: "", image: "", link: "", price: "0" };
 
 export default function JerseyPage() {
   const gate = useAdminGate();
@@ -57,7 +57,15 @@ export default function JerseyPage() {
       const response = await fetch("/api/admin/jerseys", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...gate.headers },
-        body: JSON.stringify({ ...form, price: Number(form.price) || 0, isActive: true }),
+        body: JSON.stringify({
+          ...(form.id ? { id: form.id } : {}),
+          name: form.name,
+          note: form.note,
+          image: form.image,
+          link: form.link,
+          price: Number(form.price) || 0,
+          isActive: true,
+        }),
       });
       const data = (await response.json().catch(() => null)) as { error?: string; jerseys?: Jersey[] } | null;
       if (!response.ok) {
@@ -66,10 +74,25 @@ export default function JerseyPage() {
       }
       setJerseys(data?.jerseys ?? []);
       setForm(EMPTY);
-      setNotice({ kind: "success", text: "Jersey saved." });
+      setNotice({ kind: "success", text: form.id ? "Jersey updated. The home page now shows the latest version." : "Jersey saved." });
+    } catch {
+      setNotice({ kind: "error", text: "Network error — could not save the jersey." });
     } finally {
       setBusy(false);
     }
+  }
+
+  function startEdit(jersey: Jersey) {
+    setForm({
+      id: jersey.id,
+      name: jersey.name,
+      note: jersey.note ?? "",
+      image: jersey.image ?? "",
+      link: jersey.link ?? "",
+      price: String(jersey.price ?? 0),
+    });
+    setNotice(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function remove(id: string) {
@@ -96,7 +119,9 @@ export default function JerseyPage() {
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">Add jersey</h3>
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+          {form.id ? "Update jersey" : "Add jersey"}
+        </h3>
         <form
           className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2"
           onSubmit={(event) => {
@@ -126,11 +151,20 @@ export default function JerseyPage() {
           </div>
           <div className="sm:col-span-2">
             <label className="sr-only" htmlFor="jy-note">Note</label>
-            <input id="jy-note" className={inputClass} placeholder="Short note" value={form.note}
+            <input id="jy-note" className={inputClass} placeholder="Short note / description" value={form.note}
               onChange={(event) => setForm({ ...form, note: event.target.value })} />
           </div>
           <div className="sm:col-span-2">
-            <button type="submit" disabled={busy} className={buttonPrimaryClass}>{busy ? "Saving…" : "+ Add Jersey"}</button>
+            <label className="sr-only" htmlFor="jy-link">Order link</label>
+            <input id="jy-link" type="url" className={inputClass} placeholder="Order link (optional, e.g. https://wa.me/…)" value={form.link}
+              onChange={(event) => setForm({ ...form, link: event.target.value })} />
+          </div>
+          <div className="flex gap-2 sm:col-span-2">
+            <button type="submit" disabled={busy} className={buttonPrimaryClass}>{busy ? "Saving…" : form.id ? "Update Jersey" : "+ Add Jersey"}</button>
+            {form.id && (
+              <button type="button" disabled={busy} className={buttonDangerClass}
+                onClick={() => { setForm(EMPTY); setNotice(null); }}>Cancel</button>
+            )}
           </div>
         </form>
       </div>
@@ -141,9 +175,11 @@ export default function JerseyPage() {
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">{jersey.name}</span>
               <span className="block truncate text-xs text-zinc-500">
-                ৳ {jersey.price.toLocaleString("en-IN")}{jersey.note ? ` · ${jersey.note}` : ""}
+                ৳ {jersey.price.toLocaleString("en-IN")}{jersey.note ? ` · ${jersey.note}` : ""}{!jersey.isActive ? " · hidden" : ""}
               </span>
             </span>
+            <button type="button" disabled={busy} aria-label={`Edit ${jersey.name}`} className={buttonPrimaryClass}
+              onClick={() => startEdit(jersey)}>Edit</button>
             <button type="button" disabled={busy} aria-label={`Delete ${jersey.name}`} className={buttonDangerClass}
               onClick={() => void remove(jersey.id)}>✕</button>
           </li>
