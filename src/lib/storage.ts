@@ -1,11 +1,30 @@
 import { randomUUID } from "node:crypto";
 import { exec, query } from "@/lib/mysql";
 
-// Uploads are stored in MySQL (uploads.data LONGBLOB) and served through
-// /api/files/[id]. The serverless filesystem is ephemeral, so nothing may
-// be written to disk — everything must live in the database.
+// Media files live on the Azure VM's disk under /var/www/medispark-uploads
+// and are served over HTTPS by nginx at MEDIA_FILES_BASE_URL. saveFile()
+// forwards bytes to the VM's upload endpoint; only the returned URL is kept.
+// The uploads table (LONGBLOB) is legacy — /api/files/[id] still serves old
+// rows so nothing breaks, but new writes never touch the database.
 
 export const UPLOADS_BASE_URL = "/api/files";
+
+const MEDIA_FILES_BASE_URL =
+  process.env.MEDIA_FILES_BASE_URL ?? "https://eduspark2024.duckdns.org/medifiles";
+const MEDIA_UPLOAD_URL =
+  process.env.MEDIA_UPLOAD_URL ?? "https://eduspark2024.duckdns.org/medifiles-upload";
+const MEDIA_DELETE_URL =
+  process.env.MEDIA_DELETE_URL ?? "https://eduspark2024.duckdns.org/medifiles-delete";
+
+function mediaToken(): string {
+  const token = (process.env.MEDIA_UPLOAD_TOKEN ?? "").trim();
+  if (!token) {
+    throw new Error(
+      "MEDIA_UPLOAD_TOKEN is not configured — set it in the environment to upload media files.",
+    );
+  }
+  return token;
+}
 
 type MimeByExtension = Record<string, string>;
 
@@ -18,6 +37,12 @@ const MIME_BY_EXTENSION: MimeByExtension = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".avif": "image/avif",
+  ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
+  ".aac": "audio/aac",
+  ".ogg": "audio/ogg",
+  ".opus": "audio/opus",
+  ".wav": "audio/wav",
   ".pdf": "application/pdf",
 };
 
@@ -48,25 +73,68 @@ export async function saveFile(
 ): Promise<string> {
   const bytes =
     data instanceof ArrayBuffer ? Buffer.from(new Uint8Array(data)) : data;
-  const id = randomUUID();
-  await ensureUploadsTable();
-  await exec(
-    `INSERT INTO uploads (id, directory, file_name, mime_type, size, data)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, directory, fileName, detectMimeType(fileName), bytes.length, bytes],
-  );
-  return `${UPLOADS_BASE_URL}/${id}`;
+
+  const endpoint = new URL(MEDIA_UPLOAD_URL);
+  endpoint.searchParams.set("dir", directory);
+  endpoint.searchParams.set("name", fileName || `file-${randomUUID()}`);
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": detectMimeType(fileName),
+      "X-Medifiles-Token": mediaToken(),
+    },
+    body: new Uint8Array(bytes),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `Media upload failed (${response.status}): ${detail.slice(0, 200)}`,
+    );
+  }
+
+  const result = (await response.json()) as { url?: string };
+  if (!result.url) throw new Error("Media upload returned no URL");
+
+  return `${MEDIA_FILES_BASE_URL}/${result.url.replace(/^\/medifiles\//, "")}`;
 }
 
-function extractFileId(storagePath: string): string | null {
+function extractLegacyFileId(storagePath: string): string | null {
   if (!storagePath.startsWith(`${UPLOADS_BASE_URL}/`)) return null;
   const id = storagePath.slice(UPLOADS_BASE_URL.length + 1).split(/[?#]/)[0];
   return /^[0-9a-f-]{16,64}$/i.test(id) ? id : null;
 }
 
+function extractMediaPath(url: string): string | null {
+  const marker = "/medifiles/";
+  const index = url.indexOf(marker);
+  if (index === -1) return null;
+  return url.slice(index + marker.length).split(/[?#]/)[0];
+}
+
 export async function removeFile(storagePath: string): Promise<void> {
-  const id = extractFileId(storagePath);
-  if (!id) return; // Legacy /uploads/... paths have no DB row to delete.
+  // New-style VM-hosted file: ask the medifiles service to unlink it.
+  const mediaPath = extractMediaPath(storagePath);
+  if (mediaPath && storagePath.startsWith(MEDIA_FILES_BASE_URL)) {
+    try {
+      await fetch(MEDIA_DELETE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Medifiles-Token": mediaToken(),
+        },
+        body: JSON.stringify({ url: storagePath }),
+      });
+    } catch {
+      // Best-effort cleanup.
+    }
+    return;
+  }
+
+  // Legacy DB blob.
+  const id = extractLegacyFileId(storagePath);
+  if (!id) return;
   try {
     await exec("DELETE FROM uploads WHERE id = ?", [id]);
   } catch {
@@ -75,9 +143,10 @@ export async function removeFile(storagePath: string): Promise<void> {
 }
 
 export function isLocalUpload(url: string): boolean {
-  // Accepts "/api/files/<id>" URLs plus legacy relative storage paths
-  // ("/uploads/...", "website/logo/...", "admin-content/...")
-  // while rejecting external URLs (https://...).
+  // Accepts VM-hosted media URLs, "/api/files/<id>" legacy URLs and legacy
+  // relative paths ("/uploads/...", "website/logo/...", ...) while rejecting
+  // external URLs (other https://... hosts).
+  if (url.startsWith(`${MEDIA_FILES_BASE_URL}/`)) return true;
   if (url.startsWith(`${UPLOADS_BASE_URL}/`)) return true;
   if (url.startsWith("https://")) return false;
   return url.includes("/") && !url.startsWith("http");

@@ -42,14 +42,26 @@ git pull clinic main
 
 ## Database rules
 - ALL data lives in Azure MySQL. Never use Firestore/Supabase/local disk for data.
-- **Never write files to disk** (Vercel filesystem is ephemeral). All uploads
-  (logo, favicon, banners, course images, profile pictures) go to the `uploads`
-  table (LONGBLOB) via `src/lib/storage.ts` and are served by `/api/files/[id]`.
+- **Media files** (logo, favicon, banners, course images, profile pictures,
+  audio) live on the **Azure VM disk** at `/var/www/medispark-uploads/<dir>/`
+  and are served over HTTPS by nginx at
+  `https://eduspark2024.duckdns.org/medifiles/...` (static, Range support).
+- `src/lib/storage.ts` `saveFile()` forwards bytes to the VM upload service
+  (`medifiles.service`, systemd, listens on 127.0.0.1:4021 behind nginx at
+  `/medifiles-upload` + `/medifiles-delete`; token-auth via `X-Medifiles-Token`
+  = `MEDIA_UPLOAD_TOKEN`). Only the returned URL is stored — DB stores no blobs.
+- Legacy: the `uploads` table (LONGBLOB) still exists; `/api/files/[id]`
+  serves old rows. New uploads never touch the database.
+- Config: env vars `MEDIA_UPLOAD_TOKEN` (Vercel prod + `/etc/medifiles.env`
+  on VM), optional overrides `MEDIA_FILES_BASE_URL`, `MEDIA_UPLOAD_URL`,
+  `MEDIA_DELETE_URL`. Server source: `server/medifiles-server.mjs`;
+  unit file `deploy/medifiles.service`; nginx snippet
+  `/etc/nginx/snippets/medifiles.conf` (also in repo: `deploy/medifiles-nginx.conf`).
 - Schema lives in `src/sql/*.sql`. After changing schema:
   1. Add/update a migration file in `src/sql/`
   2. Apply it: `ssh azureuser@VM 'sudo mysql bloodare_medispark' < src/sql/<file>.sql`
 - Tables: students, student_ids, courses, enrollments, admins, logos,
-  homepage_courses, website_settings, banners, uploads.
+  homepage_courses, website_settings, banners, uploads (legacy blobs only).
 
 ## Commands
 - Dev: `pnpm dev`

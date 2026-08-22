@@ -1,0 +1,20 @@
+[Unit]
+Description=MediSpark media file upload service (medifiles)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+Environment=PORT=4021
+Environment=STORAGE_ROOT=/var/www/medispark-uploads
+EnvironmentFile=/etc/medifiles.env
+ExecStart=/usr/bin/node /opt/medifiles/medifiles-server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/www/medispark-uploads
+
+[Install]
+WantedBy=multi-user.target
