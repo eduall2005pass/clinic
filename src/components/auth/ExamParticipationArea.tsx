@@ -48,7 +48,6 @@ export default function ExamParticipationArea({
   const [exam, setExam] = useState<TakingExam | null>(null);
   const [questions, setQuestions] = useState<TakingQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [current, setCurrent] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<SubmissionOutcome | null>(null);
@@ -206,90 +205,93 @@ export default function ExamParticipationArea({
     );
   }
 
-  const activeQuestion = questions[current];
   const answeredCount = Object.keys(answers).length;
 
   return (
     <div className="rounded-2xl border border-primary-600/30 bg-dark-900 p-5 sm:p-6">
       {/* Header: timer + progress */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 pb-4">
+      <div className="sticky top-0 z-10 -mx-5 flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-dark-900 px-5 py-4 sm:-mx-6 sm:px-6">
         <div>
           <h3 className="font-extrabold text-heading">{exam.title}</h3>
           <p className="text-xs text-neutral-400">
-            Question {current + 1} of {questions.length} · answered {answeredCount}
+            {questions.length} questions · answered {answeredCount}
             {exam.negativeMarks > 0 ? ` · −${exam.negativeMarks} per wrong` : ""}
           </p>
         </div>
-        <span
-          className={`rounded-full px-4 py-1.5 font-mono text-lg font-extrabold ${
-            secondsLeft !== null && secondsLeft < 60
-              ? "bg-red-500/15 text-red-400"
-              : "bg-primary-600/15 text-primary-300"
-          }`}
-        >
-          ⏱ {formatClock(secondsLeft ?? 0)}
-        </span>
-      </div>
-
-      {/* Question */}
-      <div className="py-5">
-        <p className="text-base font-bold leading-relaxed text-heading">
-          {current + 1}. {activeQuestion.question}
-        </p>
-        <p className="mt-1 text-xs text-neutral-500">{activeQuestion.marks} marks</p>
-
-        <div className="mt-4 space-y-2.5">
-          {activeQuestion.options.map((option, index) => {
-            const selected = answers[activeQuestion.id] === index;
-            return (
-              <button
-                key={index}
-                type="button"
-                onClick={() =>
-                  setAnswers((prev) => ({ ...prev, [activeQuestion.id]: index }))
-                }
-                className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
-                  selected
-                    ? "border-primary-500 bg-primary-600/15 text-heading"
-                    : "border-ink/10 bg-dark-850 text-neutral-300 hover:border-primary-500/50"
-                }`}
-              >
-                <span
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${
-                    selected
-                      ? "bg-primary-600 text-white"
-                      : "bg-ink/10 text-neutral-400"
-                  }`}
-                >
-                  {String.fromCharCode(65 + index)}
-                </span>
-                {option}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-3">
+          <span
+            className={`rounded-full px-4 py-1.5 font-mono text-lg font-extrabold ${
+              secondsLeft !== null && secondsLeft < 60
+                ? "bg-red-500/15 text-red-400"
+                : "bg-primary-600/15 text-primary-300"
+            }`}
+          >
+            ⏱ {formatClock(secondsLeft ?? 0)}
+          </span>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Submit the exam? ${answeredCount}/${questions.length} answered.`,
+                )
+              ) {
+                void submit();
+              }
+            }}
+            className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-extrabold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {submitting ? "Submitting…" : "Submit"}
+          </button>
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink/10 pt-4">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={current === 0}
-            onClick={() => setCurrent((value) => Math.max(0, value - 1))}
-            className="rounded-lg border border-ink/10 px-4 py-2 text-xs font-bold text-neutral-300 disabled:opacity-40"
-          >
-            ← Prev
-          </button>
-          <button
-            type="button"
-            disabled={current >= questions.length - 1}
-            onClick={() => setCurrent((value) => Math.min(questions.length - 1, value + 1))}
-            className="rounded-lg border border-ink/10 px-4 py-2 text-xs font-bold text-neutral-300 disabled:opacity-40"
-          >
-            Next →
-          </button>
-        </div>
+      {/* All questions on one page */}
+      <div className="space-y-8 py-6">
+        {questions.map((question, index) => (
+          <div key={question.id} id={`question-${question.id}`}>
+            <p className="text-base font-bold leading-relaxed text-heading">
+              {index + 1}. {question.question}
+            </p>
+            <p className="mt-1 text-xs text-neutral-500">{question.marks} marks</p>
+
+            <div className="mt-3 space-y-2.5">
+              {question.options.map((option, optionIndex) => {
+                const selected = answers[question.id] === optionIndex;
+                return (
+                  <button
+                    key={optionIndex}
+                    type="button"
+                    onClick={() =>
+                      setAnswers((prev) => ({ ...prev, [question.id]: optionIndex }))
+                    }
+                    className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      selected
+                        ? "border-primary-500 bg-primary-600/15 text-heading"
+                        : "border-ink/10 bg-dark-850 text-neutral-300 hover:border-primary-500/50"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${
+                        selected
+                          ? "bg-primary-600 text-white"
+                          : "bg-ink/10 text-neutral-400"
+                      }`}
+                    >
+                      {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom submit for long papers */}
+      <div className="flex justify-end border-t border-ink/10 pt-4">
         <button
           type="button"
           disabled={submitting}
@@ -306,27 +308,6 @@ export default function ExamParticipationArea({
         >
           {submitting ? "Submitting…" : "Submit Exam"}
         </button>
-      </div>
-
-      {/* Question palette */}
-      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-ink/10 pt-4">
-        {questions.map((question, index) => (
-          <button
-            key={question.id}
-            type="button"
-            onClick={() => setCurrent(index)}
-            aria-label={`Go to question ${index + 1}`}
-            className={`h-8 w-8 rounded-lg text-xs font-extrabold transition ${
-              index === current
-                ? "bg-primary-600 text-white"
-                : answers[question.id] !== undefined
-                  ? "bg-emerald-600/20 text-emerald-400"
-                  : "bg-ink/10 text-neutral-400"
-            }`}
-          >
-            {index + 1}
-          </button>
-        ))}
       </div>
     </div>
   );
