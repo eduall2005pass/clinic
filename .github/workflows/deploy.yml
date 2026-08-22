@@ -59,6 +59,8 @@ jobs:
           port: 22
           source: deploy.tar.gz
           target: /tmp
+          timeout: 120s
+          command_timeout: 10m
 
       - name: Deploy + restart + verify
         uses: appleboy/ssh-action@v1.0.3
@@ -67,6 +69,8 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: 22
+          timeout: 120s
+          command_timeout: 20m
           script: |
             set -euxo pipefail
             APP=/home/bloodare/domains/bloodarenabd.tech/app
