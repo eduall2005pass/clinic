@@ -342,12 +342,40 @@ export async function saveQuestion(
       input.isActive === false ? 0 : 1,
     ],
   );
+  await recomputeExamTotals(examId);
   return fetchQuestions({ examId: examId ?? "bank", subject: asString(input.subject) });
 }
 
 export async function deleteQuestion(id: number): Promise<void> {
   await ensureTables();
+  const rows = await query<{ exam_id: string | null }[]>(
+    `SELECT exam_id FROM exam_questions WHERE id = ? LIMIT 1`,
+    [id],
+  );
   await exec(`DELETE FROM exam_questions WHERE id = ?`, [id]);
+  await recomputeExamTotals(rows[0]?.exam_id ?? null);
+}
+
+/** Keep exams.question_count / total_marks in sync with linked questions. */
+async function recomputeExamTotals(examId: string | null): Promise<void> {
+  if (!examId) return; // bank-only question — nothing to update
+  try {
+    const totals = await query<{ count: number; marks: string | null }[]>(
+      `SELECT COUNT(*) AS count, SUM(marks) AS marks
+       FROM exam_questions WHERE exam_id = ? AND is_active = 1`,
+      [examId],
+    );
+    await exec(
+      `UPDATE exams SET question_count = ?, total_marks = ? WHERE id = ?`,
+      [
+        totals[0]?.count ?? 0,
+        Number(totals[0]?.marks ?? 0) || 0,
+        examId,
+      ],
+    );
+  } catch {
+    // Best-effort sync.
+  }
 }
 
 // ── Enrollments & Results ────────────────────────────────────────────────
