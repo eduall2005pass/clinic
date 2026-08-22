@@ -33,9 +33,38 @@ const iconProps = {
 } as const;
 
 const FALLBACK_ICONS: Record<string, React.ReactNode> = {
+  // HSC Academic — graduation cap
+  hsc: (
+    <svg {...iconProps}>
+      <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+      <path d="M22 10v6" />
+      <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
+    </svg>
+  ),
   academic: (
     <svg {...iconProps}>
-      <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+      <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+      <path d="M22 10v6" />
+      <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
+    </svg>
+  ),
+  // SSC Academic — school building
+  ssc: (
+    <svg {...iconProps}>
+      <path d="M14 22v-4a2 2 0 1 0-4 0v4" />
+      <path d="m18 10 3.447 1.724a1 1 0 0 1 .553.894V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7.382a1 1 0 0 1 .553-.894L6 10" />
+      <path d="M18 5v17" />
+      <path d="m4 6 7.106-3.553a2 2 0 0 1 1.788 0L20 6" />
+      <path d="M6 5v17" />
+      <circle cx="12" cy="9" r="2" />
+    </svg>
+  ),
+  // Medical Admission — stethoscope
+  medical: (
+    <svg {...iconProps}>
+      <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" />
+      <path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4" />
+      <circle cx="20" cy="10" r="2" />
     </svg>
   ),
   admission: (

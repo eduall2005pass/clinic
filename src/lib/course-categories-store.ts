@@ -28,26 +28,37 @@ type CourseCategoryRow = {
 /** Fallback used when the database has no categories yet. */
 export const DEFAULT_COURSE_CATEGORIES: CourseCategory[] = [
   {
-    id: "category-academic",
-    slug: "academic",
-    name: "Academic Courses",
+    id: "category-ssc",
+    slug: "ssc",
+    name: "SSC Academic Courses",
     description:
-      "Complete HSC academic preparation — every subject with batch-wise courses and board exam-focused explanations.",
-    href: "/courses/academic",
+      "Complete SSC academic preparation — every subject with batch-wise courses and board exam-focused explanations.",
+    href: "/courses/ssc",
     imageUrl: null,
     isActive: true,
     sortOrder: 1,
   },
   {
-    id: "category-admission",
-    slug: "admission",
-    name: "Admission Courses",
+    id: "category-hsc",
+    slug: "hsc",
+    name: "HSC Academic Courses",
+    description:
+      "Complete HSC academic preparation — every subject with batch-wise courses and board exam-focused explanations.",
+    href: "/courses/academic",
+    imageUrl: null,
+    isActive: true,
+    sortOrder: 2,
+  },
+  {
+    id: "category-medical",
+    slug: "medical",
+    name: "Medical Admission Courses",
     description:
       "Focused medical admission preparation — combined syllabus training with exam strategy for the medical entrance race.",
     href: "/courses/admission",
     imageUrl: null,
     isActive: true,
-    sortOrder: 2,
+    sortOrder: 3,
   },
 ];
 
