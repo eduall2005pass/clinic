@@ -571,6 +571,56 @@ export async function saveChapter(
   return fetchChapters();
 }
 
+/** Single-chapter update: rename / re-assign subject / enable-disable. */
+export async function updateChapter(
+  id: string,
+  patch: {
+    name?: string;
+    subjectId?: string;
+    isActive?: boolean;
+  },
+): Promise<Chapter[]> {
+  await ensureChapterTables();
+  const existing = await query<{ id: string }[]>(
+    `SELECT id FROM course_chapters WHERE id = ? LIMIT 1`,
+    [id],
+  );
+  if (existing.length === 0) throw new Error("Chapter not found.");
+
+  if (patch.name !== undefined) {
+    const name = asString(patch.name);
+    if (!name) throw new Error("Chapter name is required.");
+    await exec(`UPDATE course_chapters SET name = ? WHERE id = ?`, [name, id]);
+  }
+  if (patch.subjectId !== undefined) {
+    const subjectId = asString(patch.subjectId);
+    if (!subjectId) throw new Error("A subject must be selected.");
+    await exec(`UPDATE course_chapters SET subject_id = ? WHERE id = ?`, [
+      subjectId,
+      id,
+    ]);
+  }
+  if (patch.isActive !== undefined) {
+    await exec(`UPDATE course_chapters SET is_active = ? WHERE id = ?`, [
+      patch.isActive ? 1 : 0,
+      id,
+    ]);
+  }
+  return fetchChapters();
+}
+
+/** Change display order of chapters from an ordered id list. */
+export async function reorderChapters(orderedIds: string[]): Promise<Chapter[]> {
+  await ensureChapterTables();
+  for (let index = 0; index < orderedIds.length; index += 1) {
+    await exec(`UPDATE course_chapters SET sort_order = ? WHERE id = ?`, [
+      index + 1,
+      orderedIds[index],
+    ]);
+  }
+  return fetchChapters();
+}
+
 export async function deleteChapter(id: string): Promise<Chapter[]> {
   await ensureChapterTables();
   await exec(`DELETE FROM course_classes WHERE chapter_id = ?`, [id]);
