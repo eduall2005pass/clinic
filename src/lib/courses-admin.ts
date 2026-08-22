@@ -337,12 +337,124 @@ export async function deleteTaxonomyItem(
 ): Promise<void> {
   await ensureTaxonomyTables();
   await exec(`DELETE FROM ${table} WHERE id = ?`, [id]);
+  if (table === "course_subjects") {
+    await ensureAssignmentTable();
+    await exec(`DELETE FROM course_subject_assignments WHERE subject_id = ?`, [id]);
+  }
 }
 
 export const fetchCourseCategories = () =>
   fetchTaxonomy("course_categories");
 export const saveCourseCategories = (items: Array<Record<string, unknown>>) =>
   saveTaxonomy("course_categories", items);
+
+/** Subject with its course assignments — used by the Subjects admin page/API. */
+export type CourseSubjectDetail = CourseTaxonomyItem & {
+  assignedCourseSlugs: string[];
+};
+
+async function ensureAssignmentTable(): Promise<void> {
+  await exec(`CREATE TABLE IF NOT EXISTS course_subject_assignments (
+    subject_id VARCHAR(64) NOT NULL,
+    course_slug VARCHAR(191) NOT NULL,
+    PRIMARY KEY (subject_id, course_slug)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+}
+
+async function fetchAssignmentMap(): Promise<Map<string, string[]>> {
+  await ensureAssignmentTable();
+  const rows = await query<{ subject_id: string; course_slug: string }[]>(
+    `SELECT subject_id, course_slug FROM course_subject_assignments`,
+  );
+  const map = new Map<string, string[]>();
+  for (const row of rows) {
+    const list = map.get(row.subject_id) ?? [];
+    list.push(row.course_slug);
+    map.set(row.subject_id, list);
+  }
+  return map;
+}
+
+/** All subjects incl. assigned course slugs. */
+export async function fetchCourseSubjectDetails(): Promise<CourseSubjectDetail[]> {
+  const [subjects, assignments] = await Promise.all([
+    fetchCourseSubjects(),
+    fetchAssignmentMap(),
+  ]);
+  return subjects.map((subject) => ({
+    ...subject,
+    assignedCourseSlugs: assignments.get(subject.id) ?? [],
+  }));
+}
+
+export async function setSubjectAssignments(
+  subjectId: string,
+  courseSlugs: string[],
+): Promise<void> {
+  await ensureAssignmentTable();
+  await exec(`DELETE FROM course_subject_assignments WHERE subject_id = ?`, [
+    subjectId,
+  ]);
+  const unique = [...new Set(courseSlugs.filter((slug) => slug.length > 0))];
+  for (const slug of unique) {
+    await exec(
+      `INSERT IGNORE INTO course_subject_assignments (subject_id, course_slug) VALUES (?, ?)`,
+      [subjectId, slug],
+    );
+  }
+}
+
+/** Single-subject update: rename / toggle / change course assignments. */
+export async function updateCourseSubject(
+  id: string,
+  patch: {
+    name?: string;
+    isActive?: boolean;
+    assignedCourseSlugs?: string[];
+  },
+): Promise<CourseSubjectDetail[]> {
+  await ensureTaxonomyTables();
+  const existing = await query<{ id: string }[]>(
+    `SELECT id FROM course_subjects WHERE id = ? LIMIT 1`,
+    [id],
+  );
+  if (existing.length === 0) throw new Error("Subject not found.");
+
+  if (patch.name !== undefined) {
+    const name = asString(patch.name);
+    if (!name) throw new Error("Subject name is required.");
+    await exec(`UPDATE course_subjects SET name = ? WHERE id = ?`, [name, id]);
+  }
+  if (patch.isActive !== undefined) {
+    await exec(`UPDATE course_subjects SET is_active = ? WHERE id = ?`, [
+      patch.isActive ? 1 : 0,
+      id,
+    ]);
+  }
+  if (patch.assignedCourseSlugs !== undefined) {
+    await setSubjectAssignments(id, patch.assignedCourseSlugs);
+  }
+  return fetchCourseSubjectDetails();
+}
+
+/**
+ * Course options for assignment pickers — DB catalog first,
+ * static fallback catalog when the DB has no courses yet.
+ */
+export async function fetchCourseOptions(): Promise<
+  Array<{ slug: string; name: string }>
+> {
+  try {
+    const catalog = await fetchCatalogCourses();
+    if (catalog.length > 0) {
+      return catalog.map((course) => ({ slug: course.slug, name: course.name }));
+    }
+  } catch {
+    // Fall through to the static catalog.
+  }
+  const { courses } = await import("@/lib/courses");
+  return courses.map((course) => ({ slug: course.slug, name: course.name }));
+}
 export const fetchCourseSubjects = () => fetchTaxonomy("course_subjects");
 export const saveCourseSubjects = (items: Array<Record<string, unknown>>) =>
   saveTaxonomy("course_subjects", items);
