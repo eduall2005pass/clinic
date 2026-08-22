@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BatchCourseList from "@/components/BatchCourseList";
-import { batches, getPublicCourses } from "@/lib/courses";
+import { batches } from "@/lib/courses";
+import { getLivePublicCourses } from "@/lib/course-catalog";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Academic Courses",
@@ -9,8 +12,8 @@ export const metadata: Metadata = {
     "Browse MediSpark HSC academic courses by batch — Botany, Zoology and Biology Revision with board exam-focused preparation.",
 };
 
-export default function AcademicCoursesPage() {
-  const academicCourses = getPublicCourses().filter(
+export default async function AcademicCoursesPage() {
+  const academicCourses = (await getLivePublicCourses()).filter(
     (course) => course.category === "Academic",
   );
 

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { getCourse, getPayableFee } from "@/lib/courses";
 import type { Enrollment } from "@/lib/enrollments";
 
 const statusStyles: Record<string, string> = {
@@ -23,7 +22,6 @@ function formatDate(value: unknown): string {
 }
 
 function EnrollmentCard({ enrollment }: { enrollment: Enrollment }) {
-  const course = getCourse(enrollment.courseId);
   const statusLabel =
     enrollment.enrollmentStatus === "active"
       ? "Active"
@@ -57,9 +55,9 @@ function EnrollmentCard({ enrollment }: { enrollment: Enrollment }) {
             Fee
           </p>
           <p className="mt-0.5 font-bold text-primary-500">
-            {course
-              ? `৳ ${getPayableFee(course).toLocaleString("en-IN")}`
-              : "—"}
+            {enrollment.fee > 0
+              ? `৳ ${enrollment.fee.toLocaleString("en-IN")}`
+              : "Free"}
           </p>
         </div>
         {enrollment.enrollmentDate ? (

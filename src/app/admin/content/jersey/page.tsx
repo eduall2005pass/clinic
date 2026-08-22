@@ -11,6 +11,7 @@ import {
   buttonDangerClass,
   type Notice,
 } from "@/components/admin/admin-ui";
+import { MediaUploadField } from "@/components/admin/MediaUploadField";
 
 type Jersey = { id: string; name: string; note: string | null; image: string | null; price: number; isActive: boolean };
 
@@ -114,9 +115,14 @@ export default function JerseyPage() {
               onChange={(event) => setForm({ ...form, price: event.target.value })} />
           </div>
           <div className="sm:col-span-2">
-            <label className="sr-only" htmlFor="jy-image">Image URL</label>
-            <input id="jy-image" className={inputClass} placeholder="Image URL (/api/files/…)" value={form.image}
-              onChange={(event) => setForm({ ...form, image: event.target.value })} />
+            <MediaUploadField
+              id="jy-image"
+              label="Jersey image"
+              value={form.image}
+              onChange={(url) => setForm({ ...form, image: url })}
+              directory="jerseys"
+              preview
+            />
           </div>
           <div className="sm:col-span-2">
             <label className="sr-only" htmlFor="jy-note">Note</label>

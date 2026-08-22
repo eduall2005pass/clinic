@@ -1,8 +1,8 @@
 import Link from "next/link";
 import CourseCard from "@/components/CourseCard";
 import SectionHeader from "@/components/SectionHeader";
-import { getCourse } from "@/lib/courses";
 import { fetchActiveFeaturedSlugs } from "@/lib/featured-courses";
+import { getLiveCourse } from "@/lib/course-catalog";
 
 export default async function FeaturedCourses({
   title,
@@ -12,9 +12,9 @@ export default async function FeaturedCourses({
   description?: string;
 } = {}) {
   const slugs = await fetchActiveFeaturedSlugs();
-  const featured = slugs
-    .map((slug) => getCourse(slug))
-    .filter((course) => course !== undefined);
+  const featured = (
+    await Promise.all(slugs.map((slug) => getLiveCourse(slug)))
+  ).filter((course) => course !== undefined);
 
   return (
     <section id="featured-courses" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">

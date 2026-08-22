@@ -4,27 +4,24 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
-  courses,
   getBatch,
-  getCourse,
   getPayableFee,
   hasDiscount,
   formatFee,
 } from "@/lib/courses";
+import { getLiveCourse } from "@/lib/course-catalog";
 import { getCourseKind } from "@/lib/enrollments";
 import CourseEnrollFlow from "@/components/auth/CourseEnrollFlow";
 
-type CourseDetailsParams = { params: Promise<{ slug: string }> };
+export const dynamic = "force-dynamic";
 
-export function generateStaticParams() {
-  return courses.map((course) => ({ slug: course.slug }));
-}
+type CourseDetailsParams = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({
   params,
 }: CourseDetailsParams): Promise<Metadata> {
   const { slug } = await params;
-  const course = getCourse(slug);
+  const course = await getLiveCourse(slug);
   return {
     title: course ? course.name : "Course",
     description: course?.shortDescription,
@@ -35,7 +32,7 @@ export default async function CourseDetailsPage({
   params,
 }: CourseDetailsParams) {
   const { slug } = await params;
-  const course = getCourse(slug);
+  const course = await getLiveCourse(slug);
 
   if (!course) {
     notFound();

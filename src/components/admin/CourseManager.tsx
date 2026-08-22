@@ -13,6 +13,7 @@ import {
   buttonDangerClass,
   type Notice,
 } from "@/components/admin/admin-ui";
+import { MediaUploadField } from "@/components/admin/MediaUploadField";
 
 export type CatalogCourse = {
   slug: string;
@@ -335,9 +336,14 @@ export default function CourseManager({
                   onChange={(e) => setForm({ ...form, duration: e.target.value })} />
               </div>
               <div>
-                <label className={labelClass} htmlFor="cm-image">Image URL / /api/files link</label>
-                <input id="cm-image" className={inputClass} value={form.image}
-                  onChange={(e) => setForm({ ...form, image: e.target.value })} />
+                <MediaUploadField
+                  id="cm-image"
+                  label="Course image"
+                  value={form.image}
+                  onChange={(url) => setForm({ ...form, image: url })}
+                  directory="courses"
+                  preview
+                />
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="cm-short">Short description</label>
