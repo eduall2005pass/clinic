@@ -10,6 +10,8 @@
 :root[data-theme="dark"] {
   --background: #0a0a0a;
   --foreground: #d4d4d8;
+  --font-geist-sans: "Inter", "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-geist-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   --surface-600: #333333;
   --surface-700: #262626;
