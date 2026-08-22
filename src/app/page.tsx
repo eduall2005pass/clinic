@@ -1,6 +1,5 @@
 import BannerSlider from "@/components/home/BannerSlider";
 import Hero from "@/components/home/Hero";
-import HomepageCourses from "@/components/home/HomepageCourses";
 import FeaturedCourses from "@/components/home/FeaturedCourses";
 import WhyMediSpark from "@/components/home/WhyMediSpark";
 import OurSuccess from "@/components/home/OurSuccess";
@@ -27,8 +26,6 @@ function renderSection(section: HomepageSection) {
       return <BannerSlider key={section.key} />;
     case "hero":
       return <Hero key={section.key} />;
-    case "homepage-courses":
-      return <HomepageCourses key={section.key} {...textProps} />;
     case "featured-courses":
       return <FeaturedCourses key={section.key} {...textProps} />;
     case "why-medispark":
