@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import { loginHref } from "@/lib/nav-links";
 import { useAuth } from "@/lib/auth-context";
 import {
   DEFAULT_NAVBAR_CONFIG,
+  NAVBAR_SECTION_FALLBACKS,
   type NavbarConfig,
 } from "@/lib/navbar-constants";
 
 export default function Navbar({ config }: { config?: NavbarConfig }) {
+  const router = useRouter();
   const settings = config ?? DEFAULT_NAVBAR_CONFIG;
   const { user } = useAuth();
   const actionHref = user ? "/dashboard" : loginHref;
@@ -19,7 +22,29 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
 
   if (!settings.showNavbar) return null;
 
-  const menuItems = settings.items.filter((item) => item.isActive);
+  const menuItems = settings.items
+    .filter((item) => item.isActive)
+    .map((item) => ({
+      ...item,
+      href: item.href ?? NAVBAR_SECTION_FALLBACKS[item.key] ?? null,
+    }));
+
+  /** Smooth-scroll to a "/#section" target, navigating home first if needed. */
+  async function goToSection(hashHref: string) {
+    const sectionId = hashHref.slice(2);
+    if (window.location.pathname !== "/") {
+      await router.push("/");
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
+  function isSectionLink(href: string): boolean {
+    return /^\/#[\w-]+$/.test(href);
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
@@ -143,7 +168,14 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
                           key={item.key}
                           href={item.href}
                           role="menuitem"
-                          onClick={() => setMenuOpen(false)}
+                          onClick={(event) => {
+                            if (isSectionLink(item.href as string)) {
+                              event.preventDefault();
+                              void goToSection(item.href as string);
+                              return;
+                            }
+                            setMenuOpen(false);
+                          }}
                           className="block rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 transition hover:bg-primary-500/10 hover:text-heading"
                         >
                           {item.label}

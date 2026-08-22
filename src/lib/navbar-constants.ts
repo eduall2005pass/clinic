@@ -19,7 +19,7 @@ export const DEFAULT_NAVBAR_ITEMS: NavbarItem[] = [
   { key: "courses", label: "Course", href: "/courses", isActive: true },
   { key: "public-exam", label: "Public Exam", href: "/exam", isActive: true },
   { key: "our-success", label: "Our Success", href: "/#our-success", isActive: true },
-  { key: "jersey", label: "Jersey", href: null, isActive: true },
+  { key: "jersey", label: "Jersey", href: "/#jerseys", isActive: true },
   { key: "mentors", label: "Mentor", href: "/#mentors", isActive: true },
   { key: "reviews", label: "Review", href: "/#reviews", isActive: true },
   { key: "faq", label: "FAQ", href: "/#faq", isActive: true },
@@ -52,3 +52,11 @@ export function isValidNavbarHref(value: string): boolean {
     return false;
   }
 }
+
+/**
+ * Menu items saved without a link fall back to their home-page section,
+ * so they stay clickable (e.g. Jersey → /#jerseys).
+ */
+export const NAVBAR_SECTION_FALLBACKS: Record<string, string> = {
+  jersey: "/#jerseys",
+};
