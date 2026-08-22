@@ -1,7 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { inputClass, labelClass, buttonSecondaryClass } from "./admin-ui";
+import {
+  useAdminGate,
+  inputClass,
+  labelClass,
+  buttonSecondaryClass,
+} from "./admin-ui";
 
 type MediaUploadFieldProps = {
   id: string;
@@ -39,11 +44,16 @@ export function MediaUploadField({
   placeholder = "Paste a URL or upload a file",
 }: MediaUploadFieldProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const gate = useAdminGate();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function uploadFile(file: File) {
     setError(null);
+    if (!gate.token) {
+      setError("Not authorized — please sign in as an admin.");
+      return;
+    }
     setUploading(true);
     try {
       const formData = new FormData();
@@ -54,6 +64,7 @@ export function MediaUploadField({
       const response = await fetch("/api/uploads", {
         method: "POST",
         body: formData,
+        headers: { Authorization: `Bearer ${gate.token}` },
       });
       const data = (await response.json().catch(() => ({}))) as {
         url?: string;
