@@ -9,19 +9,17 @@ export default function DashboardSectionCard({
   return (
     <Link
       href={section.href}
-      className="group flex items-center gap-4 rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
+      className="group flex flex-col items-center rounded-2xl border border-ink/10 bg-dark-900 p-5 text-center shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30 active:scale-[0.98] sm:p-6"
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-500 transition group-hover:bg-primary-600 group-hover:text-heading group-hover:shadow-md group-hover:shadow-primary-900/50">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-500 transition group-hover:bg-primary-600 group-hover:text-heading group-hover:shadow-md group-hover:shadow-primary-900/50 sm:h-14 sm:w-14">
         {section.icon}
       </span>
-      <div className="min-w-0">
-        <h3 className="text-base font-bold text-heading transition group-hover:text-primary-400">
-          {section.title}
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-neutral-400">
-          {section.description}
-        </p>
-      </div>
+      <h3 className="mt-4 text-sm font-bold leading-snug text-heading transition group-hover:text-primary-400 sm:text-base">
+        {section.title}
+      </h3>
+      <p className="mt-1.5 text-xs leading-relaxed text-neutral-400 sm:text-sm">
+        {section.description}
+      </p>
     </Link>
   );
 }

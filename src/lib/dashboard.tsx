@@ -31,7 +31,7 @@ export const dashboardSections: DashboardSection[] = [
     ),
   },
   {
-    title: "My Enrolled Course",
+    title: "My Enrolled Courses",
     description: "Access your enrolled courses",
     href: "/dashboard/enrolled-courses",
     icon: (
@@ -41,7 +41,7 @@ export const dashboardSections: DashboardSection[] = [
     ),
   },
   {
-    title: "Exam Result",
+    title: "Exam Results",
     description: "Track your exam performance",
     href: "/dashboard/exam-result",
     icon: (
