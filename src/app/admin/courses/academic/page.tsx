@@ -1,12 +1,16 @@
-import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { GraduationCapIcon } from "@/components/admin/icons";
+import CourseManager from "@/components/admin/CourseManager";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Academic Courses — MediSpark Admin",
   description: "Manage academic HSC courses by class and group.",
 };
 
 export default function AcademicCoursesPage() {
-  return <AdminPlaceholder title="Academic Courses" description="Manage academic HSC courses by class and group." icon={GraduationCapIcon} />;
+  return (
+    <CourseManager
+      title="Academic Courses"
+      description="Create and manage HSC academic courses — Botany, Zoology, revision and more."
+      categoryFilter="Academic"
+    />
+  );
 }

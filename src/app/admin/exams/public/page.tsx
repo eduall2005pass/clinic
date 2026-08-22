@@ -1,12 +1,11 @@
-import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { ExamsIcon } from "@/components/admin/icons";
-
-export const metadata: Metadata = {
-  title: "Public Exams — MediSpark Admin",
-  description: "Create and manage exams open to everyone.",
-};
+import ExamManager from "@/components/admin/ExamManager";
 
 export default function PublicExamsPage() {
-  return <AdminPlaceholder title="Public Exams" description="Create and manage exams open to everyone." icon={ExamsIcon} />;
+  return (
+    <ExamManager
+      title="Public Exams"
+      description="Create and manage published exams visible to students — model tests, chapter exams and more."
+      kindFilter="public"
+    />
+  );
 }

@@ -1,12 +1,14 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+"use client";
 
-export const metadata = { title: "Password & Security" };
+import { AccessMessage } from "@/components/auth/AccessGuard";
 
-export default function AdminProfileSecurityPage() {
+export default function ProfileSecurityPage() {
   return (
-    <AdminPlaceholder
-      title="Password & Security"
-      description="Update your password and manage security options."
+    <AccessMessage
+      title="Account Security"
+      message="Password and sign-in method are managed by your Google account. Panel-wide security policy lives under Administration → Security."
+      actionLabel="Security Settings"
+      actionHref="/admin/administration/security"
     />
   );
 }

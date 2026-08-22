@@ -1,12 +1,5 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+import AccountPage from "@/app/admin/profile/account/page";
 
-export const metadata = { title: "Profile Picture" };
-
-export default function AdminProfilePicturePage() {
-  return (
-    <AdminPlaceholder
-      title="Profile Picture"
-      description="Upload or change your administrator profile picture."
-    />
-  );
+export default function PicturePage() {
+  return <AccountPage />;
 }
