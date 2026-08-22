@@ -1,0 +1,76 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin";
+import { logAdminAction } from "@/lib/administration";
+import {
+  fetchCatalogCourses,
+  fetchCatalogCourse,
+  saveCatalogCourse,
+  deleteCatalogCourse,
+} from "@/lib/courses-admin";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(request: NextRequest) {
+  const slug = request.nextUrl.searchParams.get("slug");
+  if (slug) {
+    const course = await fetchCatalogCourse(slug);
+    if (!course) {
+      return NextResponse.json({ error: "Course not found." }, { status: 404 });
+    }
+    return NextResponse.json(
+      { course },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  const courses = await fetchCatalogCourses();
+  return NextResponse.json(
+    { courses },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+/** Create or update a course. */
+export async function POST(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || typeof body.slug !== "string") {
+    return NextResponse.json(
+      { error: "Course slug and details are required." },
+      { status: 400 },
+    );
+  }
+  try {
+    const course = await saveCatalogCourse(body, admin.uid);
+    await logAdminAction(admin, "course.save", `slug=${course.slug}`, request);
+    return NextResponse.json({ course });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to save the course.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => null)) as { slug?: unknown } | null;
+  if (typeof body?.slug !== "string" || !body.slug) {
+    return NextResponse.json({ error: "Missing course slug." }, { status: 400 });
+  }
+  try {
+    const deleted = await deleteCatalogCourse(body.slug);
+    if (!deleted) {
+      return NextResponse.json({ error: "Course not found." }, { status: 404 });
+    }
+    await logAdminAction(admin, "course.delete", `slug=${body.slug}`, request);
+    const courses = await fetchCatalogCourses();
+    return NextResponse.json({ courses });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete the course.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
