@@ -69,3 +69,18 @@ export function parseDate(raw: unknown): string {
   }
   return String(raw ?? "");
 }
+
+/**
+ * Normalize a JSON column value. mysql2 auto-parses JSON columns into
+ * objects/arrays, but values may also arrive as strings (raw drivers,
+ * legacy rows), so accept both and never throw.
+ */
+export function parseJsonColumn<T = unknown>(value: unknown): T | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return value as T;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}

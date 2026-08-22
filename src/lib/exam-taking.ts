@@ -1,4 +1,4 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, parseJsonColumn, query } from "@/lib/mysql";
 import { fetchExams, type Exam } from "@/lib/exams-admin";
 
 // Student-facing exam taking: load sanitized questions (no answers) and
@@ -49,18 +49,14 @@ export async function getExamForTaking(
 
   const questions: TakingQuestion[] = [];
   for (const row of optionRows) {
-    try {
-      const parsed = JSON.parse(row.options);
-      if (Array.isArray(parsed)) {
-        questions.push({
-          id: row.id,
-          question: row.question,
-          options: parsed.map(String),
-          marks: Number(row.marks) || 1,
-        });
-      }
-    } catch {
-      // Skip malformed rows.
+    const parsed = parseJsonColumn<unknown[]>(row.options);
+    if (Array.isArray(parsed)) {
+      questions.push({
+        id: row.id,
+        question: row.question,
+        options: parsed.map(String),
+        marks: Number(row.marks) || 1,
+      });
     }
   }
 

@@ -1,4 +1,4 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, parseJsonColumn, query } from "@/lib/mysql";
 
 // Admin Panel → Exams. Exams, question bank, enrollments, results and
 // settings all live in MySQL. `exam_questions.exam_id = NULL` marks a
@@ -105,17 +105,11 @@ function toNumber(value: string | number | null): number {
 }
 
 function rowToExam(row: ExamRow): Exam {
-  let answerKey: Record<string, number> | null = null;
-  if (row.answer_key) {
-    try {
-      const parsed = JSON.parse(row.answer_key);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        answerKey = parsed as Record<string, number>;
-      }
-    } catch {
-      answerKey = null;
-    }
-  }
+  const parsedKey = parseJsonColumn<unknown>(row.answer_key);
+  const answerKey: Record<string, number> | null =
+    parsedKey && typeof parsedKey === "object" && !Array.isArray(parsedKey)
+      ? (parsedKey as Record<string, number>)
+      : null;
   return {
     id: row.id,
     title: row.title,
@@ -139,19 +133,13 @@ function rowToExam(row: ExamRow): Exam {
 }
 
 function rowToQuestion(row: QuestionRow): ExamQuestion {
-  let options: string[] = [];
-  try {
-    const parsed = JSON.parse(row.options);
-    options = Array.isArray(parsed) ? parsed.map(String) : [];
-  } catch {
-    options = [];
-  }
+  const options = parseJsonColumn<unknown[]>(row.options);
   return {
     id: row.id,
     examId: row.exam_id,
     subject: row.bank_subject ?? "",
     question: row.question,
-    options,
+    options: Array.isArray(options) ? options.map(String) : [],
     correctIndex: row.correct_index ?? 0,
     explanation: row.explanation,
     marks: toNumber(row.marks),

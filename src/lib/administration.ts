@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { exec, query } from "@/lib/mysql";
+import { exec, parseJsonColumn, query } from "@/lib/mysql";
 
 // Admin Panel → Administration. Admin account management (rows in the
 // `admins` table), role assignments (`admin_roles`), activity logging
@@ -165,14 +165,8 @@ export async function fetchRoleAssignments(): Promise<RoleAssignment[]> {
     }[]>(`SELECT email, role, permissions FROM admin_roles ORDER BY email ASC`);
     return rows.map((row) => {
       let permissions = DEFAULT_PERMISSIONS_BY_ROLE[row.role] ?? [];
-      if (row.permissions) {
-        try {
-          const parsed = JSON.parse(row.permissions);
-          if (Array.isArray(parsed)) permissions = parsed.map(String);
-        } catch {
-          // keep defaults
-        }
-      }
+      const parsed = parseJsonColumn<string[]>(row.permissions);
+      if (Array.isArray(parsed)) permissions = parsed.map(String);
       return { email: row.email, role: row.role, permissions };
     });
   } catch {
@@ -251,14 +245,8 @@ export async function fetchSecuritySettings(): Promise<SecuritySettings> {
     const row = rows[0];
     if (!row) return DEFAULT_SECURITY;
     let domains = DEFAULT_SECURITY.allowedEmailDomains;
-    if (row.allowed_email_domains) {
-      try {
-        const parsed = JSON.parse(row.allowed_email_domains);
-        if (Array.isArray(parsed)) domains = parsed.map(String);
-      } catch {
-        // keep defaults
-      }
-    }
+    const parsedDomains = parseJsonColumn<string[]>(row.allowed_email_domains);
+    if (Array.isArray(parsedDomains)) domains = parsedDomains.map(String);
     return {
       allowedEmailDomains: domains,
       maxLoginAttempts: row.max_login_attempts ?? 5,
