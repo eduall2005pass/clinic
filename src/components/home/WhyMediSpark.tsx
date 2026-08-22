@@ -181,16 +181,16 @@ export default  function WhyMediSpark({
           {benefits.map((benefit) => (
             <div
               key={benefit.title}
-              className="group flex items-center gap-3 rounded-2xl border border-ink/10 bg-dark-950/60 p-3 shadow-lg shadow-black/20 transition duration-300 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:gap-4 sm:p-4"
+              className="group flex flex-col items-center rounded-2xl border border-ink/10 bg-dark-950/60 p-4 text-center shadow-lg shadow-black/20 transition duration-300 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:p-6"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50 sm:h-11 sm:w-11">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50 sm:h-12 sm:w-12">
                 <benefit.Icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </span>
-              <div className="min-w-0">
-                <h3 className="font-bold leading-snug text-heading">
+              <div className="mt-3 min-w-0">
+                <h3 className="text-sm font-bold leading-snug text-heading sm:text-base">
                   {benefit.title}
                 </h3>
-                <p className="mt-0.5 text-sm leading-snug text-neutral-400">
+                <p className="mt-1 text-xs leading-snug text-neutral-400 sm:text-sm">
                   {benefit.description}
                 </p>
               </div>
