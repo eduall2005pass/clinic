@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { TagIcon } from "@/components/admin/icons";
+import CourseCategoryManager from "@/components/admin/CourseCategoryManager";
 
 export const metadata: Metadata = {
   title: "Categories — MediSpark Admin",
@@ -8,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function CourseCategoriesPage() {
-  return <AdminPlaceholder title="Categories" description="Organize courses into categories for the website." icon={TagIcon} />;
+  return <CourseCategoryManager loadingLabel="Loading categories…" />;
 }

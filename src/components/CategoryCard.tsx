@@ -5,7 +5,8 @@ type CategoryCardProps = {
   href: string;
   title: string;
   description: string;
-  icon: ReactNode;
+  icon?: ReactNode;
+  image?: string | null;
 };
 
 export default function CategoryCard({
@@ -13,6 +14,7 @@ export default function CategoryCard({
   title,
   description,
   icon,
+  image,
 }: CategoryCardProps) {
   return (
     <Link
@@ -23,9 +25,18 @@ export default function CategoryCard({
       <div className="pointer-events-none absolute inset-0 bg-medical-dots opacity-30" />
 
       <div className="relative">
-        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-600/15 text-primary-500 transition duration-300 group-hover:bg-primary-600 group-hover:text-heading group-hover:shadow-md group-hover:shadow-primary-900/50">
-          {icon}
-        </span>
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt=""
+            className="h-16 w-16 rounded-2xl object-cover transition duration-300 group-hover:shadow-md group-hover:shadow-primary-900/50"
+          />
+        ) : (
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-600/15 text-primary-500 transition duration-300 group-hover:bg-primary-600 group-hover:text-heading group-hover:shadow-md group-hover:shadow-primary-900/50">
+            {icon ?? null}
+          </span>
+        )}
         <h2 className="mt-6 text-2xl font-extrabold text-heading transition duration-300 group-hover:text-primary-400">
           {title}
         </h2>

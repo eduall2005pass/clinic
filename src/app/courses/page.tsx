@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import CategoryCard from "@/components/CategoryCard";
+import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
 
 export const metadata: Metadata = {
   title: "Courses",
@@ -17,7 +18,24 @@ const iconProps = {
   viewBox: "0 0 24 24",
 } as const;
 
-export default function CoursesPage() {
+const FALLBACK_ICONS: Record<string, React.ReactNode> = {
+  academic: (
+    <svg {...iconProps}>
+      <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+    </svg>
+  ),
+  admission: (
+    <svg {...iconProps}>
+      <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" />
+      <path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4" />
+      <circle cx="20" cy="10" r="2" />
+    </svg>
+  ),
+};
+
+export default async function CoursesPage() {
+  const categories = await fetchActiveCourseCategories();
+
   return (
     <main className="flex-1 bg-dark-950">
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -35,28 +53,16 @@ export default function CoursesPage() {
         </header>
 
         <div className="grid gap-6 sm:grid-cols-2">
-          <CategoryCard
-            href="/courses/academic"
-            title="Academic Courses"
-            description="Complete HSC academic preparation — every subject with batch-wise courses and board exam-focused explanations."
-            icon={
-              <svg {...iconProps}>
-                <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-              </svg>
-            }
-          />
-          <CategoryCard
-            href="/courses/admission"
-            title="Admission Courses"
-            description="Focused medical admission preparation — combined syllabus training with exam strategy for the medical entrance race."
-            icon={
-              <svg {...iconProps}>
-                <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" />
-                <path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4" />
-                <circle cx="20" cy="10" r="2" />
-              </svg>
-            }
-          />
+          {categories.map((category) => (
+            <CategoryCard
+              key={category.id}
+              href={category.href}
+              title={category.name}
+              description={category.description ?? ""}
+              image={category.imageUrl}
+              icon={FALLBACK_ICONS[category.slug]}
+            />
+          ))}
         </div>
       </section>
     </main>
