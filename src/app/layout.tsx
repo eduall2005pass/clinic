@@ -34,8 +34,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(
       process.env.NEXT_PUBLIC_SITE_URL ??
-        process.env.VERCEL_URL ??
-        "https://bloodarenabd.tech",
+        (process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : "https://bloodarenabd.tech"),
     ),
     title: {
       default: siteTitle,
