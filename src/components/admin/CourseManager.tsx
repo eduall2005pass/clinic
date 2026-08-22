@@ -38,6 +38,7 @@ export type CatalogCourse = {
   status: "published" | "unpublished";
   availability: "available" | "hidden";
   couponEnabled: boolean;
+  featured: boolean;
 };
 
 const EMPTY_FORM = {
@@ -56,6 +57,7 @@ const EMPTY_FORM = {
   overviewTitle: "Chapters",
   status: "unpublished" as "published" | "unpublished",
   couponEnabled: false,
+  featured: false,
 };
 
 type FormState = typeof EMPTY_FORM;
@@ -77,6 +79,7 @@ function toForm(course: CatalogCourse): FormState {
     overviewTitle: course.overviewTitle || "Chapters",
     status: course.status,
     couponEnabled: course.couponEnabled,
+    featured: course.featured,
   };
 }
 
@@ -175,6 +178,33 @@ export default function CourseManager({
     }
   }
 
+  async function toggleFlags(
+    slug: string,
+    label: string,
+    patch: { status?: "published" | "unpublished"; featured?: boolean },
+  ) {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/courses", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({ slug, ...patch }),
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { error?: string; course?: CatalogCourse }
+        | null;
+      if (!response.ok) {
+        setNotice({ kind: "error", text: data?.error ?? "Failed to update." });
+        return;
+      }
+      await load();
+      setNotice({ kind: "success", text: `“${label}” updated.` });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleDelete(slug: string, name: string) {
     if (!window.confirm(`Delete “${name}”? This cannot be undone.`)) return;
     setBusy(true);
@@ -249,6 +279,11 @@ export default function CourseManager({
                     >
                       {course.status}
                     </span>
+                    {course.featured && (
+                      <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-600">
+                        ★ Featured
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
                     {course.shortDescription ?? "—"}
@@ -259,6 +294,39 @@ export default function CourseManager({
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      void toggleFlags(course.slug, course.name, {
+                        status:
+                          course.status === "published"
+                            ? "unpublished"
+                            : "published",
+                      })
+                    }
+                    className={buttonSecondaryClass}
+                  >
+                    {course.status === "published" ? "Unpublish" : "Publish"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-label={`Toggle featured for ${course.name}`}
+                    title={course.featured ? "Remove from featured" : "Mark as featured"}
+                    onClick={() =>
+                      void toggleFlags(course.slug, course.name, {
+                        featured: !course.featured,
+                      })
+                    }
+                    className={
+                      course.featured
+                        ? "rounded-lg border border-amber-500/60 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-600 transition hover:bg-amber-500/20"
+                        : buttonSecondaryClass
+                    }
+                  >
+                    ★
+                  </button>
                   <button type="button" onClick={() => startEdit(course)} className={buttonSecondaryClass}>
                     Edit
                   </button>
@@ -372,6 +440,11 @@ export default function CourseManager({
                   <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.couponEnabled}
                     onChange={(e) => setForm({ ...form, couponEnabled: e.target.checked })} />
                   Coupon enabled
+                </label>
+                <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+                  <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.featured}
+                    onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
+                  ★ Featured
                 </label>
               </div>
             </div>

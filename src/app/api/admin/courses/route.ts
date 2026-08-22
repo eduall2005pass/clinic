@@ -6,6 +6,7 @@ import {
   fetchCatalogCourse,
   saveCatalogCourse,
   deleteCatalogCourse,
+  setCatalogCourseFlags,
 } from "@/lib/courses-admin";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ course });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to save the course.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+/** Quick flags update: { slug, status?, featured? }. */
+export async function PATCH(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || typeof body.slug !== "string" || !body.slug) {
+    return NextResponse.json({ error: "Missing course slug." }, { status: 400 });
+  }
+  const status =
+    body.status === "published" || body.status === "unpublished"
+      ? body.status
+      : undefined;
+  const featured = typeof body.featured === "boolean" ? body.featured : undefined;
+  if (status === undefined && featured === undefined) {
+    return NextResponse.json(
+      { error: "Nothing to update — pass status and/or featured." },
+      { status: 400 },
+    );
+  }
+  try {
+    const course = await setCatalogCourseFlags(body.slug, {
+      status,
+      featured,
+    });
+    await logAdminAction(admin, "course.flags", `slug=${body.slug}`, request);
+    return NextResponse.json({ course });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to update the course.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

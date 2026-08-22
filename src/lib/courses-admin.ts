@@ -42,6 +42,7 @@ export type CatalogCourse = {
   status: "published" | "unpublished";
   availability: "available" | "hidden";
   couponEnabled: boolean;
+  featured: boolean;
 };
 
 type CatalogCourseRow = {
@@ -64,6 +65,7 @@ type CatalogCourseRow = {
   status: string;
   availability: string;
   coupon_enabled: number | boolean;
+  is_featured?: number | boolean | null;
 };
 
 function parseJsonArray(raw: string | null): string[] {
@@ -106,6 +108,7 @@ function rowToCourse(row: CatalogCourseRow): CatalogCourse {
     status: row.status === "published" ? "published" : "unpublished",
     availability: row.availability === "hidden" ? "hidden" : "available",
     couponEnabled: Boolean(row.coupon_enabled),
+    featured: Boolean(row.is_featured),
   };
 }
 
@@ -130,11 +133,20 @@ async function ensureTables(): Promise<void> {
     status ENUM('published','unpublished') NOT NULL DEFAULT 'unpublished',
     availability ENUM('available','hidden') NOT NULL DEFAULT 'available',
     coupon_enabled TINYINT(1) NOT NULL DEFAULT 0,
+    is_featured TINYINT(1) NOT NULL DEFAULT 0,
     sort_order INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_by VARCHAR(191) NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // Databases created before the featured flag need the column added.
+  try {
+    await exec(
+      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS is_featured TINYINT(1) NOT NULL DEFAULT 0`,
+    );
+  } catch {
+    // Best effort — column may already exist.
+  }
 }
 
 export async function fetchCatalogCourses(): Promise<CatalogCourse[]> {
@@ -201,11 +213,11 @@ export async function saveCatalogCourse(
 
   await exec(
     `INSERT INTO catalog_courses
-      (slug, name, category, batch_id, image_url, short_description, description,
-       teacher_name, teacher_photo_url, teacher_designation, duration,
-       fee, discount_fee, features, overview_title, overview,
-       status, availability, coupon_enabled, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (slug, name, category, batch_id, image_url, short_description, description,
+        teacher_name, teacher_photo_url, teacher_designation, duration,
+        fee, discount_fee, features, overview_title, overview,
+        status, availability, coupon_enabled, is_featured, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        name = VALUES(name), category = VALUES(category), batch_id = VALUES(batch_id),
        image_url = VALUES(image_url), short_description = VALUES(short_description),
@@ -215,7 +227,8 @@ export async function saveCatalogCourse(
        fee = VALUES(fee), discount_fee = VALUES(discount_fee), features = VALUES(features),
        overview_title = VALUES(overview_title), overview = VALUES(overview),
        status = VALUES(status), availability = VALUES(availability),
-       coupon_enabled = VALUES(coupon_enabled), updated_by = VALUES(updated_by)`,
+       coupon_enabled = VALUES(coupon_enabled), is_featured = VALUES(is_featured),
+       updated_by = VALUES(updated_by)`,
     [
       slug,
       name,
@@ -236,12 +249,40 @@ export async function saveCatalogCourse(
       input.status === "published" ? "published" : "unpublished",
       input.availability === "hidden" ? "hidden" : "available",
       input.couponEnabled ? 1 : 0,
+      input.featured ? 1 : 0,
       adminUid,
     ],
   );
 
   const saved = await fetchCatalogCourse(slug);
   if (!saved) throw new Error("Failed to save the course.");
+  return saved;
+}
+
+/** Quick flags update — publish/unpublish and/or feature a course. */
+export async function setCatalogCourseFlags(
+  slug: string,
+  patch: { status?: "published" | "unpublished"; featured?: boolean },
+): Promise<CatalogCourse> {
+  await ensureTables();
+  const existing = await fetchCatalogCourse(slug);
+  if (!existing) throw new Error("Course not found.");
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  if (patch.status !== undefined) {
+    sets.push("status = ?");
+    values.push(patch.status);
+  }
+  if (patch.featured !== undefined) {
+    sets.push("is_featured = ?");
+    values.push(patch.featured ? 1 : 0);
+  }
+  if (sets.length > 0) {
+    values.push(slug);
+    await exec(`UPDATE catalog_courses SET ${sets.join(", ")} WHERE slug = ?`, values);
+  }
+  const saved = await fetchCatalogCourse(slug);
+  if (!saved) throw new Error("Failed to update the course.");
   return saved;
 }
 
