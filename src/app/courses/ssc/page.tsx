@@ -7,14 +7,14 @@ import { getLivePublicCourses } from "@/lib/course-catalog";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "HSC Academic Courses",
+  title: "SSC Academic Courses",
   description:
-    "Browse MediSpark HSC academic courses by batch — Botany, Zoology and Biology Revision with board exam-focused preparation.",
+    "Browse MediSpark SSC academic courses by batch — complete subject preparation for SSC board exams.",
 };
 
-export default async function AcademicCoursesPage() {
-  const academicCourses = (await getLivePublicCourses()).filter(
-    (course) => course.category === "HSC Academic",
+export default async function SscCoursesPage() {
+  const sscCourses = (await getLivePublicCourses()).filter(
+    (course) => course.category === "SSC Academic",
   );
 
   return (
@@ -44,14 +44,14 @@ export default async function AcademicCoursesPage() {
             Courses
           </p>
           <h1 className="mt-2 text-3xl font-extrabold text-heading sm:text-4xl">
-            HSC Academic Courses
+            SSC Academic Courses
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-            Select your batch to see the relevant HSC academic course lineup.
+            Select your batch to see the relevant SSC academic course lineup.
           </p>
         </header>
 
-        <BatchCourseList batches={batches} courses={academicCourses} />
+        <BatchCourseList batches={batches} courses={sscCourses} />
       </section>
     </main>
   );

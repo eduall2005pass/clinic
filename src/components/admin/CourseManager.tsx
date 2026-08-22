@@ -14,11 +14,14 @@ import {
   type Notice,
 } from "@/components/admin/admin-ui";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
+import {
+  type CatalogCourseCategory,
+} from "@/lib/courses-admin";
 
 export type CatalogCourse = {
   slug: string;
   name: string;
-  category: "Academic" | "Admission";
+  category: CatalogCourseCategory;
   batchId: string;
   image: string | null;
   shortDescription: string | null;
@@ -40,7 +43,7 @@ export type CatalogCourse = {
 const EMPTY_FORM = {
   slug: "",
   name: "",
-  category: "Academic" as "Academic" | "Admission",
+  category: "HSC Academic" as CatalogCourseCategory,
   batchId: "hsc-28",
   image: "",
   shortDescription: "",
@@ -84,7 +87,7 @@ export default function CourseManager({
 }: {
   title: string;
   description: string;
-  categoryFilter?: "Academic" | "Admission";
+  categoryFilter?: CatalogCourseCategory;
 }) {
   const gate = useAdminGate();
   const [courses, setCourses] = useState<CatalogCourse[] | null>(null);
@@ -294,11 +297,12 @@ export default function CourseManager({
                   onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} />
               </div>
               <div>
-                <label className={labelClass} htmlFor="cm-category">Category</label>
+                <label className={labelClass} htmlFor="cm-category">Course type</label>
                 <select id="cm-category" className={inputClass} value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value as "Academic" | "Admission" })}>
-                  <option value="Academic">Academic</option>
-                  <option value="Admission">Admission</option>
+                  onChange={(e) => setForm({ ...form, category: e.target.value as CatalogCourseCategory })}>
+                  <option value="SSC Academic">SSC Academic</option>
+                  <option value="HSC Academic">HSC Academic</option>
+                  <option value="Medical Admission">Medical Admission</option>
                 </select>
               </div>
               <div>
@@ -308,6 +312,9 @@ export default function CourseManager({
                   <option value="hsc-28">HSC 28</option>
                   <option value="hsc-27">HSC 27</option>
                   <option value="hsc-26">HSC 26</option>
+                  <option value="ssc-28">SSC 28</option>
+                  <option value="ssc-27">SSC 27</option>
+                  <option value="ssc-26">SSC 26</option>
                 </select>
               </div>
               <div>

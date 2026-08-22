@@ -7,14 +7,14 @@ import { getLivePublicCourses } from "@/lib/course-catalog";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Admission Courses",
+  title: "Medical Admission Courses",
   description:
     "Browse MediSpark medical admission courses by batch — combined syllabus preparation for the medical entrance race.",
 };
 
 export default async function AdmissionCoursesPage() {
   const admissionCourses = (await getLivePublicCourses()).filter(
-    (course) => course.category === "Admission",
+    (course) => course.category === "Medical Admission",
   );
 
   return (
@@ -44,7 +44,7 @@ export default async function AdmissionCoursesPage() {
             Courses
           </p>
           <h1 className="mt-2 text-3xl font-extrabold text-heading sm:text-4xl">
-            Admission Courses
+            Medical Admission Courses
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
             Select your batch to see the relevant medical admission course

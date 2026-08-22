@@ -8,9 +8,9 @@ export const metadata = {
 export default function AcademicCoursesPage() {
   return (
     <CourseManager
-      title="Academic Courses"
+      title="HSC Academic Courses"
       description="Create and manage HSC academic courses — Botany, Zoology, revision and more."
-      categoryFilter="Academic"
+      categoryFilter="HSC Academic"
     />
   );
 }

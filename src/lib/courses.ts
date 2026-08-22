@@ -3,7 +3,10 @@ export type Batch = {
   label: string;
 };
 
-export type CourseType = "Academic" | "Admission";
+export type CourseType =
+  | "SSC Academic"
+  | "HSC Academic"
+  | "Medical Admission";
 
 export type CourseCategory = CourseType;
 
@@ -37,16 +40,23 @@ export const batches: Batch[] = [
   { id: "hsc-28", label: "HSC 28" },
   { id: "hsc-27", label: "HSC 27" },
   { id: "hsc-26", label: "HSC 26" },
+  { id: "ssc-28", label: "SSC 28" },
+  { id: "ssc-27", label: "SSC 27" },
+  { id: "ssc-26", label: "SSC 26" },
 ];
 
-export const courseTypes: CourseType[] = ["Academic", "Admission"];
+export const courseTypes: CourseType[] = [
+  "SSC Academic",
+  "HSC Academic",
+  "Medical Admission",
+];
 
 export const courses: Course[] = [
   // ── HSC 28 — Academic ────────────────────────────────────────────────
   {
     slug: "botany",
     name: "Botany Complete Course",
-    category: "Academic",
+    category: "HSC Academic",
     batchId: "hsc-28",
     image: "/courses/biology.svg",
     shortDescription:
@@ -82,7 +92,7 @@ export const courses: Course[] = [
   {
     slug: "zoology",
     name: "Zoology Complete Course",
-    category: "Academic",
+    category: "HSC Academic",
     batchId: "hsc-28",
     image: "/courses/biology.svg",
     shortDescription:
@@ -118,7 +128,7 @@ export const courses: Course[] = [
   {
     slug: "biology-revision",
     name: "Biology Revision Course",
-    category: "Academic",
+    category: "HSC Academic",
     batchId: "hsc-28",
     image: "/courses/biology.svg",
     shortDescription:
@@ -152,7 +162,7 @@ export const courses: Course[] = [
   {
     slug: "medical-admission",
     name: "Special Medical Admission Course",
-    category: "Admission",
+    category: "Medical Admission",
     batchId: "hsc-28",
     image: "/courses/medical-admission.svg",
     shortDescription:
@@ -188,7 +198,7 @@ export const courses: Course[] = [
   {
     slug: "botany-27",
     name: "Botany Complete Course",
-    category: "Academic",
+    category: "HSC Academic",
     batchId: "hsc-27",
     image: "/courses/biology.svg",
     shortDescription:
@@ -224,7 +234,7 @@ export const courses: Course[] = [
   {
     slug: "zoology-27",
     name: "Zoology Complete Course",
-    category: "Academic",
+    category: "HSC Academic",
     batchId: "hsc-27",
     image: "/courses/biology.svg",
     shortDescription:
@@ -260,7 +270,7 @@ export const courses: Course[] = [
   {
     slug: "biology-revision-27",
     name: "Biology Revision Course",
-    category: "Academic",
+    category: "HSC Academic",
     batchId: "hsc-27",
     image: "/courses/biology.svg",
     shortDescription:
@@ -294,7 +304,7 @@ export const courses: Course[] = [
   {
     slug: "medical-admission-27",
     name: "Special Medical Admission Course",
-    category: "Admission",
+    category: "Medical Admission",
     batchId: "hsc-27",
     image: "/courses/medical-admission.svg",
     shortDescription:
@@ -330,7 +340,7 @@ export const courses: Course[] = [
   {
     slug: "botany-26",
     name: "Botany Complete Course",
-    category: "Academic",
+    category: "HSC Academic",
     batchId: "hsc-26",
     image: "/courses/biology.svg",
     shortDescription:
@@ -366,7 +376,7 @@ export const courses: Course[] = [
   {
     slug: "zoology-26",
     name: "Zoology Complete Course",
-    category: "Academic",
+    category: "HSC Academic",
     batchId: "hsc-26",
     image: "/courses/biology.svg",
     shortDescription:
@@ -402,7 +412,7 @@ export const courses: Course[] = [
   {
     slug: "biology-revision-26",
     name: "Biology Revision Course",
-    category: "Academic",
+    category: "HSC Academic",
     batchId: "hsc-26",
     image: "/courses/biology.svg",
     shortDescription:
@@ -436,7 +446,7 @@ export const courses: Course[] = [
   {
     slug: "medical-admission-26",
     name: "Special Medical Admission Course",
-    category: "Admission",
+    category: "Medical Admission",
     batchId: "hsc-26",
     image: "/courses/medical-admission.svg",
     shortDescription:

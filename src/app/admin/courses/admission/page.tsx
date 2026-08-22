@@ -10,7 +10,7 @@ export default function AdmissionCoursesPage() {
     <CourseManager
       title="Admission Courses"
       description="Create and manage medical admission preparation courses for every batch."
-      categoryFilter="Admission"
+      categoryFilter="Medical Admission"
     />
   );
 }

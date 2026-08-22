@@ -5,10 +5,27 @@ import { removeFile, isLocalUpload } from "@/lib/storage";
 // When the table is missing/empty the static catalog in `@/lib/courses`
 // is used as fallback so the live site keeps working before migration.
 
+export type CatalogCourseCategory =
+  | "SSC Academic"
+  | "HSC Academic"
+  | "Medical Admission";
+
+const CATALOG_COURSE_CATEGORIES: CatalogCourseCategory[] = [
+  "SSC Academic",
+  "HSC Academic",
+  "Medical Admission",
+];
+
+export function normalizeCatalogCategory(value: unknown): CatalogCourseCategory {
+  return (CATALOG_COURSE_CATEGORIES as string[]).includes(value as string)
+    ? (value as CatalogCourseCategory)
+    : "HSC Academic";
+}
+
 export type CatalogCourse = {
   slug: string;
   name: string;
-  category: "Academic" | "Admission";
+  category: CatalogCourseCategory;
   batchId: string;
   image: string | null;
   shortDescription: string | null;
@@ -69,7 +86,7 @@ function rowToCourse(row: CatalogCourseRow): CatalogCourse {
   return {
     slug: row.slug,
     name: row.name,
-    category: row.category === "Admission" ? "Admission" : "Academic",
+    category: normalizeCatalogCategory(row.category),
     batchId: row.batch_id,
     image: row.image_url,
     shortDescription: row.short_description,
@@ -96,7 +113,7 @@ async function ensureTables(): Promise<void> {
   await exec(`CREATE TABLE IF NOT EXISTS catalog_courses (
     slug VARCHAR(191) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    category ENUM('Academic','Admission') NOT NULL DEFAULT 'Academic',
+    category ENUM('SSC Academic','HSC Academic','Medical Admission') NOT NULL DEFAULT 'HSC Academic',
     batch_id VARCHAR(32) NOT NULL DEFAULT 'hsc-28',
     image_url VARCHAR(1024) NULL,
     short_description TEXT NULL,
@@ -173,7 +190,7 @@ export async function saveCatalogCourse(
   }
   if (name.length < 2) throw new Error("Course name is required.");
 
-  const category = input.category === "Admission" ? "Admission" : "Academic";
+  const category = normalizeCatalogCategory(input.category);
   const batchId = asString(input.batchId, "hsc-28") || "hsc-28";
   const fee = Math.max(0, Number(input.fee) || 0);
   const discountRaw = input.discountFee;

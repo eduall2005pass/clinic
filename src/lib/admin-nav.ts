@@ -56,8 +56,9 @@ export const adminCategories: AdminCategory[] = [
     icon: CoursesIcon,
     subsections: [
       { label: "All Courses", href: "/admin/courses/all" },
-      { label: "Academic Courses", href: "/admin/courses/academic" },
-      { label: "Admission Courses", href: "/admin/courses/admission" },
+      { label: "SSC Academic", href: "/admin/courses/ssc" },
+      { label: "HSC Academic", href: "/admin/courses/academic" },
+      { label: "Medical Admission", href: "/admin/courses/admission" },
       { label: "Categories", href: "/admin/courses/categories" },
       { label: "Subjects", href: "/admin/courses/subjects" },
       { label: "Chapters", href: "/admin/courses/chapters" },

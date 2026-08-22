@@ -1,12 +1,26 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import CategoryCard from "@/components/CategoryCard";
+import BatchCourseList from "@/components/BatchCourseList";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
+import { batches } from "@/lib/courses";
+import { getLivePublicCourses } from "@/lib/course-catalog";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Courses",
   description:
-    "Explore MediSpark courses — HSC academic subjects and medical admission preparation programs.",
+    "Explore MediSpark courses — SSC academic, HSC academic and medical admission preparation programs.",
 };
+
+const CATEGORY_TYPES = {
+  ssc: "SSC Academic",
+  hsc: "HSC Academic",
+  medical: "Medical Admission",
+} as const;
+
+type CategoryParam = keyof typeof CATEGORY_TYPES;
 
 const iconProps = {
   className: "h-8 w-8",
@@ -33,7 +47,62 @@ const FALLBACK_ICONS: Record<string, React.ReactNode> = {
   ),
 };
 
-export default async function CoursesPage() {
+export default async function CoursesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  const categoryParam = category?.toLowerCase();
+  const courseType =
+    categoryParam && categoryParam in CATEGORY_TYPES
+      ? CATEGORY_TYPES[categoryParam as CategoryParam]
+      : null;
+
+  if (courseType) {
+    const typeCourses = (await getLivePublicCourses()).filter(
+      (course) => course.category === courseType,
+    );
+    return (
+      <main className="flex-1 bg-dark-950">
+        <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <Link
+            href="/courses"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-400 transition hover:text-primary-400"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <path d="M19 12H5" />
+              <path d="m12 19-7-7 7-7" />
+            </svg>
+            All Courses
+          </Link>
+
+          <header className="mb-10">
+            <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-500">
+              Courses
+            </p>
+            <h1 className="mt-2 text-3xl font-extrabold text-heading sm:text-4xl">
+              {courseType} Courses
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
+              Select your batch to see the relevant {courseType} course lineup.
+            </p>
+          </header>
+
+          <BatchCourseList batches={batches} courses={typeCourses} />
+        </section>
+      </main>
+    );
+  }
+
   const categories = await fetchActiveCourseCategories();
 
   return (
@@ -47,8 +116,8 @@ export default async function CoursesPage() {
             Choose Your Path
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-            Select a program to browse batch-wise courses built for HSC board
-            exam success and medical admission preparation.
+            Select a program to browse batch-wise courses built for SSC/HSC
+            board exam success and medical admission preparation.
           </p>
         </header>
 
