@@ -143,7 +143,7 @@ export default  function OurSuccess({
         />
 
         {items.length > 0 ? (
-          <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-4">
             {items.map((item) => {
               const Icon = successIcons[item.icon];
               return (
