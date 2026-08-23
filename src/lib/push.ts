@@ -54,10 +54,21 @@ export async function enablePushNotifications(
       return { ok: false, error: "Push messaging is not supported in this browser." };
     }
     const registration = await registerServiceWorker();
-    const token = await getToken(getMessaging(), {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: registration,
-    });
+    // Drop any existing push subscription so the new one is always created
+    // with the current VAPID key (stale subscriptions from a previous key
+    // would make getToken() fail or return an unusable token).
+    const existing = await registration.pushManager.getSubscription();
+    if (existing) await existing.unsubscribe();
+    let token = "";
+    try {
+      token = await getToken(getMessaging(), {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: registration,
+      });
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      return { ok: false, error: `Token generation failed: ${detail}` };
+    }
     if (!token) {
       return { ok: false, error: "Could not obtain a registration token." };
     }
@@ -71,11 +82,12 @@ export async function enablePushNotifications(
     });
     if (!response.ok) {
       const data = (await response.json().catch(() => null)) as { error?: string } | null;
-      return { ok: false, error: data?.error ?? "Failed to save the subscription." };
+      return { ok: false, error: data?.error ?? `Save failed (HTTP ${response.status}).` };
     }
     return { ok: true, token };
-  } catch {
-    return { ok: false, error: "Failed to enable push notifications." };
+  } catch (err) {
+    const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    return { ok: false, error: `Push setup failed — ${detail}` };
   }
 }
 
