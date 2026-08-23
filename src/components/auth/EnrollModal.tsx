@@ -96,6 +96,10 @@ export default function EnrollModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; finalFee: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -122,7 +126,7 @@ export default function EnrollModal({
     setSubmitting(true);
     setError(null);
     try {
-      await enrollInCourse(course, user);
+      await enrollInCourse(course, user, appliedCoupon?.code ?? null);
       await refreshEnrollments();
       setCompleted(true);
     } catch (err) {
@@ -133,6 +137,39 @@ export default function EnrollModal({
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim();
+    setCouponError(null);
+    if (!code) {
+      setAppliedCoupon(null);
+      return;
+    }
+    setCheckingCoupon(true);
+    try {
+      const response = await fetch(
+        `/api/coupons/validate?code=${encodeURIComponent(code)}&fee=${payableFee}`,
+        { cache: "no-store" },
+      );
+      const data = (await response.json().catch(() => null)) as {
+        valid?: boolean;
+        code?: string;
+        finalFee?: number;
+        error?: string;
+      } | null;
+      if (!response.ok || !data?.valid) {
+        setAppliedCoupon(null);
+        setCouponError(data?.error ?? "Invalid coupon code.");
+        return;
+      }
+      setAppliedCoupon({ code: data.code ?? code.toUpperCase(), finalFee: data.finalFee ?? payableFee });
+    } catch {
+      setAppliedCoupon(null);
+      setCouponError("Could not verify the coupon. Try again.");
+    } finally {
+      setCheckingCoupon(false);
     }
   };
 
@@ -324,10 +361,76 @@ export default function EnrollModal({
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Course Fee
               </p>
-              <p className="text-xl font-extrabold text-primary-500">
-                {formatFee(payableFee)}
-              </p>
+              <div className="text-right">
+                {appliedCoupon && appliedCoupon.finalFee < payableFee ? (
+                  <>
+                    <p className="text-sm text-neutral-500 line-through">
+                      {formatFee(payableFee)}
+                    </p>
+                    <p className="text-xl font-extrabold text-primary-500">
+                      {formatFee(appliedCoupon.finalFee)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xl font-extrabold text-primary-500">
+                    {formatFee(payableFee)}
+                  </p>
+                )}
+              </div>
             </div>
+
+            {/* Coupon code */}
+            <div className="mt-4">
+              <label
+                htmlFor="enroll-coupon"
+                className="text-xs font-semibold uppercase tracking-wide text-neutral-500"
+              >
+                Have a coupon?
+              </label>
+              <div className="mt-1.5 flex gap-2">
+                <input
+                  id="enroll-coupon"
+                  type="text"
+                  value={couponInput}
+                  onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                  placeholder="COUPON CODE"
+                  disabled={Boolean(appliedCoupon)}
+                  className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3.5 py-2.5 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 disabled:opacity-60"
+                />
+                {appliedCoupon ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedCoupon(null);
+                      setCouponInput("");
+                      setCouponError(null);
+                    }}
+                    className="shrink-0 rounded-xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-xs font-bold text-heading transition hover:border-primary-500/60"
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void handleApplyCoupon()}
+                    disabled={checkingCoupon || !couponInput.trim()}
+                    className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-4 py-2.5 text-xs font-bold text-primary-300 transition hover:bg-primary-600/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {checkingCoupon ? "Checking…" : "Apply"}
+                  </button>
+                )}
+              </div>
+              {appliedCoupon && (
+                <p className="mt-2 text-xs font-semibold text-emerald-400">
+                  Coupon {appliedCoupon.code} applied — you pay{" "}
+                  {formatFee(appliedCoupon.finalFee)}.
+                </p>
+              )}
+              {couponError && (
+                <p className="mt-2 text-xs font-semibold text-red-400">{couponError}</p>
+              )}
+            </div>
+
             <p className="mt-4 text-sm leading-relaxed text-neutral-400">
               This is a paid course. Your enrollment request will be placed as
               pending until payment or approval is completed. The course will

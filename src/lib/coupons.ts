@@ -155,3 +155,24 @@ export async function deleteCoupon(code: string): Promise<void> {
   await ensureCouponsTable();
   await exec(`DELETE FROM coupons WHERE code = ?`, [code.trim().toUpperCase()]);
 }
+
+/** Discounted fee for a validated coupon — never below zero. */
+export function computeDiscountedFee(coupon: Coupon, amount: number): number {
+  const base = Math.max(0, amount);
+  if (coupon.discountType === "percent") {
+    return Math.max(0, Math.round(base * (1 - coupon.value / 100)));
+  }
+  return Math.max(0, Math.round(base - coupon.value));
+}
+
+/** Count one more use — call only after a successful checkout. */
+export async function incrementCouponUsage(code: string): Promise<void> {
+  try {
+    await exec(
+      `UPDATE coupons SET used_count = used_count + 1 WHERE code = ?`,
+      [code.trim().toUpperCase()],
+    );
+  } catch {
+    // Usage counting is best-effort; enrollment must not fail for it.
+  }
+}

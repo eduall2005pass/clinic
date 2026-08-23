@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFirebaseUser } from "@/lib/auth-api";
 import { query, exec, parseDate, isMysqlConfigured } from "@/lib/mysql";
 import type { Enrollment } from "@/lib/enrollments";
+import { validateCoupon, computeDiscountedFee, incrementCouponUsage } from "@/lib/coupons";
 
 export const dynamic = "force-dynamic";
 
@@ -70,12 +71,15 @@ export async function POST(request: NextRequest) {
     courseType?: unknown;
     courseKind?: unknown;
     fee?: unknown;
+    couponCode?: unknown;
   } | null;
   const courseId = typeof body?.courseId === "string" ? body.courseId : "";
   const courseName =
     typeof body?.courseName === "string" ? body.courseName : courseId;
   const courseType = body?.courseType === "Admission" ? "Admission" : "Academic";
   const fee = typeof body?.fee === "number" && body.fee > 0 ? body.fee : 0;
+  const rawCouponCode =
+    typeof body?.couponCode === "string" ? body.couponCode.trim() : "";
   if (!courseId) {
     return NextResponse.json(
       { error: "Missing course id." },
@@ -83,9 +87,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Coupons are always re-validated server-side — the client-side check is
+  // cosmetic only and must never be trusted for pricing.
+  let appliedCouponCode: string | null = null;
+  let finalFee = fee;
+  if (rawCouponCode && fee > 0) {
+    const result = await validateCoupon(rawCouponCode);
+    if (result.error || !result.coupon) {
+      return NextResponse.json(
+        { error: result.error ?? "Invalid coupon code." },
+        { status: 400 },
+      );
+    }
+    finalFee = computeDiscountedFee(result.coupon, fee);
+    appliedCouponCode = result.coupon.code;
+  }
+
   await query("INSERT IGNORE INTO courses (course_id, kind) VALUES (?, ?)", [
     courseId,
-    fee > 0 ? "paid" : "free",
+    finalFee > 0 ? "paid" : "free",
   ]);
 
   const now = new Date().toISOString();
@@ -94,9 +114,9 @@ export async function POST(request: NextRequest) {
     courseId,
     courseName,
     courseType,
-    courseKind: fee > 0 ? "paid" : "free",
-    fee,
-    enrollmentStatus: fee > 0 ? "pending" : "active",
+    courseKind: finalFee > 0 ? "paid" : "free",
+    fee: finalFee,
+    enrollmentStatus: finalFee > 0 ? "pending" : "active",
     enrollmentDate: now,
     updatedAt: now,
   };
@@ -112,7 +132,7 @@ export async function POST(request: NextRequest) {
         courseName,
         courseType,
         enrollment.courseKind,
-        fee,
+        finalFee,
         enrollment.enrollmentStatus,
       ],
     );
@@ -124,6 +144,10 @@ export async function POST(request: NextRequest) {
       if (rows[0]) {
         return NextResponse.json({ enrollment: mapEnrollment(rows[0]) });
       }
+    }
+    // Coupon usage counts only for a newly created enrollment.
+    if (appliedCouponCode) {
+      await incrementCouponUsage(appliedCouponCode);
     }
   } catch {
     return NextResponse.json(

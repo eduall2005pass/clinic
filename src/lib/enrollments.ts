@@ -70,6 +70,7 @@ export async function getEnrollment(
 export async function enrollInCourse(
   course: Course,
   user: User,
+  couponCode?: string | null,
 ): Promise<Enrollment> {
   const response = await fetch("/api/enrollments", {
     method: "POST",
@@ -80,6 +81,7 @@ export async function enrollInCourse(
       courseType: course.category,
       courseKind: getCourseKind(course),
       fee: getPayableFee(course),
+      ...(couponCode ? { couponCode } : {}),
     }),
   });
   const data = (await response.json().catch(() => null)) as {

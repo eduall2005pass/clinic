@@ -30,6 +30,7 @@ export default function CouponsPage() {
   const gate = useAdminGate();
   const [coupons, setCoupons] = useState<Coupon[] | null>(null);
   const [form, setForm] = useState(EMPTY);
+  const [editingCode, setEditingCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
 
@@ -83,7 +84,57 @@ export default function CouponsPage() {
       }
       setCoupons(data?.coupons ?? []);
       setForm(EMPTY);
-      setNotice({ kind: "success", text: "Coupon saved." });
+      setEditingCode(null);
+      setNotice({ kind: "success", text: editingCode ? `Coupon ${editingCode} updated.` : "Coupon saved." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(coupon: Coupon) {
+    const toLocalInput = (iso: string | null) => {
+      if (!iso) return "";
+      const date = new Date(iso);
+      const offset = date.getTimezoneOffset() * 60000;
+      return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+    };
+    setEditingCode(coupon.code);
+    setForm({
+      code: coupon.code,
+      discountType: coupon.discountType,
+      value: String(coupon.value),
+      maxUses: String(coupon.maxUses),
+      startsAt: toLocalInput(coupon.startsAt),
+      expiresAt: toLocalInput(coupon.expiresAt),
+    });
+    setNotice(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function toggleActive(coupon: Coupon) {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({
+          code: coupon.code,
+          discountType: coupon.discountType,
+          value: coupon.value,
+          maxUses: coupon.maxUses,
+          startsAt: coupon.startsAt,
+          expiresAt: coupon.expiresAt,
+          isActive: !coupon.isActive,
+        }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string; coupons?: Coupon[] } | null;
+      if (!response.ok) {
+        setNotice({ kind: "error", text: data?.error ?? "Failed to update." });
+        return;
+      }
+      setCoupons(data?.coupons ?? []);
+      setNotice({ kind: "success", text: `Coupon ${coupon.code} ${coupon.isActive ? "disabled" : "enabled"}.` });
     } finally {
       setBusy(false);
     }
@@ -115,7 +166,21 @@ export default function CouponsPage() {
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">New / update coupon</h3>
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+          {editingCode ? `Edit coupon — ${editingCode}` : "New / update coupon"}
+        </h3>
+        {editingCode && (
+          <button
+            type="button"
+            onClick={() => {
+              setEditingCode(null);
+              setForm(EMPTY);
+            }}
+            className="mt-1 text-xs font-semibold text-primary-600 hover:underline admin-dark:text-primary-400"
+          >
+            + New coupon instead
+          </button>
+        )}
         <form
           className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2"
           onSubmit={(event) => {
@@ -126,6 +191,7 @@ export default function CouponsPage() {
           <div>
             <label className={labelClass} htmlFor="cp-code">Code</label>
             <input id="cp-code" className={`${inputClass} uppercase`} placeholder="HSC28" value={form.code}
+              disabled={Boolean(editingCode)}
               onChange={(event) => setForm({ ...form, code: event.target.value.toUpperCase() })} />
           </div>
           <div>
@@ -158,7 +224,7 @@ export default function CouponsPage() {
           </div>
           <div className="sm:col-span-2">
             <button type="submit" disabled={busy} className={buttonPrimaryClass}>
-              {busy ? "Saving…" : "Save Coupon"}
+              {busy ? "Saving…" : editingCode ? "Update Coupon" : "Save Coupon"}
             </button>
           </div>
         </form>
@@ -172,10 +238,35 @@ export default function CouponsPage() {
               <span className="block text-xs text-zinc-500">
                 {coupon.discountType === "percent" ? `${coupon.value}% off` : `৳ ${coupon.value} off`}
                 {" · used "}{coupon.usedCount}{coupon.maxUses > 0 ? `/${coupon.maxUses}` : ""}
-                {!coupon.isActive && " · inactive"}
                 {coupon.expiresAt && ` · expires ${new Date(coupon.expiresAt).toLocaleDateString()}`}
               </span>
             </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
+                coupon.isActive
+                  ? "bg-emerald-500/10 text-emerald-600"
+                  : "bg-zinc-500/10 text-zinc-500"
+              }`}
+            >
+              {coupon.isActive ? "Active" : "Disabled"}
+            </span>
+            <button type="button" disabled={busy} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+              onClick={() => startEdit(coupon)}>
+              Edit
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              aria-label={coupon.isActive ? `Disable ${coupon.code}` : `Enable ${coupon.code}`}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
+                coupon.isActive
+                  ? "border-yellow-500/40 text-yellow-600 hover:bg-yellow-500/10"
+                  : "border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"
+              }`}
+              onClick={() => void toggleActive(coupon)}
+            >
+              {coupon.isActive ? "Disable" : "Enable"}
+            </button>
             <button type="button" disabled={busy} aria-label={`Delete ${coupon.code}`} className={buttonDangerClass}
               onClick={() => void remove(coupon.code)}>
               ✕
