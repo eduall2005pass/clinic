@@ -15,6 +15,13 @@ import { MediaUploadField } from "@/components/admin/MediaUploadField";
 
 type Jersey = { id: string; name: string; note: string | null; image: string | null; link: string | null; price: number; isActive: boolean };
 
+type HomepageSection = {
+  key: string;
+  title?: string | null;
+  description?: string | null;
+  isActive: boolean;
+};
+
 const EMPTY = { id: "", name: "", note: "", image: "", link: "", price: "0" };
 
 export default function JerseyPage() {
@@ -23,6 +30,7 @@ export default function JerseyPage() {
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [sectionActive, setSectionActive] = useState<boolean | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -31,6 +39,14 @@ export default function JerseyPage() {
       setJerseys(data.jerseys ?? []);
     } catch {
       setJerseys([]);
+    }
+    try {
+      const response = await fetch("/api/homepage-sections", { cache: "no-store" });
+      const data = (await response.json()) as { sections?: HomepageSection[] };
+      const jerseySection = data.sections?.find((section) => section.key === "jersey");
+      setSectionActive(jerseySection ? jerseySection.isActive : true);
+    } catch {
+      // Leave unknown.
     }
   }, []);
 
@@ -95,6 +111,72 @@ export default function JerseyPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function toggleJersey(jersey: Jersey) {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/jerseys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({
+          id: jersey.id,
+          name: jersey.name,
+          note: jersey.note ?? "",
+          image: jersey.image ?? "",
+          link: jersey.link ?? "",
+          price: jersey.price,
+          isActive: !jersey.isActive,
+        }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string; jerseys?: Jersey[] } | null;
+      if (!response.ok) {
+        setNotice({ kind: "error", text: data?.error ?? "Failed to update." });
+        return;
+      }
+      setJerseys(data?.jerseys ?? []);
+      setNotice({ kind: "success", text: `“${jersey.name}” ${jersey.isActive ? "disabled" : "enabled"}.` });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleSection() {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const current = await fetch("/api/homepage-sections", { cache: "no-store" });
+      const data = (await current.json()) as { sections?: HomepageSection[] };
+      const sections = data.sections ?? [];
+      const updated = sections.map((section) =>
+        section.key === "jersey"
+          ? { ...section, isActive: !(sectionActive ?? true) }
+          : section,
+      );
+      if (!updated.some((section) => section.key === "jersey")) {
+        updated.push({ key: "jersey", isActive: !(sectionActive ?? true) });
+      }
+      const response = await fetch("/api/homepage-sections", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({ sections: updated }),
+      });
+      if (!response.ok) {
+        const errData = (await response.json().catch(() => null)) as { error?: string } | null;
+        setNotice({ kind: "error", text: errData?.error ?? "Failed to update the section." });
+        return;
+      }
+      setSectionActive((prev) => !(prev ?? true));
+      setNotice({
+        kind: "success",
+        text: `Jersey section ${sectionActive ? "hidden from" : "visible on"} the home page.`,
+      });
+    } catch {
+      setNotice({ kind: "error", text: "Network error — could not update the section." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function remove(id: string) {
     if (!window.confirm("Delete this jersey?")) return;
     setBusy(true);
@@ -113,9 +195,26 @@ export default function JerseyPage() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
-      <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Jerseys</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Merchandise jerseys shown on the website.</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Jerseys</h2>
+          <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Merchandise jerseys shown on the website.</p>
+        </div>
+        {sectionActive !== null && (
+          <button
+            type="button"
+            onClick={() => void toggleSection()}
+            disabled={busy}
+            aria-pressed={sectionActive}
+            className={`rounded-xl border px-4 py-2.5 text-xs font-extrabold uppercase tracking-wide transition ${
+              sectionActive
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                : "border-zinc-400/40 bg-zinc-500/10 text-zinc-500 hover:bg-zinc-500/20"
+            }`}
+          >
+            {sectionActive ? "Section: Visible" : "Section: Hidden"}
+          </button>
+        )}
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
@@ -178,6 +277,28 @@ export default function JerseyPage() {
                 ৳ {jersey.price.toLocaleString("en-IN")}{jersey.note ? ` · ${jersey.note}` : ""}{!jersey.isActive ? " · hidden" : ""}
               </span>
             </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
+                jersey.isActive
+                  ? "bg-emerald-500/10 text-emerald-600"
+                  : "bg-zinc-500/10 text-zinc-500"
+              }`}
+            >
+              {jersey.isActive ? "Active" : "Disabled"}
+            </span>
+            <button
+              type="button"
+              disabled={busy}
+              aria-label={jersey.isActive ? `Disable ${jersey.name}` : `Enable ${jersey.name}`}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
+                jersey.isActive
+                  ? "border-yellow-500/40 text-yellow-600 hover:bg-yellow-500/10"
+                  : "border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"
+              }`}
+              onClick={() => void toggleJersey(jersey)}
+            >
+              {jersey.isActive ? "Disable" : "Enable"}
+            </button>
             <button type="button" disabled={busy} aria-label={`Edit ${jersey.name}`} className={buttonPrimaryClass}
               onClick={() => startEdit(jersey)}>Edit</button>
             <button type="button" disabled={busy} aria-label={`Delete ${jersey.name}`} className={buttonDangerClass}
