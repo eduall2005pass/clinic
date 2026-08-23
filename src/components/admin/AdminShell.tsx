@@ -25,6 +25,7 @@ import { AdminThemeProvider, useAdminTheme } from "@/components/admin/AdminTheme
 import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
 import AdminToastProvider from "@/components/admin/AdminToastProvider";
 import AdminSearch from "@/components/admin/AdminSearch";
+import { useAdminGate, hasAdminPermission } from "@/components/admin/admin-ui";
 
 const SIDEBAR_STORAGE_KEY = "medispark-admin-sidebar-collapsed";
 
@@ -39,6 +40,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 function AdminShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { theme } = useAdminTheme();
+  const gate = useAdminGate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -89,6 +91,14 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   const active = findActiveAdminNav(pathname);
   const activeSectionHref = findAdminCategory(pathname)?.href ?? null;
   const openSection = manualOpenSection !== null ? manualOpenSection : activeSectionHref;
+
+  // Role-based navigation: hide sections the admin's role does not cover.
+  // (Writes are enforced server-side regardless of what the UI shows.)
+  const visibleCategories = adminCategories.filter(
+    (category) =>
+      category.permission === null ||
+      hasAdminPermission(gate, category.permission),
+  );
 
   const toggleSection = (href: string) => {
     setManualOpenSection(openSection === href ? "" : href);
@@ -220,7 +230,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
         </p>
 
         <ul className="space-y-1">
-          {adminCategories.map(renderSection)}
+          {visibleCategories.map(renderSection)}
         </ul>
 
         <p

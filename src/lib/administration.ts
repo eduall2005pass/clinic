@@ -87,8 +87,53 @@ export async function logAdminAction(
 export async function fetchActivityLogs(
   limit = 200,
 ): Promise<ActivityLogEntry[]> {
+  return fetchFilteredActivityLogs({}, limit);
+}
+
+export type ActivityLogFilters = {
+  /** Free-text search across admin email, action and detail. */
+  q?: string;
+  /** Module name — matched as the prefix before the dot in `action`. */
+  module?: string;
+  /** Action verb — e.g. save, delete, login (matches any module). */
+  action?: string;
+  /** ISO date — only entries on/after this day. */
+  from?: string;
+  /** ISO date — only entries on/before this day. */
+  to?: string;
+};
+
+export async function fetchFilteredActivityLogs(
+  filters: ActivityLogFilters,
+  limit = 200,
+): Promise<ActivityLogEntry[]> {
   try {
     await ensureLogTable();
+    const where: string[] = [];
+    const params: unknown[] = [];
+    if (filters.q && filters.q.trim()) {
+      const like = `%${filters.q.trim()}%`;
+      where.push("(admin_email LIKE ? OR action LIKE ? OR detail LIKE ?)");
+      params.push(like, like, like);
+    }
+    if (filters.module && filters.module.trim()) {
+      where.push("action LIKE ?");
+      params.push(`${filters.module.trim()}.%`);
+    }
+    if (filters.action && filters.action.trim()) {
+      const verb = filters.action.trim();
+      where.push("(action = ? OR action LIKE CONCAT('%.', ?))");
+      params.push(verb, verb);
+    }
+    if (filters.from && filters.from.trim()) {
+      where.push("created_at >= ?");
+      params.push(`${filters.from.trim()} 00:00:00`);
+    }
+    if (filters.to && filters.to.trim()) {
+      where.push("created_at <= ?");
+      params.push(`${filters.to.trim()} 23:59:59`);
+    }
+    const clause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
     const rows = await query<{
       id: number;
       admin_uid: string;
@@ -98,7 +143,8 @@ export async function fetchActivityLogs(
       ip_address: string | null;
       created_at: Date | string;
     }[]>(
-      `SELECT * FROM admin_activity_logs ORDER BY created_at DESC LIMIT ${Math.min(1000, Math.max(1, limit))}`,
+      `SELECT * FROM admin_activity_logs ${clause} ORDER BY created_at DESC LIMIT ${Math.min(1000, Math.max(1, limit))}`,
+      params,
     );
     return rows.map((row) => ({
       id: row.id,
@@ -135,9 +181,44 @@ export async function recordAdminLogin(
   }
 }
 
-// ── Roles ────────────────────────────────────────────────────────────────
+// ── Roles & permissions ──────────────────────────────────────────────────
 
-export const AVAILABLE_ROLES = ["super-admin", "admin", "moderator"] as const;
+export const AVAILABLE_ROLES = [
+  "super-admin",
+  "admin",
+  "content-manager",
+  "course-manager",
+  "exam-manager",
+] as const;
+
+export type AdminRole = (typeof AVAILABLE_ROLES)[number];
+
+export const ROLE_LABELS: Record<AdminRole, string> = {
+  "super-admin": "Super Admin",
+  admin: "Admin",
+  "content-manager": "Content Manager",
+  "course-manager": "Course Manager",
+  "exam-manager": "Exam Manager",
+};
+
+/** Permission categories enforced on every admin API write. */
+export const ALL_PERMISSIONS = [
+  "manageContent",
+  "manageCourses",
+  "manageExams",
+  "manageStudents",
+  "manageAdmins",
+] as const;
+
+export type AdminPermission = (typeof ALL_PERMISSIONS)[number];
+
+const DEFAULT_PERMISSIONS_BY_ROLE: Record<AdminRole, readonly AdminPermission[]> = {
+  "super-admin": [...ALL_PERMISSIONS],
+  admin: ["manageContent", "manageCourses", "manageExams", "manageStudents"],
+  "content-manager": ["manageContent"],
+  "course-manager": ["manageCourses"],
+  "exam-manager": ["manageExams"],
+};
 
 async function ensureRolesTable(): Promise<void> {
   await exec(`CREATE TABLE IF NOT EXISTS admin_roles (
@@ -149,22 +230,124 @@ async function ensureRolesTable(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 }
 
-const DEFAULT_PERMISSIONS_BY_ROLE: Record<string, string[]> = {
-  "super-admin": ["manageContent", "manageAdmins", "manageSystem"],
-  admin: ["manageContent"],
-  moderator: ["manageReviews"],
-};
+async function ensureRolePermissionsTable(): Promise<void> {
+  await exec(`CREATE TABLE IF NOT EXISTS role_permissions (
+    role VARCHAR(64) NOT NULL PRIMARY KEY,
+    permissions JSON NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_by VARCHAR(191) NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+}
+
+/** Configured permission set for a role; falls back to built-in defaults. */
+export async function fetchRolePermissions(): Promise<Record<string, string[]>> {
+  try {
+    await ensureRolePermissionsTable();
+    const rows = await query<{ role: string; permissions: string | null }[]>(
+      `SELECT role, permissions FROM role_permissions`,
+    );
+    const result: Record<string, string[]> = {};
+    for (const role of AVAILABLE_ROLES) {
+      result[role] = [...DEFAULT_PERMISSIONS_BY_ROLE[role]];
+    }
+    for (const row of rows) {
+      if (!(AVAILABLE_ROLES as readonly string[]).includes(row.role)) continue;
+      const parsed = parseJsonColumn<string[]>(row.permissions);
+      if (Array.isArray(parsed)) {
+        result[row.role] = parsed
+          .map(String)
+          .filter((permission): permission is AdminPermission =>
+            (ALL_PERMISSIONS as readonly string[]).includes(permission),
+          );
+      }
+    }
+    return result;
+  } catch {
+    // Table not migrated yet — built-in defaults only.
+    const result: Record<string, string[]> = {};
+    for (const role of AVAILABLE_ROLES) {
+      result[role] = [...DEFAULT_PERMISSIONS_BY_ROLE[role]];
+    }
+    return result;
+  }
+}
+
+/** Bulk-save the configurable permission matrix (super-admin only). */
+export async function saveRolePermissions(
+  input: Record<string, unknown>,
+  adminUid: string,
+): Promise<Record<string, string[]>> {
+  await ensureRolePermissionsTable();
+  for (const [role, rawPermissions] of Object.entries(input)) {
+    if (!(AVAILABLE_ROLES as readonly string[]).includes(role)) {
+      throw new Error(`Unknown role: ${role}`);
+    }
+    if (!Array.isArray(rawPermissions)) continue;
+    const permissions = rawPermissions
+      .map(String)
+      .filter((permission): permission is AdminPermission =>
+        (ALL_PERMISSIONS as readonly string[]).includes(permission),
+      );
+    await exec(
+      `INSERT INTO role_permissions (role, permissions, updated_by)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE permissions = VALUES(permissions), updated_by = VALUES(updated_by)`,
+      [role, JSON.stringify(permissions), adminUid],
+    );
+  }
+  return fetchRolePermissions();
+}
+
+/**
+ * Resolve an admin's role and effective permissions.
+ * Role assignment lives in `admin_roles` (email-keyed, defaults to
+ * "admin"); the permission matrix comes from `role_permissions`.
+ * Super-admins always hold every permission.
+ */
+export async function resolveAdminPermissions(
+  email: string | null | undefined,
+): Promise<{ role: AdminRole; permissions: AdminPermission[] }> {
+  const fallback: { role: AdminRole; permissions: AdminPermission[] } = {
+    role: "admin",
+    permissions: [...DEFAULT_PERMISSIONS_BY_ROLE.admin],
+  };
+  try {
+    await ensureRolesTable();
+    let assignedRole: AdminRole = "admin";
+    if (email) {
+      const rows = await query<{ role: string }[]>(
+        `SELECT role FROM admin_roles WHERE email = ? LIMIT 1`,
+        [email.trim().toLowerCase()],
+      );
+      const role = rows[0]?.role as AdminRole | undefined;
+      if (role && (AVAILABLE_ROLES as readonly string[]).includes(role)) {
+        assignedRole = role;
+      }
+    }
+    const matrix = await fetchRolePermissions();
+    const configured: AdminPermission[] =
+      assignedRole === "super-admin"
+        ? [...ALL_PERMISSIONS]
+        : ((matrix[assignedRole] ?? []) as AdminPermission[]).length > 0
+          ? (matrix[assignedRole] as AdminPermission[])
+          : [...DEFAULT_PERMISSIONS_BY_ROLE[assignedRole]];
+    return { role: assignedRole, permissions: configured };
+  } catch {
+    return fallback;
+  }
+}
 
 export async function fetchRoleAssignments(): Promise<RoleAssignment[]> {
   try {
     await ensureRolesTable();
+    const matrix = await fetchRolePermissions();
     const rows = await query<{
       email: string;
       role: string;
       permissions: string | null;
     }[]>(`SELECT email, role, permissions FROM admin_roles ORDER BY email ASC`);
     return rows.map((row) => {
-      let permissions = DEFAULT_PERMISSIONS_BY_ROLE[row.role] ?? [];
+      let permissions = matrix[row.role] ?? [];
       const parsed = parseJsonColumn<string[]>(row.permissions);
       if (Array.isArray(parsed)) permissions = parsed.map(String);
       return { email: row.email, role: row.role, permissions };
@@ -189,7 +372,7 @@ export async function saveRoleAssignments(
     }
     const permissions = Array.isArray(raw.permissions)
       ? raw.permissions.map(String)
-      : DEFAULT_PERMISSIONS_BY_ROLE[role];
+      : (await fetchRolePermissions())[role] ?? [];
     await exec(
       `INSERT INTO admin_roles (email, role, permissions, updated_by)
        VALUES (?, ?, ?, ?)

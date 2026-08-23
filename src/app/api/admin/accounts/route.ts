@@ -19,7 +19,20 @@ export async function GET() {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch {
-    return NextResponse.json({ admins: [] });
+    // Migration (src/sql/admins-management-migration.sql) not applied yet.
+    try {
+      const admins = await query<Record<string, unknown>[]>(
+        `SELECT uid, email, display_name AS displayName, photo_url AS photoUrl,
+                'admin' AS role, 1 AS isActive, created_at AS createdAt
+         FROM admins ORDER BY created_at ASC`,
+      );
+      return NextResponse.json(
+        { admins },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } catch {
+      return NextResponse.json({ admins: [] });
+    }
   }
 }
 

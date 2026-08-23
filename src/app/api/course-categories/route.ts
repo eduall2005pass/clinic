@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
 import {
   createCourseCategory,
   deleteCourseCategory,
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   if (url.searchParams.get("all") === "1") {
-    const admin = await requireAdmin(request);
+    const admin = await requirePermission(request, "manageCourses");
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
 /** Create a category (multipart, optional image). */
 export async function POST(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
  *  - { order: [id, …] }        → change display order
  */
 export async function PUT(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest) {
 
 /** Replace a category's image (multipart: id + file). */
 export async function PATCH(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -164,7 +164,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

@@ -5,7 +5,7 @@ import {
   ALLOWED_HERO_IMAGE_EXTENSIONS,
   MAX_HERO_IMAGE_FILE_SIZE,
 } from "@/lib/hero-settings";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageContent");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageContent");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

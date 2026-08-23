@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 import {
   useAdminGate,
+  hasAdminPermission,
   noticeClass,
   cardClass,
   inputClass,
@@ -14,11 +15,29 @@ import {
 
 type Assignment = { email: string; role: string; permissions: string[] };
 
-const ROLES = ["super-admin", "admin", "moderator"] as const;
+const ROLES = [
+  { value: "super-admin", label: "Super Admin" },
+  { value: "admin", label: "Admin" },
+  { value: "content-manager", label: "Content Manager" },
+  { value: "course-manager", label: "Course Manager" },
+  { value: "exam-manager", label: "Exam Manager" },
+] as const;
+
+const PERMISSIONS = [
+  { value: "manageContent", label: "Content (notifications, jerseys, media, website)" },
+  { value: "manageCourses", label: "Courses (courses, chapters, classes, coupons, enrollments)" },
+  { value: "manageExams", label: "Exams (exams, questions, results, settings)" },
+  { value: "manageStudents", label: "Students (student management)" },
+  { value: "manageAdmins", label: "Administration (admins, roles, security, system)" },
+] as const;
+
+const DEFAULT_ROLE = "admin";
 
 export default function RolesPage() {
   const gate = useAdminGate();
+  const allowed = hasAdminPermission(gate, "manageAdmins");
   const [assignments, setAssignments] = useState<Assignment[] | null>(null);
+  const [matrix, setMatrix] = useState<Record<string, string[]> | null>(null);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -26,27 +45,51 @@ export default function RolesPage() {
   const load = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/roles", { cache: "no-store", headers: gate.headers });
-      const data = (await response.json()) as { assignments?: Assignment[] };
+      const data = (await response.json()) as {
+        assignments?: Assignment[];
+        rolePermissions?: Record<string, string[]>;
+      };
       setAssignments(data.assignments ?? []);
+      setMatrix(data.rolePermissions ?? {});
     } catch {
       setAssignments([]);
+      setMatrix({});
     }
-  }, []);
+  }, [gate.headers]);
 
   useEffect(() => {
-    if (gate.ready) void Promise.resolve().then(load);
-  }, [gate.ready, load]);
+    if (gate.ready && allowed) void Promise.resolve().then(load);
+  }, [gate.ready, allowed, load]);
 
   if (!gate.ready) {
-    return gate.denied ? (
-      <AccessMessage title="Administrators only" message="Restricted to authorized administrators." actionLabel="Back to Admin Home" actionHref="/admin" />
-    ) : (
+    return (
       <AccessLoading label="Loading roles…" />
+    );
+  }
+  if (!allowed) {
+    return (
+      <AccessMessage
+        title="Super Admin / Administration access required"
+        message="Your role does not include permission to manage roles and permissions."
+        actionLabel="Back to Admin Home"
+        actionHref="/admin"
+      />
     );
   }
 
   function update(index: number, patch: Partial<Assignment>) {
     setAssignments((prev) => (prev ?? []).map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  function togglePermission(role: string, permission: string) {
+    if (role === "super-admin") return; // super-admin always has everything.
+    setMatrix((prev) => {
+      const current = prev?.[role] ?? [];
+      const next = current.includes(permission)
+        ? current.filter((item) => item !== permission)
+        : [...current, permission];
+      return { ...(prev ?? {}), [role]: next };
+    });
   }
 
   async function save() {
@@ -56,35 +99,84 @@ export default function RolesPage() {
       const response = await fetch("/api/admin/roles", {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...gate.headers },
-        body: JSON.stringify({ assignments }),
+        body: JSON.stringify({ assignments, rolePermissions: matrix }),
       });
-      const data = (await response.json().catch(() => null)) as { error?: string; assignments?: Assignment[] } | null;
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        assignments?: Assignment[];
+        rolePermissions?: Record<string, string[]>;
+      } | null;
       if (!response.ok) {
         setNotice({ kind: "error", text: data?.error ?? "Failed to save roles." });
         return;
       }
       setAssignments(data?.assignments ?? []);
-      setNotice({ kind: "success", text: "Role assignments saved." });
+      setMatrix(data?.rolePermissions ?? {});
+      setNotice({ kind: "success", text: "Roles and permissions saved — changes apply immediately." });
     } finally {
       setBusy(false);
     }
   }
 
-  async function remove(email: string) {
+  function remove(email: string) {
     setAssignments((prev) => (prev ?? []).filter((row) => row.email !== email));
   }
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Roles</h2>
+        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Roles &amp; Permissions</h2>
         <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
-          Assign roles by admin email. super-admin manages admins and system; admin manages content; moderator manages reviews.
+          Assign a role to each admin by email and configure what each role may manage. Permission changes are enforced on the server immediately.
         </p>
       </header>
 
+      {/* Role permission matrix */}
+      <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">Role permissions</h3>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wide text-zinc-400">
+                <th className="pb-2 pr-4">Role</th>
+                {PERMISSIONS.map((permission) => (
+                  <th key={permission.value} className="px-2 pb-2 text-center">{permission.value.replace("manage", "")}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {ROLES.map((role) => (
+                <tr key={role.value} className="border-t border-neutral-100 admin-dark:border-zinc-800">
+                  <td className="py-2 pr-4">
+                    <span className="text-xs font-bold text-zinc-900 admin-dark:text-zinc-100">{role.label}</span>
+                  </td>
+                  {PERMISSIONS.map((permission) => {
+                    const checked =
+                      role.value === "super-admin" ||
+                      Boolean(matrix?.[role.value]?.includes(permission.value));
+                    return (
+                      <td key={permission.value} className="px-2 py-2 text-center" title={permission.label}>
+                        <input
+                          type="checkbox"
+                          aria-label={`${role.label}: ${permission.label}`}
+                          disabled={role.value === "super-admin"}
+                          checked={checked}
+                          onChange={() => togglePermission(role.value, permission.value)}
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-xs text-zinc-500 admin-dark:text-zinc-400">Super Admin always has every permission.</p>
+      </div>
+
+      {/* Email → role assignments */}
       <form
-        className={`${cardClass} mt-5 flex flex-wrap gap-2 p-4`}
+        className={`${cardClass} mt-4 flex flex-wrap gap-2 p-4`}
         onSubmit={(event) => {
           event.preventDefault();
           const normalized = email.trim().toLowerCase();
@@ -92,7 +184,7 @@ export default function RolesPage() {
           setAssignments((prev) =>
             (prev ?? []).some((row) => row.email === normalized)
               ? prev
-              : [...(prev ?? []), { email: normalized, role: "admin", permissions: ["manageContent"] }],
+              : [...(prev ?? []), { email: normalized, role: DEFAULT_ROLE, permissions: matrix?.[DEFAULT_ROLE] ?? [] }],
           );
           setEmail("");
         }}
@@ -115,7 +207,7 @@ export default function RolesPage() {
               className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs font-bold admin-dark:border-zinc-700 admin-dark:bg-zinc-800"
             >
               {ROLES.map((role) => (
-                <option key={role} value={role}>{role}</option>
+                <option key={role.value} value={role.value}>{role.label}</option>
               ))}
             </select>
             <button type="button" onClick={() => void remove(assignment.email)} className={buttonSecondaryClass}>
@@ -125,14 +217,14 @@ export default function RolesPage() {
         ))}
         {(assignments ?? []).length === 0 && assignments !== null && (
           <p className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
-            No role assignments yet — every admin defaults to full access.
+            No role assignments yet — admins without an assignment default to the Admin role.
           </p>
         )}
       </div>
 
-      {(assignments ?? []).length > 0 && (
+      {((assignments ?? []).length > 0 || matrix !== null) && (
         <button type="button" onClick={() => void save()} disabled={busy} className={`${buttonPrimaryClass} mt-5`}>
-          {busy ? "Saving…" : "Save Roles"}
+          {busy ? "Saving…" : "Save Changes"}
         </button>
       )}
 

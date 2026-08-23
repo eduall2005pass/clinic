@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
 import { fetchActivityLogs } from "@/lib/administration";
 
 export const dynamic = "force-dynamic";
 
 /** System → Logs — tail of the admin activity log. */
 export async function GET(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageAdmins");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

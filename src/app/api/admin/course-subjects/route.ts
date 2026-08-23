@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
+import { logAdminAction } from "@/lib/administration";
 import {
   deleteTaxonomyItem,
   fetchCourseOptions,
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 /** GET → { subjects: [{ id, name, isActive, assignedCourseSlugs }], courses: [{ slug, name }] }. */
 export async function GET(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
  * Handles create, rename, enable/disable and display order in one shot.
  */
 export async function PUT(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -66,6 +67,7 @@ export async function PUT(request: NextRequest) {
     // Preserve assignment data on the bulk-saved rows.
     const byId = new Map(detailed.map((s) => [s.id, s]));
     const merged = subjects.map((s) => byId.get(s.id) ?? s);
+    await logAdminAction(admin, "subject.save", "bulk update", request);
     return NextResponse.json({ subjects: merged });
   } catch (error) {
     const message =
@@ -76,7 +78,7 @@ export async function PUT(request: NextRequest) {
 
 /** PATCH — single-subject edit/assign: { id, name?, isActive?, assignedCourseSlugs? }. */
 export async function PATCH(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -92,6 +94,7 @@ export async function PATCH(request: NextRequest) {
       patch.assignedCourseSlugs = body.assignedCourseSlugs.map(String);
     }
     const subjects = await updateCourseSubject(body.id, patch);
+    await logAdminAction(admin, "subject.update", body.id, request);
     return NextResponse.json({ subjects });
   } catch (error) {
     const message =
@@ -101,7 +104,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -110,6 +113,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Missing subject id." }, { status: 400 });
   }
   await deleteTaxonomyItem("course_subjects", body.id);
+  await logAdminAction(admin, "subject.delete", body.id, request);
   const subjects = await fetchCourseSubjectDetails();
   return NextResponse.json({ subjects });
 }

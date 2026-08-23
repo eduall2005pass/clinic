@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
 import { fetchAllFaqs, fetchPublishedFaqs, saveFaqs } from "@/lib/faq-store";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   if (url.searchParams.get("all") === "1") {
-    const admin = await requireAdmin(request);
+    const admin = await requirePermission(request, "manageContent");
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
 /** Replace the full FAQ list (add / edit / delete / toggle / reorder). */
 export async function PUT(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageContent");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
+import { logAdminAction } from "@/lib/administration";
 import {
   fetchChapters,
   saveChapter,
@@ -11,7 +12,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 /** Create a chapter: { name, subjectId }. */
 export async function POST(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const chapters = await saveChapter(body);
+    await logAdminAction(admin, "chapter.save", String(body.id ?? body.name ?? ""), request);
     return NextResponse.json({ chapters });
   } catch (error) {
     const message =
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
 
 /** Single-chapter update: { id, name?, subjectId?, isActive? }. */
 export async function PATCH(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -60,6 +62,7 @@ export async function PATCH(request: NextRequest) {
     if (typeof body.subjectId === "string") patch.subjectId = body.subjectId;
     if (typeof body.isActive === "boolean") patch.isActive = body.isActive;
     const chapters = await updateChapter(body.id, patch);
+    await logAdminAction(admin, "chapter.update", body.id, request);
     return NextResponse.json({ chapters });
   } catch (error) {
     const message =
@@ -70,7 +73,7 @@ export async function PATCH(request: NextRequest) {
 
 /** Change display order: { order: [id, …] }. */
 export async function PUT(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -89,6 +92,7 @@ export async function PUT(request: NextRequest) {
   }
   try {
     const chapters = await reorderChapters(body.order as string[]);
+    await logAdminAction(admin, "chapter.update", "reorder", request);
     return NextResponse.json({ chapters });
   } catch (error) {
     const message =
@@ -98,7 +102,7 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -107,5 +111,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Missing chapter id." }, { status: 400 });
   }
   const chapters = await deleteChapter(body.id);
+  await logAdminAction(admin, "chapter.delete", body.id, request);
   return NextResponse.json({ chapters });
 }

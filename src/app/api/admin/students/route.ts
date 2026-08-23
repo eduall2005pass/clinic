@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
+import { logAdminAction } from "@/lib/administration";
 import {
   fetchStudents,
   fetchStudentDetail,
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 /** List students (search + status filter) or fetch a single student's details. */
 export async function GET(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageStudents");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
 /** Activate / deactivate a student account. */
 export async function PUT(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageStudents");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -66,6 +67,8 @@ export async function PUT(request: NextRequest) {
       { status: 500 },
     );
   }
+
+  await logAdminAction(admin, `student.${body.isActive ? "restore" : "delete"}`, body.uid, request);
 
   return NextResponse.json({
     message: body.isActive

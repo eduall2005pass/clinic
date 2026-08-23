@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
+import { logAdminAction } from "@/lib/administration";
 import { fetchResults, deleteResult } from "@/lib/exams-admin";
 
 export const dynamic = "force-dynamic";
 
 /** ?examId=... — submitted results for an exam (or all). */
 export async function GET(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageExams");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageExams");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -29,5 +30,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Missing result id." }, { status: 400 });
   }
   await deleteResult(id);
+  await logAdminAction(admin, "result.delete", `#${id}`, request);
   return NextResponse.json({ ok: true });
 }

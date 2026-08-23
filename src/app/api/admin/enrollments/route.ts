@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
 import {
   fetchEnrollmentsAdmin,
   setEnrollmentStatus,
@@ -7,6 +7,7 @@ import {
   deleteEnrollment,
 } from "@/lib/enrollments-admin";
 import type { EnrollmentStatus } from "@/lib/enrollments";
+import { logAdminAction } from "@/lib/administration";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ const STATUSES: EnrollmentStatus[] = [
 
 /** List enrollments (search + status filter). */
 export async function GET(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
 
 /** Assign a course to a student. */
 export async function POST(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -68,12 +69,13 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
-  return NextResponse.json({ message: "Course assigned and activated." });
+    await logAdminAction(admin, "enrollment.save", String(body.studentUid), request);
+return NextResponse.json({ message: "Course assigned and activated." });
 }
 
 /** Approve / cancel / complete an enrollment. */
 export async function PUT(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -98,12 +100,13 @@ export async function PUT(request: NextRequest) {
       { status: 500 },
     );
   }
-  return NextResponse.json({ message: `Enrollment marked as ${body.status}.` });
+    await logAdminAction(admin, `enrollment.update`, `#${id} → ${String(body.status)}`, request);
+return NextResponse.json({ message: `Enrollment marked as ${body.status}.` });
 }
 
 /** Permanently remove a course access record. */
 export async function DELETE(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -121,5 +124,6 @@ export async function DELETE(request: NextRequest) {
       { status: 500 },
     );
   }
-  return NextResponse.json({ message: "Course access removed." });
+    await logAdminAction(admin, "enrollment.delete", `#${id}`, request);
+return NextResponse.json({ message: "Course access removed." });
 }

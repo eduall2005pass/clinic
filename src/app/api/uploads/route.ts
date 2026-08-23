@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
 import { saveFile, isLocalUpload, removeFile } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ const MAX_FILE_BYTES = 512 * 1024 * 1024;
 
 /** Generic admin media upload: multipart { file, dir?, previousUrl? }. */
 export async function POST(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageContent");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

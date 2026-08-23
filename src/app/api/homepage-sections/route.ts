@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
 import { fetchHomepageSections, saveHomepageSections } from "@/lib/homepage-sections";
 import {
   isValidHomepageSectionKey,
@@ -15,7 +15,7 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageContent");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

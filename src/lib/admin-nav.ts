@@ -17,12 +17,25 @@ export type AdminSubSection = {
   href: string;
 };
 
+/**
+ * Permission category required to see/use a nav section.
+ * null = available to every signed-in admin (e.g. profile).
+ */
+export type AdminNavPermission =
+  | "manageContent"
+  | "manageCourses"
+  | "manageExams"
+  | "manageStudents"
+  | "manageAdmins"
+  | null;
+
 export type AdminCategory = {
   name: string;
   href: string;
   description: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   subsections: AdminSubSection[];
+  permission: AdminNavPermission;
 };
 
 export const adminCategories: AdminCategory[] = [
@@ -31,6 +44,7 @@ export const adminCategories: AdminCategory[] = [
     href: "/admin/website",
     description: "Control the complete public website.",
     icon: WebsiteIcon,
+    permission: "manageContent",
     subsections: [
       { label: "General Settings", href: "/admin/settings" },
       { label: "Logo & Favicon", href: "/admin/website/logo-favicon" },
@@ -54,6 +68,7 @@ export const adminCategories: AdminCategory[] = [
     href: "/admin/courses",
     description: "Manage courses, subjects, chapters, classes and pricing.",
     icon: CoursesIcon,
+    permission: "manageCourses",
     subsections: [
       { label: "All Courses", href: "/admin/courses/all" },
       { label: "SSC Academic", href: "/admin/courses/ssc" },
@@ -74,6 +89,7 @@ export const adminCategories: AdminCategory[] = [
     href: "/admin/students",
     description: "Manage students, enrollments and account activity.",
     icon: StudentsIcon,
+    permission: "manageStudents",
     subsections: [
       { label: "All Students", href: "/admin/students/all" },
       { label: "Student Details", href: "/admin/students/details" },
@@ -88,6 +104,7 @@ export const adminCategories: AdminCategory[] = [
     description:
       "Manage public exams, enrolled exams, questions and results.",
     icon: ExamsIcon,
+    permission: "manageExams",
     subsections: [
       { label: "Public Exams", href: "/admin/exams/public" },
       { label: "Enrolled Exams", href: "/admin/exams/enrolled" },
@@ -102,6 +119,7 @@ export const adminCategories: AdminCategory[] = [
     href: "/admin/mentors",
     description: "Manage mentor profiles and information.",
     icon: MentorsIcon,
+    permission: "manageContent",
     subsections: [
       { label: "All Mentors", href: "/admin/mentors/all" },
       { label: "Mentor Profiles", href: "/admin/mentors/profiles" },
@@ -113,6 +131,7 @@ export const adminCategories: AdminCategory[] = [
     description:
       "Manage reviews, FAQ, notifications, announcements and media.",
     icon: MegaphoneIcon,
+    permission: "manageContent",
     subsections: [
       { label: "Reviews", href: "/admin/content/reviews" },
       { label: "FAQ", href: "/admin/content/faq" },
@@ -129,6 +148,7 @@ export const adminCategories: AdminCategory[] = [
     description:
       "Manage offers, promotional banners, featured courses and campaigns.",
     icon: TargetIcon,
+    permission: "manageCourses",
     subsections: [
       { label: "Promotional Banners", href: "/admin/marketing/banners" },
       { label: "Featured Courses", href: "/admin/marketing/featured-courses" },
@@ -142,6 +162,7 @@ export const adminCategories: AdminCategory[] = [
     href: "/admin/administration",
     description: "Manage admins, permissions, security and activity logs.",
     icon: LockIcon,
+    permission: "manageAdmins",
     subsections: [
       { label: "Admin Management", href: "/admin/administration/admins" },
       { label: "Roles & Permissions", href: "/admin/administration/roles" },
@@ -155,6 +176,7 @@ export const adminCategories: AdminCategory[] = [
     description:
       "Manage system-level settings, storage, cache, backup and logs.",
     icon: ServerIcon,
+    permission: "manageAdmins",
     subsections: [
       { label: "System Status", href: "/admin/system/status" },
       { label: "Storage", href: "/admin/system/storage" },
@@ -170,6 +192,7 @@ export const adminProfileCategory: AdminCategory = {
   href: "/admin/profile",
   description: "View and manage your administrator account.",
   icon: UserShieldIcon,
+  permission: null,
   subsections: [
     { label: "Profile Information", href: "/admin/profile" },
     { label: "Profile Picture", href: "/admin/profile/picture" },

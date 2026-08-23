@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getFirebaseUser } from "@/lib/auth-api";
 import { query, isMysqlConfigured } from "@/lib/mysql";
+import { resolveAdminPermissions, type AdminPermission } from "@/lib/administration";
 import type { DecodedIdToken } from "firebase-admin/auth";
 
 export type AdminAccount = {
@@ -19,12 +20,23 @@ export async function isAdminUid(uid: string): Promise<boolean> {
   if (!isMysqlConfigured) return false;
   try {
     const rows = await query<{ uid: string }[]>(
-      "SELECT uid FROM admins WHERE uid = ? LIMIT 1",
+      // Inactive admins are no longer authorized — see Admin Management.
+      "SELECT uid FROM admins WHERE uid = ? AND is_active = 1 LIMIT 1",
       [uid],
     );
     return rows.length > 0;
   } catch {
-    return false;
+    // Migration (src/sql/admins-management-migration.sql) may not be
+    // applied yet — fall back to plain lookup so nobody gets locked out.
+    try {
+      const rows = await query<{ uid: string }[]>(
+        "SELECT uid FROM admins WHERE uid = ? LIMIT 1",
+        [uid],
+      );
+      return rows.length > 0;
+    } catch {
+      return false;
+    }
   }
 }
 
@@ -60,4 +72,19 @@ export async function requireAdmin(
   const user = await getFirebaseUser(request);
   if (!user) return null;
   return (await isAdminUid(user.uid)) ? user : null;
+}
+
+/**
+ * Role-based gate: like requireAdmin, but additionally enforces that the
+ * admin's role grants the requested permission. Returns null when the
+ * caller is not an admin or lacks the permission.
+ */
+export async function requirePermission(
+  request: NextRequest,
+  permission: AdminPermission,
+): Promise<DecodedIdToken | null> {
+  const user = await requireAdmin(request);
+  if (!user) return null;
+  const { permissions } = await resolveAdminPermissions(user.email);
+  return permissions.includes(permission) ? user : null;
 }

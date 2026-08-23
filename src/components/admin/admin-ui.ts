@@ -10,6 +10,10 @@ export type AdminGate = {
   token: string | null;
   /** Auth headers for admin API calls. */
   headers: Record<string, string>;
+  /** Current admin's role ("super-admin", "admin", …) — null while loading. */
+  role: string | null;
+  /** Permission categories granted by the admin's role. */
+  permissions: string[];
 };
 
 /** Shared admin access gate — verifies the signed-in user is an admin. */
@@ -17,6 +21,8 @@ export function useAdminGate(): AdminGate {
   const { user, authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<string[]>([]);
 
   // Admin check — runs once per signed-in user.
   useEffect(() => {
@@ -30,9 +36,16 @@ export function useAdminGate(): AdminGate {
           cache: "no-store",
         });
         const data = (await response.json().catch(() => null)) as
-          | { isAdmin?: boolean }
+          | { isAdmin?: boolean; role?: string; permissions?: string[] }
           | null;
-        if (!cancelled) setIsAdmin(Boolean(response.ok && data?.isAdmin));
+        if (cancelled) return;
+        if (response.ok && data?.isAdmin) {
+          setIsAdmin(true);
+          setRole(data.role ?? "admin");
+          setPermissions(Array.isArray(data.permissions) ? data.permissions : []);
+        } else {
+          setIsAdmin(false);
+        }
       } catch {
         if (!cancelled) setIsAdmin(false);
       }
@@ -60,7 +73,18 @@ export function useAdminGate(): AdminGate {
     denied,
     token,
     headers: token ? { Authorization: `Bearer ${token}` } : {},
+    role,
+    permissions,
   };
+}
+
+/** Client-side convenience: does the current admin's role grant a permission? */
+export function hasAdminPermission(
+  gate: Pick<AdminGate, "role" | "permissions">,
+  permission: string,
+): boolean {
+  if (gate.role === "super-admin") return true;
+  return gate.permissions.includes(permission);
 }
 
 export type Notice = { kind: "success" | "error"; text: string };

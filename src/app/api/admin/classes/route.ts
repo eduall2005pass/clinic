@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
+import { logAdminAction } from "@/lib/administration";
 import { fetchClasses, saveClass, deleteClass } from "@/lib/courses-admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const classes = await saveClass(body);
+    await logAdminAction(admin, "class.save", String(body.id ?? body.title ?? ""), request);
     return NextResponse.json({ classes });
   } catch (error) {
     const message =
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -47,5 +49,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Missing class id." }, { status: 400 });
   }
   const classes = await deleteClass(body.id);
+  await logAdminAction(admin, "class.delete", body.id, request);
   return NextResponse.json({ classes });
 }
