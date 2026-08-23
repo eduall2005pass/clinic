@@ -93,12 +93,19 @@ export async function deletePushToken(token: string): Promise<void> {
   await exec(`DELETE FROM push_tokens WHERE token = ?`, [token]);
 }
 
-/** All stored subscriptions (admin view). */
-export async function fetchPushSubscriptions(): Promise<PushSubscription[]> {
+/** All stored subscriptions, optionally filtered to one user (admin view). */
+export async function fetchPushSubscriptions(
+  targetUid?: string,
+): Promise<PushSubscription[]> {
   await ensureTable();
-  const rows = await query<PushTokenRow[]>(
-    `SELECT token, uid, email, user_agent, created_at FROM push_tokens ORDER BY created_at DESC LIMIT 1000`,
-  );
+  const rows = targetUid
+    ? await query<PushTokenRow[]>(
+        `SELECT token, uid, email, user_agent, created_at FROM push_tokens WHERE uid = ? ORDER BY created_at DESC LIMIT 1000`,
+        [targetUid],
+      )
+    : await query<PushTokenRow[]>(
+        `SELECT token, uid, email, user_agent, created_at FROM push_tokens ORDER BY created_at DESC LIMIT 1000`,
+      );
   return rows.map((row) => ({
     token: row.token,
     uid: row.uid,
@@ -108,6 +115,17 @@ export async function fetchPushSubscriptions(): Promise<PushSubscription[]> {
   }));
 }
 
+/** Resolve a student's Firebase UID from their email. */
+export async function resolveStudentUidByEmail(
+  email: string,
+): Promise<string | null> {
+  const rows = await query<{ uid: string }[]>(
+    `SELECT uid FROM students WHERE email = ? LIMIT 1`,
+    [email.trim().toLowerCase()],
+  );
+  return rows[0]?.uid ?? null;
+}
+
 export type PushSendResult = {
   sent: number;
   failed: number;
@@ -115,19 +133,21 @@ export type PushSendResult = {
 };
 
 /**
- * Broadcast a notification to every registered token. Tokens that FCM
- * reports as invalid/unregistered are pruned from the table.
+ * Send a notification — to every registered token when no targetUid is
+ * given (broadcast), otherwise only to that user's devices. Tokens that
+ * FCM reports as invalid/unregistered are pruned from the table.
  */
-export async function sendPushToAll(input: {
+export async function sendPush(input: {
   title: string;
   body: string;
   url?: string;
+  targetUid?: string;
 }): Promise<PushSendResult> {
   const messaging = getMessagingInstance();
   if (!messaging) {
     throw new Error("Firebase Admin is not configured.");
   }
-  const subscriptions = await fetchPushSubscriptions();
+  const subscriptions = await fetchPushSubscriptions(input.targetUid);
   const result: PushSendResult = { sent: 0, failed: 0, total: subscriptions.length };
   if (subscriptions.length === 0) return result;
   const staleTokens: string[] = [];
