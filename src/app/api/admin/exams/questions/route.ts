@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { logAdminAction } from "@/lib/administration";
-import { fetchQuestions, saveQuestion, deleteQuestion } from "@/lib/exams-admin";
+import {
+  attachBankQuestion,
+  fetchQuestions,
+  saveQuestion,
+  deleteQuestion,
+} from "@/lib/exams-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +39,29 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save the question.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+/** PATCH — attach a copy of a bank question to an exam: { id, examId }. */
+export async function PATCH(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => null)) as { id?: unknown; examId?: unknown } | null;
+  const id = Number(body?.id);
+  const examId = typeof body?.examId === "string" ? body.examId : "";
+  if (!Number.isInteger(id) || !examId) {
+    return NextResponse.json({ error: "Missing question id or exam id." }, { status: 400 });
+  }
+  try {
+    const questions = await attachBankQuestion(id, examId);
+    await logAdminAction(admin, "question.attach", `question=${id} exam=${examId}`, request);
+    return NextResponse.json({ questions });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to attach the question.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

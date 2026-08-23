@@ -401,25 +401,70 @@ export async function saveQuestion(
     throw new Error("Correct answer index is out of range.");
   }
   const examId = asString(input.examId) || null;
+  const values = [
+    examId,
+    asString(input.subject),
+    text,
+    JSON.stringify(options),
+    correctIndex,
+    asString(input.explanation) || null,
+    Math.max(0.5, Number(input.marks) || 1),
+    input.isActive === false ? 0 : 1,
+  ];
+
+  const existingId = Number(input.id);
+  if (Number.isInteger(existingId) && existingId > 0) {
+    // Update an existing question (possibly moving it between exams/bank).
+    const current = await query<{ exam_id: string | null }[]>(
+      `SELECT exam_id FROM exam_questions WHERE id = ? LIMIT 1`,
+      [existingId],
+    );
+    if (!current[0]) throw new Error("Question not found.");
+    await exec(
+      `UPDATE exam_questions SET exam_id = ?, bank_subject = ?, question = ?,
+         options = ?, correct_index = ?, explanation = ?, marks = ?, is_active = ?
+       WHERE id = ?`,
+      [...values, existingId],
+    );
+    await recomputeExamTotals(current[0].exam_id);
+    await recomputeExamTotals(examId);
+    return fetchQuestions({ examId: examId ?? "bank", subject: asString(input.subject) });
+  }
+
   await exec(
     `INSERT INTO exam_questions (exam_id, bank_subject, question, options, correct_index, explanation, marks, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE exam_id = VALUES(exam_id), bank_subject = VALUES(bank_subject),
-       question = VALUES(question), options = VALUES(options), correct_index = VALUES(correct_index),
-       explanation = VALUES(explanation), marks = VALUES(marks), is_active = VALUES(is_active)`,
-    [
-      examId,
-      asString(input.subject),
-      text,
-      JSON.stringify(options),
-      correctIndex,
-      asString(input.explanation) || null,
-      Math.max(0.5, Number(input.marks) || 1),
-      input.isActive === false ? 0 : 1,
-    ],
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    values,
   );
   await recomputeExamTotals(examId);
   return fetchQuestions({ examId: examId ?? "bank", subject: asString(input.subject) });
+}
+
+/** Attach a copy of a reusable bank question to an exam. */
+export async function attachBankQuestion(
+  questionId: number,
+  examId: string,
+): Promise<ExamQuestion[]> {
+  await ensureTables();
+  if (!/^[a-z0-9-]{2,64}$/.test(examId)) {
+    throw new Error("Invalid exam id.");
+  }
+  const source = await query<
+    { bank_subject: string; question: string; options: string; correct_index: number; explanation: string | null; marks: string | number }[]
+  >(
+    `SELECT bank_subject, question, options, correct_index, explanation, marks
+     FROM exam_questions WHERE id = ? AND exam_id IS NULL LIMIT 1`,
+    [questionId],
+  );
+  const src = source[0];
+  if (!src) throw new Error("Bank question not found.");
+  await exec(
+    `INSERT INTO exam_questions (exam_id, bank_subject, question, options, correct_index, explanation, marks, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+    [examId, src.bank_subject, src.question, src.options, src.correct_index, src.explanation, Math.max(0.5, Number(src.marks) || 1)],
+  );
+  await recomputeExamTotals(examId);
+  return fetchQuestions({ examId });
 }
 
 export async function deleteQuestion(id: number): Promise<void> {

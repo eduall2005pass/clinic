@@ -9,6 +9,7 @@ import {
   inputClass,
   labelClass,
   buttonPrimaryClass,
+  buttonSecondaryClass,
   buttonDangerClass,
   type Notice,
 } from "@/components/admin/admin-ui";
@@ -39,6 +40,7 @@ export default function QuestionBankPage() {
   });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -69,7 +71,11 @@ export default function QuestionBankPage() {
       const response = await fetch("/api/admin/exams/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...gate.headers },
-        body: JSON.stringify({ ...form, marks: Number(form.marks) || 1 }),
+        body: JSON.stringify({
+          ...(editingId ? { id: editingId } : {}),
+          ...form,
+          marks: Number(form.marks) || 1,
+        }),
       });
       const data = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) {
@@ -77,11 +83,27 @@ export default function QuestionBankPage() {
         return;
       }
       setForm({ subject: form.subject, question: "", options: EMPTY_OPTIONS, correctIndex: 0, explanation: "", marks: "1" });
+      setEditingId(null);
       await load();
-      setNotice({ kind: "success", text: "Question added to the bank." });
+      setNotice({ kind: "success", text: editingId ? "Question updated." : "Question added to the bank." });
     } finally {
       setBusy(false);
     }
+  }
+
+  function startEdit(question: Question) {
+    if (question.id === null) return;
+    setForm({
+      subject: question.subject,
+      question: question.question,
+      options: [...question.options],
+      correctIndex: question.correctIndex,
+      explanation: question.explanation ?? "",
+      marks: String(question.marks),
+    });
+    setEditingId(question.id);
+    setNotice(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function remove(id: number) {
@@ -109,7 +131,9 @@ export default function QuestionBankPage() {
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">Add question</h3>
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+          {editingId ? "Edit question" : "Add question"}
+        </h3>
         <form
           className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]"
           onSubmit={(event) => {
@@ -160,8 +184,18 @@ export default function QuestionBankPage() {
             <textarea id="qb-explain" rows={2} className={inputClass} value={form.explanation}
               onChange={(event) => setForm({ ...form, explanation: event.target.value })} />
           </div>
-          <div className="sm:col-span-2">
-            <button type="submit" disabled={busy} className={buttonPrimaryClass}>{busy ? "Saving…" : "Add to Bank"}</button>
+          <div className="sm:col-span-2 flex gap-3">
+            <button type="submit" disabled={busy} className={buttonPrimaryClass}>
+              {busy ? "Saving…" : editingId ? "Update Question" : "Add to Bank"}
+            </button>
+            {editingId && (
+              <button type="button" disabled={busy} className={buttonSecondaryClass}
+                onClick={() => {
+                  setEditingId(null);
+                  setForm({ subject: form.subject, question: "", options: EMPTY_OPTIONS, correctIndex: 0, explanation: "", marks: "1" });
+                  setNotice(null);
+                }}>Cancel</button>
+            )}
           </div>
         </form>
       </div>
@@ -171,6 +205,8 @@ export default function QuestionBankPage() {
           <li key={question.id} className={`${cardClass} p-4`}>
             <div className="flex items-start justify-between gap-3">
               <p className="min-w-0 flex-1 text-sm font-semibold text-zinc-900 admin-dark:text-zinc-100">{question.question}</p>
+              <button type="button" disabled={busy} className={buttonSecondaryClass}
+                onClick={() => startEdit(question)}>Edit</button>
               <button type="button" disabled={busy} aria-label="Delete question" className={buttonDangerClass}
                 onClick={() => question.id !== null && void remove(question.id)}>✕</button>
             </div>

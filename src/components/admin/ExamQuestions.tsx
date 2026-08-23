@@ -40,6 +40,7 @@ export default function ExamQuestions({
   onChanged?: () => void;
 }) {
   const [questions, setQuestions] = useState<ExamQuestion[] | null>(null);
+  const [bankQuestions, setBankQuestions] = useState<ExamQuestion[] | null>(null);
   const [form, setForm] = useState({
     subject: exam.subject || "",
     question: "",
@@ -64,9 +65,24 @@ export default function ExamQuestions({
     }
   }, [exam.id]);
 
+  // Reusable bank questions (same subject first) available to attach.
+  const loadBank = useCallback(async () => {
+    try {
+      const query = exam.subject
+        ? `?examId=bank&subject=${encodeURIComponent(exam.subject)}`
+        : "?examId=bank";
+      const response = await fetch(`/api/admin/exams/questions${query}`, { cache: "no-store" });
+      const data = (await response.json()) as { questions?: ExamQuestion[] };
+      setBankQuestions(data.questions ?? []);
+    } catch {
+      setBankQuestions([]);
+    }
+  }, [exam.subject]);
+
   useEffect(() => {
     void Promise.resolve().then(load);
-  }, [load]);
+    void Promise.resolve().then(loadBank);
+  }, [load, loadBank]);
 
   async function addQuestion() {
     setError(null);
@@ -113,6 +129,27 @@ export default function ExamQuestions({
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ id }),
       });
+      await load();
+      onChanged?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function attachFromBank(id: number) {
+    setError(null);
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/exams/questions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ id, examId: exam.id }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setError(data?.error ?? "Failed to attach the question.");
+        return;
+      }
       await load();
       onChanged?.();
     } finally {
@@ -244,6 +281,39 @@ export default function ExamQuestions({
             </button>
           </div>
         </form>
+
+        {/* Assign questions from the reusable bank */}
+        <h4 className="mt-6 text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+          Assign from question bank
+          {exam.subject ? ` · ${exam.subject}` : ""}
+        </h4>
+        <ul className="mt-3 space-y-2">
+          {(bankQuestions ?? []).map((question) => (
+            <li key={`bank-${question.id}`} className={`${cardClass} flex items-center gap-3 p-3`}>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-semibold text-zinc-900 admin-dark:text-zinc-100">
+                  {question.question}
+                </span>
+                <span className="block text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+                  {question.subject || "general"} · {question.marks} marks
+                </span>
+              </span>
+              <button
+                type="button"
+                disabled={busy}
+                className={buttonSecondaryClass}
+                onClick={() => question.id !== null && void attachFromBank(question.id)}
+              >
+                + Attach
+              </button>
+            </li>
+          ))}
+          {(bankQuestions ?? []).length === 0 && bankQuestions !== null && (
+            <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+              No bank questions available{exam.subject ? " for this subject" : ""}.
+            </li>
+          )}
+        </ul>
 
         {/* Existing questions */}
         <ul className="mt-6 space-y-3 border-t border-neutral-200 pt-5 admin-dark:border-zinc-800">
