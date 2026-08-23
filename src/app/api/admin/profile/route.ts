@@ -5,6 +5,8 @@ import {
   updateAdminProfile,
   saveAdminPhoto,
   fetchLoginActivity,
+  fetchAdminRole,
+  fetchLastLogin,
 } from "@/lib/admin-profile";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +35,12 @@ export async function GET(request: NextRequest) {
     };
   }
   return NextResponse.json(
-    { profile },
+    {
+      profile,
+      status: "active",
+      role: await fetchAdminRole(profile.email),
+      lastLoginAt: await fetchLastLogin(admin.uid),
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

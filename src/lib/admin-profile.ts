@@ -132,6 +132,38 @@ export async function fetchLoginActivity(
   }
 }
 
+/** Role for this admin from the admin_roles table — null when none set. */
+export async function fetchAdminRole(email: string | null): Promise<string | null> {
+  if (!email) return null;
+  try {
+    const rows = await query<{ role: string }[]>(
+      "SELECT role FROM admin_roles WHERE email = ? LIMIT 1",
+      [email],
+    );
+    return rows[0]?.role ?? null;
+  } catch {
+    // Table may not exist yet on older databases.
+    return null;
+  }
+}
+
+/** Most recent successful login timestamp for this admin. */
+export async function fetchLastLogin(uid: string): Promise<string | null> {
+  try {
+    const rows = await query<{ created_at: Date | string }[]>(
+      `SELECT created_at FROM admin_activity_logs
+       WHERE admin_uid = ? AND action = 'login'
+       ORDER BY created_at DESC LIMIT 1`,
+      [uid],
+    );
+    const value = rows[0]?.created_at;
+    if (!value) return null;
+    return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  } catch {
+    return null;
+  }
+}
+
 // ── System module ────────────────────────────────────────────────────────
 
 export type SystemStatus = {
