@@ -5,17 +5,19 @@ import {
   fetchExams,
   saveExam,
   deleteExam,
+  setExamStatus,
+  EXAM_KINDS,
   type ExamKind,
+  type ExamStatus,
 } from "@/lib/exams-admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const kindParam = request.nextUrl.searchParams.get("kind");
-  const kind =
-    kindParam === "public" || kindParam === "practice"
-      ? (kindParam as ExamKind)
-      : undefined;
+  const kind = EXAM_KINDS.includes(kindParam as ExamKind)
+    ? (kindParam as ExamKind)
+    : undefined;
   const exams = await fetchExams(kind);
   return NextResponse.json(
     { exams },
@@ -43,6 +45,32 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save the exam.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+/** Quick publish/unpublish/close: { id, status }. */
+export async function PATCH(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || typeof body.id !== "string" || !body.id) {
+    return NextResponse.json({ error: "Missing exam id." }, { status: 400 });
+  }
+  const status = String(body.status);
+  if (!["draft", "published", "closed"].includes(status)) {
+    return NextResponse.json({ error: "Invalid status." }, { status: 400 });
+  }
+  try {
+    await setExamStatus(body.id, status as ExamStatus);
+    await logAdminAction(admin, "exam.status", `id=${body.id} status=${status}`, request);
+    const exams = await fetchExams();
+    return NextResponse.json({ exams });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to update the exam.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

@@ -43,8 +43,15 @@ function formatExamTime(iso: string): string {
 
 function deriveStatus(exam: Exam): ExamStatus {
   if (exam.status === "closed") return "Closed";
-  if (exam.scheduledAt && new Date(exam.scheduledAt).getTime() > Date.now()) {
+  const now = Date.now();
+  const startsAt = exam.scheduledAt ? new Date(exam.scheduledAt).getTime() : null;
+  const endsAt = exam.endsAt ? new Date(exam.endsAt).getTime() : null;
+  // Before the start time → Upcoming; after the end time (when set) → Closed.
+  if (startsAt !== null && !Number.isNaN(startsAt) && startsAt > now) {
     return "Upcoming";
+  }
+  if (endsAt !== null && !Number.isNaN(endsAt) && endsAt < now) {
+    return "Closed";
   }
   return "Live";
 }
@@ -77,11 +84,12 @@ function toPublicExam(exam: Exam): PublicExam {
 /**
  * Live exam catalog for the public site — reads published/closed exams
  * straight from MySQL so admin-panel edits show up immediately.
+ * Enrolled exams are excluded — they are gated by course enrollment.
  */
 export async function fetchPublicExams(): Promise<PublicExam[]> {
   const exams = await fetchExams();
   return exams
-    .filter((exam) => exam.status !== "draft")
+    .filter((exam) => exam.status !== "draft" && exam.kind !== "enrolled")
     .map(toPublicExam);
 }
 

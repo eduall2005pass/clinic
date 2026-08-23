@@ -18,7 +18,7 @@ import ExamQuestions from "@/components/admin/ExamQuestions";
 export type Exam = {
   id: string;
   title: string;
-  kind: "public" | "practice";
+  kind: "public" | "practice" | "enrolled";
   batchId: string;
   subject: string;
   courseType: "Academic" | "Admission";
@@ -28,34 +28,45 @@ export type Exam = {
   questionCount: number;
   status: "draft" | "published" | "closed";
   scheduledAt: string | null;
+  endsAt: string | null;
   answerKey: Record<string, number> | null;
+  courseIds?: string[];
 };
 
 const EMPTY = {
   id: "",
   title: "",
-  kind: "public" as "public" | "practice",
+  kind: "public" as Exam["kind"],
   batchId: "hsc-28",
   subject: "",
   courseType: "Academic" as "Academic" | "Admission",
   durationMinutes: "30",
   negativeMarks: "0.25",
+  totalMarks: "",
   status: "draft" as "draft" | "published" | "closed",
   scheduledAt: "",
+  endsAt: "",
 };
+
+type CourseOption = { slug: string; name: string };
 
 export default function ExamManager({
   title,
   description,
   kindFilter,
+  allowEnrolled = false,
 }: {
   title: string;
   description: string;
-  kindFilter?: "public" | "practice";
+  kindFilter?: "public" | "practice" | "enrolled";
+  /** Show the "Enrolled" kind + course assignment picker. */
+  allowEnrolled?: boolean;
 }) {
   const gate = useAdminGate();
   const [exams, setExams] = useState<Exam[] | null>(null);
   const [form, setForm] = useState(EMPTY);
+  const [courseIds, setCourseIds] = useState<string[]>([]);
+  const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -77,6 +88,15 @@ export default function ExamManager({
     if (gate.ready) void Promise.resolve().then(load);
   }, [gate.ready, load]);
 
+  // Course options for the enrolled-exam assignment picker.
+  useEffect(() => {
+    if (!gate.ready || !allowEnrolled) return;
+    fetch("/api/admin/course-subjects", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data: { courses?: CourseOption[] }) => setCourseOptions(data.courses ?? []))
+      .catch(() => setCourseOptions([]));
+  }, [gate.ready, allowEnrolled]);
+
   if (!gate.ready) {
     return gate.denied ? (
       <AccessMessage title="Administrators only" message="Exam management is restricted to authorized administrators." actionLabel="Back to Admin Home" actionHref="/admin" />
@@ -87,6 +107,7 @@ export default function ExamManager({
 
   function startCreate() {
     setForm(EMPTY);
+    setCourseIds([]);
     setEditingId(null);
     setShowForm(true);
     setNotice(null);
@@ -102,15 +123,22 @@ export default function ExamManager({
       courseType: exam.courseType,
       durationMinutes: String(exam.durationMinutes),
       negativeMarks: String(exam.negativeMarks),
+      totalMarks: exam.totalMarks ? String(exam.totalMarks) : "",
       status: exam.status,
       scheduledAt: exam.scheduledAt ? exam.scheduledAt.slice(0, 16) : "",
+      endsAt: exam.endsAt ? exam.endsAt.slice(0, 16) : "",
     });
+    setCourseIds(exam.courseIds ?? []);
     setEditingId(exam.id);
     setShowForm(true);
     setNotice(null);
   }
 
   async function save() {
+    if (form.kind === "enrolled" && courseIds.length === 0) {
+      setNotice({ kind: "error", text: "Assign at least one course to an enrolled exam." });
+      return;
+    }
     setBusy(true);
     setNotice(null);
     try {
@@ -119,9 +147,12 @@ export default function ExamManager({
         headers: { "Content-Type": "application/json", ...gate.headers },
         body: JSON.stringify({
           ...form,
+          courseIds: form.kind === "enrolled" ? courseIds : [],
           durationMinutes: Number(form.durationMinutes) || 30,
           negativeMarks: Number(form.negativeMarks) || 0,
+          totalMarks: form.totalMarks ? Number(form.totalMarks) : undefined,
           scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
+          endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
         }),
       });
       const data = (await response.json().catch(() => null)) as { error?: string; exam?: Exam } | null;
@@ -132,6 +163,37 @@ export default function ExamManager({
       setShowForm(false);
       await load();
       setNotice({ kind: "success", text: `Exam “${data?.exam?.title ?? form.title}” saved.` });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleStatus(exam: Exam) {
+    const next =
+      exam.status === "published" ? "draft" : "published";
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/exams", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({ id: exam.id, status: next }),
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { error?: string; exams?: Exam[] }
+        | null;
+      if (!response.ok) {
+        setNotice({ kind: "error", text: data?.error ?? "Failed to update." });
+        return;
+      }
+      if (data?.exams) setExams(data.exams);
+      setNotice({
+        kind: "success",
+        text:
+          next === "published"
+            ? `“${exam.title}” published — visible to students.`
+            : `“${exam.title}” unpublished.`,
+      });
     } finally {
       setBusy(false);
     }
@@ -196,10 +258,28 @@ export default function ExamManager({
                     {exam.totalMarks} marks · {exam.durationMinutes} min
                     {exam.negativeMarks > 0 && ` · −${exam.negativeMarks} negative`}
                   </p>
+                  {exam.kind === "enrolled" && (
+                    <p className="mt-1 text-xs font-semibold text-zinc-500">
+                      Courses:{" "}
+                      {exam.courseIds && exam.courseIds.length > 0
+                        ? exam.courseIds
+                            .map((id) => courseOptions.find((option) => option.slug === id)?.name ?? id)
+                            .join(", ")
+                        : "none assigned"}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonSecondaryClass}>
                     Questions ({exam.questionCount})
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void toggleStatus(exam)}
+                    className={buttonSecondaryClass}
+                  >
+                    {exam.status === "published" ? "Unpublish" : "Publish"}
                   </button>
                   <button type="button" onClick={() => startEdit(exam)} className={buttonSecondaryClass}>Edit</button>
                   <button type="button" onClick={() => void remove(exam.id, exam.title)} disabled={busy}
@@ -237,11 +317,40 @@ export default function ExamManager({
               <div>
                 <label className={labelClass} htmlFor="ex-kind">Kind</label>
                 <select id="ex-kind" className={inputClass} value={form.kind}
-                  onChange={(event) => setForm({ ...form, kind: event.target.value as "public" | "practice" })}>
+                  onChange={(event) => setForm({ ...form, kind: event.target.value as Exam["kind"] })}>
                   <option value="public">Public</option>
                   <option value="practice">Practice</option>
+                  {allowEnrolled && <option value="enrolled">Enrolled (course students)</option>}
                 </select>
               </div>
+              {allowEnrolled && form.kind === "enrolled" && (
+                <div className="sm:col-span-2">
+                  <span className={labelClass}>Assign courses (students enrolled in any of these)</span>
+                  {courseOptions.length === 0 ? (
+                    <p className="mt-1 text-xs text-zinc-500">Loading courses…</p>
+                  ) : (
+                    <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
+                      {courseOptions.map((course) => (
+                        <label key={course.slug} className="flex items-center gap-2 text-sm text-zinc-700 admin-dark:text-zinc-200">
+                          <input
+                            type="checkbox"
+                            checked={courseIds.includes(course.slug)}
+                            onChange={(event) =>
+                              setCourseIds(
+                                event.target.checked
+                                  ? [...courseIds, course.slug]
+                                  : courseIds.filter((id) => id !== course.slug),
+                              )
+                            }
+                          />
+                          <span className="truncate">{course.name}</span>
+                          <span className="ml-auto shrink-0 text-[10px] font-bold uppercase tracking-wide text-zinc-400">{course.slug}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <label className={labelClass} htmlFor="ex-status">Status</label>
                 <select id="ex-status" className={inputClass} value={form.status}
@@ -288,10 +397,20 @@ export default function ExamManager({
                 <input id="ex-neg" type="number" step="0.25" min="0" className={inputClass} value={form.negativeMarks}
                   onChange={(event) => setForm({ ...form, negativeMarks: event.target.value })} />
               </div>
+              <div>
+                <label className={labelClass} htmlFor="ex-marks">Total marks (auto from questions)</label>
+                <input id="ex-marks" type="number" min="0" className={inputClass} value={form.totalMarks}
+                  placeholder="Auto" onChange={(event) => setForm({ ...form, totalMarks: event.target.value })} />
+              </div>
               <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="ex-schedule">Schedule (optional)</label>
+                <label className={labelClass} htmlFor="ex-schedule">Start time (optional)</label>
                 <input id="ex-schedule" type="datetime-local" className={inputClass} value={form.scheduledAt}
                   onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="ex-ends">End time (optional — exam closes after this)</label>
+                <input id="ex-ends" type="datetime-local" className={inputClass} value={form.endsAt}
+                  onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
               </div>
               <div className="sm:col-span-2 flex gap-3">
                 <button type="submit" disabled={busy} className={buttonPrimaryClass}>{busy ? "Saving…" : "Save Exam"}</button>

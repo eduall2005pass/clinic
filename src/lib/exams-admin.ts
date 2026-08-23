@@ -5,8 +5,10 @@ import { exec, parseJsonColumn, query } from "@/lib/mysql";
 // bank-only question; the `answer_key` JSON column on `exams` stores
 // per-question correct answers for published answer keys.
 
-export type ExamKind = "public" | "practice";
+export type ExamKind = "public" | "practice" | "enrolled";
 export type ExamStatus = "draft" | "published" | "closed";
+
+export const EXAM_KINDS: ExamKind[] = ["public", "practice", "enrolled"];
 
 export type ExamQuestionOption = string;
 
@@ -23,7 +25,10 @@ export type Exam = {
   questionCount: number;
   status: ExamStatus;
   scheduledAt: string | null;
+  endsAt: string | null;
   answerKey: Record<string, number> | null;
+  /** Courses whose enrolled students may take this exam (kind = "enrolled"). */
+  courseIds: string[];
 };
 
 export type ExamQuestion = {
@@ -77,6 +82,7 @@ type ExamRow = {
   question_count: number;
   status: string;
   scheduled_at: Date | string | null;
+  ends_at?: Date | string | null;
   answer_key: string | null;
 };
 
@@ -113,7 +119,12 @@ function rowToExam(row: ExamRow): Exam {
   return {
     id: row.id,
     title: row.title,
-    kind: row.kind === "practice" ? "practice" : "public",
+    kind:
+      row.kind === "practice"
+        ? "practice"
+        : row.kind === "enrolled"
+          ? "enrolled"
+          : "public",
     batchId: row.batch_id ?? "",
     subject: row.subject ?? "",
     courseType: row.course_type === "Admission" ? "Admission" : "Academic",
@@ -128,7 +139,9 @@ function rowToExam(row: ExamRow): Exam {
           ? "closed"
           : "draft",
     scheduledAt: toIso(row.scheduled_at),
+    endsAt: toIso(row.ends_at),
     answerKey,
+    courseIds: [],
   };
 }
 
@@ -161,10 +174,30 @@ async function ensureTables(): Promise<void> {
     question_count INT NOT NULL DEFAULT 0,
     status ENUM('draft','published','closed') NOT NULL DEFAULT 'draft',
     scheduled_at DATETIME NULL,
+    ends_at DATETIME NULL,
     answer_key JSON NULL,
     created_by VARCHAR(191) NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // Exams created before end-time support need the column added.
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS ends_at DATETIME NULL AFTER scheduled_at`);
+  } catch {
+    // Best effort — column may already exist.
+  }
+  // Enrolled exams: widen the kind enum (older installs lack 'enrolled').
+  try {
+    await exec(
+      `ALTER TABLE exams MODIFY COLUMN kind ENUM('public','practice','enrolled') NOT NULL DEFAULT 'public'`,
+    );
+  } catch {
+    // Best effort — already widened.
+  }
+  await exec(`CREATE TABLE IF NOT EXISTS exam_courses (
+    exam_id VARCHAR(64) NOT NULL,
+    course_id VARCHAR(191) NOT NULL,
+    PRIMARY KEY (exam_id, course_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   await exec(`CREATE TABLE IF NOT EXISTS exam_questions (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -181,9 +214,23 @@ async function ensureTables(): Promise<void> {
 }
 
 const EXAM_COLUMNS = `id, title, kind, batch_id, subject, course_type, duration_minutes,
-  total_marks, negative_marks, question_count, status, scheduled_at, answer_key`;
+  total_marks, negative_marks, question_count, status, scheduled_at, ends_at, answer_key`;
 
 // ── Exams CRUD ───────────────────────────────────────────────────────────
+
+/** exam_id → assigned course ids (for enrolled exams). */
+async function fetchCourseAssignments(): Promise<Map<string, string[]>> {
+  const rows = await query<{ exam_id: string; course_id: string }[]>(
+    `SELECT exam_id, course_id FROM exam_courses ORDER BY course_id ASC`,
+  );
+  const map = new Map<string, string[]>();
+  for (const row of rows) {
+    const list = map.get(row.exam_id) ?? [];
+    list.push(row.course_id);
+    map.set(row.exam_id, list);
+  }
+  return map;
+}
 
 export async function fetchExams(kind?: ExamKind): Promise<Exam[]> {
   try {
@@ -191,7 +238,15 @@ export async function fetchExams(kind?: ExamKind): Promise<Exam[]> {
     const rows = kind
       ? await query<ExamRow[]>(`SELECT ${EXAM_COLUMNS} FROM exams WHERE kind = ? ORDER BY created_at DESC`, [kind])
       : await query<ExamRow[]>(`SELECT ${EXAM_COLUMNS} FROM exams ORDER BY created_at DESC`);
-    return rows.map(rowToExam);
+    let assignments: Map<string, string[]> | null = null;
+    if (rows.some((row) => row.kind === "enrolled")) {
+      assignments = await fetchCourseAssignments();
+    }
+    return rows.map((row) => {
+      const exam = rowToExam(row);
+      exam.courseIds = assignments?.get(exam.id) ?? [];
+      return exam;
+    });
   } catch {
     return [];
   }
@@ -224,24 +279,44 @@ export async function saveExam(
   const scheduledAt = scheduledRaw
     ? new Date(scheduledRaw).toISOString().slice(0, 19).replace("T", " ")
     : null;
+  const endsRaw = asString(input.endsAt);
+  let endsAt: string | null = null;
+  if (endsRaw) {
+    const endDate = new Date(endsRaw);
+    if (!Number.isNaN(endDate.getTime()) && scheduledAt && endDate <= new Date(scheduledAt)) {
+      throw new Error("End time must be after the start time.");
+    }
+    endsAt = endDate.toISOString().slice(0, 19).replace("T", " ");
+  }
 
   let answerKeyJson: string | null = null;
   if (input.answerKey && typeof input.answerKey === "object") {
     answerKeyJson = JSON.stringify(input.answerKey);
   }
 
+  const kind: ExamKind = EXAM_KINDS.includes(input.kind as ExamKind)
+    ? (input.kind as ExamKind)
+    : "public";
+  const courseIds = Array.isArray(input.courseIds)
+    ? Array.from(new Set(input.courseIds.map(String).map((value) => value.trim()).filter(Boolean)))
+    : [];
+  if (kind === "enrolled" && courseIds.length === 0) {
+    throw new Error("Assign at least one course to an enrolled exam.");
+  }
+
   await exec(
     `INSERT INTO exams (${EXAM_COLUMNS}, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE title = VALUES(title), kind = VALUES(kind), batch_id = VALUES(batch_id),
        subject = VALUES(subject), course_type = VALUES(course_type), duration_minutes = VALUES(duration_minutes),
        total_marks = VALUES(total_marks), negative_marks = VALUES(negative_marks),
        question_count = VALUES(question_count), status = VALUES(status),
-       scheduled_at = VALUES(scheduled_at), answer_key = VALUES(answer_key), created_by = VALUES(created_by)`,
+       scheduled_at = VALUES(scheduled_at), ends_at = VALUES(ends_at),
+       answer_key = VALUES(answer_key), created_by = VALUES(created_by)`,
     [
       id,
       title,
-      input.kind === "practice" ? "practice" : "public",
+      kind,
       asString(input.batchId),
       asString(input.subject),
       input.courseType === "Admission" ? "Admission" : "Academic",
@@ -253,14 +328,26 @@ export async function saveExam(
         ? String(input.status)
         : "draft",
       scheduledAt,
+      endsAt,
       answerKeyJson,
       adminUid,
     ],
   );
 
+  // Keep course assignments in sync (enrolled exams).
+  await exec(`DELETE FROM exam_courses WHERE exam_id = ?`, [id]);
+  for (const courseId of courseIds) {
+    await exec(
+      `INSERT IGNORE INTO exam_courses (exam_id, course_id) VALUES (?, ?)`,
+      [id, courseId],
+    );
+  }
+
   const rows = await query<ExamRow[]>(`SELECT ${EXAM_COLUMNS} FROM exams WHERE id = ? LIMIT 1`, [id]);
   if (!rows[0]) throw new Error("Failed to save the exam.");
-  return rowToExam(rows[0]);
+  const exam = rowToExam(rows[0]);
+  exam.courseIds = courseIds;
+  return exam;
 }
 
 export async function deleteExam(id: string): Promise<void> {
@@ -268,6 +355,7 @@ export async function deleteExam(id: string): Promise<void> {
   await exec(`DELETE FROM exam_questions WHERE exam_id = ?`, [id]);
   await exec(`DELETE FROM exam_enrollments WHERE exam_id = ?`, [id]);
   await exec(`DELETE FROM exam_results WHERE exam_id = ?`, [id]);
+  await exec(`DELETE FROM exam_courses WHERE exam_id = ?`, [id]);
   await exec(`DELETE FROM exams WHERE id = ?`, [id]);
 }
 
@@ -529,4 +617,41 @@ export async function saveExamSettings(
     ],
   );
   return fetchExamSettings();
+}
+
+/** Quick publish/unpublish/close toggle from the admin exam list. */
+export async function setExamStatus(
+  id: string,
+  status: ExamStatus,
+): Promise<void> {
+  await ensureTables();
+  if (!["draft", "published", "closed"].includes(status)) {
+    throw new Error("Invalid exam status.");
+  }
+  const result = await exec(`UPDATE exams SET status = ? WHERE id = ?`, [status, id]);
+  if (!result.affectedRows) throw new Error("Exam not found.");
+}
+
+/**
+ * Whether a student may take an enrolled exam — true when they have an
+ * active (or completed) enrollment in at least one assigned course.
+ */
+export async function hasEnrolledExamAccess(
+  examId: string,
+  uid: string,
+): Promise<boolean> {
+  try {
+    await ensureTables();
+    const rows = await query<{ ok: number }[]>(
+      `SELECT 1 AS ok FROM exam_courses ec
+       JOIN enrollments e ON e.course_id = ec.course_id AND e.student_uid = ?
+       WHERE ec.exam_id = ? AND e.enrollment_status IN ('active','completed')
+       LIMIT 1`,
+      [uid, examId],
+    );
+    return rows.length > 0;
+  } catch {
+    // Fail closed — never leak gated exams on DB errors.
+    return false;
+  }
 }
