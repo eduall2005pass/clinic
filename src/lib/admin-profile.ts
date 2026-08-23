@@ -169,16 +169,62 @@ export async function fetchLastLogin(uid: string): Promise<string | null> {
 export type SystemStatus = {
   databaseOnline: boolean;
   databaseLatencyMs: number | null;
+  databaseVersion: string | null;
+  storageOnline: boolean | null;
+  storageLatencyMs: number | null;
+  /** Public media host only — never secrets or credentials. */
+  storageHost: string | null;
+  firebaseAdminConfigured: boolean;
   counts: Record<string, number>;
 };
 
+/** Reachability probe for the media/storage service (no credentials sent). */
+async function probeStorage(): Promise<{
+  online: boolean | null;
+  latencyMs: number | null;
+  host: string | null;
+}> {
+  const base =
+    process.env.MEDIA_FILES_BASE_URL ??
+    "https://eduspark2024.duckdns.org/medifiles";
+  try {
+    const url = new URL(base);
+    const started = Date.now();
+    // Any HTTP response (even 403/404) proves the service is up.
+    const response = await fetch(base, {
+      method: "GET",
+      redirect: "manual",
+      signal: AbortSignal.timeout(6000),
+      cache: "no-store",
+    });
+    return {
+      online: response.status < 500,
+      latencyMs: Date.now() - started,
+      host: url.host,
+    };
+  } catch {
+    return { online: false, latencyMs: null, host: new URL(base).host };
+  }
+}
+
 export async function fetchSystemStatus(): Promise<SystemStatus> {
-  const status: SystemStatus = { databaseOnline: false, databaseLatencyMs: null, counts: {} };
+  const status: SystemStatus = {
+    databaseOnline: false,
+    databaseLatencyMs: null,
+    databaseVersion: null,
+    storageOnline: null,
+    storageLatencyMs: null,
+    storageHost: null,
+    firebaseAdminConfigured: false,
+    counts: {},
+  };
+
   const started = Date.now();
   try {
-    await query("SELECT 1");
+    const rows = await query<{ version: string }[]>("SELECT VERSION() AS version");
     status.databaseOnline = true;
     status.databaseLatencyMs = Date.now() - started;
+    status.databaseVersion = rows[0]?.version ?? null;
 
     const tables = [
       ["students", "students"],
@@ -191,10 +237,10 @@ export async function fetchSystemStatus(): Promise<SystemStatus> {
     ] as const;
     for (const [key, table] of tables) {
       try {
-        const rows = await query<{ total: number }[]>(
+        const countRows = await query<{ total: number }[]>(
           `SELECT COUNT(*) AS total FROM ${table}`,
         );
-        status.counts[key] = rows[0]?.total ?? 0;
+        status.counts[key] = countRows[0]?.total ?? 0;
       } catch {
         status.counts[key] = 0;
       }
@@ -202,5 +248,15 @@ export async function fetchSystemStatus(): Promise<SystemStatus> {
   } catch {
     status.databaseOnline = false;
   }
+
+  try {
+    const storage = await probeStorage();
+    status.storageOnline = storage.online;
+    status.storageLatencyMs = storage.latencyMs;
+    status.storageHost = storage.host;
+  } catch {
+    status.storageOnline = false;
+  }
+
   return status;
 }

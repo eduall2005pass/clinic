@@ -208,6 +208,7 @@ export const ALL_PERMISSIONS = [
   "manageExams",
   "manageStudents",
   "manageAdmins",
+  "manageSystem",
 ] as const;
 
 export type AdminPermission = (typeof ALL_PERMISSIONS)[number];
