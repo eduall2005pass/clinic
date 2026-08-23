@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 import { useAdminGate, cardClass } from "@/components/admin/admin-ui";
+import ExamManager from "@/components/admin/ExamManager";
 
-type Exam = { id: string; title: string };
+type Exam = { id: string; title: string; kind?: string };
 type Enrollment = {
   id: number;
   examId: string;
@@ -13,7 +14,7 @@ type Enrollment = {
   enrolledAt: string;
 };
 
-export default function EnrolledPage() {
+function EnrolledStudentsPanel() {
   const gate = useAdminGate();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examId, setExamId] = useState("");
@@ -55,13 +56,9 @@ export default function EnrolledPage() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
-      <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Enrolled Students</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Students enrolled in each exam.</p>
-      </header>
-
-      <div className={`${cardClass} mt-5 p-4`}>
+    <section className="mx-auto max-w-3xl px-4 pb-10 sm:px-6">
+      <h2 className="text-lg font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Students who took these exams</h2>
+      <div className={`${cardClass} mt-3 p-4`}>
         <label htmlFor="enr-exam" className="sr-only">Filter by exam</label>
         <select id="enr-exam" value={examId}
           onChange={(event) => setExamId(event.target.value)}
@@ -95,5 +92,27 @@ export default function EnrolledPage() {
         </ul>
       )}
     </section>
+  );
+}
+
+export default function EnrolledPage() {
+  const gate = useAdminGate();
+
+  if (!gate.ready && gate.denied) {
+    return (
+      <AccessMessage title="Administrators only" message="Restricted to authorized administrators." actionLabel="Back to Admin Home" actionHref="/admin" />
+    );
+  }
+
+  return (
+    <>
+      <ExamManager
+        title="Enrolled Exams"
+        description="Exams available only to students enrolled in the assigned courses. Students enrolled in any assigned course can take the exam while it is published."
+        kindFilter="enrolled"
+        allowEnrolled
+      />
+      <EnrolledStudentsPanel />
+    </>
   );
 }

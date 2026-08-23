@@ -15,7 +15,7 @@ export async function GET(
   }
 
   const { id } = await context.params;
-  const payload = await getExamForTaking(id);
+  const payload = await getExamForTaking(id, user.uid);
   if (!payload) {
     return NextResponse.json(
       { error: "Exam not found or not available." },

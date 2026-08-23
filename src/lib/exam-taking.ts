@@ -1,5 +1,5 @@
 import { exec, parseJsonColumn, query } from "@/lib/mysql";
-import { fetchExams, type Exam } from "@/lib/exams-admin";
+import { fetchExams, hasEnrolledExamAccess, type Exam } from "@/lib/exams-admin";
 
 // Student-facing exam taking: load sanitized questions (no answers) and
 // grade submissions server-side, persisting results in exam_results.
@@ -34,10 +34,15 @@ function isLivePublished(exam: Exam): boolean {
 
 export async function getExamForTaking(
   examId: string,
+  uid?: string,
 ): Promise<{ exam: TakingExam; questions: TakingQuestion[] } | null> {
   const exams = await fetchExams();
   const found = exams.find((exam) => exam.id === examId);
   if (!found || !isLivePublished(found)) return null;
+  // Enrolled exams are only visible to students enrolled in an assigned course.
+  if (found.kind === "enrolled") {
+    if (!uid || !(await hasEnrolledExamAccess(examId, uid))) return null;
+  }
 
   const optionRows = await query<
     { id: number; question: string; options: string; marks: string | number }[]
@@ -92,6 +97,10 @@ export async function submitExamAttempt(
   const exams = await fetchExams();
   const found = exams.find((exam) => exam.id === examId);
   if (!found || !isLivePublished(found)) return null;
+  // Enrolled exams can only be submitted by students enrolled in an assigned course.
+  if (found.kind === "enrolled" && !(await hasEnrolledExamAccess(examId, uid))) {
+    return null;
+  }
 
   const rows = await query<GradingQuestionRow[]>(
     `SELECT id, correct_index, marks FROM exam_questions
