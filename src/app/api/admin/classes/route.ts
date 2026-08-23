@@ -5,6 +5,11 @@ import { fetchClasses, saveClass, deleteClass } from "@/lib/courses-admin";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const chapterId = request.nextUrl.searchParams.get("chapterId") ?? undefined;
   const classes = await fetchClasses(chapterId || undefined);
   return NextResponse.json(

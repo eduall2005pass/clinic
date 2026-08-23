@@ -11,6 +11,11 @@ export const dynamic = "force-dynamic";
 
 /** ?all=1 — include inactive notifications (admin view). */
 export async function GET(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const all = request.nextUrl.searchParams.get("all") === "1";
   const notifications = await fetchNotifications(all);
   return NextResponse.json(

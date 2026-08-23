@@ -21,7 +21,7 @@ export default function PricingPage() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/courses/pricing", { cache: "no-store" });
+      const response = await fetch("/api/admin/courses/pricing", { cache: "no-store", headers: gate.headers });
       const data = (await response.json()) as { pricing?: PricingRow[] };
       setRows(data.pricing ?? []);
     } catch {

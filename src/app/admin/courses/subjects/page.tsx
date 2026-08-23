@@ -42,7 +42,7 @@ export default function SubjectsPage() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/course-subjects", { cache: "no-store" });
+      const response = await fetch("/api/admin/course-subjects", { cache: "no-store", headers: gate.headers });
       const data = (await response.json()) as {
         subjects?: Subject[];
         courses?: CourseOption[];

@@ -51,7 +51,7 @@ export default function ResultsPage() {
 
   useEffect(() => {
     if (!gate.ready) return;
-    fetch("/api/admin/exams", { cache: "no-store" })
+    fetch("/api/admin/exams", { cache: "no-store", headers: gate.headers })
       .then((response) => response.json())
       .then((data: { exams?: Exam[] }) => setExams(data.exams ?? []))
       .catch(() => setExams([]));

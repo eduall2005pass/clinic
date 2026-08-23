@@ -35,8 +35,8 @@ export default function ClassesPage() {
   const load = useCallback(async () => {
     try {
       const [chaptersResponse, classesResponse] = await Promise.all([
-        fetch("/api/admin/chapters", { cache: "no-store" }),
-        fetch("/api/admin/classes", { cache: "no-store" }),
+        fetch("/api/admin/chapters", { cache: "no-store", headers: gate.headers }),
+        fetch("/api/admin/classes", { cache: "no-store", headers: gate.headers }),
       ]);
       const chaptersData = (await chaptersResponse.json()) as { chapters?: Chapter[] };
       const classesData = (await classesResponse.json()) as { classes?: CourseClass[] };

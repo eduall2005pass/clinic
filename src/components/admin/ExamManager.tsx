@@ -93,7 +93,7 @@ export default function ExamManager({
   // Course options for the enrolled-exam assignment picker.
   useEffect(() => {
     if (!gate.ready || !allowEnrolled) return;
-    fetch("/api/admin/course-subjects", { cache: "no-store" })
+    fetch("/api/admin/course-subjects", { cache: "no-store", headers: gate.headers })
       .then((response) => response.json())
       .then((data: { courses?: CourseOption[] }) => setCourseOptions(data.courses ?? []))
       .catch(() => setCourseOptions([]));

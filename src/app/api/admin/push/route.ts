@@ -11,6 +11,11 @@ export const dynamic = "force-dynamic";
 
 /** Subscriber count for the admin page (?email=1 to preview a target's devices). */
 export async function GET(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const email = request.nextUrl.searchParams.get("email");
   if (email && email.trim()) {
     const uid = await resolveStudentUidByEmail(email);

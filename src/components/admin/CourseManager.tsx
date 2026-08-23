@@ -103,7 +103,7 @@ export default function CourseManager({
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/courses", { cache: "no-store" });
+      const response = await fetch("/api/admin/courses", { cache: "no-store", headers: gate.headers });
       const data = (await response.json()) as { courses?: CatalogCourse[] };
       let list = data.courses ?? [];
       if (categoryFilter) {

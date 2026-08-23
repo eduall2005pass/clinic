@@ -28,7 +28,7 @@ export default function PushManager() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/push", { cache: "no-store" });
+      const response = await fetch("/api/admin/push", { cache: "no-store", headers: gate.headers });
       const data = (await response.json()) as { count?: number };
       setCount(data.count ?? 0);
     } catch {

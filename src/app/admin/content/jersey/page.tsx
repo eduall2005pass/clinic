@@ -34,7 +34,7 @@ export default function JerseyPage() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/jerseys", { cache: "no-store" });
+      const response = await fetch("/api/admin/jerseys", { cache: "no-store", headers: gate.headers });
       const data = (await response.json()) as { jerseys?: Jersey[] };
       setJerseys(data.jerseys ?? []);
     } catch {

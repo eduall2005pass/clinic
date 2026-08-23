@@ -25,7 +25,7 @@ export default function RolesPage() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/roles", { cache: "no-store" });
+      const response = await fetch("/api/admin/roles", { cache: "no-store", headers: gate.headers });
       const data = (await response.json()) as { assignments?: Assignment[] };
       setAssignments(data.assignments ?? []);
     } catch {

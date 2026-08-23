@@ -14,6 +14,11 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   // ?kind=enrolled or ?kind=public,practice (comma-separated).
   const kindParam = request.nextUrl.searchParams.get("kind");
   const kinds = kindParam

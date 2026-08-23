@@ -11,7 +11,12 @@ import {
 export const dynamic = "force-dynamic";
 
 /** GET → { subjects: [{ id, name, isActive, assignedCourseSlugs }], courses: [{ slug, name }] }. */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const [subjects, courses] = await Promise.all([
     fetchCourseSubjectDetails(),
     fetchCourseOptions(),

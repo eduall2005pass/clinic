@@ -36,7 +36,7 @@ export default function ExamSettingsPage() {
 
   useEffect(() => {
     if (!gate.ready) return;
-    fetch("/api/admin/exams/settings", { cache: "no-store" })
+    fetch("/api/admin/exams/settings", { cache: "no-store", headers: gate.headers })
       .then((response) => response.json())
       .then((data: { settings?: Settings }) => setSettings(data.settings ?? DEFAULTS))
       .catch(() => setSettings(DEFAULTS));

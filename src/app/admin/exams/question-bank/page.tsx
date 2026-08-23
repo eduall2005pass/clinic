@@ -44,7 +44,7 @@ export default function QuestionBankPage() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/exams/questions?examId=bank", { cache: "no-store" });
+      const response = await fetch("/api/admin/exams/questions?examId=bank", { cache: "no-store", headers: gate.headers });
       const data = (await response.json()) as { questions?: Question[] };
       setQuestions(data.questions ?? []);
     } catch {

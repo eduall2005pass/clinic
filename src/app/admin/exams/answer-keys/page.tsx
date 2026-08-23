@@ -23,7 +23,7 @@ export default function AnswerKeysPage() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/exams", { cache: "no-store" });
+      const response = await fetch("/api/admin/exams", { cache: "no-store", headers: gate.headers });
       const data = (await response.json()) as { exams?: Exam[] };
       setExams(data.exams ?? []);
     } catch {

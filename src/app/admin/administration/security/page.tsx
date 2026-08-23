@@ -29,7 +29,7 @@ export default function SecurityPage() {
 
   useEffect(() => {
     if (!gate.ready) return;
-    fetch("/api/admin/security-settings", { cache: "no-store" })
+    fetch("/api/admin/security-settings", { cache: "no-store", headers: gate.headers })
       .then((response) => response.json())
       .then((data: { settings?: Settings }) => {
         const loaded = data.settings;

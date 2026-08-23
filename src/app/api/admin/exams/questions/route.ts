@@ -12,6 +12,11 @@ export const dynamic = "force-dynamic";
 
 /** ?examId=... (or examId=bank for bank-only) & ?subject=... */
 export async function GET(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const params = request.nextUrl.searchParams;
   const questions = await fetchQuestions({
     examId: params.get("examId") ?? undefined,

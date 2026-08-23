@@ -36,8 +36,8 @@ export default function ChaptersPage() {
   const load = useCallback(async () => {
     try {
       const [subjectsResponse, chaptersResponse] = await Promise.all([
-        fetch("/api/admin/course-subjects", { cache: "no-store" }),
-        fetch("/api/admin/chapters", { cache: "no-store" }),
+        fetch("/api/admin/course-subjects", { cache: "no-store", headers: gate.headers }),
+        fetch("/api/admin/chapters", { cache: "no-store", headers: gate.headers }),
       ]);
       const subjectsData = (await subjectsResponse.json()) as { subjects?: Subject[] };
       const chaptersData = (await chaptersResponse.json()) as { chapters?: Chapter[] };
