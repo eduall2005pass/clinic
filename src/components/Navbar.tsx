@@ -29,17 +29,29 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
       href: item.href ?? NAVBAR_SECTION_FALLBACKS[item.key] ?? null,
     }));
 
-  /** Smooth-scroll to a "/#section" target, navigating home first if needed. */
+  /**
+   * Smooth-scroll to a "/#section" target, navigating home first if needed.
+   * Waits (with retries) for the Home page to render the section before
+   * scrolling, so slow loads don't silently skip the anchor.
+   */
   async function goToSection(hashHref: string) {
     const sectionId = hashHref.slice(2);
     if (window.location.pathname !== "/") {
       await router.push("/");
-      await new Promise((resolve) => setTimeout(resolve, 400));
     }
-    document.getElementById(sectionId)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    const scroll = () =>
+      document.getElementById(sectionId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    // Retry until the section exists on the page (max ~5s).
+    for (let attempt = 0; attempt < 50; attempt++) {
+      if (document.getElementById(sectionId)) {
+        scroll();
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
   }
 
   function isSectionLink(href: string): boolean {
