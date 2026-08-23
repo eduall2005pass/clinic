@@ -29,6 +29,7 @@ export async function PUT(request: NextRequest) {
   }
   try {
     const settings = await saveExamSettings(body, admin.uid);
+    await logAdminAction(admin, "settings.save", "exam settings", request);
     return NextResponse.json({ settings });
   } catch (error) {
     const message =

@@ -26,6 +26,7 @@ import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
 import AdminToastProvider from "@/components/admin/AdminToastProvider";
 import AdminSearch from "@/components/admin/AdminSearch";
 import { useAdminGate, hasAdminPermission } from "@/components/admin/admin-ui";
+import { useAuth } from "@/lib/auth-context";
 
 const SIDEBAR_STORAGE_KEY = "medispark-admin-sidebar-collapsed";
 

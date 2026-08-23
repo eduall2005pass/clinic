@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/admin";
+import { logAdminAction } from "@/lib/administration";
 import {
   fetchCourseCategories,
   saveCourseCategories,
@@ -35,6 +36,7 @@ export async function PUT(request: NextRequest) {
     const categories = await saveCourseCategories(
       body.categories as Array<Record<string, unknown>>,
     );
+    await logAdminAction(admin, "category.save", "taxonomy update", request);
     return NextResponse.json({ categories });
   } catch (error) {
     const message =
@@ -53,6 +55,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Missing category id." }, { status: 400 });
   }
   await deleteTaxonomyItem("course_categories", body.id);
+  await logAdminAction(admin, "category.delete", body.id, request);
   const categories = await fetchCourseCategories();
   return NextResponse.json({ categories });
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, fetchAdminAccount } from "@/lib/admin";
+import { logAdminAction } from "@/lib/administration";
 import {
   fetchAdminProfile,
   updateAdminProfile,
@@ -59,6 +60,7 @@ export async function PATCH(request: NextRequest) {
   }
   try {
     const profile = await updateAdminProfile(admin.uid, body);
+    await logAdminAction(admin, "profile.update", typeof body.displayName === "string" ? body.displayName : "", request);
     return NextResponse.json({ profile });
   } catch (error) {
     const message =
@@ -102,6 +104,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const profile = await saveAdminPhoto(admin.uid, photo);
+    await logAdminAction(admin, "profile.upload", photo.name, request);
     return NextResponse.json({ profile });
   } catch (error) {
     const message =

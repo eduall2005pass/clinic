@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/admin";
+import { logAdminAction } from "@/lib/administration";
 import {
   fetchJerseys,
   saveJersey,
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const jerseys = await saveJersey(body);
+    await logAdminAction(admin, body.image ? "jersey.upload" : "jersey.save", String(body.name ?? body.id ?? ""), request);
     return NextResponse.json({ jerseys });
   } catch (error) {
     const message =
@@ -50,6 +52,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Missing jersey id." }, { status: 400 });
   }
   await deleteJersey(body.id);
+  await logAdminAction(admin, "jersey.delete", body.id, request);
   const jerseys = await fetchJerseys();
   return NextResponse.json({ jerseys });
 }
