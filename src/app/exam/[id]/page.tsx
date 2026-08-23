@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { fetchPublicExamById } from "@/lib/public-exams";
+import { fetchExamPageById } from "@/lib/public-exams";
 import ExamParticipationArea from "@/components/auth/ExamParticipationArea";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export async function generateMetadata({
   params,
 }: ExamPageProps): Promise<Metadata> {
   const { id } = await params;
-  const exam = await fetchPublicExamById(id);
+  const exam = await fetchExamPageById(id);
 
   if (!exam) {
     return { title: "Exam Not Found" };
@@ -27,7 +27,7 @@ export async function generateMetadata({
 
 export default async function ExamDetailPage({ params }: ExamPageProps) {
   const { id } = await params;
-  const exam = await fetchPublicExamById(id);
+  const exam = await fetchExamPageById(id);
 
   if (!exam) {
     notFound();

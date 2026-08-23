@@ -41,7 +41,7 @@ function formatExamTime(iso: string): string {
     .toUpperCase();
 }
 
-function deriveStatus(exam: Exam): ExamStatus {
+export function deriveStatus(exam: Exam): ExamStatus {
   if (exam.status === "closed") return "Closed";
   const now = Date.now();
   const startsAt = exam.scheduledAt ? new Date(exam.scheduledAt).getTime() : null;
@@ -98,4 +98,19 @@ export async function fetchPublicExamById(
 ): Promise<PublicExam | null> {
   const exams = await fetchPublicExams();
   return exams.find((exam) => exam.id === id) ?? null;
+}
+
+/**
+ * Exam detail page loader — includes enrolled-kind exams so their /exam/[id]
+ * page renders. Actual access (course enrollment) is enforced server-side by
+ * /api/exams/[id] when the student tries to participate.
+ */
+export async function fetchExamPageById(
+  id: string,
+): Promise<PublicExam | null> {
+  const exams = await fetchExams();
+  const found = exams.find(
+    (exam) => exam.id === id && exam.status !== "draft",
+  );
+  return found ? toPublicExam(found) : null;
 }

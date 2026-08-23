@@ -14,11 +14,20 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  // ?kind=enrolled or ?kind=public,practice (comma-separated).
   const kindParam = request.nextUrl.searchParams.get("kind");
-  const kind = EXAM_KINDS.includes(kindParam as ExamKind)
-    ? (kindParam as ExamKind)
-    : undefined;
-  const exams = await fetchExams(kind);
+  const kinds = kindParam
+    ? kindParam
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value): value is ExamKind =>
+          EXAM_KINDS.includes(value as ExamKind),
+        )
+    : [];
+  const exams =
+    kinds.length > 0
+      ? (await fetchExams()).filter((exam) => kinds.includes(exam.kind))
+      : await fetchExams();
   return NextResponse.json(
     { exams },
     { headers: { "Cache-Control": "no-store" } },

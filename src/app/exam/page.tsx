@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PublicExamList from "@/components/PublicExamList";
+import MyEnrolledExams from "@/components/MyEnrolledExams";
 import { fetchPublicExams, batches } from "@/lib/public-exams";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ export default async function ExamPage() {
 
   return (
     <main className="flex-1 bg-dark-950">
+      <MyEnrolledExams />
       <PublicExamList exams={exams} batches={batches} />
 
       <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6">

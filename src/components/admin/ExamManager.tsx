@@ -58,7 +58,8 @@ export default function ExamManager({
 }: {
   title: string;
   description: string;
-  kindFilter?: "public" | "practice" | "enrolled";
+  /** One kind or several (comma-separated in the API query). */
+  kindFilter?: "public" | "practice" | "enrolled" | ("public" | "practice" | "enrolled")[];
   /** Show the "Enrolled" kind + course assignment picker. */
   allowEnrolled?: boolean;
 }) {
@@ -75,7 +76,8 @@ export default function ExamManager({
 
   const load = useCallback(async () => {
     try {
-      const query = kindFilter ? `?kind=${kindFilter}` : "";
+      const kinds = Array.isArray(kindFilter) ? kindFilter : kindFilter ? [kindFilter] : [];
+      const query = kinds.length > 0 ? `?kind=${kinds.join(",")}` : "";
       const response = await fetch(`/api/admin/exams${query}`, { cache: "no-store" });
       const data = (await response.json()) as { exams?: Exam[] };
       setExams(data.exams ?? []);
