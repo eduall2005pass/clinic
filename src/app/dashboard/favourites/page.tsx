@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import EnrollmentRequiredSection from "@/components/auth/EnrollmentRequiredSection";
+import { dashboardSubUnits } from "@/lib/dashboard";
 
 export const metadata: Metadata = {
   title: "Favourite",
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function FavouritesPage() {
   return (
     <EnrollmentRequiredSection
+      subUnits={dashboardSubUnits["/dashboard/favourites"]}
       title="Favourite"
       description="Your saved learning content will be shown here. Favourite data will be connected to your account in an upcoming step."
     />

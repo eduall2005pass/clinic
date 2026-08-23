@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import EnrollmentRequiredSection from "@/components/auth/EnrollmentRequiredSection";
+import { dashboardSubUnits } from "@/lib/dashboard";
 
 export const metadata: Metadata = {
   title: "Recently Viewed",
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function RecentlyViewedPage() {
   return (
     <EnrollmentRequiredSection
+      subUnits={dashboardSubUnits["/dashboard/recently-viewed"]}
       title="Recently Viewed"
       description="Your recently viewed content will be shown here. Recent activity data will be connected to your account in an upcoming step."
     />

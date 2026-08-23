@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import EnrollmentRequiredSection from "@/components/auth/EnrollmentRequiredSection";
+import { dashboardSubUnits } from "@/lib/dashboard";
 
 export const metadata: Metadata = {
   title: "Course Progress",
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function CourseProgressPage() {
   return (
     <EnrollmentRequiredSection
+      subUnits={dashboardSubUnits["/dashboard/course-progress"]}
       title="Course Progress"
       description="Your course progress will be shown here. Progress data will be connected to your account in an upcoming step."
     />

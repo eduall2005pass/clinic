@@ -96,3 +96,48 @@ export const dashboardSections: DashboardSection[] = [
     ),
   },
 ];
+export type DashboardSubItem = {
+  title: string;
+  description: string;
+};
+
+/**
+ * Final dashboard navigation hierarchy — sub-units shown inside each
+ * section page. Student Profile and Exam Results intentionally have none:
+ * their cards open their pages directly.
+ */
+export const dashboardSubUnits: Record<string, DashboardSubItem[]> = {
+  "/dashboard/enrolled-courses": [
+    { title: "Course", description: "Pick one of your enrolled courses" },
+    { title: "Subject", description: "Subjects inside the course" },
+    { title: "Paper / Segment", description: "Papers or segments of the subject" },
+    { title: "Chapter", description: "Chapters in the paper" },
+    { title: "Class", description: "Classes and lessons of the chapter" },
+    { title: "Exam", description: "Exams attached to your learning" },
+    { title: "Materials", description: "Notes and resources" },
+  ],
+  "/dashboard/favourites": [
+    { title: "Favourite Courses", description: "Courses you saved" },
+    { title: "Favourite Classes", description: "Classes you saved" },
+    { title: "Favourite Materials", description: "Materials you saved" },
+  ],
+  "/dashboard/continue-learning": [
+    { title: "Current Course", description: "The course you are studying now" },
+    { title: "Current Subject", description: "Where you are inside the course" },
+    { title: "Current Chapter", description: "The chapter in progress" },
+    { title: "Last Viewed Class", description: "Resume exactly where you stopped" },
+  ],
+  "/dashboard/recently-viewed": [
+    { title: "Recently Viewed Courses", description: "Courses you opened lately" },
+    { title: "Recently Viewed Classes", description: "Classes you watched lately" },
+    { title: "Recently Viewed Materials", description: "Materials you opened lately" },
+  ],
+  "/dashboard/course-progress": [
+    { title: "Overall Progress", description: "Your total preparation at a glance" },
+    { title: "Course-wise Progress", description: "Progress for every enrolled course" },
+    { title: "Subject-wise Progress", description: "Progress per subject" },
+    { title: "Chapter-wise Progress", description: "Progress per chapter" },
+    { title: "Completed Classes", description: "Classes you have finished" },
+    { title: "Remaining Classes", description: "Classes still left to complete" },
+  ],
+};
