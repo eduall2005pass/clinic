@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   adminCategories,
   adminProfileCategory,
@@ -40,8 +40,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
 function AdminShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme } = useAdminTheme();
   const gate = useAdminGate();
+  const { user, logout: signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -82,6 +84,23 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
       } catch {}
       return next;
     });
+  };
+
+  const handleLogout = async () => {
+    closeOverlays();
+    try {
+      if (user) {
+        const token = await user.getIdToken();
+        await fetch("/api/admin/logout", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    } catch {
+      // Logging the logout is best-effort — always sign out.
+    }
+    await signOut();
+    router.replace("/");
   };
 
   const closeOverlays = () => {
@@ -402,7 +421,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
                   </Link>
                   <button
                     type="button"
-                    onClick={closeOverlays}
+                    onClick={() => void handleLogout()}
                     className="flex w-full items-center gap-2.5 border-t border-neutral-100 px-4 py-2.5 text-sm font-medium text-primary-700 transition hover:bg-primary-600/5 admin-dark:border-zinc-800 admin-dark:text-primary-400"
                   >
                     <LogoutIcon className="h-4 w-4" />
