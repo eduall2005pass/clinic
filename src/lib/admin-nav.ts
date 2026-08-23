@@ -118,6 +118,7 @@ export const adminCategories: AdminCategory[] = [
       { label: "FAQ", href: "/admin/content/faq" },
       { label: "Announcements", href: "/admin/content/announcements" },
       { label: "Notifications", href: "/admin/content/notifications" },
+      { label: "Push Notifications", href: "/admin/content/push" },
       { label: "Jersey", href: "/admin/content/jersey" },
       { label: "Media Library", href: "/admin/content/media-library" },
     ],

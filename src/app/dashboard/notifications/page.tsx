@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AccessGate } from "@/components/auth/AccessGuard";
 import NotificationsList from "@/components/dashboard/NotificationsList";
+import PushOptIn from "@/components/dashboard/PushOptIn";
 
 export const metadata: Metadata = {
   title: "Notifications",
@@ -10,19 +11,30 @@ export const metadata: Metadata = {
 
 export default function NotificationsPage() {
   return (
-    <main className="flex-1 bg-dark-950">
-      <AccessGate
-        requirement="registered"
-        title="Registration Required"
-        message="You need to register to view your notifications."
-        actionLabel="Register Now"
-        actionHref="/register"
-        loadingLabel="Loading notifications..."
-        secondaryLabel="Back to Dashboard"
-        secondaryHref="/dashboard"
-      >
-        <NotificationsList />
-      </AccessGate>
+    <main className="flex flex-1 flex-col items-center gap-6 bg-dark-950 px-4 py-10">
+      <div className="w-full max-w-md text-center">
+        <h1 className="text-2xl font-extrabold tracking-tight text-white">
+          Notifications
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+          Exam, course and announcement updates will appear here.
+        </p>
+      </div>
+      <PushOptIn />
+      <div className="flex w-full justify-center">
+        <AccessGate
+          requirement="registered"
+          title="Registration Required"
+          message="You need to register to view your notifications."
+          actionLabel="Register Now"
+          actionHref="/register"
+          loadingLabel="Loading notifications..."
+          secondaryLabel="Back to Dashboard"
+          secondaryHref="/dashboard"
+        >
+          <NotificationsList />
+        </AccessGate>
+      </div>
     </main>
   );
 }
