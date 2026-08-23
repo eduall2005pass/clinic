@@ -17,7 +17,16 @@ type Result = {
   score: number;
   totalMarks: number;
   submittedAt: string;
+  meritPosition?: number | null;
+  timeTakenSeconds?: number | null;
 };
+
+function formatTime(seconds: number | null | undefined): string {
+  if (seconds == null) return "—";
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return minutes > 0 ? `${minutes}m ${rest}s` : `${rest}s`;
+}
 
 export default function ResultsPage() {
   const gate = useAdminGate();
@@ -87,6 +96,22 @@ export default function ResultsPage() {
         <ul className="mt-4 space-y-2">
           {results.map((result) => (
             <li key={result.id} className={`${cardClass} flex flex-wrap items-center gap-3 px-4 py-3`}>
+              {result.meritPosition != null && (
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${
+                    result.meritPosition === 1
+                      ? "bg-amber-400/20 text-amber-600"
+                      : result.meritPosition === 2
+                        ? "bg-zinc-500/15 text-zinc-600"
+                        : result.meritPosition === 3
+                          ? "bg-orange-500/15 text-orange-600"
+                          : "bg-zinc-500/10 text-zinc-500"
+                  }`}
+                  title="Merit position"
+                >
+                  #{result.meritPosition}
+                </span>
+              )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
                   {result.studentName || result.studentUid}
@@ -94,6 +119,7 @@ export default function ResultsPage() {
                 <span className="block text-xs text-zinc-500">
                   {exams.find((exam) => exam.id === result.examId)?.title ?? result.examId} ·{" "}
                   {new Date(result.submittedAt).toLocaleString()}
+                  {result.timeTakenSeconds != null && ` · ⏱ ${formatTime(result.timeTakenSeconds)}`}
                 </span>
               </span>
               <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${

@@ -59,6 +59,8 @@ export type ExamResult = {
   score: number;
   totalMarks: number;
   submittedAt: string;
+  meritPosition: number | null;
+  timeTakenSeconds: number | null;
 };
 
 export type ExamSettings = {
@@ -521,6 +523,14 @@ async function ensureResultTables(): Promise<void> {
     submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY exam_results_exam_idx (exam_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // Databases created before the richer result storage need these columns.
+  try {
+    await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS time_taken_seconds INT NULL`);
+    await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS merit_position INT NULL`);
+    await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS details JSON NULL`);
+  } catch {
+    // Best effort — columns may already exist.
+  }
 }
 
 type EnrollmentRow = {
@@ -535,6 +545,8 @@ type ResultRow = EnrollmentRow & {
   score: string | number;
   total_marks: string | number;
   submitted_at: Date | string;
+  merit_position: number | null;
+  time_taken_seconds: number | null;
 };
 
 export async function fetchEnrollments(examId?: string): Promise<ExamEnrollment[]> {
@@ -579,6 +591,8 @@ export async function fetchResults(examId?: string): Promise<ExamResult[]> {
       score: toNumber(row.score),
       totalMarks: toNumber(row.total_marks),
       submittedAt: toIso(row.submitted_at) ?? "",
+      meritPosition: row.merit_position ?? null,
+      timeTakenSeconds: row.time_taken_seconds ?? null,
     }));
   } catch {
     return [];
