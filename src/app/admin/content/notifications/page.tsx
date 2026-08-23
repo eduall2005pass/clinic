@@ -21,7 +21,7 @@ type Notification = {
   createdAt: string;
 };
 
-const EMPTY = { title: "", message: "", audience: "all" as "all" | "students" | "admins" };
+const EMPTY = { id: "", title: "", message: "", audience: "all" as "all" | "students" | "admins" };
 
 export default function NotificationsPage() {
   const gate = useAdminGate();
@@ -59,7 +59,13 @@ export default function NotificationsPage() {
       const response = await fetch("/api/admin/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...gate.headers },
-        body: JSON.stringify({ ...form, isActive: true }),
+        body: JSON.stringify({
+          ...(form.id ? { id: form.id } : {}),
+          title: form.title,
+          message: form.message,
+          audience: form.audience,
+          isActive: true,
+        }),
       });
       const data = (await response.json().catch(() => null)) as { error?: string; notifications?: Notification[] } | null;
       if (!response.ok) {
@@ -68,10 +74,16 @@ export default function NotificationsPage() {
       }
       setItems(data?.notifications ?? []);
       setForm(EMPTY);
-      setNotice({ kind: "success", text: "Notification published." });
+      setNotice({ kind: "success", text: form.id ? "Notification updated." : "Notification published." });
     } finally {
       setBusy(false);
     }
+  }
+
+  function startEdit(item: Notification) {
+    setForm({ id: item.id, title: item.title, message: item.message, audience: item.audience });
+    setNotice(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function toggle(item: Notification) {
@@ -113,6 +125,9 @@ export default function NotificationsPage() {
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+          {form.id ? "Edit notification" : "New notification"}
+        </h3>
         <form
           className="grid grid-cols-1 gap-3"
           onSubmit={(event) => {
@@ -131,7 +146,15 @@ export default function NotificationsPage() {
               <option value="students">Students only</option>
               <option value="admins">Admins only</option>
             </select>
-            <button type="submit" disabled={busy} className={buttonPrimaryClass}>{busy ? "Saving…" : "Publish"}</button>
+            <div className="flex gap-2">
+              {form.id && (
+                <button type="button" disabled={busy} className={buttonDangerClass}
+                  onClick={() => { setForm(EMPTY); setNotice(null); }}>Cancel</button>
+              )}
+              <button type="submit" disabled={busy} className={buttonPrimaryClass}>
+                {busy ? "Saving…" : form.id ? "Update" : "Publish"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -148,6 +171,9 @@ export default function NotificationsPage() {
                 {item.audience} · {new Date(item.createdAt).toLocaleDateString()}
               </span>
             </span>
+            <button type="button" onClick={() => startEdit(item)} disabled={busy} className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-zinc-500 admin-dark:border-zinc-700">
+              Edit
+            </button>
             <button type="button" onClick={() => void toggle(item)} disabled={busy} className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-zinc-500 admin-dark:border-zinc-700">
               {item.isActive ? "Hide" : "Show"}
             </button>

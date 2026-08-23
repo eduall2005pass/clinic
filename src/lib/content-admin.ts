@@ -46,6 +46,22 @@ function toIso(value: Date | string): string {
   return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
 }
 
+function mapNotificationRow(row: NotificationRow): Notification {
+  return {
+    id: row.id,
+    title: row.title,
+    message: row.message,
+    audience:
+      row.audience === "students"
+        ? "students"
+        : row.audience === "admins"
+          ? "admins"
+          : "all",
+    isActive: Boolean(row.is_active),
+    createdAt: toIso(row.created_at),
+  };
+}
+
 // ── Notifications ────────────────────────────────────────────────────────
 
 async function ensureNotificationsTable(): Promise<void> {
@@ -66,19 +82,22 @@ export async function fetchNotifications(all = false): Promise<Notification[]> {
     const rows = await query<NotificationRow[]>(
       `SELECT * FROM notifications ${all ? "" : "WHERE is_active = 1"} ORDER BY created_at DESC LIMIT 200`,
     );
-    return rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      message: row.message,
-      audience:
-        row.audience === "students"
-          ? "students"
-          : row.audience === "admins"
-            ? "admins"
-            : "all",
-      isActive: Boolean(row.is_active),
-      createdAt: toIso(row.created_at),
-    }));
+    return rows.map(mapNotificationRow);
+  } catch {
+    return [];
+  }
+}
+
+/** Active notifications relevant to students (audience = all or students). */
+export async function fetchStudentNotifications(): Promise<Notification[]> {
+  try {
+    await ensureNotificationsTable();
+    const rows = await query<NotificationRow[]>(
+      `SELECT * FROM notifications
+       WHERE is_active = 1 AND audience IN ('all','students')
+       ORDER BY created_at DESC LIMIT 200`,
+    );
+    return rows.map(mapNotificationRow);
   } catch {
     return [];
   }

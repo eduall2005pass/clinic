@@ -1,19 +1,28 @@
 import type { Metadata } from "next";
-import SectionPlaceholder from "@/components/dashboard/SectionPlaceholder";
+import { AccessGate } from "@/components/auth/AccessGuard";
+import NotificationsList from "@/components/dashboard/NotificationsList";
 
 export const metadata: Metadata = {
   title: "Notifications",
   description:
-    "Your global MediSpark notifications — updates from all dashboard sections appear here.",
+    "Your MediSpark notifications — announcements and updates from the team.",
 };
 
 export default function NotificationsPage() {
   return (
     <main className="flex-1 bg-dark-950">
-      <SectionPlaceholder
-        title="No notifications yet"
-        description="Notifications from all dashboard sections will appear here in one place. Notification generation will be added in an upcoming step."
-      />
+      <AccessGate
+        requirement="registered"
+        title="Registration Required"
+        message="You need to register to view your notifications."
+        actionLabel="Register Now"
+        actionHref="/register"
+        loadingLabel="Loading notifications..."
+        secondaryLabel="Back to Dashboard"
+        secondaryHref="/dashboard"
+      >
+        <NotificationsList />
+      </AccessGate>
     </main>
   );
 }
