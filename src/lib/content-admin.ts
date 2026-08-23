@@ -273,3 +273,85 @@ export async function fetchUploadStats(): Promise<{ files: number; bytes: number
     return { files: 0, bytes: 0 };
   }
 }
+
+/**
+ * Columns that may hold a managed upload reference ("/api/files/<id>" or a
+ * storage path). Used to detect unused files in the Media Library.
+ */
+const MEDIA_REFERENCE_COLUMNS: Array<{ table: string; column: string }> = [
+  { table: "banners", column: "url" },
+  { table: "banners", column: "storage_path" },
+  { table: "logos", column: "url" },
+  { table: "logos", column: "storage_path" },
+  { table: "course_categories", column: "image_url" },
+  { table: "course_categories", column: "image_storage_path" },
+  { table: "catalog_courses", column: "image_url" },
+  { table: "catalog_courses", column: "teacher_photo_url" },
+  { table: "admin_courses", column: "image_url" },
+  { table: "admin_courses", column: "image_storage_path" },
+  { table: "homepage_courses", column: "image_url" },
+  { table: "students", column: "profile_picture_url" },
+  { table: "admins", column: "photo_url" },
+  { table: "jerseys", column: "image_url" },
+  { table: "mentors", column: "photo_url" },
+  { table: "mentors", column: "photo_storage_path" },
+  { table: "reviews", column: "photo_url" },
+  { table: "reviews", column: "photo_storage_path" },
+  { table: "seo_settings", column: "og_image_url" },
+  { table: "hero_settings", column: "background_url" },
+];
+
+/** All upload ids referenced anywhere in the content tables. */
+async function fetchReferencedUploadIds(): Promise<Set<string>> {
+  const referenced = new Set<string>();
+  for (const { table, column } of MEDIA_REFERENCE_COLUMNS) {
+    try {
+      const rows = await query<{ value: string | null }[]>(
+        `SELECT ${column} AS value FROM ${table}`,
+      );
+      for (const row of rows) {
+        const value = row.value;
+        if (typeof value !== "string") continue;
+        // Match "/api/files/<uuid>" anywhere in the stored value.
+        const matches = value.matchAll(/\/api\/files\/([0-9a-f-]{16,64})/gi);
+        for (const match of matches) {
+          if (match[1]) referenced.add(match[1].toLowerCase());
+        }
+      }
+    } catch {
+      // Table/column may not exist on older databases — skip it.
+    }
+  }
+  return referenced;
+}
+
+/**
+ * Uploads not referenced by any content table — safe-to-delete candidates.
+ */
+export async function findUnusedUploads(): Promise<MediaItem[]> {
+  const [media, referenced] = await Promise.all([
+    fetchMediaLibrary(500),
+    fetchReferencedUploadIds(),
+  ]);
+  return media.filter((item) => !referenced.has(item.id.toLowerCase()));
+}
+
+/** Delete every unreferenced upload. Returns how many were removed. */
+export async function deleteUnusedMedia(): Promise<number> {
+  const unused = await findUnusedUploads();
+  let count = 0;
+  for (const item of unused) {
+    try {
+      const deleted = await removeUploadRow(item.id);
+      if (deleted) count += 1;
+    } catch {
+      // Skip failures and continue.
+    }
+  }
+  return count;
+}
+
+async function removeUploadRow(id: string): Promise<boolean> {
+  const result = await exec(`DELETE FROM uploads WHERE id = ?`, [id]);
+  return (result.affectedRows ?? 0) > 0;
+}

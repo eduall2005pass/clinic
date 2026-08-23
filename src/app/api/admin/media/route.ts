@@ -5,6 +5,8 @@ import {
   fetchMediaLibrary,
   deleteMediaItem,
   fetchUploadStats,
+  findUnusedUploads,
+  deleteUnusedMedia,
 } from "@/lib/content-admin";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,13 @@ export async function GET(request: NextRequest) {
   if (request.nextUrl.searchParams.get("stats") === "1") {
     const stats = await fetchUploadStats();
     return NextResponse.json({ stats });
+  }
+  if (request.nextUrl.searchParams.get("unused") === "1") {
+    const unused = await findUnusedUploads();
+    return NextResponse.json(
+      { unused },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
   const media = await fetchMediaLibrary();
   return NextResponse.json(
@@ -41,4 +50,25 @@ export async function DELETE(request: NextRequest) {
   await logAdminAction(admin, "media.delete", body.id, request);
   const media = await fetchMediaLibrary();
   return NextResponse.json({ media });
+}
+
+/** POST { action: "deleteUnused" } — bulk-delete unreferenced uploads. */
+export async function POST(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => null)) as
+    | { action?: unknown }
+    | null;
+  if (body?.action !== "deleteUnused") {
+    return NextResponse.json({ error: "Unknown action." }, { status: 400 });
+  }
+  const removed = await deleteUnusedMedia();
+  await logAdminAction(admin, "media.deleteUnused", `count=${removed}`, request);
+  const [media, unused] = await Promise.all([
+    fetchMediaLibrary(),
+    findUnusedUploads(),
+  ]);
+  return NextResponse.json({ removed, media, unused });
 }
