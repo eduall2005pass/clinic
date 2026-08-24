@@ -1,19 +1,28 @@
 import type { Metadata } from "next";
-import EnrollmentRequiredSection from "@/components/auth/EnrollmentRequiredSection";
-import { dashboardSubUnits } from "@/lib/dashboard";
+import { AccessGate } from "@/components/auth/AccessGuard";
+import CourseProgressView from "@/components/dashboard/CourseProgressView";
 
 export const metadata: Metadata = {
   title: "Course Progress",
   description:
-    "Track your learning progress on MediSpark — your course progress will appear here.",
+    "Track your learning progress on MediSpark — overall, subject-wise and chapter-wise progress for your enrolled courses.",
 };
 
 export default function CourseProgressPage() {
   return (
-    <EnrollmentRequiredSection
-      subUnits={dashboardSubUnits["/dashboard/course-progress"]}
-      title="Course Progress"
-      description="Your course progress will be shown here. Progress data will be connected to your account in an upcoming step."
-    />
+    <main className="flex-1 bg-dark-950">
+      <AccessGate
+        requirement="enrolled"
+        title="Course Enrollment Required"
+        message="Please enroll in a course to track your learning progress."
+        actionLabel="Explore Courses"
+        actionHref="/courses"
+        loadingLabel="Loading your course progress..."
+        secondaryLabel="Back to Dashboard"
+        secondaryHref="/dashboard"
+      >
+        <CourseProgressView />
+      </AccessGate>
+    </main>
   );
 }
