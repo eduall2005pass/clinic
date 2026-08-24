@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import CourseLearningView from "@/components/dashboard/CourseLearningView";
+import { CourseSubjectsView } from "@/components/dashboard/CourseLevels";
 
 export const metadata: Metadata = {
   title: "Course | My Enrolled Courses",
@@ -14,7 +14,7 @@ export default async function EnrolledCoursePage({
   const { slug } = await params;
   return (
     <main className="flex-1 bg-dark-950">
-      <CourseLearningView slug={decodeURIComponent(slug)} />
+      <CourseSubjectsView slug={decodeURIComponent(slug)} />
     </main>
   );
 }

@@ -44,8 +44,20 @@ function EnrolledCourseCard({ course }: { course: EnrolledCourseSummary }) {
         <h2 className="text-lg font-extrabold leading-snug text-heading">
           {course.name}
         </h2>
-        <p className="mt-1 line-clamp-2 text-xs text-neutral-400">
-          {course.shortDescription || course.category}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {course.category ? (
+            <span className="rounded-full border border-primary-500/40 bg-primary-600/10 px-2.5 py-0.5 text-[11px] font-bold text-primary-400">
+              {course.category}
+            </span>
+          ) : null}
+          {course.batchId ? (
+            <span className="rounded-full border border-ink/10 bg-ink/5 px-2.5 py-0.5 text-[11px] font-bold uppercase text-neutral-300">
+              {course.batchId}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-2 line-clamp-2 text-xs text-neutral-400">
+          {course.shortDescription}
         </p>
 
         <div className="mt-4">
