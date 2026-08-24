@@ -176,6 +176,29 @@ export default function ClassPlayerView({
     return null;
   })();
 
+  // Opening the class records it in the student's Recently Viewed history.
+  useEffect(() => {
+    if (!user || !found) return;
+    let cancelled = false;
+    void user
+      .getIdToken()
+      .then((token) => {
+        if (cancelled) return;
+        void fetch("/api/my/recent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ itemType: "class", itemId: classId }),
+        }).catch(() => undefined);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [user, found, classId]);
+
   if (authLoading || !user || state === "loading") {
     return (
       <section className="mx-auto flex max-w-6xl flex-col items-center px-4 py-24 sm:px-6">

@@ -1005,25 +1005,17 @@ export async function getContinueLearningItems(
     for (const row of bucket.classes) {
       const stamp = stampByClass.get(row.class_id);
       if (!stamp || stamp.completed) continue;
-      if (
-        stamp.lastSeenSeconds > 0 &&
-        (stamp.updatedAt > bestTouchedAt || !target)
-      ) {
-        if (stamp.updatedAt >= bestTouchedAt) {
-          bestTouchedAt = stamp.updatedAt;
-          target = row;
-          resumeSeconds = stamp.lastSeenSeconds;
-        }
-      }
+      // First incomplete class in curriculum order — the default target.
       if (!target) {
         target = row;
         resumeSeconds = stamp.lastSeenSeconds;
       }
-      break;
-    }
-    // Fallback: first incomplete without any watch history.
-    if (!target) {
-      target = bucket.classes.find((row) => !stampByClass.get(row.class_id)?.completed);
+      // Prefer the incomplete class the student watched most recently.
+      if (stamp.lastSeenSeconds > 0 && stamp.updatedAt > bestTouchedAt) {
+        bestTouchedAt = stamp.updatedAt;
+        target = row;
+        resumeSeconds = stamp.lastSeenSeconds;
+      }
     }
     // Everything completed → nothing left to continue in this course.
     if (!target) continue;

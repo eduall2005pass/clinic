@@ -161,10 +161,39 @@ function countsOf(chapters: ChapterItem[]) {
   );
 }
 
+function recordRecentView(
+  user: { getIdToken: () => Promise<string> } | null,
+  itemType: "course" | "class" | "exam" | "material",
+  itemId: string,
+) {
+  if (!user) return;
+  void user
+    .getIdToken()
+    .then((token) =>
+      fetch("/api/my/recent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ itemType, itemId }),
+      }).catch(() => undefined),
+    )
+    .catch(() => undefined);
+}
+
 /* ── Level 1: Course → Subjects ─────────────────────────────────────────── */
 
 export function CourseSubjectsView({ slug }: { slug: string }) {
   const { course, state, load } = useCourseLearning(slug);
+  const { user } = useAuth();
+
+  // Opening the course records it in the student's Recently Viewed history.
+  useEffect(() => {
+    if (state === "ready" && course) {
+      recordRecentView(user, "course", slug);
+    }
+  }, [state, course, slug, user]);
 
   if (state !== "ready" || !course) {
     return <LevelStates state={state} load={load} slug={slug} />;
@@ -429,6 +458,7 @@ export function PaperContentView({
 }) {
   const { course, state, load } = useCourseLearning(slug);
   const subject = course ? findSubject(course, subjectId) : null;
+  const { user } = useAuth();
   const [tab, setTab] = useState<TabKey>("classes");
 
   const chapters = useMemo(() => {
@@ -537,6 +567,7 @@ export function PaperContentView({
                     <li key={cls.id}>
                       <Link
                         href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/classes/${encodeURIComponent(cls.id)}`}
+                        onClick={() => recordRecentView(user, "class", cls.id)}
                         className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
                       >
                         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${cls.completed ? "bg-emerald-500/15 text-emerald-400" : "bg-primary-600/15 text-primary-500"}`}>
@@ -574,6 +605,7 @@ export function PaperContentView({
                     <li key={exam.id}>
                       <Link
                         href="/exam"
+                        onClick={() => recordRecentView(user, "exam", exam.id)}
                         className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
                       >
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-400">
@@ -606,6 +638,9 @@ export function PaperContentView({
                         href={material.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() =>
+                          recordRecentView(user, "material", String(material.id))
+                        }
                         className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
                       >
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
