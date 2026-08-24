@@ -12,6 +12,8 @@ type MyExam = {
   courseType: "Academic" | "Admission";
   totalMarks: number;
   durationMinutes: number;
+  questionCount?: number;
+  negativeMarks?: number;
   scheduledAt: string | null;
   status: ExamStatus;
 };
@@ -23,8 +25,17 @@ function toPublicExam(exam: MyExam): PublicExam {
     name: exam.title,
     batch: "",
     courseType: exam.courseType,
+    subject: exam.subject,
     totalMarks: exam.totalMarks,
+    totalQuestions: Math.max(0, Number(exam.questionCount) || 0),
     durationMinutes: exam.durationMinutes,
+    // Same rule the grader applies (−0.25 for Admission, none otherwise).
+    negativeMarks:
+      exam.negativeMarks !== undefined
+        ? Math.max(0, Number(exam.negativeMarks) || 0)
+        : exam.courseType === "Admission"
+          ? 0.25
+          : 0,
     examDate: scheduledIso.slice(0, 10),
     examTime: scheduledIso
       ? new Date(scheduledIso).toLocaleTimeString("en-US", {

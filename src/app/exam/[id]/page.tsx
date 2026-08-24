@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 type ExamPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ begin?: string }>;
 };
 
 export async function generateMetadata({
@@ -25,8 +26,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function ExamDetailPage({ params }: ExamPageProps) {
+export default async function ExamDetailPage({ params, searchParams }: ExamPageProps) {
   const { id } = await params;
+  const { begin } = await searchParams;
   const exam = await fetchExamPageById(id);
 
   if (!exam) {
@@ -57,7 +59,9 @@ export default async function ExamDetailPage({ params }: ExamPageProps) {
         </div>
 
         <div className="mt-8">
-          <ExamParticipationArea examId={exam.id} />
+          {/* begin=1 → the student already accepted the Exam Rules on the
+              card's modal, so the attempt may start immediately. */}
+          <ExamParticipationArea examId={exam.id} autoBegin={begin === "1"} />
         </div>
       </section>
     </main>

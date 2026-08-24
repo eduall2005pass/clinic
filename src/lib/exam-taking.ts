@@ -43,6 +43,9 @@ export type SubmissionOutcome = {
   negativeDeduction?: number;
   meritPosition?: number | null;
   timeTakenSeconds?: number | null;
+  /** Best score achieved by any student on this exam. */
+  highestMark?: number | null;
+  examName?: string;
 };
 
 type ResultDetail = {
@@ -53,6 +56,20 @@ type ResultDetail = {
   /** Marks obtained for this question — negative when a wrong answer costs marks. */
   obtained: number;
 };
+
+/** Best score achieved by any student on this exam (null when no results). */
+async function highestMarkFor(examId: string): Promise<number | null> {
+  try {
+    const rows = await query<{ best: string | number | null }[]>(
+      `SELECT MAX(score) AS best FROM exam_results WHERE exam_id = ?`,
+      [examId],
+    );
+    const best = rows[0]?.best;
+    return best === null || best === undefined ? null : Number(best);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Merit positions for every result of an exam. Ranking: higher score first;
@@ -387,7 +404,13 @@ async function finalizeAttempt(
     // Leave null on failure.
   }
 
-  return { ...graded, meritPosition, timeTakenSeconds };
+  return {
+    ...graded,
+    meritPosition,
+    timeTakenSeconds,
+    examName: found.title,
+    highestMark: await highestMarkFor(examId),
+  };
 }
 
 /** Rebuild the outcome of the most recent stored result for this student. */
@@ -396,9 +419,14 @@ async function latestOutcome(
   uid: string,
 ): Promise<SubmissionOutcome | null> {
   const rows = await query<
-    { score: string | number; total_marks: string | number }[]
+    {
+      score: string | number;
+      total_marks: string | number;
+      merit_position: number | null;
+      time_taken_seconds: number | null;
+    }[]
   >(
-    `SELECT score, total_marks FROM exam_results
+    `SELECT score, total_marks, merit_position, time_taken_seconds FROM exam_results
      WHERE exam_id = ? AND student_uid = ? ORDER BY id DESC LIMIT 1`,
     [examId, uid],
   );
@@ -440,6 +468,10 @@ async function latestOutcome(
       wrongCount > 0 && negativePerWrong > 0
         ? Math.round(negativePerWrong * wrongCount * 100) / 100
         : 0,
+    examName: found?.title ?? undefined,
+    meritPosition: row.merit_position ?? null,
+    timeTakenSeconds: row.time_taken_seconds ?? null,
+    highestMark: await highestMarkFor(examId),
   };
 }
 
@@ -447,6 +479,8 @@ export async function getExamForTaking(
   examId: string,
   uid?: string,
   studentName?: string,
+  /** Only true once the student accepts the exam rules — begins the attempt. */
+  startAttempt = false,
 ): Promise<{
   exam: TakingExam;
   questions: TakingQuestion[];
@@ -494,8 +528,10 @@ export async function getExamForTaking(
       negativeMarks: negativeMarksFor(found.courseType),
     },
     questions,
+    // The attempt (and its timer) starts only when the student accepts the
+    // rules — a rules preview must not consume exam time or lock answers.
     sessionToken:
-      uid && questions.length > 0
+      uid && startAttempt && questions.length > 0
         ? await startExamAttempt(examId, uid, studentName || "Student")
         : null,
   };
@@ -528,4 +564,153 @@ export async function submitExamAttempt(
   }
 
   return finalizeAttempt(examId, uid, studentName, answers);
+}
+
+export type AnswerScriptQuestion = {
+  questionId: number;
+  question: string;
+  options: string[];
+  marks: number;
+  /** Index the student selected — null when the question was left unanswered. */
+  chosenIndex: number | null;
+  correctIndex: number;
+  /** Marks obtained for this question — negative on wrong answers. */
+  obtained: number;
+};
+
+export type ExamResultScript = {
+  examName: string;
+  score: number;
+  totalMarks: number;
+  submittedAt: string | null;
+  timeTakenSeconds: number | null;
+  meritPosition: number | null;
+  questions: AnswerScriptQuestion[];
+};
+
+/**
+ * The student's answer script — available ONLY after their attempt is
+ * submitted. Joins the stored per-question breakdown with question text and
+ * options so the client can show chosen vs correct answers side by side.
+ */
+export async function getExamResultScript(
+  examId: string,
+  uid: string,
+): Promise<ExamResultScript | null> {
+  const resultRows = await query<
+    {
+      student_name: string;
+      score: string | number;
+      total_marks: string | number;
+      answers: string | null;
+      details: string | null;
+      submitted_at: Date | string;
+      time_taken_seconds: number | null;
+      merit_position: number | null;
+    }[]
+  >(
+    `SELECT student_name, score, total_marks, answers, details, submitted_at,
+            time_taken_seconds, merit_position
+     FROM exam_results
+     WHERE exam_id = ? AND student_uid = ?
+     ORDER BY id DESC LIMIT 1`,
+    [examId, uid],
+  );
+  const result = resultRows[0];
+  if (!result) return null;
+
+  const exams = await fetchExams();
+  const found = exams.find((exam) => exam.id === examId);
+
+  const detailRows = parseJsonColumn<ResultDetail[]>(result.details);
+  const details: ResultDetail[] = Array.isArray(detailRows) ? detailRows : [];
+
+  const questionRows = await query<{
+    id: number;
+    question: string;
+    options: string;
+    marks: string | number;
+    correct_index: number;
+  }[]>(
+    `SELECT id, question, options, marks, correct_index FROM exam_questions
+     WHERE exam_id = ? AND is_active = 1 ORDER BY id ASC`,
+    [examId],
+  );
+  const byId = new Map<number, {
+    question: string;
+    options: string[];
+    marks: number;
+    correctIndex: number;
+  }>();
+  for (const row of questionRows) {
+    const parsed = parseJsonColumn<unknown[]>(row.options);
+    if (Array.isArray(parsed)) {
+      byId.set(row.id, {
+        question: row.question,
+        options: parsed.map(String),
+        marks: Number(row.marks) || 1,
+        correctIndex: Number(row.correct_index) || 0,
+      });
+    }
+  }
+
+  // Prefer the stored per-question breakdown; fall back to the answers
+  // snapshot + question keys when details are missing (older results).
+  const fallbackAnswers =
+    parseJsonColumn<Record<string, number>>(result.answers) ?? {};
+  const questions: AnswerScriptQuestion[] = [];
+  const seen = new Set<number>();
+  for (const detail of details) {
+    const meta = byId.get(detail.questionId);
+    if (!meta) continue;
+    seen.add(detail.questionId);
+    questions.push({
+      questionId: detail.questionId,
+      question: meta.question,
+      options: meta.options,
+      marks: meta.marks,
+      chosenIndex: detail.chosenIndex,
+      correctIndex: detail.correctIndex,
+      obtained: Number(detail.obtained) || 0,
+    });
+  }
+  for (const [key, meta] of byId.entries()) {
+    if (seen.has(key)) continue;
+    const raw = fallbackAnswers[String(key)];
+    const chosen = typeof raw === "number" ? raw : null;
+    questions.push({
+      questionId: key,
+      question: meta.question,
+      options: meta.options,
+      marks: meta.marks,
+      chosenIndex: chosen,
+      correctIndex: meta.correctIndex,
+      obtained:
+        chosen === null
+          ? 0
+          : chosen === meta.correctIndex
+            ? meta.marks
+            : 0, // Legacy rows lack per-question deductions; totals stay authoritative.
+    });
+  }
+  questions.sort((a, b) => a.questionId - b.questionId);
+
+  const submittedMs = new Date(result.submitted_at).getTime();
+  return {
+    examName: found?.title ?? examId,
+    score: Number(result.score) || 0,
+    totalMarks: Number(result.total_marks) || 0,
+    submittedAt: Number.isNaN(submittedMs)
+      ? null
+      : new Date(submittedMs).toISOString(),
+    timeTakenSeconds:
+      result.time_taken_seconds === null || result.time_taken_seconds === undefined
+        ? null
+        : Number(result.time_taken_seconds),
+    meritPosition:
+      result.merit_position === null || result.merit_position === undefined
+        ? null
+        : Number(result.merit_position),
+    questions,
+  };
 }

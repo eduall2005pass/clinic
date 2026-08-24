@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
+import {
+  ExamRulesList,
+  type ExamRulesData,
+} from "@/components/ExamRules";
 
-type TakingExam = {
+type TakingExam = ExamRulesData & {
   id: string;
-  title: string;
   subject: string;
-  durationMinutes: number;
-  totalMarks: number;
-  negativeMarks: number;
 };
 
 type TakingQuestion = {
@@ -28,6 +28,29 @@ type SubmissionOutcome = {
   skippedCount: number;
   negativeMarks?: number;
   negativeDeduction?: number;
+  meritPosition?: number | null;
+  timeTakenSeconds?: number | null;
+  highestMark?: number | null;
+  examName?: string;
+};
+
+type ScriptQuestion = {
+  questionId: number;
+  question: string;
+  options: string[];
+  marks: number;
+  chosenIndex: number | null;
+  correctIndex: number;
+  obtained: number;
+};
+
+type ResultScript = {
+  examName: string;
+  score: number;
+  totalMarks: number;
+  timeTakenSeconds: number | null;
+  meritPosition: number | null;
+  questions: ScriptQuestion[];
 };
 
 function formatClock(seconds: number): string {
@@ -36,10 +59,22 @@ function formatClock(seconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export default function ExamParticipationArea({
   examId,
+  autoBegin = false,
 }: {
   examId: string;
+  /** True when the student already accepted the rules (Start Now flow). */
+  autoBegin?: boolean;
 }) {
   const examHref = `/exam/${examId}`;
   const loginHref = `/login?next=${encodeURIComponent(examHref)}`;
@@ -55,10 +90,67 @@ export default function ExamParticipationArea({
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<SubmissionOutcome | null>(null);
   const [terminatedNotice, setTerminatedNotice] = useState(false);
+  // Rules accepted → the actual attempt has begun.
+  const [begun, setBegun] = useState(false);
+  const [beginning, setBeginning] = useState(false);
+  const [script, setScript] = useState<ResultScript | null>(null);
+  const [scriptOpen, setScriptOpen] = useState(false);
   const submittedRef = useRef(false);
   const answersRef = useRef<Record<number, number>>({});
   const tokenRef = useRef<string | null>(null);
 
+  /**
+   * Activate a freshly created server session — locks in the start time and
+   * starts the countdown. Only called after rules are accepted.
+   */
+  const activateSession = useCallback(
+    (sessionToken: string | null, durationMinutes: number) => {
+      tokenRef.current = sessionToken;
+      answersRef.current = {};
+      setAnswers({});
+      setCurrent(0);
+      setBegun(true);
+      // Fresh session — clear any leftover answers from a terminated one.
+      setSecondsLeft(Math.max(60, durationMinutes * 60));
+    },
+    [],
+  );
+
+  /**
+   * Begin the real attempt — creates the server session and starts the
+   * timer. Only called after the student accepts the exam rules.
+   */
+  const beginExam = useCallback(async () => {
+    if (!user || beginning || begun || !exam) return;
+    setBeginning(true);
+    try {
+      const authToken = await user.getIdToken();
+      const response = await fetch(
+        `/api/exams/${encodeURIComponent(examId)}?start=1`,
+        {
+          headers: authToken
+            ? { Authorization: `Bearer ${authToken}` }
+            : undefined,
+          cache: "no-store",
+        },
+      );
+      const data = (await response.json().catch(() => ({}))) as {
+        sessionToken?: string | null;
+        error?: string;
+      };
+      if (!response.ok) {
+        setLoadError(data.error ?? "Could not start the exam. Please retry.");
+        return;
+      }
+      activateSession(data.sessionToken ?? null, exam.durationMinutes);
+    } catch {
+      setLoadError("Failed to start the exam. Check your connection.");
+    } finally {
+      setBeginning(false);
+    }
+  }, [beginning, begun, exam, examId, user, activateSession]);
+
+  // Load the exam meta + sanitized questions first (no answers, no attempt).
   useEffect(() => {
     if (authLoading || profileLoading || !user) return;
     let cancelled = false;
@@ -72,7 +164,6 @@ export default function ExamParticipationArea({
         const data = (await response.json().catch(() => ({}))) as {
           exam?: TakingExam;
           questions?: TakingQuestion[];
-          sessionToken?: string | null;
           error?: string;
         };
         if (cancelled) return;
@@ -82,8 +173,34 @@ export default function ExamParticipationArea({
         }
         setExam(data.exam);
         setQuestions(data.questions ?? []);
-        tokenRef.current = data.sessionToken ?? null;
-        setSecondsLeft(Math.max(60, data.exam.durationMinutes * 60));
+        // "Start Now" flow: rules were already accepted on the exam card,
+        // so begin the attempt right away without showing them again.
+        if (autoBegin && (data.questions?.length ?? 0) > 0) {
+          try {
+            const authToken = await user.getIdToken();
+            const startResponse = await fetch(
+              `/api/exams/${encodeURIComponent(examId)}?start=1`,
+              {
+                headers: authToken
+                  ? { Authorization: `Bearer ${authToken}` }
+                  : undefined,
+                cache: "no-store",
+              },
+            );
+            const startData = (await startResponse
+              .json()
+              .catch(() => ({}))) as { sessionToken?: string | null };
+            if (cancelled) return;
+            if (startResponse.ok && data.exam) {
+              activateSession(
+                startData.sessionToken ?? null,
+                data.exam.durationMinutes,
+              );
+            }
+          } catch {
+            if (!cancelled) setLoadError("Failed to start the exam. Please retry.");
+          }
+        }
       } catch {
         if (!cancelled) setLoadError("Failed to load the exam. Please retry.");
       } finally {
@@ -93,7 +210,7 @@ export default function ExamParticipationArea({
     return () => {
       cancelled = true;
     };
-  }, [authLoading, profileLoading, user, examId]);
+  }, [authLoading, profileLoading, user, examId, autoBegin, activateSession]);
 
   const submit = useCallback(async () => {
     if (submittedRef.current || !user) return;
@@ -137,7 +254,8 @@ export default function ExamParticipationArea({
     }
   }, [examId, user]);
 
-  // Countdown + auto-submit when time runs out.
+  // Countdown + auto-submit when time runs out. The timer only exists once
+  // the attempt has actually begun (rules accepted).
   useEffect(() => {
     if (secondsLeft === null || outcome || terminatedNotice) return;
     if (secondsLeft <= 0) {
@@ -234,6 +352,35 @@ export default function ExamParticipationArea({
     setCurrent((value) => Math.min(value + 1, questions.length - 1));
   }
 
+  const openAnswerScript = async () => {
+    if (script) {
+      setScriptOpen(true);
+      return;
+    }
+    try {
+      if (!user) return;
+      const token = await user.getIdToken();
+      const response = await fetch(
+        `/api/exams/${encodeURIComponent(examId)}/result`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          cache: "no-store",
+        },
+      );
+      const data = (await response.json().catch(() => ({}))) as
+        | ResultScript
+        | { error?: string };
+      if ("questions" in data) {
+        setScript(data);
+        setScriptOpen(true);
+      } else {
+        setLoadError("error" in data && data.error ? data.error : "Answer script is not available yet.");
+      }
+    } catch {
+      setLoadError("Failed to load the answer script. Please retry.");
+    }
+  };
+
   if (authLoading || profileLoading) {
     return <AccessLoading label="Checking access..." />;
   }
@@ -277,13 +424,118 @@ export default function ExamParticipationArea({
     );
   }
 
+  /* ── Result Card ─────────────────────────────────────────────────────── */
+
   if (outcome) {
     const percentage =
       outcome.totalMarks > 0
         ? Math.round((outcome.score / outcome.totalMarks) * 100)
         : 0;
+
+    if (scriptOpen && script) {
+      return (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-extrabold text-heading">Answer Script</h3>
+              <p className="text-xs text-neutral-400">{script.examName}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setScriptOpen(false)}
+              className="rounded-xl border border-ink/10 bg-dark-850 px-4 py-2 text-sm font-bold text-neutral-300 transition hover:text-heading"
+            >
+              ← Back to Result
+            </button>
+          </div>
+
+          <ol className="space-y-4">
+            {script.questions.map((item, index) => {
+              const isCorrect =
+                item.chosenIndex !== null && item.chosenIndex === item.correctIndex;
+              return (
+                <li
+                  key={item.questionId}
+                  className={`rounded-2xl border p-4 sm:p-5 ${
+                    item.chosenIndex === null
+                      ? "border-ink/10 bg-dark-900"
+                      : isCorrect
+                        ? "border-emerald-500/30 bg-emerald-500/5"
+                        : "border-red-500/30 bg-red-500/5"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-bold leading-relaxed text-heading sm:text-base">
+                      {index + 1}. {item.question}
+                    </p>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
+                        item.chosenIndex === null
+                          ? "bg-neutral-500/15 text-neutral-400"
+                          : isCorrect
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : "bg-red-500/15 text-red-300"
+                      }`}
+                    >
+                      {item.chosenIndex === null
+                        ? "Unanswered"
+                        : isCorrect
+                          ? `Correct +${item.obtained}`
+                          : `Wrong ${item.obtained}`}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {item.options.map((option, optionIndex) => {
+                      const chosen = item.chosenIndex === optionIndex;
+                      const correct = item.correctIndex === optionIndex;
+                      return (
+                        <div
+                          key={optionIndex}
+                          className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-sm font-semibold ${
+                            correct
+                              ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
+                              : chosen
+                                ? "border-red-500/50 bg-red-500/10 text-red-200"
+                                : "border-ink/10 bg-dark-850 text-neutral-400"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${
+                              correct
+                                ? "bg-emerald-500 text-white"
+                                : chosen
+                                  ? "bg-red-500 text-white"
+                                  : "bg-ink/10 text-neutral-400"
+                            }`}
+                          >
+                            {String.fromCharCode(65 + optionIndex)}
+                          </span>
+                          <span className="min-w-0 break-words">{option}</span>
+                          {correct && (
+                            <span className="ml-auto shrink-0 text-[10px] font-extrabold uppercase tracking-wide text-emerald-300">
+                              Correct Answer
+                            </span>
+                          )}
+                          {chosen && !correct && (
+                            <span className="ml-auto shrink-0 text-[10px] font-extrabold uppercase tracking-wide text-red-300">
+                              Your Answer
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      );
+    }
+
     return (
-      <div className="rounded-2xl border border-primary-600/30 bg-primary-600/10 p-8 text-center">
+      <div className="rounded-2xl border border-primary-600/30 bg-primary-600/10 p-6 text-center sm:p-8">
         {terminatedNotice ? (
           <p className="mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm font-semibold text-yellow-300">
             This exam was started on another device — this session was
@@ -292,34 +544,119 @@ export default function ExamParticipationArea({
         ) : (
           <h3 className="text-lg font-extrabold text-heading">Exam submitted 🎉</h3>
         )}
-        <p className="mt-4 text-4xl font-extrabold text-primary-300">
-          {outcome.score} / {outcome.totalMarks}
+
+        {/* Result card */}
+        <p className="mt-4 text-xl font-extrabold text-heading">
+          {outcome.examName ?? exam?.name}
+        </p>
+        <p className="mt-3 text-sm font-semibold uppercase tracking-wide text-neutral-400">
+          Obtained Marks
+        </p>
+        <p className="text-5xl font-extrabold text-primary-300">
+          {outcome.score}
+          <span className="text-2xl text-neutral-400"> / {outcome.totalMarks}</span>
         </p>
         <p className="mt-1 text-sm font-semibold text-neutral-300">{percentage}%</p>
-        <ul className="mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-neutral-300">
-          <li>✅ Correct: {outcome.correctCount}</li>
-          <li>❌ Wrong: {outcome.wrongCount}</li>
-          <li>⏭ Skipped: {outcome.skippedCount}</li>
+
+        <div className="mx-auto mt-6 grid max-w-md grid-cols-3 gap-3">
+          <div className="rounded-xl border border-ink/10 bg-dark-900 p-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">Correct</p>
+            <p className="mt-1 text-lg font-extrabold text-emerald-300">{outcome.correctCount}</p>
+          </div>
+          <div className="rounded-xl border border-ink/10 bg-dark-900 p-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">Wrong</p>
+            <p className="mt-1 text-lg font-extrabold text-red-300">{outcome.wrongCount}</p>
+          </div>
+          <div className="rounded-xl border border-ink/10 bg-dark-900 p-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-500">Unanswered</p>
+            <p className="mt-1 text-lg font-extrabold text-neutral-300">{outcome.skippedCount}</p>
+          </div>
+        </div>
+
+        <ul className="mx-auto mt-4 grid max-w-md gap-2 text-left text-sm">
+          {outcome.negativeMarks != null && outcome.negativeMarks > 0 ? (
+            <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
+              <span className="font-semibold text-neutral-400">Negative Marks</span>
+              <span className="font-extrabold text-red-300">
+                −{outcome.negativeMarks} per wrong
+                {outcome.negativeDeduction ? ` · total −${outcome.negativeDeduction}` : ""}
+              </span>
+            </li>
+          ) : (
+            <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
+              <span className="font-semibold text-neutral-400">Negative Marks</span>
+              <span className="font-extrabold text-emerald-300">None</span>
+            </li>
+          )}
+          {typeof outcome.timeTakenSeconds === "number" && (
+            <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
+              <span className="font-semibold text-neutral-400">Time Taken</span>
+              <span className="font-extrabold text-heading">
+                {formatDuration(outcome.timeTakenSeconds)}
+              </span>
+            </li>
+          )}
+          {outcome.meritPosition != null && (
+            <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
+              <span className="font-semibold text-neutral-400">Merit Position</span>
+              <span className="font-extrabold text-primary-300">#{outcome.meritPosition}</span>
+            </li>
+          )}
+          {outcome.highestMark != null && (
+            <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
+              <span className="font-semibold text-neutral-400">Highest Mark</span>
+              <span className="font-extrabold text-heading">{outcome.highestMark}</span>
+            </li>
+          )}
         </ul>
-        {/* Negative marking summary — shown here only, never during the exam. */}
-        {outcome.negativeMarks != null && outcome.negativeMarks > 0 ? (
-          <p className="mt-4 text-sm font-semibold text-red-300">
-            Negative marking applied: −{outcome.negativeMarks} per wrong answer
-            {outcome.negativeDeduction
-              ? ` · deduction −${outcome.negativeDeduction}`
-              : ""}
-          </p>
-        ) : (
-          <p className="mt-4 text-sm font-semibold text-emerald-300">
-            No negative marking for this exam.
-          </p>
-        )}
-        <a
-          href="/dashboard"
-          className="mt-6 inline-block rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-700"
+
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => void openAnswerScript()}
+            className="w-full rounded-xl bg-primary-600 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-500 active:scale-[0.98] sm:w-auto"
+          >
+            View Answer Script
+          </button>
+          <a
+            href="/dashboard"
+            className="w-full rounded-xl border border-ink/10 bg-dark-850 px-6 py-3 text-sm font-bold text-neutral-300 transition hover:text-heading sm:w-auto"
+          >
+            Go to Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Exam Rules gate ─────────────────────────────────────────────────── */
+
+  if (exam && !begun && questions.length > 0) {
+    return (
+      <div className="rounded-2xl border border-primary-600/30 bg-dark-900 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-lg font-extrabold text-heading">Exam Rules</h3>
+          <span className="rounded-full bg-primary-600/15 px-3 py-1 text-[11px] font-bold text-primary-300">
+            Read carefully before starting
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-neutral-400">{exam.name}</p>
+
+        <div className="mt-4">
+          <ExamRulesList exam={exam} />
+        </div>
+
+        <button
+          type="button"
+          disabled={beginning}
+          onClick={() => void beginExam()}
+          className="mt-6 w-full rounded-xl bg-primary-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-500 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Go to Dashboard
-        </a>
+          {beginning ? "Starting…" : "I Understand & Start Exam"}
+        </button>
+        <p className="mt-2 text-center text-xs text-neutral-500">
+          The timer starts as soon as you press this button.
+        </p>
       </div>
     );
   }
@@ -334,6 +671,8 @@ export default function ExamParticipationArea({
     );
   }
 
+  /* ── Active exam interface ──────────────────────────────────────────── */
+
   const answeredCount = Object.keys(answers).length;
   const question = questions[current];
   const selected = answers[question.id];
@@ -345,7 +684,7 @@ export default function ExamParticipationArea({
       {/* Header: timer + progress (no negative-marking info here). */}
       <div className="sticky top-0 z-10 -mx-5 flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-dark-900 px-5 py-4 sm:-mx-6 sm:px-6">
         <div>
-          <h3 className="font-extrabold text-heading">{exam.title}</h3>
+          <h3 className="font-extrabold text-heading">{exam.name}</h3>
           <p className="text-xs text-neutral-400">
             Question {current + 1} of {questions.length} · answered{" "}
             {answeredCount}

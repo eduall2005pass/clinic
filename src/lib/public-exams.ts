@@ -1,6 +1,17 @@
 import { fetchExams, type Exam } from "@/lib/exams-admin";
 import type { Eligibility } from "@/lib/eligibility";
 
+/**
+ * MediSpark negative-marking rule — MUST stay identical to
+ * `negativeMarksFor()` in src/lib/exam-taking.ts (the grader).
+ * Kept inline here so client components never pull in server-only code.
+ */
+export const NEGATIVE_MARKS_PER_WRONG = 0.25;
+
+function negativeMarksFor(courseType: string): number {
+  return courseType === "Admission" ? NEGATIVE_MARKS_PER_WRONG : 0;
+}
+
 export type ExamStatus = "Upcoming" | "Live" | "Closed";
 
 export type CourseType = "Academic" | "Admission";
@@ -10,8 +21,12 @@ export type PublicExam = {
   name: string;
   batch: string;
   courseType: CourseType;
+  subject: string;
   totalMarks: number;
+  totalQuestions: number;
   durationMinutes: number;
+  /** Negative marks per wrong answer (0 = no negative marking). */
+  negativeMarks: number;
   examDate: string;
   examTime: string;
   status: ExamStatus;
@@ -97,8 +112,13 @@ function toPublicExam(exam: Exam): PublicExam {
     name: exam.title,
     batch,
     courseType: exam.courseType,
+    subject: exam.subject,
     totalMarks: exam.totalMarks,
+    // Question count as configured by the admin (0 = unknown/not set yet).
+    totalQuestions: Math.max(0, Number(exam.questionCount) || 0),
     durationMinutes: exam.durationMinutes,
+    // Same rule the grader applies — rules shown must match grading exactly.
+    negativeMarks: negativeMarksFor(exam.courseType),
     examDate: scheduledIso ? scheduledIso.slice(0, 10) : "",
     examTime: scheduledIso ? formatExamTime(scheduledIso) : "",
     status: deriveStatus(exam),

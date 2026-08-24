@@ -15,10 +15,14 @@ export async function GET(
   }
 
   const { id } = await context.params;
+  // The attempt (timer + answer storage) begins only with ?start=1 — i.e.
+  // after the student accepts the exam rules on the client.
+  const startAttempt = request.nextUrl.searchParams.get("start") === "1";
   const payload = await getExamForTaking(
     id,
     user.uid,
     user.name || user.email || "Student",
+    startAttempt,
   );
   if (!payload) {
     return NextResponse.json(
