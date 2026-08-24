@@ -295,7 +295,10 @@ export default function CourseLearningView({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (authLoading) return;
-    if (user) void load();
+    if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void load();
+    }
   }, [authLoading, user, load]);
 
   if (authLoading || !user || state === "loading") {

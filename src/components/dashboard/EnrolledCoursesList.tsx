@@ -114,6 +114,7 @@ export default function EnrolledCoursesList() {
   useEffect(() => {
     if (authLoading) return;
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void load();
     }
   }, [authLoading, user, load]);

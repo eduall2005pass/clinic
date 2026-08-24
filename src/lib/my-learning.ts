@@ -303,24 +303,20 @@ export async function getCourseLearningData(
   const subjectIds = subjects.map((subject) => subject.id);
   const subjectPlaceholders = subjectIds.map(() => "?").join(",");
 
-  const [papers, chapters, classesRows, materialsRows, examsRows] =
-    await Promise.all([
-      query<PaperRow[]>(
-        `SELECT id, subject_id, name, kind FROM course_papers
-          WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
-          ORDER BY sort_order, name`,
-        subjectIds,
-      ),
-      query<ChapterRow[]>(
-        `SELECT id, subject_id, paper_id, name FROM course_chapters
-          WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
-          ORDER BY sort_order, name`,
-        subjectIds,
-      ),
-      Promise.resolve([] as ClassRow[]),
-      Promise.resolve([] as MaterialRow[]),
-      Promise.resolve([] as ExamRow[]),
-    ]);
+  const [papers, chapters] = await Promise.all([
+    query<PaperRow[]>(
+      `SELECT id, subject_id, name, kind FROM course_papers
+        WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+        ORDER BY sort_order, name`,
+      subjectIds,
+    ),
+    query<ChapterRow[]>(
+      `SELECT id, subject_id, paper_id, name FROM course_chapters
+        WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+        ORDER BY sort_order, name`,
+      subjectIds,
+    ),
+  ]);
 
   const chapterIds = chapters.map((chapter) => chapter.id);
 
