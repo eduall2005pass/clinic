@@ -11,6 +11,9 @@ type MentorDraft = {
   id: string;
   name: string;
   subject: string;
+  qualification: string;
+  isFounder: boolean;
+  isDeveloper: boolean;
   note: string;
   bio: string;
   isActive: boolean;
@@ -33,6 +36,9 @@ function toDraft(mentor: Mentor): MentorDraft {
     id: mentor.id,
     name: mentor.name,
     subject: mentor.subject,
+    qualification: mentor.qualification ?? "",
+    isFounder: mentor.isFounder,
+    isDeveloper: mentor.isDeveloper,
     note: mentor.note,
     bio: mentor.bio ?? "",
     isActive: mentor.isActive,
@@ -60,6 +66,9 @@ export default function AllMentorsPage() {
   const [addForm, setAddForm] = useState({
     name: "",
     subject: "",
+    qualification: "",
+    isFounder: false,
+    isDeveloper: false,
     note: "",
     bio: "",
     isActive: true,
@@ -172,6 +181,9 @@ export default function AllMentorsPage() {
       id: mentor.id,
       name: mentor.name.trim(),
       subject: mentor.subject.trim(),
+      qualification: mentor.qualification.trim(),
+      isFounder: mentor.isFounder,
+      isDeveloper: mentor.isDeveloper,
       note: mentor.note.trim(),
       bio: mentor.bio.trim(),
       initials: mentor.name
@@ -212,6 +224,9 @@ export default function AllMentorsPage() {
             {
               name: addForm.name.trim(),
               subject: addForm.subject.trim(),
+              qualification: addForm.qualification.trim(),
+              isFounder: addForm.isFounder,
+              isDeveloper: addForm.isDeveloper,
               note: addForm.note.trim(),
               bio: addForm.bio.trim(),
               isActive: addForm.isActive,
@@ -263,6 +278,9 @@ export default function AllMentorsPage() {
       setAddForm({
         name: "",
         subject: "",
+        qualification: "",
+        isFounder: false,
+        isDeveloper: false,
         note: "",
         bio: "",
         isActive: true,
@@ -445,11 +463,44 @@ export default function AllMentorsPage() {
                 type="text"
                 value={addForm.subject}
                 maxLength={255}
-                placeholder="Biology & Anatomy"
+                placeholder="Subject Teacher"
                 onChange={(event) => setAddForm({ ...addForm, subject: event.target.value })}
                 className={inputClass}
               />
             </label>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className={labelClass}>Qualification</span>
+              <input
+                type="text"
+                value={addForm.qualification}
+                maxLength={255}
+                placeholder="MBBS, ShSMC"
+                onChange={(event) => setAddForm({ ...addForm, qualification: event.target.value })}
+                className={inputClass}
+              />
+            </label>
+            <div className="flex flex-wrap items-end gap-4 pb-1">
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-600 admin-dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={addForm.isFounder}
+                  onChange={(event) => setAddForm({ ...addForm, isFounder: event.target.checked })}
+                  className="h-4 w-4 accent-primary-600"
+                />
+                Show Founder
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-600 admin-dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={addForm.isDeveloper}
+                  onChange={(event) => setAddForm({ ...addForm, isDeveloper: event.target.checked })}
+                  className="h-4 w-4 accent-primary-600"
+                />
+                Show Developer
+              </label>
+            </div>
           </div>
           <label className="block">
             <span className={labelClass}>Short Note</span>
@@ -650,10 +701,44 @@ export default function AllMentorsPage() {
                       type="text"
                       value={mentor.subject}
                       maxLength={255}
+                      placeholder="Subject Teacher"
                       onChange={(event) => patchMentor(mentor.id, { subject: event.target.value })}
                       className={inputClass}
                     />
                   </label>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className={labelClass}>Qualification</span>
+                    <input
+                      type="text"
+                      value={mentor.qualification}
+                      maxLength={255}
+                      placeholder="MBBS, ShSMC"
+                      onChange={(event) => patchMentor(mentor.id, { qualification: event.target.value })}
+                      className={inputClass}
+                    />
+                  </label>
+                  <div className="flex flex-wrap items-end gap-4 pb-1">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-600 admin-dark:text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={mentor.isFounder}
+                        onChange={(event) => patchMentor(mentor.id, { isFounder: event.target.checked })}
+                        className="h-4 w-4 accent-primary-600"
+                      />
+                      Show Founder
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-600 admin-dark:text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={mentor.isDeveloper}
+                        onChange={(event) => patchMentor(mentor.id, { isDeveloper: event.target.checked })}
+                        className="h-4 w-4 accent-primary-600"
+                      />
+                      Show Developer
+                    </label>
+                  </div>
                 </div>
                 <label className="block">
                   <span className={labelClass}>Short Note</span>

@@ -167,7 +167,8 @@ export async function fetchAllMentors(): Promise<Mentor[]> {
   try {
     await ensureMentorsTable();
     const rows = await query<MentorRow[]>(
-      `SELECT id, name, subject, note, initials, is_active,
+      `SELECT id, name, subject, qualification, is_founder, is_developer,
+              note, initials, is_active,
               photo_url, bio, social_facebook, social_instagram, social_linkedin, social_youtube
        FROM mentors ORDER BY sort_order ASC`,
     );
@@ -183,7 +184,8 @@ export async function fetchMentors(): Promise<Mentor[]> {
   try {
     await ensureMentorsTable();
     const rows = await query<MentorRow[]>(
-      `SELECT id, name, subject, note, initials, is_active,
+      `SELECT id, name, subject, qualification, is_founder, is_developer,
+              note, initials, is_active,
               photo_url, bio, social_facebook, social_instagram, social_linkedin, social_youtube
        FROM mentors WHERE is_active = 1 ORDER BY sort_order ASC`,
     );
@@ -198,6 +200,9 @@ export type MentorSaveInput = {
   id?: unknown;
   name?: unknown;
   subject?: unknown;
+  qualification?: unknown;
+  isFounder?: unknown;
+  isDeveloper?: unknown;
   note?: unknown;
   initials?: unknown;
   isActive?: unknown;
@@ -231,6 +236,16 @@ export function normalizeMentorInput(
     id: typeof raw.id === "string" && raw.id.trim() ? raw.id.trim().slice(0, 64) : null,
     name,
     subject: str(raw.subject, 255),
+    qualification:
+      typeof raw.qualification === "string"
+        ? raw.qualification.trim().slice(0, 255)
+        : "",
+    isFounder:
+      raw.isFounder === true || raw.isFounder === "true" || raw.isFounder === "1",
+    isDeveloper:
+      raw.isDeveloper === true ||
+      raw.isDeveloper === "true" ||
+      raw.isDeveloper === "1",
     note: str(raw.note, 1000),
     initials:
       str(raw.initials, 8) ||
@@ -279,12 +294,16 @@ export async function saveMentors(
         ? entry.id
         : `mentor-${Date.now()}-${index}`;
     await query(
-      `INSERT INTO mentors (id, name, subject, note, initials, is_active, sort_order, updated_by,
+      `INSERT INTO mentors (id, name, subject, qualification, is_founder, is_developer,
+                            note, initials, is_active, sort_order, updated_by,
                             bio, social_facebook, social_instagram, social_linkedin, social_youtube)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          name = VALUES(name),
          subject = VALUES(subject),
+         qualification = VALUES(qualification),
+         is_founder = VALUES(is_founder),
+         is_developer = VALUES(is_developer),
          note = VALUES(note),
          initials = VALUES(initials),
          is_active = VALUES(is_active),
@@ -298,6 +317,9 @@ export async function saveMentors(
         id,
         entry.name as string,
         (entry.subject as string) || "",
+        ((entry.qualification as string) || null),
+        entry.isFounder ? 1 : 0,
+        entry.isDeveloper ? 1 : 0,
         (entry.note as string) || null,
         (entry.initials as string) || "?",
         entry.isActive ? 1 : 0,
