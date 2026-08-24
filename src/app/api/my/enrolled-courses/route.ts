@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFirebaseUser } from "@/lib/auth-api";
-import { isMysqlConfigured, query } from "@/lib/mysql";
+import { isMysqlConfigured } from "@/lib/mysql";
 import { getMyEnrolledCourses } from "@/lib/my-learning";
 
 export const dynamic = "force-dynamic";
