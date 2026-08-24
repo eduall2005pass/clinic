@@ -69,7 +69,8 @@ const categoryCards: {
 
 /**
  * The Public Exam section entry point — exactly 4 separate course-category
- * cards (2 per row on desktop and mobile). Clicking a card opens that
+ * cards stacked vertically (1 card per row on every screen size), icon on
+ * the left with the category name beside it. Clicking a card opens that
  * category's own Public Exams page. Not tabs, not a dropdown.
  */
 export default function ExamCategoryCards() {
@@ -86,26 +87,36 @@ export default function ExamCategoryCards() {
         </div>
       </div>
 
-      {/* Exactly 4 cards — 2 per row on every screen size. */}
-      <div className="grid grid-cols-2 gap-4 sm:gap-6">
-        {categoryCards.map(({ key, label, description, Icon }) => (
+      {/* Exactly 4 cards — vertical stack, 1 per row, equal height & width. */}
+      <div className="flex flex-col gap-3 sm:gap-4">
+        {categoryCards.map(({ key, label, Icon }) => (
           <Link
             key={key}
             href={`/exam/category/${key}`}
-            className="group flex flex-col rounded-2xl border border-ink/10 bg-dark-900 p-4 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30 active:scale-[0.99] sm:p-6"
+            className="group flex w-full items-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-3.5 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/30 active:scale-[0.99] sm:gap-4 sm:p-5"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600/15 text-primary-300 transition group-hover:bg-primary-600 group-hover:text-white sm:h-14 sm:w-14">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-300 transition duration-300 group-hover:bg-primary-600 group-hover:text-white sm:h-13 sm:w-13">
               <Icon />
             </span>
-            <h3 className="mt-3 text-sm font-extrabold leading-snug text-heading transition group-hover:text-primary-400 sm:text-base">
-              {label}
-            </h3>
-            <p className="mt-1 hidden text-xs leading-relaxed text-neutral-400 sm:block">
-              {description}
-            </p>
-            <span className="mt-auto pt-3 text-[11px] font-bold uppercase tracking-wide text-primary-400 opacity-0 transition group-hover:opacity-100 sm:pt-4">
-              View Exams →
+            <span className="min-w-0 flex-1">
+              <h3 className="text-sm font-extrabold leading-snug text-heading transition group-hover:text-primary-400 sm:text-base">
+                {label}
+              </h3>
+              <p className="mt-0.5 truncate text-xs text-neutral-500 sm:text-sm">
+                Live · Upcoming · Previous Exams
+              </p>
             </span>
+            <svg
+              className="h-4 w-4 shrink-0 text-neutral-500 transition duration-300 group-hover:translate-x-1 group-hover:text-primary-400"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <path d="m9 18 6-6-6-6" />
+            </svg>
           </Link>
         ))}
       </div>
