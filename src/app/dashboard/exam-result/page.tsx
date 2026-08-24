@@ -1,17 +1,28 @@
 import type { Metadata } from "next";
-import EnrollmentRequiredSection from "@/components/auth/EnrollmentRequiredSection";
+import { AccessGate } from "@/components/auth/AccessGuard";
+import ExamResultsView from "@/components/dashboard/ExamResultsView";
 
 export const metadata: Metadata = {
-  title: "Exam Result",
+  title: "Exam Results",
   description:
-    "Track your exam performance on MediSpark — your exam results will appear here.",
+    "All your MediSpark exam results — course-wise totals, obtained marks, highest marks and merit ranking.",
 };
 
 export default function ExamResultPage() {
   return (
-    <EnrollmentRequiredSection
-      title="Exam Result"
-      description="Your exam results will be shown here. Exam result data will be connected to your account in an upcoming step."
-    />
+    <main className="flex-1 bg-dark-950">
+      <AccessGate
+        requirement="registered"
+        title="Registration Required"
+        message="You need to register to view your exam results."
+        actionLabel="Register Now"
+        actionHref="/register"
+        loadingLabel="Loading your exam results..."
+        secondaryLabel="Back to Dashboard"
+        secondaryHref="/dashboard"
+      >
+        <ExamResultsView />
+      </AccessGate>
+    </main>
   );
 }
