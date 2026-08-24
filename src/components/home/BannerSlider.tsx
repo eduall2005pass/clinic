@@ -5,12 +5,22 @@ import Link from "next/link";
 import { bannerSlides } from "@/lib/banners";
 import type { CustomBanner } from "@/lib/banner-store";
 
+type Slide = {
+  id: string;
+  image: string;
+  href?: string;
+  alt?: string;
+};
+
 const AUTO_SLIDE_MS = 3000;
 const SWIPE_THRESHOLD_PX = 40;
 
 export default function BannerSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [slides, setSlides] = useState(bannerSlides);
+  // Slides come only from Admin → Banners (MySQL). Defaults are shown only
+  // while the API is unreachable; an empty banner list renders nothing.
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [ready, setReady] = useState(false);
   const [paused, setPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchSwiped = useRef(false);
@@ -18,12 +28,14 @@ export default function BannerSlider() {
   useEffect(() => {
     let cancelled = false;
     fetch("/api/banners", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
+      .then((response) => {
+        if (!response.ok) throw new Error("banners unavailable");
+        return response.json();
+      })
       .then((data: { slides?: CustomBanner[] | null } | null) => {
         if (cancelled) return;
         const custom = data?.slides ?? [];
-        if (custom.length === 0) return;
-        // Database is the single source of truth once banners exist.
+        // Database is the single source of truth for the slider.
         setSlides(
           custom.map((slide) => ({
             id: slide.id,
@@ -34,7 +46,11 @@ export default function BannerSlider() {
         );
       })
       .catch(() => {
-        // Keep the default banners when the API is unreachable.
+        // API unreachable → keep the built-in banners as a graceful fallback.
+        if (!cancelled) setSlides(bannerSlides);
+      })
+      .finally(() => {
+        if (!cancelled) setReady(true);
       });
     return () => {
       cancelled = true;
@@ -46,12 +62,28 @@ export default function BannerSlider() {
   }, [slides.length]);
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || slides.length === 0) return;
     const timer = setInterval(() => {
       goTo(activeIndex + 1);
     }, AUTO_SLIDE_MS);
     return () => clearInterval(timer);
-  }, [paused, activeIndex, goTo]);
+  }, [paused, activeIndex, goTo, slides.length]);
+
+  // Loading — keep layout height stable without flashing stale content.
+  if (!ready && slides.length === 0) {
+    return (
+      <section
+        role="region"
+        aria-label="Featured banners"
+        className="relative w-full overflow-hidden bg-dark-950"
+      >
+        <div className="aspect-[8/3] w-full animate-pulse bg-dark-900 sm:aspect-[16/5]" />
+      </section>
+    );
+  }
+
+  // Admin disabled/deleted every banner — nothing to show.
+  if (slides.length === 0) return null;
 
   return (
     <section

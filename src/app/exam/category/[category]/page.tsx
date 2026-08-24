@@ -4,10 +4,10 @@ import { notFound } from "next/navigation";
 import PublicExamList from "@/components/PublicExamList";
 import {
   examCategories,
-  fetchPublicExams,
   batches,
   type ExamCategory,
 } from "@/lib/public-exams";
+import { fetchPublicExams } from "@/lib/public-exams-server";
 
 export const dynamic = "force-dynamic";
 

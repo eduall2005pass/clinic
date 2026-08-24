@@ -4,6 +4,7 @@ import CategoryCard from "@/components/CategoryCard";
 import BatchCourseList from "@/components/BatchCourseList";
 import { batches } from "@/lib/courses";
 import { getLivePublicCourses } from "@/lib/course-catalog";
+import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
 
 export const dynamic = "force-dynamic";
 
@@ -73,41 +74,13 @@ const CATEGORY_ICONS: Record<CategoryParam, React.ReactNode> = {
   ),
 };
 
-const CATEGORY_CARDS: Array<{
-  param: CategoryParam;
-  title: string;
-  href: string;
-  description: string;
-}> = [
-  {
-    param: "ssc",
-    title: "SSC Academic Course",
-    href: "/courses/ssc",
-    description:
-      "Complete SSC academic preparation — every subject with batch-wise courses and board exam-focused explanations.",
-  },
-  {
-    param: "hsc",
-    title: "HSC Academic Course",
-    href: "/courses/academic",
-    description:
-      "Complete HSC academic preparation — every subject with batch-wise courses and board exam-focused explanations.",
-  },
-  {
-    param: "medical",
-    title: "Medical Admission Course",
-    href: "/courses/admission",
-    description:
-      "Focused medical admission preparation — combined syllabus training with exam strategy for the medical entrance race.",
-  },
-  {
-    param: "varsity",
-    title: "Varsity Admission Course",
-    href: "/courses/varsity",
-    description:
-      "Varsity admission preparation — structured classes, practice and model tests for the university entrance exam.",
-  },
-];
+/** Icon per category slug — used when a DB category has no image. */
+function iconForSlug(slug: string): React.ReactNode {
+  const key = (Object.keys(CATEGORY_ICONS) as CategoryParam[]).find((param) =>
+    slug.toLowerCase().includes(param),
+  );
+  return CATEGORY_ICONS[key ?? "hsc"];
+}
 
 export default async function CoursesPage({
   searchParams,
@@ -165,6 +138,8 @@ export default async function CoursesPage({
     );
   }
 
+  const categories = await fetchActiveCourseCategories();
+
   return (
     <main className="flex-1 bg-dark-950">
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -181,14 +156,16 @@ export default async function CoursesPage({
           </p>
         </header>
 
+        {/* Managed from Admin → Courses → Categories (course_categories table). */}
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          {CATEGORY_CARDS.map((card) => (
+          {categories.map((category) => (
             <CategoryCard
-              key={card.param}
-              href={card.href}
-              title={card.title}
-              description={card.description}
-              icon={CATEGORY_ICONS[card.param]}
+              key={category.id}
+              href={category.href || "/courses"}
+              title={category.name}
+              description={category.description ?? ""}
+              image={category.imageUrl}
+              icon={iconForSlug(category.slug)}
             />
           ))}
         </div>

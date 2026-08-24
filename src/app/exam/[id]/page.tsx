@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { fetchExamPageById } from "@/lib/public-exams";
+import { fetchExamPageById } from "@/lib/public-exams-server";
 import ExamParticipationArea from "@/components/auth/ExamParticipationArea";
 
 export const dynamic = "force-dynamic";

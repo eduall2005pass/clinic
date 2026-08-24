@@ -56,11 +56,18 @@ export async function fetchHomepageSections(): Promise<HomepageSection[]> {
       });
     }
 
-    // Ensure every known section exists even if the DB row is missing.
+    // Ensure every known section exists even if the DB row is missing,
+    // slotted into its default position (Our Success → Jersey → Mentors)
+    // instead of being appended at the end of the list.
     for (const fallback of defaults) {
-      if (!sections.some((section) => section.key === fallback.key)) {
-        sections.push(fallback);
-      }
+      if (sections.some((section) => section.key === fallback.key)) continue;
+      const defaultIndex = DEFAULT_HOMEPAGE_ORDER.indexOf(fallback.key);
+      const insertAt = sections.findIndex(
+        (section) =>
+          DEFAULT_HOMEPAGE_ORDER.indexOf(section.key) > defaultIndex,
+      );
+      if (insertAt === -1) sections.push(fallback);
+      else sections.splice(insertAt, 0, fallback);
     }
 
     return sections;
