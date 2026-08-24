@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import EnrollmentRequiredSection from "@/components/auth/EnrollmentRequiredSection";
-import { dashboardSubUnits } from "@/lib/dashboard";
+import { AccessGate } from "@/components/auth/AccessGuard";
+import ContinueLearningList from "@/components/dashboard/ContinueLearningList";
 
 export const metadata: Metadata = {
   title: "Continue Learning",
@@ -10,10 +10,17 @@ export const metadata: Metadata = {
 
 export default function ContinueLearningPage() {
   return (
-    <EnrollmentRequiredSection
-      subUnits={dashboardSubUnits["/dashboard/continue-learning"]}
-      title="Continue Learning"
-      description="Your in-progress learning will be shown here. Continue Learning data will be connected to your account in an upcoming step."
-    />
+    <AccessGate
+      requirement="enrolled"
+        title="Course Enrollment Required"
+        message="Please enroll in a course to access your learning dashboard."
+        actionLabel="Explore Courses"
+        actionHref="/courses"
+        loadingLabel="Loading Continue Learning..."
+        secondaryLabel="Back to Dashboard"
+        secondaryHref="/dashboard"
+      >
+        <ContinueLearningList />
+      </AccessGate>
   );
 }
