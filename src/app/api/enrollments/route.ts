@@ -122,10 +122,21 @@ export async function POST(request: NextRequest) {
   };
   try {
     const result = await exec(
-      `INSERT IGNORE INTO enrollments
+      `INSERT INTO enrollments
         (student_uid, course_id, course_name, course_type, course_kind,
          fee, enrollment_status, enrollment_date, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE
+         course_name = VALUES(course_name),
+         course_type = VALUES(course_type),
+         course_kind = VALUES(course_kind),
+         fee = VALUES(fee),
+         enrollment_date = NOW(),
+         updated_at = NOW(),
+         -- Never downgrade an active enrollment; re-enrolling revives
+         -- cancelled/completed/pending rows instead of being ignored.
+         enrollment_status = IF(enrollment_status = 'active', 'active',
+                                VALUES(enrollment_status))`,
       [
         user.uid,
         courseId,
@@ -136,24 +147,27 @@ export async function POST(request: NextRequest) {
         enrollment.enrollmentStatus,
       ],
     );
-    if (result.affectedRows === 0) {
-      const rows = await query<EnrollmentRow[]>(
-        "SELECT * FROM enrollments WHERE student_uid = ? AND course_id = ? LIMIT 1",
-        [user.uid, courseId],
+    // Read back the authoritative row so the client always sees the real
+    // stored status (new or revived) without needing manual DB entry.
+    const rows = await query<EnrollmentRow[]>(
+      "SELECT * FROM enrollments WHERE student_uid = ? AND course_id = ? LIMIT 1",
+      [user.uid, courseId],
+    );
+    if (!rows[0]) {
+      return NextResponse.json(
+        { error: "Could not complete the enrollment." },
+        { status: 500 },
       );
-      if (rows[0]) {
-        return NextResponse.json({ enrollment: mapEnrollment(rows[0]) });
-      }
     }
     // Coupon usage counts only for a newly created enrollment.
-    if (appliedCouponCode) {
+    if (result.affectedRows === 1 && appliedCouponCode) {
       await incrementCouponUsage(appliedCouponCode);
     }
+    return NextResponse.json({ enrollment: mapEnrollment(rows[0]) });
   } catch {
     return NextResponse.json(
       { error: "Could not complete the enrollment." },
       { status: 500 },
     );
   }
-  return NextResponse.json({ enrollment });
 }

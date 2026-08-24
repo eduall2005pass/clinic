@@ -136,8 +136,8 @@ export async function hasActiveEnrollment(
 type EnrolledCourseRow = {
   slug: string;
   name: string;
-  category: string;
-  batch_id: string;
+  category: string | null;
+  batch_id: string | null;
   image_url: string | null;
   short_description: string | null;
   fee: number;
@@ -154,8 +154,10 @@ export async function getMyEnrolledCourses(
   // (paid + approved) and assigned by an admin. Pending/cancelled rows are
   // never shown as courses.
   const rows = await query<EnrolledCourseRow[]>(
-    `SELECT c.slug, c.name, c.category, c.batch_id, c.image_url,
-            c.short_description, c.fee, c.discount_fee,
+    `SELECT e.course_id AS slug,
+            COALESCE(NULLIF(c.name, ''), e.course_name) AS name,
+            COALESCE(c.category, e.course_type) AS category,
+            c.batch_id, c.image_url, c.short_description, c.fee, c.discount_fee,
             e.course_kind, e.enrollment_status, e.enrollment_date
        FROM enrollments e
        LEFT JOIN catalog_courses c ON c.slug = e.course_id
@@ -232,6 +234,8 @@ type CatalogRow = {
 
 type EnrollmentMetaRow = {
   course_kind: "free" | "paid";
+  course_name: string | null;
+  course_type: string | null;
   enrollment_status: string;
   enrollment_date: Date | string;
 };
@@ -268,7 +272,7 @@ export async function getCourseLearningData(
   slug: string,
 ): Promise<CourseLearningData | null> {
   const enrollmentRows = await query<EnrollmentMetaRow[]>(
-    "SELECT course_kind, enrollment_status, enrollment_date FROM enrollments WHERE student_uid = ? AND course_id = ? LIMIT 1",
+    "SELECT course_kind, course_name, course_type, enrollment_status, enrollment_date FROM enrollments WHERE student_uid = ? AND course_id = ? LIMIT 1",
     [uid, slug],
   );
   const enrollment = enrollmentRows[0];
@@ -280,8 +284,23 @@ export async function getCourseLearningData(
     "SELECT slug, name, category, batch_id, image_url, short_description, description, teacher_name, duration, fee, discount_fee FROM catalog_courses WHERE slug = ? LIMIT 1",
     [slug],
   );
-  const catalog = catalogRows[0];
-  if (!catalog) return null;
+  // Fall back to the enrollment's own stored course info when the catalog
+  // row is missing — an active enrollment must always open its course page.
+  const catalog: CatalogRow =
+    catalogRows[0] ??
+    {
+      slug,
+      name: toStringOrNull(enrollment.course_name) ?? slug,
+      category: enrollment.course_type ?? "Academic",
+      batch_id: "",
+      image_url: null,
+      short_description: null,
+      description: null,
+      teacher_name: null,
+      duration: null,
+      fee: 0,
+      discount_fee: null,
+    };
 
   const [subjects, progress, favourites] = await Promise.all([
     query<SubjectRow[]>(
