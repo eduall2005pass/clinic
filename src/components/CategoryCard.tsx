@@ -54,14 +54,12 @@ export default function CategoryCard({
         </p>
       )}
 
-      {/* Explore Course — clearly separated, arrow centered underneath. */}
-      <div className="relative mt-auto flex flex-col items-center gap-2 pt-6">
-        <span className="text-sm font-bold text-primary-400 transition duration-300 group-hover:text-primary-300">
+      {/* Single rounded-square action button — text and arrow together. */}
+      <div className="relative mt-auto pt-6">
+        <span className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-900/40 transition duration-300 group-hover:bg-primary-700 group-hover:shadow-primary-900/60">
           Explore Course
-        </span>
-        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-primary-600/40 bg-primary-600/10 text-primary-400 transition duration-300 group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50">
           <svg
-            className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5"
+            className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
             fill="none"
             stroke="currentColor"
             strokeWidth="2.4"

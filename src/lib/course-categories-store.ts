@@ -60,6 +60,17 @@ export const DEFAULT_COURSE_CATEGORIES: CourseCategory[] = [
     isActive: true,
     sortOrder: 3,
   },
+  {
+    id: "category-varsity",
+    slug: "varsity",
+    name: "Varsity Admission Courses",
+    description:
+      "Varsity admission preparation — structured classes, practice and model tests for the university entrance exam.",
+    href: "/courses/varsity",
+    imageUrl: null,
+    isActive: true,
+    sortOrder: 4,
+  },
 ];
 
 const ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"] as const;
@@ -150,9 +161,19 @@ export async function fetchActiveCourseCategories(): Promise<CourseCategory[]> {
     await ensureSchema();
     const rows = await query<CourseCategoryRow[]>(
       `SELECT id, slug, name, description, href, image_url, is_active, sort_order
-       FROM course_categories WHERE is_active = 1 ORDER BY sort_order ASC, created_at ASC`,
+       FROM course_categories ORDER BY sort_order ASC, created_at ASC`,
     );
-    return rows.length > 0 ? rows.map(rowToCategory) : DEFAULT_COURSE_CATEGORIES;
+    if (rows.length === 0) return DEFAULT_COURSE_CATEGORIES;
+    const mapped = rows.map(rowToCategory);
+    // Canonical categories must always be visible on the website. Legacy
+    // seeds may only contain three of the four — append any canonical
+    // category that has NO row at all (explicitly disabled rows stay hidden).
+    const missingDefaults = DEFAULT_COURSE_CATEGORIES.filter(
+      (fallback) => !mapped.some((category) => category.slug === fallback.slug),
+    );
+    return [...mapped, ...missingDefaults]
+      .filter((category) => category.isActive)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
   } catch {
     return DEFAULT_COURSE_CATEGORIES;
   }
