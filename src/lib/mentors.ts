@@ -16,6 +16,7 @@ export type Mentor = {
   subject: string;
   qualification: string | null;
   isFounder: boolean;
+  isCoFounder: boolean;
   isDeveloper: boolean;
   note: string;
   initials: string;
@@ -35,6 +36,7 @@ export const DEFAULT_MENTORS: Mentor[] = [
     subject: "Biology & Anatomy",
     qualification: null,
     isFounder: false,
+    isCoFounder: false,
     isDeveloper: false,
     note: "Makes complex biology topics simple and exam-focused.",
     initials: "AR",
@@ -52,6 +54,7 @@ export const DEFAULT_MENTORS: Mentor[] = [
     subject: "Chemistry",
     qualification: null,
     isFounder: false,
+    isCoFounder: false,
     isDeveloper: false,
     note: "Guides students through every chapter with clarity.",
     initials: "SI",
@@ -69,6 +72,7 @@ export const DEFAULT_MENTORS: Mentor[] = [
     subject: "Physics & Mathematics",
     qualification: null,
     isFounder: false,
+    isCoFounder: false,
     isDeveloper: false,
     note: "Builds strong concepts with real exam practice.",
     initials: "FA",
@@ -88,6 +92,7 @@ type MentorRow = {
   subject: string;
   qualification?: string | null;
   is_founder?: number | boolean;
+  is_co_founder?: number | boolean;
   is_developer?: number | boolean;
   note: string | null;
   initials: string;
@@ -128,6 +133,9 @@ async function ensureMentorsTable(): Promise<void> {
       "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_founder TINYINT(1) NOT NULL DEFAULT 0",
     );
     await query(
+      "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_co_founder TINYINT(1) NOT NULL DEFAULT 0",
+    );
+    await query(
       "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_developer TINYINT(1) NOT NULL DEFAULT 0",
     );
       await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_facebook VARCHAR(1024) NULL");
@@ -149,6 +157,7 @@ function mapMentor(row: MentorRow): Mentor {
     subject: row.subject ?? "",
     qualification: row.qualification ?? null,
     isFounder: Boolean(row.is_founder),
+    isCoFounder: Boolean(row.is_co_founder),
     isDeveloper: Boolean(row.is_developer),
     note: row.note ?? "",
     initials: row.initials,
@@ -167,7 +176,7 @@ export async function fetchAllMentors(): Promise<Mentor[]> {
   try {
     await ensureMentorsTable();
     const rows = await query<MentorRow[]>(
-      `SELECT id, name, subject, qualification, is_founder, is_developer,
+      `SELECT id, name, subject, qualification, is_founder, is_co_founder, is_developer,
               note, initials, is_active,
               photo_url, bio, social_facebook, social_instagram, social_linkedin, social_youtube
        FROM mentors ORDER BY sort_order ASC`,
@@ -184,7 +193,7 @@ export async function fetchMentors(): Promise<Mentor[]> {
   try {
     await ensureMentorsTable();
     const rows = await query<MentorRow[]>(
-      `SELECT id, name, subject, qualification, is_founder, is_developer,
+      `SELECT id, name, subject, qualification, is_founder, is_co_founder, is_developer,
               note, initials, is_active,
               photo_url, bio, social_facebook, social_instagram, social_linkedin, social_youtube
        FROM mentors WHERE is_active = 1 ORDER BY sort_order ASC`,
@@ -202,6 +211,7 @@ export type MentorSaveInput = {
   subject?: unknown;
   qualification?: unknown;
   isFounder?: unknown;
+  isCoFounder?: unknown;
   isDeveloper?: unknown;
   note?: unknown;
   initials?: unknown;
@@ -242,6 +252,10 @@ export function normalizeMentorInput(
         : "",
     isFounder:
       raw.isFounder === true || raw.isFounder === "true" || raw.isFounder === "1",
+    isCoFounder:
+      raw.isCoFounder === true ||
+      raw.isCoFounder === "true" ||
+      raw.isCoFounder === "1",
     isDeveloper:
       raw.isDeveloper === true ||
       raw.isDeveloper === "true" ||
@@ -294,7 +308,7 @@ export async function saveMentors(
         ? entry.id
         : `mentor-${Date.now()}-${index}`;
     await query(
-      `INSERT INTO mentors (id, name, subject, qualification, is_founder, is_developer,
+      `INSERT INTO mentors (id, name, subject, qualification, is_founder, is_co_founder, is_developer,
                             note, initials, is_active, sort_order, updated_by,
                             bio, social_facebook, social_instagram, social_linkedin, social_youtube)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -319,6 +333,7 @@ export async function saveMentors(
         (entry.subject as string) || "",
         ((entry.qualification as string) || null),
         entry.isFounder ? 1 : 0,
+        entry.isCoFounder ? 1 : 0,
         entry.isDeveloper ? 1 : 0,
         (entry.note as string) || null,
         (entry.initials as string) || "?",

@@ -64,18 +64,25 @@ export default async function Mentors({
                   </p>
                 ) : null}
 
-                {/* Founder / Developer — compact rounded-square containers,
-                    vertically stacked */}
-                {(mentor.isFounder || mentor.isDeveloper) && (
+                {/* Designations — enabled ones only, vertically stacked,
+                    centered rounded-square text containers (not badges). */}
+                {(mentor.isFounder ||
+                  mentor.isCoFounder ||
+                  mentor.isDeveloper) && (
                   <div className="mt-5 flex flex-col items-center gap-2.5">
                     {mentor.isFounder && (
-                      <span className="inline-flex w-fit items-center justify-center rounded-xl border border-primary-500/40 bg-dark-950 px-5 py-2 text-xs font-bold tracking-wide text-primary-400">
-                        Founder
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-primary-500/40 bg-dark-950 px-4 py-2 text-xs font-bold tracking-wide text-primary-400">
+                        Founder of MediSpark
+                      </span>
+                    )}
+                    {mentor.isCoFounder && (
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-primary-500/40 bg-dark-950 px-4 py-2 text-xs font-bold tracking-wide text-primary-400">
+                        Co-Founder of MediSpark
                       </span>
                     )}
                     {mentor.isDeveloper && (
-                      <span className="inline-flex w-fit items-center justify-center rounded-xl border border-ink/15 bg-dark-950 px-5 py-2 text-xs font-bold tracking-wide text-neutral-300">
-                        Developer
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-ink/15 bg-dark-950 px-4 py-2 text-xs font-bold tracking-wide text-neutral-300">
+                        Developer of MediSpark
                       </span>
                     )}
                   </div>

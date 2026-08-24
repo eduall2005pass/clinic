@@ -13,6 +13,7 @@ type MentorDraft = {
   subject: string;
   qualification: string;
   isFounder: boolean;
+  isCoFounder: boolean;
   isDeveloper: boolean;
   note: string;
   bio: string;
@@ -38,6 +39,7 @@ function toDraft(mentor: Mentor): MentorDraft {
     subject: mentor.subject,
     qualification: mentor.qualification ?? "",
     isFounder: mentor.isFounder,
+    isCoFounder: mentor.isCoFounder,
     isDeveloper: mentor.isDeveloper,
     note: mentor.note,
     bio: mentor.bio ?? "",
@@ -68,6 +70,7 @@ export default function AllMentorsPage() {
     subject: "",
     qualification: "",
     isFounder: false,
+    isCoFounder: false,
     isDeveloper: false,
     note: "",
     bio: "",
@@ -183,6 +186,7 @@ export default function AllMentorsPage() {
       subject: mentor.subject.trim(),
       qualification: mentor.qualification.trim(),
       isFounder: mentor.isFounder,
+      isCoFounder: mentor.isCoFounder,
       isDeveloper: mentor.isDeveloper,
       note: mentor.note.trim(),
       bio: mentor.bio.trim(),
@@ -226,6 +230,7 @@ export default function AllMentorsPage() {
               subject: addForm.subject.trim(),
               qualification: addForm.qualification.trim(),
               isFounder: addForm.isFounder,
+              isCoFounder: addForm.isCoFounder,
               isDeveloper: addForm.isDeveloper,
               note: addForm.note.trim(),
               bio: addForm.bio.trim(),
@@ -280,6 +285,7 @@ export default function AllMentorsPage() {
         subject: "",
         qualification: "",
         isFounder: false,
+        isCoFounder: false,
         isDeveloper: false,
         note: "",
         bio: "",
@@ -490,6 +496,15 @@ export default function AllMentorsPage() {
                   className="h-4 w-4 accent-primary-600"
                 />
                 Show Founder
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-600 admin-dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={addForm.isCoFounder}
+                  onChange={(event) => setAddForm({ ...addForm, isCoFounder: event.target.checked })}
+                  className="h-4 w-4 accent-primary-600"
+                />
+                Show Co-Founder
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-600 admin-dark:text-zinc-300">
                 <input
@@ -728,6 +743,15 @@ export default function AllMentorsPage() {
                         className="h-4 w-4 accent-primary-600"
                       />
                       Show Founder
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-600 admin-dark:text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={mentor.isCoFounder}
+                        onChange={(event) => patchMentor(mentor.id, { isCoFounder: event.target.checked })}
+                        className="h-4 w-4 accent-primary-600"
+                      />
+                      Show Co-Founder
                     </label>
                     <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-600 admin-dark:text-zinc-300">
                       <input
