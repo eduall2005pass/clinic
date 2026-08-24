@@ -51,17 +51,45 @@ export const examCategories: { key: ExamCategory; label: string }[] = [
   { key: "varsity-admission", label: "Varsity Admission" },
 ];
 
+export const categoryLabels: Record<ExamCategory, string> = {
+  "ssc-academic": "SSC Academic",
+  "hsc-academic": "HSC Academic",
+  "medical-admission": "Medical Admission",
+  "varsity-admission": "Varsity Admission",
+};
+
+export const categoryDescriptions: Record<ExamCategory, string> = {
+  "ssc-academic": "SSC public exam model tests and mock exams for academic students.",
+  "hsc-academic": "HSC public exam model tests and mock exams for academic students.",
+  "medical-admission": "Medical admission test preparation with model exams and practice tests.",
+  "varsity-admission": "University admission test preparation with model exams and practice tests.",
+};
+
 /**
  * Display-only grouping used by the Public Exam page layout.
  * Purely structural — no eligibility or participation logic here.
+ * Uses subject field to differentiate between medical and varsity admission.
  */
 export function categorizeExam(
-  exam: Pick<PublicExam, "batch" | "courseType">,
+  exam: Pick<PublicExam, "batch" | "courseType" | "subject">,
 ): ExamCategory {
   if (exam.courseType === "Academic") {
     return /^SSC/i.test(exam.batch.trim()) ? "ssc-academic" : "hsc-academic";
   }
-  return "medical-admission";
+  // Admission exams: use subject to determine medical vs varsity
+  const subject = exam.subject.toLowerCase();
+  if (
+    subject.includes("medical") ||
+    subject.includes("mbbs") ||
+    subject.includes("dental") ||
+    subject.includes("nursing") ||
+    subject.includes("biology") ||
+    subject.includes("physics") ||
+    subject.includes("chemistry")
+  ) {
+    return "medical-admission";
+  }
+  return "varsity-admission";
 }
 
 export function batchLabel(batchId: string): string {
