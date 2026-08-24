@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 import { loginHref } from "@/lib/nav-links";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -63,7 +64,7 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link
           href="/"
-          className="flex w-1/3 max-w-[384px] shrink-0 transition-opacity hover:opacity-90"
+          className="flex w-1/3 max-w-[330px] shrink-0 transition-opacity hover:opacity-90"
         >
           <Logo size="large" />
         </Link>
@@ -88,6 +89,9 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
             </svg>
             <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary-500" />
           </Link>
+
+          {/* Compact theme toggle — sits immediately beside the notification icon. */}
+          <ThemeToggle />
 
           {settings.showLoginButton && (
             <Link

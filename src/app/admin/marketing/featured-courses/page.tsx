@@ -1,25 +1,37 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
-import { getPublicCourses, getPayableFee, formatFee } from "@/lib/courses";
+import { formatFee } from "@/lib/courses";
 import type { FeaturedCourseRecord } from "@/lib/featured-courses";
 
 type Notice = { kind: "success" | "error"; text: string };
+
+/** Minimal live-catalog info needed by this page (from /api/admin/courses). */
+type CatalogItem = {
+  slug: string;
+  name: string;
+  category: string;
+  fee: number;
+  discountFee: number | null;
+};
+
+function payableFee(course: CatalogItem): number {
+  return course.discountFee != null ? course.discountFee : course.fee;
+}
 
 export default function FeaturedCoursesPage() {
   const { user, authLoading } = useAuth();
 
   const [featured, setFeatured] = useState<FeaturedCourseRecord[] | null>(null);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [adminStatus, setAdminStatus] = useState<
     "checking" | "admin" | "denied"
   >("checking");
-
-  const catalog = useMemo(() => getPublicCourses(), []);
 
   // Admin check
   useEffect(() => {
@@ -45,22 +57,52 @@ export default function FeaturedCoursesPage() {
     };
   }, [user, authLoading]);
 
-  // Load current featured selection
+  // Load current featured selection + live course catalog (MySQL).
   useEffect(() => {
     if (authLoading || !user || adminStatus !== "admin") return;
     let cancelled = false;
     async function load() {
       try {
         const token = await user!.getIdToken();
-        const response = await fetch("/api/featured-courses?all=1", {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (!response.ok) return;
-        const data = (await response.json()) as {
-          courses?: FeaturedCourseRecord[];
-        };
-        if (data.courses && !cancelled) setFeatured(data.courses);
+        const headers = { Authorization: `Bearer ${token}` };
+        const [featuredResponse, catalogResponse] = await Promise.all([
+          fetch("/api/featured-courses?all=1", {
+            headers,
+            cache: "no-store",
+          }),
+          fetch("/api/admin/courses", { headers, cache: "no-store" }),
+        ]);
+        if (featuredResponse.ok) {
+          const data = (await featuredResponse.json()) as {
+            courses?: FeaturedCourseRecord[];
+          };
+          if (data.courses && !cancelled) setFeatured(data.courses);
+        }
+        if (catalogResponse.ok) {
+          const data = (await catalogResponse.json()) as {
+            courses?: Array<{
+              slug: string;
+              name: string;
+              category: string;
+              fee: number;
+              discountFee: number | null;
+            }>;
+          };
+          if (data.courses && !cancelled) {
+            setCatalog(
+              data.courses.map((course) => ({
+                slug: course.slug,
+                name: course.name,
+                category: course.category,
+                fee: Number(course.fee) || 0,
+                discountFee:
+                  course.discountFee == null
+                    ? null
+                    : Number(course.discountFee),
+              })),
+            );
+          }
+        }
       } catch {
         // Keep loading state cleared below
       } finally {
@@ -233,7 +275,7 @@ export default function FeaturedCoursesPage() {
                           {course
                             ? `${course.category} · ${
                                 course.fee > 0
-                                  ? formatFee(getPayableFee(course))
+                                  ? formatFee(payableFee(course))
                                   : "Free"
                               }`
                             : "Unknown course"}
@@ -297,7 +339,7 @@ export default function FeaturedCoursesPage() {
                       <span className="block truncate text-xs text-zinc-500">
                         {course.category} ·{" "}
                         {course.fee > 0
-                          ? formatFee(getPayableFee(course))
+                          ? formatFee(payableFee(course))
                           : "Free"}
                       </span>
                     </span>

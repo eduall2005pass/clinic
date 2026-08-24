@@ -16,6 +16,9 @@ export default async function FeaturedCourses({
     await Promise.all(slugs.map((slug) => getLiveCourse(slug)))
   ).filter((course) => course !== undefined);
 
+  // No ★ Featured courses in the Admin Panel → nothing to show.
+  if (featured.length === 0) return null;
+
   return (
     <section id="featured-courses" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">

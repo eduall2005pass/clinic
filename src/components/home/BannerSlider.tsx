@@ -10,6 +10,21 @@ type Slide = {
   image: string;
   href?: string;
   alt?: string;
+  /** Present on auto-generated featured-course slides. */
+  title?: string;
+  subtitle?: string;
+};
+
+type FeaturedSlideResponse = {
+  slides?:
+    | {
+        id: string;
+        image: string;
+        href: string;
+        title: string;
+        subtitle: string;
+      }[]
+    | null;
 };
 
 const AUTO_SLIDE_MS = 3000;
@@ -20,6 +35,7 @@ export default function BannerSlider() {
   // Slides come only from Admin → Banners (MySQL). Defaults are shown only
   // while the API is unreachable; an empty banner list renders nothing.
   const [slides, setSlides] = useState<Slide[]>([]);
+  const [featuredSlides, setFeaturedSlides] = useState<Slide[]>([]);
   const [ready, setReady] = useState(false);
   const [paused, setPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
@@ -57,20 +73,49 @@ export default function BannerSlider() {
     };
   }, []);
 
+  // Featured courses marked ★ in the Admin Panel slide here automatically —
+  // no manual banner upload required. Toggling Featured off removes them.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/featured-slides", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: FeaturedSlideResponse | null) => {
+        if (cancelled || !data?.slides) return;
+        setFeaturedSlides(
+          data.slides.map((slide) => ({
+            id: slide.id,
+            image: slide.image,
+            href: slide.href,
+            title: slide.title,
+            subtitle: slide.subtitle,
+          })),
+        );
+      })
+      .catch(() => {
+        // Featured slides are optional — silently skip on failure.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Admin banners first, then auto-generated featured-course slides.
+  const allSlides = [...slides, ...featuredSlides];
+
   const goTo = useCallback((index: number) => {
-    setActiveIndex((index + slides.length) % slides.length);
-  }, [slides.length]);
+    setActiveIndex((index + allSlides.length) % allSlides.length);
+  }, [allSlides.length]);
 
   useEffect(() => {
-    if (paused || slides.length === 0) return;
+    if (paused || allSlides.length === 0) return;
     const timer = setInterval(() => {
       goTo(activeIndex + 1);
     }, AUTO_SLIDE_MS);
     return () => clearInterval(timer);
-  }, [paused, activeIndex, goTo, slides.length]);
+  }, [paused, activeIndex, goTo, allSlides.length]);
 
   // Loading — keep layout height stable without flashing stale content.
-  if (!ready && slides.length === 0) {
+  if (!ready && allSlides.length === 0) {
     return (
       <section
         role="region"
@@ -82,8 +127,8 @@ export default function BannerSlider() {
     );
   }
 
-  // Admin disabled/deleted every banner — nothing to show.
-  if (slides.length === 0) return null;
+  // Admin disabled/deleted every banner and no featured courses — nothing.
+  if (allSlides.length === 0) return null;
 
   return (
     <section
@@ -116,12 +161,12 @@ export default function BannerSlider() {
         className="flex touch-pan-y transition-transform duration-700 ease-out"
         style={{ transform: `translateX(-${activeIndex * 100}%)` }}
       >
-        {slides.map((slide) => {
+        {allSlides.map((slide) => {
           const banner = (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={slide.image}
-              alt={slide.alt ?? ""}
+              alt={slide.alt ?? slide.title ?? ""}
               draggable={false}
               className="h-full w-full object-cover"
             />
@@ -129,6 +174,21 @@ export default function BannerSlider() {
           const hashTarget = slide.href?.startsWith("#")
             ? slide.href.slice(1)
             : null;
+          const overlay =
+            slide.title || slide.subtitle ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pb-9 pt-10 sm:p-6 sm:pb-10 sm:pt-14">
+                {slide.title && (
+                  <p className="truncate text-base font-extrabold text-white drop-shadow sm:text-xl">
+                    {slide.title}
+                  </p>
+                )}
+                {slide.subtitle && (
+                  <p className="mt-0.5 truncate text-xs font-semibold text-primary-300 sm:text-sm">
+                    {slide.subtitle}
+                  </p>
+                )}
+              </div>
+            ) : null;
           return (
             <div
               key={slide.id}
@@ -158,13 +218,14 @@ export default function BannerSlider() {
               ) : (
                 banner
               )}
+              {overlay}
             </div>
           );
         })}
       </div>
 
       <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
-        {slides.map((slide, index) => (
+        {allSlides.map((slide, index) => (
           <button
             key={slide.id}
             type="button"
