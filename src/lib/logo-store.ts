@@ -4,14 +4,23 @@ import type { LogoInfo } from "@/lib/logo";
 import { DEFAULT_LOGO } from "@/lib/logo";
 import { fetchAdminAccount } from "@/lib/admin";
 
-// Centralized website logo configuration. Mirrors the old
-// "settings/website" document: a single "active" row in the `logos`
-// table holds the live logo (logoUrl -> url, logoPath -> storage_path,
-// updatedAt -> updated_at, updatedBy -> updated_by). Every component
-// reads the logo through LogoProvider/Logo — nothing is hard-coded.
+// Centralized website logo configuration. The `logos` table holds up to
+// THREE rows, one per slot:
+//   id = "active"       → shared/fallback logo (legacy single-logo slot)
+//   id = "active-light" → LIGHT MODE logo
+//   id = "active-dark"  → DARK MODE logo
+// The main website picks light/dark by the VISITOR'S CURRENT THEME and falls
+// back to the shared "active" row, then to DEFAULT_LOGO. Nothing is hard-coded.
 export const LOGO_COLLECTION = "logos";
 export const LOGO_DOCUMENT_ID = "active";
 export const LOGO_STORAGE_DIR = "website/logo";
+
+export type LogoMode = "light" | "dark";
+
+export const LOGO_VARIANT_IDS: Record<LogoMode, string> = {
+  light: "active-light",
+  dark: "active-dark",
+};
 
 type LogoRow = {
   url: string;
@@ -55,54 +64,53 @@ function withCacheBust(url: string, updatedAt: number): string {
   return `${url}${sep}v=${updatedAt}`;
 }
 
+function rowToLogo(data: LogoRow): LogoInfo {
+  const updatedAt = Date.parse(parseDate(data.updated_at)) || 0;
+  return {
+    fileName: data.file_name,
+    url: withCacheBust(data.url, updatedAt),
+    width:
+      typeof data.width === "number" && data.width > 0
+        ? data.width
+        : DEFAULT_LOGO.width,
+    height:
+      typeof data.height === "number" && data.height > 0
+        ? data.height
+        : DEFAULT_LOGO.height,
+    updatedAt,
+    updatedBy: data.updated_by ?? null,
+  };
+}
+
+async function fetchLogoById(id: string): Promise<LogoInfo | null> {
+  const rows = await query<LogoRow[]>(
+    "SELECT url, file_name, width, height, storage_path, updated_at, updated_by FROM logos WHERE id = ? LIMIT 1",
+    [id],
+  );
+  const data = rows[0];
+  return data ? rowToLogo(data) : null;
+}
+
+/** Shared/fallback logo — used when no theme-specific variant is set. */
 export async function fetchActiveLogo(): Promise<LogoInfo | null> {
   try {
-    const rows = await query<LogoRow[]>(
-      "SELECT url, file_name, width, height, storage_path, updated_at, updated_by FROM logos WHERE id = ? LIMIT 1",
-      [LOGO_DOCUMENT_ID],
-    );
-    const data = rows[0];
-    if (!data) return null;
-    const account = data.updated_by
-      ? await fetchAdminAccount(data.updated_by)
-      : null;
-    const updatedAt = Date.parse(parseDate(data.updated_at)) || 0;
-    return {
-      fileName: data.file_name,
-      url: withCacheBust(data.url, updatedAt),
-      width:
-        typeof data.width === "number" && data.width > 0
-          ? data.width
-          : DEFAULT_LOGO.width,
-      height:
-        typeof data.height === "number" && data.height > 0
-          ? data.height
-          : DEFAULT_LOGO.height,
-      updatedAt,
-      updatedBy:
-        account?.displayName ?? account?.email ?? (data.updated_by ?? null),
-    };
+    const logo = await fetchLogoById(LOGO_DOCUMENT_ID);
+    if (!logo || !logo.updatedBy) return logo;
+    const account = await fetchAdminAccount(logo.updatedBy);
+    return account
+      ? { ...logo, updatedBy: account.displayName ?? account.email ?? logo.updatedBy }
+      : logo;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     // If table missing, try to create it and retry once (self-heal on Interserver)
-    if (msg.includes("doesn't exist") || msg.includes("Unknown table") || msg.includes("no such table")) {
+    if (
+      msg.includes("doesn't exist") ||
+      msg.includes("Unknown table") ||
+      msg.includes("no such table")
+    ) {
       await ensureLogosTable();
       try {
-        const rows = await query<LogoRow[]>(
-          "SELECT url, file_name, width, height, storage_path, updated_at, updated_by FROM logos WHERE id = ? LIMIT 1",
-          [LOGO_DOCUMENT_ID],
-        );
-        const data = rows[0];
-        if (!data) return null;
-        const updatedAt = Date.parse(parseDate(data.updated_at)) || 0;
-        return {
-          fileName: data.file_name,
-          url: withCacheBust(data.url, updatedAt),
-          width: typeof data.width === "number" && data.width > 0 ? data.width : DEFAULT_LOGO.width,
-          height: typeof data.height === "number" && data.height > 0 ? data.height : DEFAULT_LOGO.height,
-          updatedAt,
-          updatedBy: data.updated_by ?? null,
-        };
+        return await fetchLogoById(LOGO_DOCUMENT_ID);
       } catch {
         return null;
       }
@@ -111,16 +119,49 @@ export async function fetchActiveLogo(): Promise<LogoInfo | null> {
   }
 }
 
+/**
+ * Both theme-specific logos at once. Each is null when the admin has not
+ * uploaded that variant yet — the caller then falls back to the shared logo.
+ */
+export async function fetchThemeLogos(): Promise<{
+  light: LogoInfo | null;
+  dark: LogoInfo | null;
+}> {
+  try {
+    const rows = await query<(LogoRow & { id: string })[]>(
+      `SELECT id, url, file_name, width, height, storage_path, updated_at, updated_by
+       FROM logos WHERE id IN (?, ?)`,
+      [LOGO_VARIANT_IDS.light, LOGO_VARIANT_IDS.dark],
+    );
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const lightRow = byId.get(LOGO_VARIANT_IDS.light);
+    const darkRow = byId.get(LOGO_VARIANT_IDS.dark);
+    return {
+      light: lightRow ? rowToLogo(lightRow) : null,
+      dark: darkRow ? rowToLogo(darkRow) : null,
+    };
+  } catch {
+    return { light: null, dark: null };
+  }
+}
+
+function targetIdFor(mode?: LogoMode): string {
+  return mode ? LOGO_VARIANT_IDS[mode] : LOGO_DOCUMENT_ID;
+}
+
 export async function saveActiveLogo(
   file: File,
   width: number,
   height: number,
   adminUid: string,
+  /** When set, uploads into the theme-specific slot instead of the shared one. */
+  mode?: LogoMode,
 ): Promise<LogoInfo> {
   const extension = file.name.includes(".")
     ? `.${file.name.split(".").pop()?.toLowerCase() ?? ""}`
     : ".png";
-  const storagePath = `${LOGO_STORAGE_DIR}/active-logo-${Date.now()}${extension}`;
+  const suffix = mode ? `${mode}-logo` : "active-logo";
+  const storagePath = `${LOGO_STORAGE_DIR}/${suffix}-${Date.now()}${extension}`;
   // Read file buffer once — callers may have already consumed the original File
   // stream, so we tolerate both File and already-buffered data.
   const buffer = await file.arrayBuffer();
@@ -133,11 +174,13 @@ export async function saveActiveLogo(
   // Ensure table exists before read/write (first upload on fresh DB)
   await ensureLogosTable();
 
+  const targetId = targetIdFor(mode);
+
   let previousStoragePath: string | null = null;
   try {
     const rows = await query<{ storage_path: string }[]>(
       "SELECT storage_path FROM logos WHERE id = ? LIMIT 1",
-      [LOGO_DOCUMENT_ID],
+      [targetId],
     );
     const previousPath: unknown = rows[0]?.storage_path;
     if (typeof previousPath === "string" && isLocalUpload(previousPath)) {
@@ -160,9 +203,11 @@ export async function saveActiveLogo(
       storage_path = VALUES(storage_path),
       updated_at = NOW(),
       updated_by = VALUES(updated_by)`,
-    [LOGO_DOCUMENT_ID, cleanUrl, file.name, width, height, storagePath, adminUid],
+    [targetId, cleanUrl, file.name, width, height, storagePath, adminUid],
   );
 
+  // Only clean up this slot's previous file — other slots stay untouched so
+  // both theme logos always remain available simultaneously.
   if (previousStoragePath) {
     await removeFile(previousStoragePath);
   }
@@ -179,14 +224,15 @@ export async function saveActiveLogo(
   };
 }
 
-export async function removeActiveLogo(): Promise<void> {
+export async function removeActiveLogo(mode?: LogoMode): Promise<void> {
   try {
+    const targetId = targetIdFor(mode);
     const rows = await query<{ storage_path: string }[]>(
       "SELECT storage_path FROM logos WHERE id = ? LIMIT 1",
-      [LOGO_DOCUMENT_ID],
+      [targetId],
     );
     const storagePath: unknown = rows[0]?.storage_path;
-    await query("DELETE FROM logos WHERE id = ?", [LOGO_DOCUMENT_ID]);
+    await query("DELETE FROM logos WHERE id = ?", [targetId]);
     if (typeof storagePath === "string" && isLocalUpload(storagePath)) {
       await removeFile(storagePath);
     }

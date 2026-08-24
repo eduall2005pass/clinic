@@ -8,7 +8,7 @@ import { WebsiteSettingsProvider } from "@/components/WebsiteSettingsProvider";
 import { AuthProvider } from "@/lib/auth-context";
 import HideOnAdmin from "@/components/admin/HideOnAdmin";
 import AnnouncementBar from "@/components/home/AnnouncementBar";
-import { getActiveLogo } from "@/lib/logo-store";
+import { getActiveLogo, fetchThemeLogos } from "@/lib/logo-store";
 import { getWebsiteSettingsWithFallback } from "@/lib/website-settings";
 import { fetchSeoSettings } from "@/lib/seo-settings";
 import { fetchNavbarConfig } from "@/lib/navbar";
@@ -59,9 +59,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [initialLogo, initialSettings, navbarConfig, themeSettings] =
+  const [initialLogo, initialThemeLogos, initialSettings, navbarConfig, themeSettings] =
     await Promise.all([
       getActiveLogo(),
+      fetchThemeLogos(),
       getWebsiteSettingsWithFallback(),
       fetchNavbarConfig(),
       fetchThemeSettings(),
@@ -91,7 +92,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="flex min-h-full flex-col bg-dark-950 pb-16 text-neutral-300">
         <ThemeProvider>
           <WebsiteSettingsProvider initialSettings={initialSettings}>
-            <LogoProvider initialLogo={initialLogo}>
+            <LogoProvider
+              initialLogo={initialLogo}
+              initialThemeLogos={initialThemeLogos}
+            >
               <AuthProvider>
                 <HideOnAdmin>
                   <AnnouncementBar />
