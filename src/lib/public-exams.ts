@@ -23,6 +23,32 @@ export const batches: string[] = ["HSC 26", "HSC 27", "HSC 28"];
 
 export const courseTypes: CourseType[] = ["Academic", "Admission"];
 
+export type ExamCategory =
+  | "ssc-academic"
+  | "hsc-academic"
+  | "medical-admission"
+  | "varsity-admission";
+
+export const examCategories: { key: ExamCategory; label: string }[] = [
+  { key: "ssc-academic", label: "SSC Academic" },
+  { key: "hsc-academic", label: "HSC Academic" },
+  { key: "medical-admission", label: "Medical Admission" },
+  { key: "varsity-admission", label: "Varsity Admission" },
+];
+
+/**
+ * Display-only grouping used by the Public Exam page layout.
+ * Purely structural — no eligibility or participation logic here.
+ */
+export function categorizeExam(
+  exam: Pick<PublicExam, "batch" | "courseType">,
+): ExamCategory {
+  if (exam.courseType === "Academic") {
+    return /^SSC/i.test(exam.batch.trim()) ? "ssc-academic" : "hsc-academic";
+  }
+  return "medical-admission";
+}
+
 function batchLabel(batchId: string): string {
   const match = /^hsc-(\d{2})$/i.exec(batchId.trim());
   return match ? `HSC ${match[1]}` : batchId.trim();

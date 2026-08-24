@@ -1,8 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ExamCard from "@/components/ExamCard";
-import type { PublicExam, CourseType } from "@/lib/public-exams";
+import {
+  categorizeExam,
+  examCategories,
+  type ExamCategory,
+  type PublicExam,
+} from "@/lib/public-exams";
+
+const examSections: { key: PublicExam["status"]; label: string }[] = [
+  { key: "Live", label: "Live Exams" },
+  { key: "Upcoming", label: "Upcoming Exams" },
+  { key: "Closed", label: "Previous Exams" },
+];
+
+type CategoryGroups = Record<PublicExam["status"], PublicExam[]>;
+
+function emptyGroups(): CategoryGroups {
+  return { Live: [], Upcoming: [], Closed: [] };
+}
 
 export default function PublicExamList({
   exams,
@@ -12,21 +29,29 @@ export default function PublicExamList({
   batches: string[];
 }) {
   const [batch, setBatch] = useState("All Batches");
-  const [courseType, setCourseType] = useState<"All" | CourseType>("All");
 
   const filtered = exams.filter(
     (exam) =>
-      exam.published &&
-      (batch === "All Batches" || exam.batch === batch) &&
-      (courseType === "All" || exam.courseType === courseType)
+      exam.published && (batch === "All Batches" || exam.batch === batch)
   );
+
+  const grouped = useMemo(() => {
+    const map = new Map<ExamCategory, CategoryGroups>();
+    for (const category of examCategories) {
+      map.set(category.key, emptyGroups());
+    }
+    for (const exam of filtered) {
+      map.get(categorizeExam(exam))?.[exam.status].push(exam);
+    }
+    return map;
+  }, [filtered]);
 
   const selectClass =
     "rounded-lg border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm font-semibold text-heading transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30";
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <select
             aria-label="Filter by batch"
@@ -41,19 +66,6 @@ export default function PublicExamList({
               </option>
             ))}
           </select>
-
-          <select
-            aria-label="Filter by course type"
-            value={courseType}
-            onChange={(event) =>
-              setCourseType(event.target.value as "All" | CourseType)
-            }
-            className={selectClass}
-          >
-            <option value="All">All Course Types</option>
-            <option value="Academic">Academic</option>
-            <option value="Admission">Admission</option>
-          </select>
         </div>
 
         <p className="text-sm font-medium text-neutral-400">
@@ -61,20 +73,60 @@ export default function PublicExamList({
         </p>
       </div>
 
-      {filtered.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((exam) => (
-            <ExamCard key={exam.id} exam={exam} />
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
+      {filtered.length === 0 && (
+        <div className="mb-10 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
           <p className="font-semibold text-heading">No exams found</p>
           <p className="mt-1 text-sm text-neutral-400">
-            Try changing the batch or course type filters.
+            Try changing the batch filter.
           </p>
         </div>
       )}
+
+      <div className="space-y-14">
+        {examCategories.map((category) => {
+          const groups = grouped.get(category.key) ?? emptyGroups();
+          const categoryTotal =
+            groups.Live.length + groups.Upcoming.length + groups.Closed.length;
+
+          return (
+            <div key={category.key}>
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <h2 className="text-xl font-bold text-heading sm:text-2xl">
+                  {category.label}
+                </h2>
+                <span className="text-sm font-medium text-neutral-400">
+                  {categoryTotal} exam{categoryTotal === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <div className="space-y-8">
+                {examSections.map((section) => (
+                  <div key={section.key}>
+                    <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-heading">
+                      {section.label}
+                      <span className="rounded-full bg-dark-850 px-2 py-0.5 text-xs font-semibold text-neutral-400">
+                        {groups[section.key].length}
+                      </span>
+                    </h3>
+
+                    {groups[section.key].length > 0 ? (
+                      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {groups[section.key].map((exam) => (
+                          <ExamCard key={exam.id} exam={exam} />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-neutral-500">
+                        No {section.label.toLowerCase()} right now.
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }
