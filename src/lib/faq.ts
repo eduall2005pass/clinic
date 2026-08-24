@@ -8,53 +8,40 @@ export type Faq = {
   status: FaqStatus;
 };
 
+// Live homepage FAQ content — exactly these four items, in Bangla.
+// Editable from Admin Panel → Content → FAQ (faqs table overrides these
+// defaults once rows exist).
 export const faqs: Faq[] = [
   {
-    id: "faq-1",
-    question: "What is MediSpark?",
+    id: "faq-registration",
+    question: "MediSpark ওয়েবসাইটে কীভাবে Registration করব?",
     answer:
-      "MediSpark is a preparation platform for HSC students. It brings HSC Academic courses and Medical Admission Preparation together with model exams and an expert Q&A section in one clean platform.",
+      "ওয়েবসাইটের Register / Log In অপশনে ক্লিক করে Continue with Google নির্বাচন করুন। প্রথমবার প্রবেশের পর প্রয়োজনীয় তথ্য পূরণ করলেই আপনার Registration সম্পন্ন হবে।",
     order: 1,
     status: "published",
   },
   {
-    id: "faq-2",
-    question: "Which courses and batches are available?",
+    id: "faq-buy-course",
+    question: "কীভাবে Course কিনব?",
     answer:
-      "Courses are organised by batch — HSC 26, HSC 27 and HSC 28. Each batch offers Biology, Chemistry, Physics, Higher Mathematics and English, plus a Medical Admission Preparation course.",
+      "Courses অপশনে গিয়ে পছন্দের Course নির্বাচন করুন। এরপর Enroll / Buy Course অপশনে ক্লিক করে payment সম্পন্ন করুন। Payment সফল হলে Courseটি আপনার My Enrolled Courses-এ যুক্ত হবে।",
     order: 2,
     status: "published",
   },
   {
-    id: "faq-3",
-    question: "How do I enroll in a course?",
+    id: "faq-jersey",
+    question: "Jersey কীভাবে পাব?",
     answer:
-      "Open the Courses page, choose your batch and course type, open the course you want, and use the Enroll button on the course page. The course fee is shown clearly before you enroll.",
+      "MediSpark-এর Course-এ ভর্তি হলেই আপনি MediSpark Jersey পাবেন।",
     order: 3,
     status: "published",
   },
   {
-    id: "faq-4",
-    question: "How does the model exam system work?",
+    id: "faq-qa",
+    question: "Q&A কীভাবে পাব?",
     answer:
-      "Model exams are listed in the Exams section with their marks, duration and status. Each exam page is the entry point for the exam engine, which will add questions, a timer, marking and results step by step.",
+      "আপনার enrolled Course-এর Q&A Section থেকে প্রশ্ন করতে পারবেন। শিক্ষক আপনার প্রশ্নের উত্তর দিলে একই Section থেকেই উত্তরটি দেখতে পারবেন।",
     order: 4,
-    status: "published",
-  },
-  {
-    id: "faq-5",
-    question: "How can I ask a question in the Q&A section?",
-    answer:
-      "Open the Q&A page, pick your subject, and ask your question — you can attach a picture or audio. Teachers review the questions and post answers that stay visible to every student.",
-    order: 5,
-    status: "published",
-  },
-  {
-    id: "faq-6",
-    question: "How do I track my learning progress?",
-    answer:
-      "Your dashboard shows enrolled courses, course progress, continue-learning suggestions, exam results, favourites and notifications, so you always know where to pick up next.",
-    order: 6,
     status: "published",
   },
 ];

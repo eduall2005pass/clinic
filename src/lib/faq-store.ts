@@ -61,7 +61,8 @@ export async function fetchPublishedFaqs(): Promise<Faq[]> {
       `SELECT id, question, answer, status
        FROM faqs WHERE status = 'published' ORDER BY sort_order ASC`,
     );
-    return rows.map(rowToFaq);
+    // Empty table → show the default four FAQs instead of an empty section.
+    return rows.length > 0 ? rows.map(rowToFaq) : getPublishedDefaultFaqs();
   } catch {
     return getPublishedDefaultFaqs();
   }
