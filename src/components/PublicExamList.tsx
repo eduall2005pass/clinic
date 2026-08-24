@@ -24,15 +24,20 @@ function emptyGroups(): CategoryGroups {
 export default function PublicExamList({
   exams,
   batches,
+  category,
 }: {
   exams: PublicExam[];
   batches: string[];
+  /** When set, only exams of this course category are shown. */
+  category?: ExamCategory;
 }) {
   const [batch, setBatch] = useState("All Batches");
 
   const filtered = exams.filter(
     (exam) =>
-      exam.published && (batch === "All Batches" || exam.batch === batch)
+      exam.published &&
+      (batch === "All Batches" || exam.batch === batch) &&
+      (category ? categorizeExam(exam) === category : true)
   );
 
   const grouped = useMemo(() => {
