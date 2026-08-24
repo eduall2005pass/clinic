@@ -1,7 +1,6 @@
 import BannerSlider from "@/components/home/BannerSlider";
 import Hero from "@/components/home/Hero";
 import FeaturedCourses from "@/components/home/FeaturedCourses";
-import HomepageCourses from "@/components/home/HomepageCourses";
 import WhyMediSpark from "@/components/home/WhyMediSpark";
 import OurSuccess from "@/components/home/OurSuccess";
 import JerseyGallery from "@/components/home/JerseyGallery";
@@ -35,9 +34,6 @@ function renderSection(section: HomepageSection) {
       return <Hero key={section.key} />;
     case "featured-courses":
       return <FeaturedCourses key={section.key} {...textProps} />;
-    case "homepage-courses":
-      // Cards fully managed from Admin → Homepage Courses (MySQL).
-      return <HomepageCourses key={section.key} {...textProps} />;
     case "why-medispark":
       return <WhyMediSpark key={section.key} {...textProps} />;
     case "our-success":
