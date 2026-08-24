@@ -68,23 +68,25 @@ export default async function Mentors({
                 ) : null}
 
                 {/* Designations — enabled ones only, vertically stacked,
-                    centered rounded-square text containers (not badges). */}
+                    centered rounded-square text containers (not badges).
+                    All three share one identical new design, separate from
+                    the Subject Teacher container above. */}
                 {(mentor.isFounder ||
                   mentor.isCoFounder ||
                   mentor.isDeveloper) && (
                   <div className="mt-5 flex flex-col items-center gap-2.5">
                     {mentor.isFounder && (
-                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-primary-500/40 bg-dark-950 px-4 py-2 text-xs font-bold tracking-wide text-primary-400">
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold tracking-wide text-neutral-200">
                         Founder of MediSpark
                       </span>
                     )}
                     {mentor.isCoFounder && (
-                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-primary-500/40 bg-dark-950 px-4 py-2 text-xs font-bold tracking-wide text-primary-400">
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold tracking-wide text-neutral-200">
                         Co-Founder of MediSpark
                       </span>
                     )}
                     {mentor.isDeveloper && (
-                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-primary-500/40 bg-dark-950 px-4 py-2 text-xs font-bold tracking-wide text-primary-400">
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold tracking-wide text-neutral-200">
                         Developer of MediSpark
                       </span>
                     )}
