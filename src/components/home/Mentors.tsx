@@ -31,8 +31,8 @@ export default async function Mentors({
                 key={mentor.id}
                 className="group rounded-2xl border border-ink/10 bg-dark-900 p-6 text-center shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:p-7"
               >
-                {/* Profile photo */}
-                <div className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary-500 to-primary-800 text-2xl font-extrabold text-white shadow-lg shadow-primary-900/40 transition group-hover:shadow-primary-800/50">
+                {/* Profile photo — rounded-square, clean modern corners */}
+                <div className="mx-auto flex h-32 w-32 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 to-primary-800 text-2xl font-extrabold text-white shadow-lg shadow-primary-900/40 transition group-hover:shadow-primary-800/50">
                   {mentor.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -57,10 +57,13 @@ export default async function Mentors({
                   </p>
                 ) : null}
 
-                {/* Role / subject */}
+                {/* Role / subject — small rounded-square container,
+                    centered, matching the designation containers below. */}
                 {mentor.subject ? (
-                  <p className="mt-1 text-sm font-medium text-primary-400">
-                    {mentor.subject}
+                  <p className="mt-3 flex justify-center">
+                    <span className="inline-flex max-w-[240px] items-center justify-center rounded-xl border border-primary-500/40 bg-dark-950 px-4 py-2 text-xs font-bold tracking-wide text-primary-400">
+                      {mentor.subject}
+                    </span>
                   </p>
                 ) : null}
 

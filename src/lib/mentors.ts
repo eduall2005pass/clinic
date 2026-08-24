@@ -311,12 +311,13 @@ export async function saveMentors(
       `INSERT INTO mentors (id, name, subject, qualification, is_founder, is_co_founder, is_developer,
                             note, initials, is_active, sort_order, updated_by,
                             bio, social_facebook, social_instagram, social_linkedin, social_youtube)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          name = VALUES(name),
          subject = VALUES(subject),
          qualification = VALUES(qualification),
          is_founder = VALUES(is_founder),
+         is_co_founder = VALUES(is_co_founder),
          is_developer = VALUES(is_developer),
          note = VALUES(note),
          initials = VALUES(initials),
