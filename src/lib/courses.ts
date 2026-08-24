@@ -46,6 +46,32 @@ export const batches: Batch[] = [
   { id: "ssc-26", label: "SSC 26" },
 ];
 
+/** One batch-filter chip on a course category page. */
+export type BatchFilterOption = { id: string; label: string };
+
+/**
+ * Per-category batch filters shown at the top of every Course Category
+ * page — exactly 4 options each. Ids reuse the course `batchId` values so
+ * filtering works against live catalog data.
+ */
+export const batchFilterOptions: {
+  ssc: BatchFilterOption[];
+  hsc: BatchFilterOption[];
+} = {
+  ssc: [
+    { id: "all", label: "All Batch" },
+    { id: "ssc-29", label: "SSC 2029" },
+    { id: "ssc-28", label: "SSC 2028" },
+    { id: "ssc-27", label: "SSC 2027" },
+  ],
+  hsc: [
+    { id: "all", label: "All Batch" },
+    { id: "hsc-29", label: "HSC 2029" },
+    { id: "hsc-28", label: "HSC 2028" },
+    { id: "hsc-27", label: "HSC 2027" },
+  ],
+};
+
 export const courseTypes: CourseType[] = [
   "SSC Academic",
   "HSC Academic",

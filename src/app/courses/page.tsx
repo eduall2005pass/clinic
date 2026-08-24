@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import CategoryCard from "@/components/CategoryCard";
 import BatchCourseList from "@/components/BatchCourseList";
-import { batches } from "@/lib/courses";
+import { batchFilterOptions } from "@/lib/courses";
 import { getLivePublicCourses } from "@/lib/course-catalog";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
 
@@ -132,7 +132,15 @@ export default async function CoursesPage({
             </p>
           </header>
 
-          <BatchCourseList batches={batches} courses={typeCourses} />
+          {/* Same 4-option batch filters as the dedicated category pages. */}
+          <BatchCourseList
+            options={
+              categoryParam === "ssc"
+                ? batchFilterOptions.ssc
+                : batchFilterOptions.hsc
+            }
+            courses={typeCourses}
+          />
         </section>
       </main>
     );

@@ -14,6 +14,9 @@ export type Mentor = {
   id: string;
   name: string;
   subject: string;
+  qualification: string | null;
+  isFounder: boolean;
+  isDeveloper: boolean;
   note: string;
   initials: string;
   isActive: boolean;
@@ -30,6 +33,9 @@ export const DEFAULT_MENTORS: Mentor[] = [
     id: "mentor-anika-rahman",
     name: "Dr. Anika Rahman",
     subject: "Biology & Anatomy",
+    qualification: null,
+    isFounder: false,
+    isDeveloper: false,
     note: "Makes complex biology topics simple and exam-focused.",
     initials: "AR",
     isActive: true,
@@ -44,6 +50,9 @@ export const DEFAULT_MENTORS: Mentor[] = [
     id: "mentor-shafiqul-islam",
     name: "Prof. Shafiqul Islam",
     subject: "Chemistry",
+    qualification: null,
+    isFounder: false,
+    isDeveloper: false,
     note: "Guides students through every chapter with clarity.",
     initials: "SI",
     isActive: true,
@@ -58,6 +67,9 @@ export const DEFAULT_MENTORS: Mentor[] = [
     id: "mentor-farhana-akter",
     name: "Dr. Farhana Akter",
     subject: "Physics & Mathematics",
+    qualification: null,
+    isFounder: false,
+    isDeveloper: false,
     note: "Builds strong concepts with real exam practice.",
     initials: "FA",
     isActive: true,
@@ -74,6 +86,9 @@ type MentorRow = {
   id: string;
   name: string;
   subject: string;
+  qualification?: string | null;
+  is_founder?: number | boolean;
+  is_developer?: number | boolean;
   note: string | null;
   initials: string;
   is_active: number | boolean;
@@ -106,6 +121,15 @@ async function ensureMentorsTable(): Promise<void> {
       await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS photo_url VARCHAR(1024) NULL");
       await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS photo_storage_path VARCHAR(1024) NULL");
       await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS bio TEXT NULL");
+    await query(
+      "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS qualification VARCHAR(255) NULL",
+    );
+    await query(
+      "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_founder TINYINT(1) NOT NULL DEFAULT 0",
+    );
+    await query(
+      "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_developer TINYINT(1) NOT NULL DEFAULT 0",
+    );
       await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_facebook VARCHAR(1024) NULL");
       await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_instagram VARCHAR(1024) NULL");
       await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_linkedin VARCHAR(1024) NULL");
@@ -123,6 +147,9 @@ function mapMentor(row: MentorRow): Mentor {
     id: row.id,
     name: row.name,
     subject: row.subject ?? "",
+    qualification: row.qualification ?? null,
+    isFounder: Boolean(row.is_founder),
+    isDeveloper: Boolean(row.is_developer),
     note: row.note ?? "",
     initials: row.initials,
     isActive: Boolean(row.is_active),

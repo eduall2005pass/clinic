@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BatchCourseList from "@/components/BatchCourseList";
-import { batches } from "@/lib/courses";
+import { batchFilterOptions } from "@/lib/courses";
 import { getLivePublicCourses } from "@/lib/course-catalog";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +52,7 @@ export default async function VarsityCoursesPage() {
           </p>
         </header>
 
-        <BatchCourseList batches={batches} courses={varsityCourses} />
+        <BatchCourseList options={batchFilterOptions.hsc} courses={varsityCourses} />
       </section>
     </main>
   );
