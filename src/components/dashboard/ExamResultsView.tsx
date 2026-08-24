@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import type {
   StudentExamResultGroup,
@@ -10,12 +10,11 @@ import type {
 
 type LoadState = "loading" | "error" | "ready";
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  if (m <= 0) return `${s}s`;
-  return `${m}m ${s}s`;
-}
+type CourseOption = { slug: string; name: string };
+
+type SortKey = "latest" | "oldest";
+
+const ALL_COURSES = "__all__";
 
 function formatDate(iso: string): string {
   const date = new Date(iso);
@@ -27,74 +26,114 @@ function formatDate(iso: string): string {
   }).format(date);
 }
 
-function RankBadge({ position }: { position: number | null }) {
-  if (position === null) {
-    return <span className="text-xs text-neutral-500">—</span>;
+function ordinal(position: number): string {
+  const rem100 = position % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${position}th`;
+  switch (position % 10) {
+    case 1:
+      return `${position}st`;
+    case 2:
+      return `${position}nd`;
+    case 3:
+      return `${position}rd`;
+    default:
+      return `${position}th`;
   }
+}
+
+function RankText({ position }: { position: number | null }) {
+  if (position === null) return <span className="text-neutral-500">—</span>;
   const highlight =
     position === 1
-      ? "bg-yellow-400/15 text-yellow-300 border-yellow-500/40"
+      ? "text-yellow-300"
       : position <= 3
-        ? "bg-primary-600/15 text-primary-300 border-primary-500/40"
-        : "bg-ink/5 text-neutral-300 border-ink/10";
+        ? "text-primary-300"
+        : "text-neutral-300";
   return (
-    <span
-      className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-xs font-extrabold ${highlight}`}
-    >
-      #{position}
-    </span>
+    <span className={`font-extrabold ${highlight}`}>{ordinal(position)}</span>
   );
 }
 
-function ResultTable({ results }: { results: StudentExamResultRow[] }) {
+function sortRows(
+  rows: StudentExamResultRow[],
+  query: string,
+  sortKey: SortKey,
+): StudentExamResultRow[] {
+  const filtered = rows.filter((row) =>
+    row.examName.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  return [...filtered].sort((a, b) => {
+    const diff = a.submittedAt.localeCompare(b.submittedAt);
+    return sortKey === "latest" ? -diff || b.submittedAt.localeCompare(a.submittedAt) : diff;
+  });
+}
+
+function ResultTable({
+  results,
+  query,
+  sortKey,
+}: {
+  results: StudentExamResultRow[];
+  query: string;
+  sortKey: SortKey;
+}) {
+  const rows = sortRows(results, query, sortKey);
+
+  if (rows.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-ink/15 bg-dark-950/60 p-6 text-center text-sm text-neutral-400">
+        {query
+          ? "No exams match your search."
+          : "No exam results available for this course yet."}
+      </p>
+    );
+  }
+
   return (
     <>
-      {/* Desktop / tablet table */}
-      <div className="hidden overflow-hidden rounded-xl border border-ink/10 sm:block">
-        <table className="w-full text-left text-sm">
+      {/* Tablet / desktop table */}
+      <div className="hidden overflow-x-auto rounded-xl border border-ink/10 md:block">
+        <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b border-ink/10 bg-ink/5 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
               <th className="px-4 py-3">Exam Name</th>
               <th className="px-3 py-3 text-center">Total Mark</th>
-              <th className="px-3 py-3 text-center">Obtained</th>
+              <th className="px-3 py-3 text-center">Obtained Mark</th>
               <th className="px-3 py-3 text-center">Highest Mark</th>
-              <th className="px-4 py-3 text-right">Ranking</th>
+              <th className="px-3 py-3 text-center">Ranking</th>
+              <th className="px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody>
-            {results.map((result) => (
-              <tr
-                key={result.examId}
-                className="border-b border-ink/5 last:border-0"
-              >
+            {rows.map((result) => (
+              <tr key={result.examId} className="border-b border-ink/5 last:border-0">
                 <td className="px-4 py-3">
                   <span className="block font-semibold text-heading">
                     {result.examName}
                   </span>
                   <span className="text-[11px] text-neutral-500">
                     {formatDate(result.submittedAt)}
-                    {result.timeTakenSeconds !== null
-                      ? ` · ${formatDuration(result.timeTakenSeconds)}`
-                      : ""}
                   </span>
                 </td>
                 <td className="px-3 py-3 text-center font-semibold text-neutral-300">
                   {result.totalMarks}
                 </td>
-                <td className="px-3 py-3 text-center">
-                  <span className="font-extrabold text-primary-400">
-                    {result.obtainedMarks}
-                  </span>
-                  <span className="text-[11px] text-neutral-500">
-                    {" "}
-                    /{result.totalMarks}
-                  </span>
+                <td className="px-3 py-3 text-center font-extrabold text-primary-400">
+                  {result.obtainedMarks}
                 </td>
                 <td className="px-3 py-3 text-center font-semibold text-neutral-300">
                   {result.highestMark ?? "—"}
                 </td>
+                <td className="px-3 py-3 text-center">
+                  <RankText position={result.meritPosition} />
+                </td>
                 <td className="px-4 py-3 text-right">
-                  <RankBadge position={result.meritPosition} />
+                  <Link
+                    href={`/dashboard/exam-result/${encodeURIComponent(result.examId)}`}
+                    className="inline-block rounded-lg bg-primary-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+                  >
+                    View Result
+                  </Link>
                 </td>
               </tr>
             ))}
@@ -102,9 +141,9 @@ function ResultTable({ results }: { results: StudentExamResultRow[] }) {
         </table>
       </div>
 
-      {/* Mobile cards */}
-      <ul className="space-y-2.5 sm:hidden">
-        {results.map((result) => (
+      {/* Mobile cards (all columns kept accessible) */}
+      <ul className="space-y-2.5 md:hidden">
+        {rows.map((result) => (
           <li
             key={result.examId}
             className="rounded-xl border border-ink/10 bg-dark-950/60 p-3.5"
@@ -116,12 +155,9 @@ function ResultTable({ results }: { results: StudentExamResultRow[] }) {
                 </p>
                 <p className="text-[11px] text-neutral-500">
                   {formatDate(result.submittedAt)}
-                  {result.timeTakenSeconds !== null
-                    ? ` · ${formatDuration(result.timeTakenSeconds)}`
-                    : ""}
                 </p>
               </div>
-              <RankBadge position={result.meritPosition} />
+              <RankText position={result.meritPosition} />
             </div>
             <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-ink/5 px-1 py-1.5">
@@ -137,6 +173,12 @@ function ResultTable({ results }: { results: StudentExamResultRow[] }) {
                 <dd className="text-sm font-bold text-neutral-300">{result.highestMark ?? "—"}</dd>
               </div>
             </dl>
+            <Link
+              href={`/dashboard/exam-result/${encodeURIComponent(result.examId)}`}
+              className="mt-3 block rounded-lg bg-primary-600 py-2 text-center text-xs font-bold text-white transition hover:bg-primary-700 active:scale-[0.98]"
+            >
+              View Result →
+            </Link>
           </li>
         ))}
       </ul>
@@ -147,7 +189,11 @@ function ResultTable({ results }: { results: StudentExamResultRow[] }) {
 export default function ExamResultsView() {
   const { user, authLoading } = useAuth();
   const [groups, setGroups] = useState<StudentExamResultGroup[] | null>(null);
+  const [courses, setCourses] = useState<CourseOption[]>([]);
   const [state, setState] = useState<LoadState>("loading");
+  const [selectedCourse, setSelectedCourse] = useState<string>(ALL_COURSES);
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("latest");
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -159,8 +205,13 @@ export default function ExamResultsView() {
         cache: "no-store",
       });
       if (!response.ok) throw new Error("failed");
-      const data = (await response.json()) as { groups?: StudentExamResultGroup[] };
+      const data = (await response.json()) as {
+        groups?: StudentExamResultGroup[];
+        courses?: CourseOption[];
+      };
       setGroups(Array.isArray(data.groups) ? data.groups : []);
+      // Selector shows ONLY the student's active enrollments.
+      setCourses(Array.isArray(data.courses) ? data.courses : []);
       setState("ready");
     } catch {
       setState("error");
@@ -172,6 +223,33 @@ export default function ExamResultsView() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user) void load();
   }, [authLoading, user, load]);
+
+  const courseName = useMemo(
+    () =>
+      selectedCourse === ALL_COURSES
+        ? null
+        : courses.find((course) => course.slug === selectedCourse)?.name ?? null,
+    [courses, selectedCourse],
+  );
+
+  const visibleGroups = useMemo(() => {
+    const all = groups ?? [];
+    if (selectedCourse === ALL_COURSES) return all;
+    // Exams grouped by the course they belong to; a selected enrolled course
+    // with no attempts still renders (with its empty-state message).
+    const match = all.filter((group) => group.courseSlug === selectedCourse);
+    return match.length > 0
+      ? match
+      : [
+          {
+            courseSlug: selectedCourse,
+            courseName: courseName ?? selectedCourse,
+            totalMarks: 0,
+            obtainedMarks: 0,
+            results: [],
+          },
+        ];
+  }, [groups, selectedCourse, courseName]);
 
   if (state === "loading") {
     return (
@@ -201,7 +279,8 @@ export default function ExamResultsView() {
     );
   }
 
-  const all = groups ?? [];
+  const selectClass =
+    "w-full rounded-xl border border-ink/10 bg-dark-850 px-4 py-3 text-sm font-semibold text-heading transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30";
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -222,22 +301,77 @@ export default function ExamResultsView() {
         <h1 className="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
           Exam Results
         </h1>
-        <p className="mt-1 text-sm text-neutral-400">
-          All exams you have taken, grouped course-wise.
-        </p>
       </header>
 
-      {all.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-12 text-center">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600/15 text-primary-500">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-7 w-7" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
+      {/* Course selector + search + sorting */}
+      <div className="mt-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <label className="block">
+          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+            Course
           </span>
-          <p className="mt-4 font-semibold text-heading">No exam results yet</p>
+          <select
+            aria-label="Select enrolled course"
+            value={selectedCourse}
+            onChange={(event) => setSelectedCourse(event.target.value)}
+            className={selectClass}
+          >
+            <option value={ALL_COURSES}>All Enrolled Courses</option>
+            {courses.map((course) => (
+              <option key={course.slug} value={course.slug}>
+                {course.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+            Search Exam
+          </span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by exam name…"
+            className={selectClass}
+          />
+        </label>
+        <label className="block md:w-44">
+          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+            Sort
+          </span>
+          <select
+            aria-label="Sort results"
+            value={sortKey}
+            onChange={(event) => setSortKey(event.target.value as SortKey)}
+            className={selectClass}
+          >
+            <option value="latest">Latest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
+        </label>
+      </div>
+
+      {courses.length === 0 ? (
+        /* Not enrolled in anything yet */
+        <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-12 text-center">
+          <p className="font-semibold text-heading">
+            You are not enrolled in any course yet.
+          </p>
           <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
-            You have not participated in any exam yet. Join a live exam and your
-            result will appear here right after submission.
+            Enroll in a course and take exams — every result will appear here.
+          </p>
+          <Link
+            href="/courses"
+            className="mt-6 inline-block rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+          >
+            Explore Courses
+          </Link>
+        </div>
+      ) : visibleGroups.length === 0 ? (
+        <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-12 text-center">
+          <p className="font-semibold text-heading">No exam results yet</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
+            You have not participated in any exam yet.
           </p>
           <Link
             href="/exam"
@@ -248,20 +382,16 @@ export default function ExamResultsView() {
         </div>
       ) : (
         <div className="mt-8 space-y-8">
-          {all.map((group) => (
+          {visibleGroups.map((group) => (
             <article
               key={group.courseSlug ?? "__general"}
               className="overflow-hidden rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20"
             >
+              {/* Course summary — overall totals for this course only */}
               <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-ink/5 px-5 py-4">
-                <div className="min-w-0">
-                  <h2 className="truncate text-base font-extrabold text-heading sm:text-lg">
-                    {group.courseName}
-                  </h2>
-                  <p className="text-[11px] text-neutral-500">
-                    {group.results.length} exam{group.results.length === 1 ? "" : "s"} taken
-                  </p>
-                </div>
+                <h2 className="truncate text-base font-extrabold text-heading sm:text-lg">
+                  {group.courseName}
+                </h2>
                 <div className="flex items-center gap-2">
                   <span className="rounded-lg border border-ink/10 bg-dark-850 px-3 py-1.5 text-center">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-neutral-500">
@@ -273,7 +403,7 @@ export default function ExamResultsView() {
                   </span>
                   <span className="rounded-lg border border-primary-500/30 bg-primary-600/10 px-3 py-1.5 text-center">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-primary-400/70">
-                      Obtained
+                      Obtained Mark
                     </span>
                     <span className="block text-sm font-extrabold text-primary-400">
                       {group.obtainedMarks}
@@ -283,7 +413,7 @@ export default function ExamResultsView() {
               </header>
 
               <div className="p-4 sm:p-5">
-                <ResultTable results={group.results} />
+                <ResultTable results={group.results} query={search} sortKey={sortKey} />
               </div>
             </article>
           ))}

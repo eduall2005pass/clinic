@@ -121,3 +121,146 @@ export async function getStudentExamResultGroups(
     return [];
   }
 }
+
+// ── Single exam result detail ─────────────────────────────────────────────
+
+export type StudentExamResultDetail = {
+  examId: string;
+  examName: string;
+  courseName: string | null;
+  totalMarks: number;
+  obtainedMarks: number;
+  highestMark: number | null;
+  meritPosition: number | null;
+  correctCount: number;
+  wrongCount: number;
+  unansweredCount: number;
+  totalQuestions: number;
+  timeTakenSeconds: number | null;
+  /** Negative marks per wrong answer (0 = none, per existing exam rules). */
+  negativePerWrong: number;
+  finalScore: number;
+  submittedAt: string;
+};
+
+type DetailRow = {
+  exam_id: string;
+  title: string;
+  course_type: string;
+  score: string | number;
+  total_marks: string | number;
+  merit_position: number | null;
+  time_taken_seconds: number | null;
+  details: string | null;
+  submitted_at: Date | string;
+  course_name: string | null;
+};
+
+/**
+ * One exam's full result for THIS student only. Returns null when the
+ * student has no result for the exam — result ownership is enforced by the
+ * student_uid filter, so another student's result can never be read.
+ */
+export async function getStudentExamResultDetail(
+  uid: string,
+  examId: string,
+): Promise<StudentExamResultDetail | null> {
+  try {
+    if (!examId || examId.length > 64) return null;
+    const rows = await query<DetailRow[]>(
+      `SELECT r.exam_id, ex.title, ex.course_type, r.score, r.total_marks,
+              r.merit_position, r.time_taken_seconds, r.details, r.submitted_at,
+              cc.name AS course_name
+         FROM exam_results r
+         JOIN exams ex ON ex.id = r.exam_id
+         LEFT JOIN course_chapters ch ON ch.id = ex.chapter_id
+         LEFT JOIN course_subject_assignments a ON a.subject_id = ch.subject_id
+         LEFT JOIN catalog_courses cc ON cc.slug = a.course_slug
+        WHERE r.student_uid = ? AND r.exam_id = ?
+        ORDER BY r.id DESC LIMIT 1`,
+      [uid, examId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+
+    // Highest mark across all participants of this exam.
+    const bestRows = await query<{ best: string | number | null }[]>(
+      `SELECT MAX(score) AS best FROM exam_results WHERE exam_id = ?`,
+      [examId],
+    );
+    const highest =
+      bestRows[0]?.best === null || bestRows[0]?.best === undefined
+        ? null
+        : num(bestRows[0].best);
+
+    // Correct / wrong / unanswered from the stored per-question breakdown
+    // ({questionId, chosenIndex, correctIndex, ...} written at submit time).
+    let rawDetails: unknown = null;
+    try {
+      rawDetails = row.details ? JSON.parse(row.details) : null;
+    } catch {
+      rawDetails = null;
+    }
+    type DetailEntry = {
+      questionId?: number;
+      chosenIndex?: number | null;
+      correctIndex?: number;
+    };
+    const details = Array.isArray(rawDetails)
+      ? (rawDetails as DetailEntry[])
+      : [];
+
+    let correct = 0;
+    let wrong = 0;
+    let unanswered = 0;
+
+    if (details.length > 0) {
+      const activeIds = new Set(
+        (
+          await query<{ id: number }[]>(
+            `SELECT id FROM exam_questions WHERE exam_id = ? AND is_active = 1`,
+            [examId],
+          )
+        ).map((row) => Number(row.id)),
+      );
+      for (const entry of details) {
+        // Skip breakdown rows whose question was removed from the exam.
+        if (typeof entry.questionId === "number" && !activeIds.has(entry.questionId)) {
+          continue;
+        }
+        if (typeof entry.chosenIndex !== "number") unanswered += 1;
+        else if (entry.chosenIndex === entry.correctIndex) correct += 1;
+        else wrong += 1;
+      }
+    }
+
+    // Existing MediSpark rule: −0.25 per wrong on Medical Admission only.
+    const negativePerWrong = row.course_type === "Admission" ? 0.25 : 0;
+
+    return {
+      examId: row.exam_id,
+      examName: row.title,
+      courseName: row.course_name ?? null,
+      totalMarks: num(row.total_marks),
+      obtainedMarks: num(row.score),
+      highestMark: highest,
+      meritPosition:
+        row.merit_position === null || row.merit_position === undefined
+          ? null
+          : Number(row.merit_position),
+      correctCount: correct,
+      wrongCount: wrong,
+      unansweredCount: unanswered,
+      totalQuestions: correct + wrong + unanswered,
+      timeTakenSeconds:
+        row.time_taken_seconds === null || row.time_taken_seconds === undefined
+          ? null
+          : Number(row.time_taken_seconds),
+      negativePerWrong,
+      finalScore: num(row.score),
+      submittedAt: toIso(row.submitted_at),
+    };
+  } catch {
+    return null;
+  }
+}
