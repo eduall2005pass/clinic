@@ -84,7 +84,7 @@ export default async function Mentors({
                       </span>
                     )}
                     {mentor.isDeveloper && (
-                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-ink/15 bg-dark-950 px-4 py-2 text-xs font-bold tracking-wide text-neutral-300">
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-primary-500/40 bg-dark-950 px-4 py-2 text-xs font-bold tracking-wide text-primary-400">
                         Developer of MediSpark
                       </span>
                     )}
