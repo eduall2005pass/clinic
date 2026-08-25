@@ -13,6 +13,26 @@ import {
   type NavbarConfig,
 } from "@/lib/navbar-constants";
 
+/** Per-item menu icons — only items listed here show an icon. */
+const MENU_ITEM_ICONS: Record<string, React.ReactNode> = {
+  qa: (
+    <svg
+      aria-hidden
+      className="h-4 w-4 shrink-0 text-primary-500"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      viewBox="0 0 24 24"
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      <path d="M9.7 9.3a2.4 2.4 0 0 1 4.7.7c0 1.6-2.4 2.1-2.4 3.4" />
+      <circle cx="12" cy="16.4" r="0.4" fill="currentColor" />
+    </svg>
+  ),
+};
+
 export default function Navbar({ config }: { config?: NavbarConfig }) {
   const router = useRouter();
   const settings = config ?? DEFAULT_NAVBAR_CONFIG;
@@ -192,9 +212,14 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
                             }
                             setMenuOpen(false);
                           }}
-                          className="block rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 transition hover:bg-primary-500/10 hover:text-heading"
+                          className={
+                            MENU_ITEM_ICONS[item.key]
+                              ? "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 transition hover:bg-primary-500/10 hover:text-heading"
+                              : "block rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 transition hover:bg-primary-500/10 hover:text-heading"
+                          }
                         >
-                          {item.label}
+                          {MENU_ITEM_ICONS[item.key]}
+                          <span>{item.label}</span>
                         </Link>
                       ) : (
                         <span

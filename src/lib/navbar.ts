@@ -47,6 +47,24 @@ export async function fetchNavbarConfig(): Promise<NavbarConfig> {
         href: row.href ?? null,
         isActive: Boolean(row.is_active),
       }));
+      // Ensure the Q&A entry exists even in older saved menus — it always
+      // sits immediately after Public Exam.
+      if (!items.some((item) => item.key === "qa")) {
+        const qaItem: NavbarItem = {
+          key: "qa",
+          label: "Q&A",
+          href: "/qa",
+          isActive: true,
+        };
+        const examIndex = items.findIndex(
+          (item) => item.key === "public-exam",
+        );
+        if (examIndex === -1) {
+          items.push(qaItem);
+        } else {
+          items.splice(examIndex + 1, 0, qaItem);
+        }
+      }
     } else {
       items = DEFAULT_NAVBAR_CONFIG.items;
     }
