@@ -16,6 +16,10 @@ export type AdminEnrollment = {
   status: EnrollmentStatus;
   enrolledAt: number | null;
   updatedAt: number | null;
+  /** Payment details submitted by the student (paid enrollment) — verified MANUALLY by admin. */
+  paymentTransactionId: string | null;
+  paymentAmount: number | null;
+  paymentSender: string | null;
 };
 
 export type EnrollmentListOptions = {
@@ -38,6 +42,9 @@ type EnrollmentRow = {
   enrollment_status: string;
   enrollment_date: Date | string | null;
   updated_at: Date | string | null;
+  payment_transaction_id?: string | null;
+  payment_amount?: string | number | null;
+  payment_sender?: string | null;
 };
 
 function toNumber(value: unknown): number {
@@ -75,6 +82,12 @@ function mapEnrollment(row: EnrollmentRow): AdminEnrollment {
     status: normalizeStatus(row.enrollment_status),
     enrolledAt: parseTime(row.enrollment_date),
     updatedAt: parseTime(row.updated_at),
+    paymentTransactionId: row.payment_transaction_id ?? null,
+    paymentAmount:
+      row.payment_amount === null || row.payment_amount === undefined
+        ? null
+        : toNumber(row.payment_amount) || null,
+    paymentSender: row.payment_sender ?? null,
   };
 }
 
@@ -84,6 +97,10 @@ const SELECT_ENROLLMENTS = `
          e.fee, e.enrollment_status, e.enrollment_date, e.updated_at
   FROM enrollments e
   LEFT JOIN students s ON s.uid = e.student_uid`;
+
+/** Payment columns (Step 3 migration) — absent on databases not yet migrated. */
+const PAYMENT_COLUMNS = `,
+         e.payment_transaction_id, e.payment_amount, e.payment_sender`;
 
 /** All enrollments with student info — supports search + status filter. */
 export async function fetchEnrollmentsAdmin(
@@ -112,10 +129,20 @@ export async function fetchEnrollmentsAdmin(
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   try {
-    const rows = await query<EnrollmentRow[]>(
-      `${SELECT_ENROLLMENTS} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
-      params,
-    );
+    let rows: EnrollmentRow[];
+    try {
+      // Preferred — includes the payment details (Step 3 migration applied).
+      rows = await query<EnrollmentRow[]>(
+        `${SELECT_ENROLLMENTS}${PAYMENT_COLUMNS} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
+        params,
+      );
+    } catch {
+      // Payment columns not migrated yet — fall back to the base columns.
+      rows = await query<EnrollmentRow[]>(
+        `${SELECT_ENROLLMENTS} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
+        params,
+      );
+    }
     return rows.map(mapEnrollment);
   } catch {
     return [];
@@ -203,23 +230,59 @@ export async function ensureEnrollmentSettingsTable(): Promise<void> {
     `CREATE TABLE IF NOT EXISTS enrollment_settings (
       id VARCHAR(32) NOT NULL PRIMARY KEY,
       free_auto_enroll TINYINT(1) NOT NULL DEFAULT 1,
+      bkash_number VARCHAR(40) NULL,
+      nagad_number VARCHAR(40) NULL,
+      payment_instructions TEXT NULL,
       updated_by VARCHAR(191) NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   );
 }
 
-export async function getEnrollmentSettings(): Promise<{ freeAutoEnroll: boolean }> {
+export type PaymentSettings = {
+  freeAutoEnroll: boolean;
+  bkashNumber: string | null;
+  nagadNumber: string | null;
+  paymentInstructions: string | null;
+};
+
+export async function getEnrollmentSettings(): Promise<PaymentSettings> {
   try {
     await ensureEnrollmentSettingsTable();
-    const rows = await query<{ free_auto_enroll: number }[]>(
-      "SELECT free_auto_enroll FROM enrollment_settings WHERE id = 'default' LIMIT 1",
+    const rows = await query<{
+      free_auto_enroll: number;
+      bkash_number: string | null;
+      nagad_number: string | null;
+      payment_instructions: string | null;
+    }[]>(
+      "SELECT free_auto_enroll, bkash_number, nagad_number, payment_instructions FROM enrollment_settings WHERE id = 'default' LIMIT 1",
     );
-    // Default: auto-enrollment for free courses is ON.
-    return { freeAutoEnroll: rows.length === 0 || rows[0].free_auto_enroll === 1 };
+    // Defaults: auto-enrollment ON, empty payment card.
+    if (rows.length === 0) {
+      return { freeAutoEnroll: true, bkashNumber: null, nagadNumber: null, paymentInstructions: null };
+    }
+    const row = rows[0];
+    return {
+      freeAutoEnroll: row.free_auto_enroll === 1,
+      bkashNumber: row.bkash_number,
+      nagadNumber: row.nagad_number,
+      paymentInstructions: row.payment_instructions,
+    };
   } catch {
-    return { freeAutoEnroll: true };
+    return { freeAutoEnroll: true, bkashNumber: null, nagadNumber: null, paymentInstructions: null };
   }
+}
+
+/** Public view of the payment card shown to students during paid enrollment. */
+export async function getPaymentCard(): Promise<
+  { bkashNumber: string | null; nagadNumber: string | null; instructions: string | null }
+> {
+  const settings = await getEnrollmentSettings();
+  return {
+    bkashNumber: settings.bkashNumber,
+    nagadNumber: settings.nagadNumber,
+    instructions: settings.paymentInstructions,
+  };
 }
 
 export async function setFreeAutoEnroll(

@@ -16,6 +16,10 @@ type Application = {
   courseName: string;
   status: string;
   enrollmentDate?: string;
+  /** Payment details — verified MANUALLY against the bKash/Nagad statement. */
+  paymentTransactionId?: string | null;
+  paymentAmount?: number | null;
+  paymentSender?: string | null;
 };
 
 const statusStyles: Record<string, string> = {
@@ -118,7 +122,9 @@ export default function CourseApplicationsPage({
         Applications
       </h1>
       <p className="mt-1 text-sm text-neutral-400">
-        Course-wise enrollment applications for this specific course.
+        Course-wise enrollment applications for this specific course. Verify
+        each payment manually against your bKash/Nagad statement before
+        accepting.
       </p>
 
       <div className="mt-5 flex gap-2">
@@ -197,6 +203,43 @@ export default function CourseApplicationsPage({
                   {application.status}
                 </span>
               </div>
+
+              {/* Payment details for manual verification — admin checks
+                  Transaction ID + Paid Amount + Sender Number against the
+                  actual bKash/Nagad statement. No external auto-verification. */}
+              {(application.paymentTransactionId ||
+                (application.paymentAmount !== null &&
+                  application.paymentAmount !== undefined) ||
+                application.paymentSender) && (
+                <dl className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-ink/10 bg-dark-950/60 p-3 text-xs sm:grid-cols-3">
+                  <div className="min-w-0">
+                    <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                      Transaction ID
+                    </dt>
+                    <dd className="mt-0.5 truncate font-mono font-semibold text-heading">
+                      {application.paymentTransactionId || "—"}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                      Paid Amount
+                    </dt>
+                    <dd className="mt-0.5 truncate font-mono font-semibold text-heading">
+                      {application.paymentAmount != null
+                        ? `৳ ${application.paymentAmount}`
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                      Sender Mobile
+                    </dt>
+                    <dd className="mt-0.5 truncate font-mono font-semibold text-heading">
+                      {application.paymentSender || "—"}
+                    </dd>
+                  </div>
+                </dl>
+              )}
 
               <div className="mt-4 flex flex-wrap gap-2 border-t border-ink/10 pt-4">
                 {application.status !== "active" && (
