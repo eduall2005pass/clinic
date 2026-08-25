@@ -21,10 +21,13 @@ export default function WebsiteInformationPage() {
   const [editingName, setEditingName] = useState(false);
   const [savingName, setSavingName] = useState(false);
 
-  // Logo
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  // Logos — dual mode (separate light / dark slots)
+  const [logoUrls, setLogoUrls] = useState<{ light: string | null; dark: string | null }>({
+    light: null,
+    dark: null,
+  });
   const [logoLoading, setLogoLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingMode, setUploadingMode] = useState<"light" | "dark" | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function token(): Promise<string> {
@@ -52,9 +55,14 @@ export default function WebsiteInformationPage() {
         if (logoRes.ok) {
           const data = (await logoRes.json()) as {
             logo?: { url?: string };
-            url?: string;
+            light?: { url?: string } | null;
+            dark?: { url?: string } | null;
           };
-          setLogoUrl(data.logo?.url ?? data.url ?? null);
+          setLogoUrls({
+            // Fall back to the shared logo until a mode-specific one is set.
+            light: data.light?.url ?? data.logo?.url ?? null,
+            dark: data.dark?.url ?? data.logo?.url ?? null,
+          });
         }
       } finally {
         setLogoLoading(false);
@@ -97,12 +105,13 @@ export default function WebsiteInformationPage() {
     [user],
   );
 
-  async function uploadLogo(file: File) {
+  async function uploadLogo(file: File, mode: "light" | "dark") {
     if (!file) return;
-    setUploading(true);
+    setUploadingMode(mode);
     try {
       const formData = new FormData();
       formData.append("logo", file);
+      formData.append("mode", mode);
       const res = await fetch("/api/logo", {
         method: "POST",
         headers: { Authorization: `Bearer ${await token()}` },
@@ -116,12 +125,17 @@ export default function WebsiteInformationPage() {
         toast.showToast("error", data.error ?? "Logo upload failed.");
         return;
       }
-      if (data.logo?.url) setLogoUrl(data.logo.url);
-      toast.showToast("success", "New logo saved — live on the Main Website.");
+      if (data.logo?.url) {
+        setLogoUrls((prev) => ({ ...prev, [mode]: data.logo!.url! }));
+      }
+      toast.showToast(
+        "success",
+        `${mode === "light" ? "Light Mode" : "Dark Mode"} logo saved — live everywhere.`,
+      );
     } catch {
       toast.showToast("error", "Logo upload failed.");
     } finally {
-      setUploading(false);
+      setUploadingMode(null);
       if (fileRef.current) fileRef.current.value = "";
     }
   }
@@ -197,52 +211,80 @@ export default function WebsiteInformationPage() {
         )}
       </div>
 
-      {/* Website Logo */}
-      <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
-        <h2 className="text-lg font-bold text-heading">Website Logo</h2>
-        <div className="mt-4 flex flex-wrap items-center gap-5">
-          {/* Current logo preview */}
-          <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-ink/10 bg-dark-950">
-            {logoLoading ? (
-              <span className="text-xs text-neutral-600">Loading…</span>
-            ) : logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt="Current website logo"
-                className="max-h-full max-w-full object-contain p-1.5"
-              />
-            ) : (
-              <span className="px-2 text-center text-[11px] text-neutral-600">
-                No logo uploaded
-              </span>
-            )}
+      {/* Website Logo — dual mode */}
+      {(["light", "dark"] as const).map((mode) => (
+        <div
+          key={mode}
+          className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-bold text-heading">
+              {mode === "light" ? "☀️ Light Mode Logo" : "🌙 Dark Mode Logo"}
+            </h2>
+            <span
+              className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                mode === "light"
+                  ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-300"
+                  : "border-blue-500/40 bg-blue-600/15 text-blue-300"
+              }`}
+            >
+              Shown in {mode} mode
+            </span>
           </div>
 
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-neutral-400">
-              PNG, JPG, WebP, GIF or SVG · up to 5 MB. The new logo replaces
-              the existing one everywhere on the Main Website.
-            </p>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".png,.jpg,.jpeg,.webp,.gif,.svg,image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void uploadLogo(file);
+          <div className="mt-4 flex flex-wrap items-center gap-5">
+            {/* Current preview — checkerboard so transparent logos read well
+                against either theme */}
+            <div
+              className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-ink/10"
+              style={{
+                backgroundColor:
+                  mode === "light" ? "#ffffff" : "#0a0a12",
               }}
-              disabled={uploading}
-              className="mt-3 w-full cursor-pointer rounded-xl border border-ink/15 bg-dark-850 px-3 py-2.5 text-xs text-neutral-300 outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-primary-700"
-            />
-            {uploading && (
-              <p className="mt-2 text-xs font-semibold text-primary-400">
-                Uploading & saving…
+            >
+              {logoLoading ? (
+                <span className="text-xs text-neutral-500">Loading…</span>
+              ) : logoUrls[mode] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrls[mode]!}
+                  alt={`${mode} mode website logo`}
+                  className="max-h-full max-w-full object-contain p-1.5"
+                />
+              ) : (
+                <span className="px-2 text-center text-[11px] text-neutral-500">
+                  No {mode} logo uploaded
+                </span>
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-neutral-400">
+                PNG, JPG, WebP, GIF or SVG · up to 5 MB. Replaces the{" "}
+                {mode} Mode logo everywhere; visitors see it automatically
+                whenever their appearance is set to {mode}.
               </p>
-            )}
+              <input
+                ref={fileRef}
+                type="file"
+                aria-label={`Upload ${mode} mode logo`}
+                accept=".png,.jpg,.jpeg,.webp,.gif,.svg,image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadLogo(file, mode);
+                }}
+                disabled={uploadingMode !== null}
+                className="mt-3 w-full cursor-pointer rounded-xl border border-ink/15 bg-dark-850 px-3 py-2.5 text-xs text-neutral-300 outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-primary-700 disabled:opacity-60"
+              />
+              {uploadingMode === mode && (
+                <p className="mt-2 text-xs font-semibold text-primary-400">
+                  Uploading & saving…
+                </p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      ))}
+</section>
   );
 }
