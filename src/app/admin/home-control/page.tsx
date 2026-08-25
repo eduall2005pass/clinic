@@ -13,6 +13,7 @@ import { fetchHeroSettings } from "@/lib/hero-settings";
 import { fetchPublishedReviewRecords } from "@/lib/reviews-store";
 import { fetchPublishedFaqs } from "@/lib/faq-store";
 import { fetchActiveJerseys } from "@/lib/content-admin";
+import AdminSectionHold from "@/components/admin/AdminSectionHold";
 import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
@@ -36,13 +37,26 @@ function AddButton({ href, label }: { href: string; label: string }) {
 function SectionWithAdd({
   children,
   add,
+  hold,
 }: {
   children: ReactNode;
   add: { href: string; label: string };
+  /** Press & Hold → Edit / Remove (admins only). */
+  hold?: { key: string; editHref: string; label: string };
 }) {
   return (
     <div className="relative">
-      {children}
+      {hold ? (
+        <AdminSectionHold
+          sectionKey={hold.key}
+          editHref={hold.editHref}
+          label={hold.label}
+        >
+          {children}
+        </AdminSectionHold>
+      ) : (
+        children
+      )}
       <div className="flex justify-end px-4 pt-4 sm:px-6">
         <AddButton {...add} />
       </div>
@@ -85,6 +99,7 @@ export default async function HomeControlPage() {
           <SectionWithAdd
             key="banner"
             add={{ href: "/admin/marketing/banners", label: "Add Banner" }}
+            hold={{ key: "banner", editHref: "/admin/website/homepage/hero", label: "Banner Slider" }}
           >
             <BannerSlider />
           </SectionWithAdd>
@@ -94,6 +109,7 @@ export default async function HomeControlPage() {
           <SectionWithAdd
             key="hero"
             add={{ href: "/admin/website/homepage", label: "Add Banner" }}
+            hold={{ key: "hero", editHref: "/admin/website/homepage/hero", label: "Hero" }}
           >
             <Hero hero={heroSettings} />
           </SectionWithAdd>
@@ -102,7 +118,8 @@ export default async function HomeControlPage() {
         return (
           <SectionWithAdd
             key="featured-courses"
-            add={{ href: "/admin/featured-courses", label: "Add Course" }}
+            add={{ href: "/admin/marketing/featured-courses", label: "Add Course" }}
+            hold={{ key: "featured-courses", editHref: "/admin/marketing/featured-courses", label: "Featured Courses" }}
           >
             <FeaturedCourses {...text(section)} />
           </SectionWithAdd>
@@ -112,6 +129,7 @@ export default async function HomeControlPage() {
           <SectionWithAdd
             key="why-medispark"
             add={{ href: "/admin/website/homepage", label: "Add Card" }}
+            hold={{ key: "why-medispark", editHref: "/admin/website/homepage", label: "Why MediSpark" }}
           >
             <WhyMediSpark {...text(section)} />
           </SectionWithAdd>
@@ -121,6 +139,7 @@ export default async function HomeControlPage() {
           <SectionWithAdd
             key="our-success"
             add={{ href: "/admin/website/homepage", label: "Add Card" }}
+            hold={{ key: "our-success", editHref: "/admin/website/homepage", label: "Our Success" }}
           >
             <OurSuccess {...text(section)} />
           </SectionWithAdd>
@@ -130,6 +149,7 @@ export default async function HomeControlPage() {
           <SectionWithAdd
             key="mentors"
             add={{ href: "/admin/mentors/all", label: "Add Mentor" }}
+            hold={{ key: "mentors", editHref: "/admin/mentors/all", label: "Mentor" }}
           >
             <Mentors {...text(section)} />
           </SectionWithAdd>
@@ -138,7 +158,8 @@ export default async function HomeControlPage() {
         return (
           <SectionWithAdd
             key="reviews"
-            add={{ href: "/admin/content/reviews", label: "Add Review" }}
+            add={{ href: "/admin/website/homepage/reviews", label: "Add Review" }}
+            hold={{ key: "reviews", editHref: "/admin/website/homepage/reviews", label: "Review" }}
           >
             <StudentReviews reviews={publishedReviews} {...text(section)} />
           </SectionWithAdd>
@@ -148,6 +169,7 @@ export default async function HomeControlPage() {
           <SectionWithAdd
             key="faq"
             add={{ href: "/admin/content/faq", label: "Add FAQ" }}
+            hold={{ key: "faq", editHref: "/admin/content/faq", label: "FAQ" }}
           >
             <FaqSection faqs={publishedFaqs} {...text(section)} />
           </SectionWithAdd>
@@ -172,6 +194,11 @@ export default async function HomeControlPage() {
               {render(section)}
               <SectionWithAdd
                 add={{ href: "/admin/content/jersey", label: "Add Jersey" }}
+                hold={{
+                  key: "jersey",
+                  editHref: "/admin/content/jersey",
+                  label: "Jersey",
+                }}
               >
                 <JerseyGallery
                   jerseys={activeJerseys}
