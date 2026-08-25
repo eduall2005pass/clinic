@@ -362,6 +362,21 @@ type ExamRow = {
   total_marks: number;
 };
 
+
+/**
+ * Run a supplementary query without letting its failure break the whole
+ * course payload. A missing/unmigrated table must never block an actively
+ * enrolled student from opening their course.
+ */
+async function safe<T>(label: string, run: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    console.error(`[my-learning] ${label} failed:`, error);
+    return fallback;
+  }
+}
+
 export async function getCourseLearningData(
   uid: string,
   slug: string,
@@ -396,16 +411,21 @@ export async function getCourseLearningData(
   };
 
   const [subjects, progress, favourites] = await Promise.all([
-    query<SubjectRow[]>(
-      `SELECT s.id, s.name
-         FROM course_subjects s
-         JOIN course_subject_assignments a ON a.subject_id = s.id
-        WHERE a.course_slug = ? AND s.is_active = 1
-        ORDER BY s.sort_order, s.name`,
-      [slug],
+    safe<SubjectRow[]>(
+      "subjects query",
+      () =>
+        query<SubjectRow[]>(
+          `SELECT s.id, s.name
+             FROM course_subjects s
+             JOIN course_subject_assignments a ON a.subject_id = s.id
+            WHERE a.course_slug = ? AND s.is_active = 1
+            ORDER BY s.sort_order, s.name`,
+          [slug],
+        ),
+      [],
     ),
-    loadProgress(uid),
-    loadFavourites(uid),
+    safe("progress query", () => loadProgress(uid), new Map()),
+    safe("favourites query", () => loadFavourites(uid), new Set<string>()),
   ]);
 
   if (subjects.length === 0) {
@@ -416,17 +436,27 @@ export async function getCourseLearningData(
   const subjectPlaceholders = subjectIds.map(() => "?").join(",");
 
   const [papers, chapters] = await Promise.all([
-    query<PaperRow[]>(
-      `SELECT id, subject_id, name, kind FROM course_papers
-        WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
-        ORDER BY sort_order, name`,
-      subjectIds,
+    safe<PaperRow[]>(
+      "papers query",
+      () =>
+        query<PaperRow[]>(
+          `SELECT id, subject_id, name, kind FROM course_papers
+            WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+            ORDER BY sort_order, name`,
+          subjectIds,
+        ),
+      [],
     ),
-    query<ChapterRow[]>(
-      `SELECT id, subject_id, paper_id, name FROM course_chapters
-        WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
-        ORDER BY sort_order, name`,
-      subjectIds,
+    safe<ChapterRow[]>(
+      "chapters query",
+      () =>
+        query<ChapterRow[]>(
+          `SELECT id, subject_id, paper_id, name FROM course_chapters
+            WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+            ORDER BY sort_order, name`,
+          subjectIds,
+        ),
+      [],
     ),
   ]);
 
@@ -439,26 +469,41 @@ export async function getCourseLearningData(
   if (chapterIds.length > 0) {
     const chapterPlaceholders = chapterIds.map(() => "?").join(",");
     [classes, materials, exams] = await Promise.all([
-      query<ClassRow[]>(
-        `SELECT id, chapter_id, title, video_url, note_url, duration_minutes, is_free
-           FROM course_classes
-          WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
-          ORDER BY sort_order, created_at`,
-        chapterIds,
+      safe<ClassRow[]>(
+        "classes query",
+        () =>
+          query<ClassRow[]>(
+            `SELECT id, chapter_id, title, video_url, note_url, duration_minutes, is_free
+               FROM course_classes
+              WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
+              ORDER BY sort_order, created_at`,
+            chapterIds,
+          ),
+        [],
       ),
-      query<MaterialRow[]>(
-        `SELECT id, chapter_id, title, material_type, file_url
-           FROM course_materials
-          WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
-          ORDER BY sort_order, id`,
-        chapterIds,
+      safe<MaterialRow[]>(
+        "materials query",
+        () =>
+          query<MaterialRow[]>(
+            `SELECT id, chapter_id, title, material_type, file_url
+               FROM course_materials
+              WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
+              ORDER BY sort_order, id`,
+            chapterIds,
+          ),
+        [],
       ),
-      query<ExamRow[]>(
-        `SELECT id, chapter_id, title, duration_minutes, total_marks
-           FROM exams
-          WHERE chapter_id IN (${chapterPlaceholders}) AND status = 'published'
-          ORDER BY scheduled_at DESC`,
-        chapterIds,
+      safe<ExamRow[]>(
+        "exams query",
+        () =>
+          query<ExamRow[]>(
+            `SELECT id, chapter_id, title, duration_minutes, total_marks
+               FROM exams
+              WHERE chapter_id IN (${chapterPlaceholders}) AND status = 'published'
+              ORDER BY scheduled_at DESC`,
+            chapterIds,
+          ),
+        [],
       ),
     ]);
   }

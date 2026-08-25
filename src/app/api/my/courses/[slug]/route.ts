@@ -45,7 +45,9 @@ export async function GET(
       );
     }
     return NextResponse.json({ course });
-  } catch {
+  } catch (error) {
+    // Surface the real cause in server logs for debugging.
+    console.error(`[api/my/courses/${slug}] failed:`, error);
     return NextResponse.json(
       { error: "Could not load this course." },
       { status: 500 },
