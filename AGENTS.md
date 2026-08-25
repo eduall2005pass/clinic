@@ -26,6 +26,11 @@ User communicates in Bengali/Banglish — reply in the same style.
   - SSH key on this machine is broken (`Permission denied`) — needs fixing separately
 - **Auth:** Firebase (Google sign-in). Admins = rows in `admins` table:
   eduall2005pass@gmail.com, siyammd553@gmail.com
+  - NOTE (2026-08-25): the app now authenticates against the NEW
+    `medisparkgo` Firebase project, so Firebase UIDs differ from the legacy
+    `shsmc-blood-portal` uids stored in `admins`. `src/lib/admin.ts`
+    therefore falls back to matching by VERIFIED EMAIL — keep that logic
+    when refactoring auth.
 - **Secrets:** all credentials live in `~/deploy.env` (never commit secrets).
   Vercel env vars are set in production (MYSQL_*, FIREBASE_*).
 
