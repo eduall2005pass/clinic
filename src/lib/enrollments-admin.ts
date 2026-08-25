@@ -2,6 +2,7 @@ import { query, exec, withTransaction } from "@/lib/mysql";
 import type { PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import { getCourse, getPayableFee } from "@/lib/courses";
 import type { EnrollmentStatus } from "@/lib/enrollments";
+import { getPaymentCard as getManagedPaymentCard } from "@/lib/payment-card";
 
 export type AdminEnrollment = {
   id: number;
@@ -451,10 +452,35 @@ export async function getEnrollmentSettings(): Promise<PaymentSettings> {
   }
 }
 
-/** Public view of the payment card shown to students during paid enrollment. */
+/** Public view of the payment card shown to students during paid enrollment.
+ *  Single source of truth: the Admin Payment Card manager (`payment_card`
+ *  table). Falls back to legacy `enrollment_settings` columns for databases
+ *  where the manager has never been used yet. Any admin edit shows up here
+ *  immediately — no caching between Admin Panel and students. */
 export async function getPaymentCard(): Promise<
   { bkashNumber: string | null; nagadNumber: string | null; instructions: string | null }
 > {
+  try {
+    const card = await getManagedPaymentCard();
+    if (
+      card.bkashNumber ||
+      card.nagadNumber ||
+      card.instructions ||
+      card.note
+    ) {
+      const instructions = [card.instructions, card.note]
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join("\n\n");
+      return {
+        bkashNumber: card.bkashEnabled ? card.bkashNumber || null : null,
+        nagadNumber: card.nagadEnabled ? card.nagadNumber || null : null,
+        instructions: instructions || null,
+      };
+    }
+  } catch {
+    // Manager table missing/unreachable — use the legacy columns below.
+  }
   const settings = await getEnrollmentSettings();
   return {
     bkashNumber: settings.bkashNumber,
