@@ -6,7 +6,8 @@ import { batchFilterOptions, getPayableFee } from "@/lib/courses";
 import { getLivePublicCourses } from "@/lib/course-catalog";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
 
-export const dynamic = "force-dynamic";
+// Cached at the edge; admin changes appear within 60s.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Courses",

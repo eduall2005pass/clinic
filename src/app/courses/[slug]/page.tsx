@@ -13,7 +13,8 @@ import { getLiveCourse } from "@/lib/course-catalog";
 import { getCourseKind } from "@/lib/enrollments";
 import CourseEnrollFlow from "@/components/auth/CourseEnrollFlow";
 
-export const dynamic = "force-dynamic";
+// Cached at the edge; admin changes appear within 60s.
+export const revalidate = 60;
 
 type CourseDetailsParams = { params: Promise<{ slug: string }> };
 

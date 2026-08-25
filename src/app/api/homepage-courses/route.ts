@@ -12,7 +12,8 @@ import {
   type HomepageCourseSlug,
 } from "@/lib/homepage-courses-constants";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 60;
 
 export async function GET() {
   const cards = await fetchHomepageCourses();

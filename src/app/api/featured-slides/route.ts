@@ -3,7 +3,8 @@ import { fetchActiveFeaturedSlugs } from "@/lib/featured-courses";
 import { getLiveCourse } from "@/lib/course-catalog";
 import { getPayableFee, formatFee } from "@/lib/courses";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 60;
 
 /**
  * Auto-generated slides for the hero sliding banner from courses marked

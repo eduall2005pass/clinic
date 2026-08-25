@@ -6,7 +6,8 @@ import {
   saveThemeSettings,
 } from "@/lib/theme-settings";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 60;
 
 const NO_CACHE_HEADERS = {
   "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
