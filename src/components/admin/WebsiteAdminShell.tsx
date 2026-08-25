@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAdminGate } from "@/components/admin/admin-ui";
 import { AccessLoading } from "@/components/auth/AccessGuard";
 import AdminToastProvider from "@/components/admin/AdminToastProvider";
+import ThemeToggle from "@/components/ThemeToggle";
 
 /**
  * Website-styled Admin shell — same header/hamburger pattern as the Main
@@ -15,11 +16,17 @@ import AdminToastProvider from "@/components/admin/AdminToastProvider";
  */
 const ADMIN_NAV = [
   { label: "Home", href: "/admin" },
-  { label: "Course", href: "/admin/course" },
-  { label: "Public Exam", href: "/admin/public-exam" },
-  { label: "Q&A", href: "/admin/qa" },
-  { label: "Dashboard", href: "/admin/dashboard" },
-  { label: "Course Content", href: "/admin/course-content" },
+  { label: "Enrollment Control", href: "/admin/enrollment-control" },
+  { label: "Home Control", href: "/admin/home-control" },
+  { label: "Course Control", href: "/admin/course-control" },
+  { label: "Course Content Control", href: "/admin/course-content-control" },
+  { label: "Public Exam Control", href: "/admin/public-exam-control" },
+  { label: "Q&A Control", href: "/admin/qa-control" },
+  { label: "Dashboard Control", href: "/admin/dashboard-control" },
+  { label: "Student Control", href: "/admin/student-control" },
+  { label: "Result Control", href: "/admin/result-control" },
+  { label: "Notification Control", href: "/admin/notification-control" },
+  { label: "Admin Center", href: "/admin/admin-center" },
 ] as const;
 
 export default function WebsiteAdminShell({
@@ -140,6 +147,7 @@ function WebsiteAdminShellInner({
           </ul>
 
           <div className="flex shrink-0 items-center gap-2">
+            <ThemeToggle />
             <Link
               href="/"
               className="hidden rounded-xl border border-ink/15 bg-ink/5 px-3.5 py-2 text-sm font-semibold text-heading transition hover:border-primary-500/60 sm:inline-block"

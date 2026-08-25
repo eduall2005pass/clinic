@@ -21,6 +21,7 @@ export type AdminEnrollment = {
 export type EnrollmentListOptions = {
   search?: string;
   status?: "all" | EnrollmentStatus;
+  courseId?: string;
 };
 
 type EnrollmentRow = {
@@ -101,6 +102,10 @@ export async function fetchEnrollmentsAdmin(
   if (options.status && options.status !== "all") {
     conditions.push("e.enrollment_status = ?");
     params.push(options.status);
+  }
+  if (options.courseId && options.courseId.trim().length > 0) {
+    conditions.push("e.course_id = ?");
+    params.push(options.courseId.trim());
   }
 
   const whereClause =
@@ -189,4 +194,43 @@ export async function deleteEnrollment(id: number): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ── Enrollment settings (Free Course auto-enrollment switch) ──────────────
+
+export async function ensureEnrollmentSettingsTable(): Promise<void> {
+  await exec(
+    `CREATE TABLE IF NOT EXISTS enrollment_settings (
+      id VARCHAR(32) NOT NULL PRIMARY KEY,
+      free_auto_enroll TINYINT(1) NOT NULL DEFAULT 1,
+      updated_by VARCHAR(191) NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  );
+}
+
+export async function getEnrollmentSettings(): Promise<{ freeAutoEnroll: boolean }> {
+  try {
+    await ensureEnrollmentSettingsTable();
+    const rows = await query<{ free_auto_enroll: number }[]>(
+      "SELECT free_auto_enroll FROM enrollment_settings WHERE id = 'default' LIMIT 1",
+    );
+    // Default: auto-enrollment for free courses is ON.
+    return { freeAutoEnroll: rows.length === 0 || rows[0].free_auto_enroll === 1 };
+  } catch {
+    return { freeAutoEnroll: true };
+  }
+}
+
+export async function setFreeAutoEnroll(
+  enabled: boolean,
+  adminUid: string,
+): Promise<void> {
+  await ensureEnrollmentSettingsTable();
+  await exec(
+    `INSERT INTO enrollment_settings (id, free_auto_enroll, updated_by)
+     VALUES ('default', ?, ?)
+     ON DUPLICATE KEY UPDATE free_auto_enroll = VALUES(free_auto_enroll), updated_by = VALUES(updated_by)`,
+    [enabled ? 1 : 0, adminUid],
+  );
 }

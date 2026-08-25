@@ -3,6 +3,7 @@ import { getFirebaseUser } from "@/lib/auth-api";
 import { query, exec, parseDate, isMysqlConfigured } from "@/lib/mysql";
 import type { Enrollment } from "@/lib/enrollments";
 import { validateCoupon, computeDiscountedFee, incrementCouponUsage } from "@/lib/coupons";
+import { getEnrollmentSettings } from "@/lib/enrollments-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +109,17 @@ export async function POST(request: NextRequest) {
     finalFee > 0 ? "paid" : "free",
   ]);
 
+  // Free Course auto-enrollment can be switched off from Enrollment Control;
+  // when disabled, free enrollments wait for admin approval like paid ones.
+  let enrollmentStatus: Enrollment["enrollmentStatus"] =
+    finalFee > 0 ? "pending" : "active";
+  if (finalFee <= 0) {
+    const settings = await getEnrollmentSettings();
+    if (!settings.freeAutoEnroll) {
+      enrollmentStatus = "pending";
+    }
+  }
+
   const now = new Date().toISOString();
   const enrollment: Enrollment = {
     studentUid: user.uid,
@@ -116,7 +128,7 @@ export async function POST(request: NextRequest) {
     courseType,
     courseKind: finalFee > 0 ? "paid" : "free",
     fee: finalFee,
-    enrollmentStatus: finalFee > 0 ? "pending" : "active",
+    enrollmentStatus,
     enrollmentDate: now,
     updatedAt: now,
   };

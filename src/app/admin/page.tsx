@@ -1,231 +1,121 @@
 import Link from "next/link";
-import BannerSlider from "@/components/home/BannerSlider";
-import Hero from "@/components/home/Hero";
-import FeaturedCourses from "@/components/home/FeaturedCourses";
-import WhyMediSpark from "@/components/home/WhyMediSpark";
-import OurSuccess from "@/components/home/OurSuccess";
-import JerseyGallery from "@/components/home/JerseyGallery";
-import Mentors from "@/components/home/Mentors";
-import StudentReviews from "@/components/home/StudentReviews";
-import FaqSection from "@/components/home/FaqSection";
-import PromotionsSection from "@/components/home/PromotionsSection";
-import AdminSectionManage from "@/components/admin/AdminSectionManage";
-import { fetchHomepageSections } from "@/lib/homepage-sections";
-import { fetchHeroSettings } from "@/lib/hero-settings";
-import { fetchPublishedReviewRecords } from "@/lib/reviews-store";
-import { fetchPublishedFaqs } from "@/lib/faq-store";
-import { fetchActiveJerseys } from "@/lib/content-admin";
-import type { StudentReview } from "@/lib/reviews";
-import type { HomepageSection } from "@/lib/homepage-sections-constants";
-import type { ReactNode } from "react";
 
 /**
- * Admin → Home. A same-to-same visual replica of the Main Website Home Page
- * (same components, same live MySQL data), with a floating "Manage" chip on
- * every section linking to its backend-backed manager. No separate
- * dashboard-style layout — this IS the website with controls attached.
+ * Admin Panel Home — exactly 11 control cards, each opening its dedicated
+ * management section. Website-control sections mirror the Main Website
+ * structure page-by-page; system sections follow their own defined flows.
  */
-export const dynamic = "force-dynamic";
+export const metadata = { title: "Admin Panel — MediSpark" };
 
-/** Section key → MySQL-backed manager route. */
-const MANAGE_HREF: Record<string, { href: string; label: string }> = {
-  banner: { href: "/admin/website/homepage/hero", label: "Banners" },
-  hero: { href: "/admin/website/homepage/hero", label: "Hero" },
-  "featured-courses": {
-    href: "/admin/marketing/featured-courses",
-    label: "Featured Courses",
+const CARDS: Array<{
+  href: string;
+  title: string;
+  description: string;
+}> = [
+  {
+    href: "/admin/enrollment-control",
+    title: "Enrollment Control",
+    description:
+      "Free Course auto-enrollment ON/OFF · Paid flow: Category → Course → Student List with application status.",
   },
-  "homepage-courses": {
-    href: "/admin/homepage-courses",
-    label: "Course Cards",
+  {
+    href: "/admin/home-control",
+    title: "Home Control",
+    description:
+      "The live homepage with per-section Manage controls — banners, hero, courses, mentors, reviews, FAQ, jersey.",
   },
-  "why-medispark": {
-    href: "/admin/website/homepage",
-    label: "Why MediSpark",
+  {
+    href: "/admin/course-control",
+    title: "Course Control",
+    description:
+      "Same structure as the website Courses page — categories, course cards, fees and details. Add / Edit / Delete.",
   },
-  "our-success": { href: "/admin/website/homepage", label: "Our Success" },
-  mentors: { href: "/admin/mentors/all", label: "Mentors" },
-  reviews: { href: "/admin/website/homepage/reviews", label: "Reviews" },
-  faq: { href: "/admin/content/faq", label: "FAQ" },
-  jersey: { href: "/admin/content/jersey", label: "Jersey" },
-};
+  {
+    href: "/admin/course-content-control",
+    title: "Course Content Control",
+    description:
+      "Course → Subject → Paper → Chapter → Class / Exam / Materials — page-by-page content management.",
+  },
+  {
+    href: "/admin/public-exam-control",
+    title: "Public Exam Control",
+    description:
+      "Public Exam section with the same category/list flow — exams, questions, answer keys, settings.",
+  },
+  {
+    href: "/admin/qa-control",
+    title: "Q&A Control",
+    description: "Q&A section review — subjects, questions and teacher answers.",
+  },
+  {
+    href: "/admin/dashboard-control",
+    title: "Dashboard Control",
+    description:
+      "Student Dashboard management — enrolled courses, progress data, notifications and push.",
+  },
+  {
+    href: "/admin/student-control",
+    title: "Student Control",
+    description:
+      "All Students · Enrolled Students · Active / Inactive account management.",
+  },
+  {
+    href: "/admin/result-control",
+    title: "Result Control",
+    description:
+      "Public Exam results + Course Exam Result sheet: Total Mark, Obtained, Highest, Merit Position.",
+  },
+  {
+    href: "/admin/notification-control",
+    title: "Notification Control",
+    description:
+      "All Student · Enrolled Student · Specific Student notifications — send and manage.",
+  },
+  {
+    href: "/admin/admin-center",
+    title: "Admin Center",
+    description: "All admin accounts and access / role management.",
+  },
+];
 
-function renderSection(section: HomepageSection) {
-  const textProps = {
-    title: section.title ?? undefined,
-    description: section.description ?? undefined,
-  };
-
-  switch (section.key) {
-    case "banner":
-      return <BannerSlider key={section.key} />;
-    case "hero":
-      return <Hero key={section.key} />;
-    case "featured-courses":
-      return <FeaturedCourses key={section.key} {...textProps} />;
-    case "why-medispark":
-      return <WhyMediSpark key={section.key} {...textProps} />;
-    case "our-success":
-      return <OurSuccess key={section.key} {...textProps} />;
-    case "mentors":
-      return <Mentors key={section.key} {...textProps} />;
-    case "reviews":
-      return <StudentReviews key={section.key} {...textProps} />;
-    default:
-      return null;
-  }
-}
-
-function wrap(sectionKey: string, node: ReactNode): ReactNode {
-  const meta = MANAGE_HREF[sectionKey];
-  if (!meta || !node) return node;
+export default function AdminHomePage() {
   return (
-    <AdminSectionManage key={`${sectionKey}-manage`} href={meta.href} label={meta.label}>
-      {node}
-    </AdminSectionManage>
-  );
-}
+    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <header>
+        <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
+          Admin Panel
+        </p>
+        <h1 className="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
+          MediSpark Management
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-400">
+          The Main Website with full control. Pick a section — every change is
+          saved to MySQL and appears on the Main Website immediately.
+        </p>
+      </header>
 
-export default async function AdminHomePage() {
-  const [sections, heroSettings, reviewRecords, publishedFaqs, activeJerseys] =
-    await Promise.all([
-      fetchHomepageSections(),
-      fetchHeroSettings(),
-      fetchPublishedReviewRecords(),
-      fetchPublishedFaqs(),
-      fetchActiveJerseys(),
-    ]);
-  const activeSections = sections.filter((section) => section.isActive);
-
-  const publishedReviews: StudentReview[] = reviewRecords.map(
-    (record, index) => ({
-      id: record.id,
-      studentName: record.studentName,
-      studentAvatar: record.studentAvatar ?? "/avatars/student.svg",
-      courseName: record.courseName,
-      batchLabel: record.batchLabel,
-      rating: record.rating,
-      text: record.text,
-      createdAt: new Date(record.createdAt).toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }),
-      order: index,
-      status: "published",
-    }),
-  );
-
-  // Same jersey placement rule as the Main Website Home:
-  // exactly between Our Success and Mentors.
-  const jerseySection = sections.find((section) => section.key === "jersey");
-  const showJersey =
-    Boolean(jerseySection?.isActive) && activeJerseys.length > 0;
-
-  function renderHomeSection(section: HomepageSection): ReactNode {
-    if (section.key === "hero") {
-      if (!heroSettings.isActive) return null;
-      return <Hero key={section.key} hero={heroSettings} />;
-    }
-    if (section.key === "reviews") {
-      return (
-        <StudentReviews
-          key={section.key}
-          reviews={publishedReviews}
-          title={section.title ?? undefined}
-          description={section.description ?? undefined}
-        />
-      );
-    }
-    if (section.key === "faq") {
-      return (
-        <FaqSection
-          key={section.key}
-          faqs={publishedFaqs}
-          title={section.title ?? undefined}
-          description={section.description ?? undefined}
-        />
-      );
-    }
-    return renderSection(section);
-  }
-
-  const jerseyNode: ReactNode = wrap(
-    "jersey",
-    <JerseyGallery
-      key="jersey"
-      jerseys={activeJerseys}
-      title={jerseySection?.title ?? undefined}
-      description={jerseySection?.description ?? undefined}
-    />,
-  );
-
-  const ourSuccessActive = activeSections.some(
-    (section) => section.key === "our-success",
-  );
-
-  return (
-    <div className="bg-dark-950">
-      {wrap(
-        "promotions",
-        <PromotionsSection key="promotions" />,
-      )}
-      {activeSections
-        .filter((section) => section.key !== "jersey")
-        .flatMap((section) => {
-          const nodes = [
-            wrap(section.key, renderHomeSection(section)),
-          ];
-          // Exact order: Our Success → Jersey → Mentors.
-          if (showJersey && section.key === "our-success") {
-            nodes.push(jerseyNode);
-          } else if (
-            showJersey &&
-            !ourSuccessActive &&
-            section.key === "mentors"
-          ) {
-            nodes.unshift(jerseyNode);
-          }
-          return nodes;
-        })}
-      {/* Fallback: both neighbours disabled but jersey still published. */}
-      {showJersey &&
-        !activeSections.some(
-          (section) =>
-            section.key === "our-success" || section.key === "mentors",
-        )
-        ? jerseyNode
-        : null}
-
-      {/* Quick access to the remaining homepage-wide managers. */}
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="flex flex-wrap justify-center gap-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {CARDS.map((card) => (
           <Link
-            href="/admin/website/homepage"
-            className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
+            key={card.href}
+            href={card.href}
+            className="group flex flex-col rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
           >
-            Sections &amp; Ordering
+            <h2 className="text-base font-extrabold text-heading transition group-hover:text-primary-400">
+              {card.title}
+            </h2>
+            <p className="mt-2 flex-1 text-xs leading-relaxed text-neutral-400">
+              {card.description}
+            </p>
+            <span className="mt-4 inline-flex w-fit items-center gap-1 text-xs font-bold text-primary-500 transition group-hover:gap-2">
+              Open
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
           </Link>
-          <Link
-            href="/admin/homepage-courses"
-            className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
-          >
-            Course Cards
-          </Link>
-          <Link
-            href="/admin/mentors/all"
-            className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
-          >
-            Add New Mentor
-          </Link>
-          <Link
-            href="/admin/content/faq"
-            className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
-          >
-            Add New FAQ
-          </Link>
-        </div>
-      </section>
-    </div>
+        ))}
+      </div>
+    </section>
   );
 }
