@@ -27,13 +27,14 @@ export async function GET(request: NextRequest) {
 
   const url = new URL(request.url);
   const search = url.searchParams.get("search") ?? undefined;
+  const course = url.searchParams.get("course") ?? undefined;
   const statusParam = url.searchParams.get("status");
   const status =
     statusParam && (STATUSES as string[]).includes(statusParam)
       ? (statusParam as EnrollmentStatus)
       : "all";
 
-  const enrollments = await fetchEnrollmentsAdmin({ search, status });
+  const enrollments = await fetchEnrollmentsAdmin({ search, status, courseId: course });
   return NextResponse.json({ enrollments });
 }
 

@@ -21,6 +21,7 @@ export type AdminEnrollment = {
 export type EnrollmentListOptions = {
   search?: string;
   status?: "all" | EnrollmentStatus;
+  courseId?: string;
 };
 
 type EnrollmentRow = {
@@ -101,6 +102,10 @@ export async function fetchEnrollmentsAdmin(
   if (options.status && options.status !== "all") {
     conditions.push("e.enrollment_status = ?");
     params.push(options.status);
+  }
+  if (options.courseId && options.courseId.trim().length > 0) {
+    conditions.push("e.course_id = ?");
+    params.push(options.courseId.trim());
   }
 
   const whereClause =
@@ -189,4 +194,87 @@ export async function deleteEnrollment(id: number): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ── Enrollment settings (Free Course auto-enrollment switch) ──────────────
+
+export async function ensureEnrollmentSettingsTable(): Promise<void> {
+  await exec(
+    `CREATE TABLE IF NOT EXISTS enrollment_settings (
+      id VARCHAR(32) NOT NULL PRIMARY KEY,
+      free_auto_enroll TINYINT(1) NOT NULL DEFAULT 1,
+      updated_by VARCHAR(191) NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  );
+}
+
+export async function getEnrollmentSettings(): Promise<{ freeAutoEnroll: boolean }> {
+  try {
+    await ensureEnrollmentSettingsTable();
+    const rows = await query<{ free_auto_enroll: number }[]>(
+      "SELECT free_auto_enroll FROM enrollment_settings WHERE id = 'default' LIMIT 1",
+    );
+    // Default: auto-enrollment for free courses is ON.
+    return { freeAutoEnroll: rows.length === 0 || rows[0].free_auto_enroll === 1 };
+  } catch {
+    return { freeAutoEnroll: true };
+  }
+}
+
+export async function setFreeAutoEnroll(
+  enabled: boolean,
+  adminUid: string,
+): Promise<void> {
+  await ensureEnrollmentSettingsTable();
+  await exec(
+    `INSERT INTO enrollment_settings (id, free_auto_enroll, updated_by)
+     VALUES ('default', ?, ?)
+     ON DUPLICATE KEY UPDATE free_auto_enroll = VALUES(free_auto_enroll), updated_by = VALUES(updated_by)`,
+    [enabled ? 1 : 0, adminUid],
+  );
+}
+
+// ── Enrollment Control — course list with pending application counts ──────
+
+export type ControlCourse = {
+  slug: string;
+  name: string;
+  category: string;
+  kind: "free" | "paid";
+  fee: number;
+  pendingCount: number;
+  totalApplications: number;
+};
+
+/** Every published catalog course + its per-course application counts. */
+export async function fetchEnrollmentControlCourses(): Promise<ControlCourse[]> {
+  const rows = await query<
+    {
+      slug: string;
+      name: string;
+      category: string | null;
+      fee: number;
+      pending_count: number;
+      total: number;
+    }[]
+  >(
+    `SELECT c.slug, c.name, c.category, c.fee,
+            COALESCE(SUM(CASE WHEN e.enrollment_status = 'pending' THEN 1 ELSE 0 END), 0) AS pending_count,
+            COUNT(e.id) AS total
+       FROM catalog_courses c
+       LEFT JOIN enrollments e ON e.course_id = c.slug
+      WHERE c.status = 'published'
+      GROUP BY c.slug, c.name, c.category, c.fee
+      ORDER BY c.sort_order ASC, c.name ASC`,
+  );
+  return rows.map((row) => ({
+    slug: row.slug,
+    name: row.name,
+    category: row.category ?? "",
+    kind: Number(row.fee) > 0 ? ("paid" as const) : ("free" as const),
+    fee: Number(row.fee) || 0,
+    pendingCount: Number(row.pending_count) || 0,
+    totalApplications: Number(row.total) || 0,
+  }));
 }

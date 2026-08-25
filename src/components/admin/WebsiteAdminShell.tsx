@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAdminGate } from "@/components/admin/admin-ui";
 import { AccessLoading } from "@/components/auth/AccessGuard";
 import AdminToastProvider from "@/components/admin/AdminToastProvider";
+import ThemeToggle from "@/components/ThemeToggle";
 
 /**
  * Website-styled Admin shell — same header/hamburger pattern as the Main
@@ -15,11 +16,17 @@ import AdminToastProvider from "@/components/admin/AdminToastProvider";
  */
 const ADMIN_NAV = [
   { label: "Home", href: "/admin" },
-  { label: "Course", href: "/admin/course" },
-  { label: "Public Exam", href: "/admin/public-exam" },
-  { label: "Q&A", href: "/admin/qa" },
-  { label: "Dashboard", href: "/admin/dashboard" },
-  { label: "Course Content", href: "/admin/course-content" },
+  { label: "Enrollment Control", href: "/admin/enrollment-control" },
+  { label: "Home Control", href: "/admin/home-control" },
+  { label: "Course Control", href: "/admin/course-control" },
+  { label: "Course Content Control", href: "/admin/course-content-control" },
+  { label: "Public Exam Control", href: "/admin/public-exam-control" },
+  { label: "Q&A Control", href: "/admin/qa-control" },
+  { label: "Dashboard Control", href: "/admin/dashboard-control" },
+  { label: "Student Control", href: "/admin/student-control" },
+  { label: "Result Control", href: "/admin/result-control" },
+  { label: "Notification Control", href: "/admin/notification-control" },
+  { label: "Admin Center", href: "/admin/admin-center" },
 ] as const;
 
 export default function WebsiteAdminShell({
@@ -87,10 +94,10 @@ function WebsiteAdminShellInner({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-dark-950">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-dark-950">
       {/* Site-style sticky header */}
       <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:gap-3">
           <div className="flex items-center gap-3">
             {/* Hamburger — exactly 6 options inside */}
             <button
@@ -111,7 +118,7 @@ function WebsiteAdminShellInner({
               )}
             </button>
             <Link href="/admin" aria-label="MediSpark Admin">
-              <span className="text-lg font-extrabold tracking-tight text-heading">
+              <span className="whitespace-nowrap text-base font-extrabold tracking-tight text-heading xl:text-lg">
                 Medi<span className="text-primary-500">Spark</span>
                 <span className="ml-2 rounded-md border border-primary-500/40 bg-primary-600/10 px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wider text-primary-400">
                   Admin
@@ -127,7 +134,7 @@ function WebsiteAdminShellInner({
                 <Link
                   href={item.href}
                   aria-current={isActive(item.href) ? "page" : undefined}
-                  className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${
+                  className={`rounded-lg px-2.5 py-2 text-[13px] font-semibold transition xl:px-3.5 xl:text-sm ${
                     isActive(item.href)
                       ? "bg-primary-600/15 text-primary-300"
                       : "text-neutral-400 hover:text-heading"
@@ -140,16 +147,17 @@ function WebsiteAdminShellInner({
           </ul>
 
           <div className="flex shrink-0 items-center gap-2">
+            <ThemeToggle />
             <Link
               href="/"
-              className="hidden rounded-xl border border-ink/15 bg-ink/5 px-3.5 py-2 text-sm font-semibold text-heading transition hover:border-primary-500/60 sm:inline-block"
+              className="hidden whitespace-nowrap rounded-xl border border-ink/15 bg-ink/5 px-3 py-2 text-[13px] font-semibold text-heading transition hover:border-primary-500/60 sm:inline-block xl:px-3.5 xl:text-sm"
             >
               View Website
             </Link>
             <button
               type="button"
               onClick={() => void handleLogout()}
-              className="rounded-xl bg-primary-600 px-3.5 py-2 text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+              className="whitespace-nowrap rounded-xl bg-primary-600 px-3 py-2 text-[13px] font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] xl:px-3.5 xl:text-sm"
             >
               Logout
             </button>
