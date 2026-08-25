@@ -8,16 +8,19 @@ import CourseCard from "@/components/CourseCard";
 type AdminBatchCourseListProps = {
   options: BatchFilterOption[];
   courses: Course[];
+  /** Course-manager base route — [ Edit ] opens it with ?edit=<slug>. */
+  editBase?: string;
 };
 
 /**
  * Same-to-same copy of the website's BatchCourseList (batch pills + identical
  * CourseCard grid) used inside the Admin Panel's mirrored Courses page.
- * The only addition: a hover "Manage Course" chip on every card.
+ * The only addition: a hover [ Edit ] control on every course card.
  */
 export default function AdminBatchCourseList({
   options,
   courses,
+  editBase = "/admin/courses/all",
 }: AdminBatchCourseListProps) {
   const [selectedBatch, setSelectedBatch] = useState<string>(
     options[0]?.id ?? "all",
@@ -68,8 +71,8 @@ export default function AdminBatchCourseList({
             <div key={course.slug} className="group/card relative">
               <CourseCard course={course} />
               <Link
-                href="/admin/courses/all"
-                title={`Manage ${course.name}`}
+                href={`${editBase}?edit=${encodeURIComponent(course.slug)}`}
+                title={`Edit ${course.name}`}
                 className="absolute left-1/2 top-3 z-30 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-lg border border-primary-500/50 bg-dark-950/85 px-2.5 py-1 text-[11px] font-bold text-primary-400 opacity-0 shadow-lg shadow-black/30 backdrop-blur transition hover:border-primary-400 hover:text-primary-300 focus:opacity-100 group-hover/card:opacity-100"
               >
                 <svg
@@ -85,7 +88,7 @@ export default function AdminBatchCourseList({
                     d="M16.86 4.49a2.1 2.1 0 013 2.97L8.42 18.9l-3.9 1 1-3.9L16.87 4.5z"
                   />
                 </svg>
-                Manage Course
+                Edit
               </Link>
             </div>
           ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 import {
   useAdminGate,
@@ -65,6 +66,20 @@ const EMPTY_FORM = {
 
 type FormState = typeof EMPTY_FORM;
 
+/** Sensible default batch id per course category for the pre-filled form. */
+function defaultBatchFor(category: CatalogCourseCategory): string {
+  switch (category) {
+    case "SSC Academic":
+      return "ssc-29";
+    case "Medical Admission":
+    case "Varsity Admission":
+    case "HSC Academic":
+      return "hsc-29";
+    default:
+      return "hsc-28";
+  }
+}
+
 function toForm(course: CatalogCourse): FormState {
   return {
     slug: course.slug,
@@ -97,6 +112,7 @@ export default function CourseManager({
   categoryFilter?: CatalogCourseCategory;
 }) {
   const gate = useAdminGate();
+  const searchParams = useSearchParams();
   const [courses, setCourses] = useState<CatalogCourse[] | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
@@ -104,6 +120,13 @@ export default function CourseManager({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [search, setSearch] = useState("");
+
+  // Deep links from the Course Control replica:
+  //   ?edit=<slug>            → open that course's edit form
+  //   ?add=1&category=<name>  → open the add form pre-set to the category
+  const requestedEditSlug = searchParams.get("edit");
+  const autoAdd = searchParams.get("add") === "1";
+  const requestedCategory = searchParams.get("category");
 
   const load = useCallback(async () => {
     try {
@@ -114,10 +137,36 @@ export default function CourseManager({
         list = list.filter((course) => course.category === categoryFilter);
       }
       setCourses(list);
+
+      // Handle the deep-linked action once the list is available.
+      if (requestedEditSlug) {
+        const target = list.find((course) => course.slug === requestedEditSlug);
+        if (target) {
+          setForm(toForm(target));
+          setEditingSlug(target.slug);
+          setShowForm(true);
+          setNotice(null);
+        } else {
+          setNotice({
+            kind: "error",
+            text: `Course “${requestedEditSlug}” was not found.`,
+          });
+        }
+      } else if (autoAdd) {
+        const category =
+          (requestedCategory as CatalogCourseCategory) ??
+          categoryFilter ??
+          EMPTY_FORM.category;
+        setForm({ ...EMPTY_FORM, category, batchId: defaultBatchFor(category) });
+        setEditingSlug(null);
+        setShowForm(true);
+        setNotice(null);
+      }
     } catch {
       setCourses([]);
     }
-  }, [categoryFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter, gate.headers, requestedEditSlug, autoAdd, requestedCategory]);
 
   useEffect(() => {
     if (gate.ready) void Promise.resolve().then(load);

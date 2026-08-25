@@ -77,6 +77,7 @@ export const adminCategories: AdminCategory[] = [
       { label: "Medical Admission", href: "/admin/courses/admission" },
       { label: "Varsity Admission", href: "/admin/courses/varsity" },
       { label: "Categories", href: "/admin/courses/categories" },
+      { label: "Filter Edit", href: "/admin/courses/filters" },
       { label: "Subjects", href: "/admin/courses/subjects" },
       { label: "Chapters", href: "/admin/courses/chapters" },
       { label: "Papers & Materials", href: "/admin/courses/papers" },

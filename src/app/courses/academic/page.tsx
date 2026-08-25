@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BatchCourseList from "@/components/BatchCourseList";
-import { batchFilterOptions } from "@/lib/courses";
+import { fetchBatchFilterOptions } from "@/lib/course-filters";
 import { getLivePublicCourses } from "@/lib/course-catalog";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,11 @@ export const metadata: Metadata = {
 };
 
 export default async function AcademicCoursesPage() {
-  const academicCourses = (await getLivePublicCourses()).filter(
+  const [filterOptions, allCourses] = await Promise.all([
+    fetchBatchFilterOptions("hsc"),
+    getLivePublicCourses(),
+  ]);
+  const academicCourses = allCourses.filter(
     (course) => course.category === "HSC Academic",
   );
 
@@ -51,7 +55,7 @@ export default async function AcademicCoursesPage() {
           </p>
         </header>
 
-        <BatchCourseList options={batchFilterOptions.hsc} courses={academicCourses} />
+        <BatchCourseList options={filterOptions} courses={academicCourses} />
       </section>
     </main>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 import AdminConfirmDialog from "@/components/admin/AdminConfirmDialog";
@@ -23,6 +24,8 @@ export default function CourseCategoryManager({
   loadingLabel: string;
 }) {
   const { user, authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const autoOpenAdd = searchParams.get("add") === "1";
 
   const [categories, setCategories] = useState<CourseCategory[] | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -71,6 +74,7 @@ export default function CourseCategoryManager({
   // Load categories
   useEffect(() => {
     if (authLoading || !user || adminStatus !== "admin") return;
+    if (autoOpenAdd) setAdding(true);
     let cancelled = false;
     async function load() {
       try {

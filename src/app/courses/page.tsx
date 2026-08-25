@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import CategoryCard from "@/components/CategoryCard";
 import BatchCourseList from "@/components/BatchCourseList";
-import { batchFilterOptions, getPayableFee } from "@/lib/courses";
+import { getPayableFee } from "@/lib/courses";
 import { getLivePublicCourses } from "@/lib/course-catalog";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
+import { fetchBatchFilterOptions } from "@/lib/course-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -98,12 +99,15 @@ export default async function CoursesPage({
     const paidCourses = (await getLivePublicCourses()).filter(
       (course) => getPayableFee(course) > 0,
     );
+    const [sscOptions, hscOptions] = await Promise.all([
+      fetchBatchFilterOptions("ssc"),
+      fetchBatchFilterOptions("hsc"),
+    ]);
     const batchOptions = [
-      ...new Map(
-        [...batchFilterOptions.ssc, ...batchFilterOptions.hsc].map(
-          (option) => [option.id, option],
-        ),
-      ).values(),
+      ...new Map([...sscOptions, ...hscOptions].map(
+        (option) => [option.id, option],
+      ),
+    ).values(),
     ];
     return (
       <main className="flex-1 bg-dark-950">
@@ -150,6 +154,9 @@ export default async function CoursesPage({
     const typeCourses = (await getLivePublicCourses()).filter(
       (course) => course.category === courseType,
     );
+    const filterOptions = await fetchBatchFilterOptions(
+      categoryParam === "ssc" ? "ssc" : "hsc",
+    );
     return (
       <main className="flex-1 bg-dark-950">
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -184,15 +191,8 @@ export default async function CoursesPage({
             </p>
           </header>
 
-          {/* Same 4-option batch filters as the dedicated category pages. */}
-          <BatchCourseList
-            options={
-              categoryParam === "ssc"
-                ? batchFilterOptions.ssc
-                : batchFilterOptions.hsc
-            }
-            courses={typeCourses}
-          />
+          {/* Batch filters — editable from Admin → Course Control → Filter Edit. */}
+          <BatchCourseList options={filterOptions} courses={typeCourses} />
         </section>
       </main>
     );
