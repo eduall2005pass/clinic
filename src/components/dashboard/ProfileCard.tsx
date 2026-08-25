@@ -88,12 +88,20 @@ export default function ProfileCard({
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
-              viewBox="0 0 24 24"
-            >
+              viewBox="0 0 24 24">
               <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
               <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
             </svg>
             Notifications
+          </Link>
+
+          {/* View Details → — beside the notification icon; opens Student Profile */}
+          <Link
+            href="/dashboard/profile"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-primary-500/40 bg-primary-600/10 px-4 py-2.5 text-sm font-semibold text-primary-300 transition hover:border-primary-500/60 hover:bg-primary-600/20 hover:text-primary-200"
+          >
+            View Details
+            <span aria-hidden="true">→</span>
           </Link>
         </div>
       </div>
