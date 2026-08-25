@@ -20,17 +20,6 @@ const iconProps = {
 
 export const dashboardSections: DashboardSection[] = [
   {
-    title: "Student Profile",
-    description: "Manage your personal information",
-    href: "/dashboard/profile",
-    icon: (
-      <svg {...iconProps}>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21a8 8 0 0 1 16 0" />
-      </svg>
-    ),
-  },
-  {
     title: "My Enrolled Courses",
     description: "Access your enrolled courses",
     href: "/dashboard/enrolled-courses",
