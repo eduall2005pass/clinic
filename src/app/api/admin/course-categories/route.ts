@@ -9,7 +9,11 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const admin = await requirePermission(request, "manageCourses");
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   const categories = await fetchCourseCategories();
   return NextResponse.json(
     { categories },
