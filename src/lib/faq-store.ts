@@ -1,33 +1,31 @@
 import { exec, query } from "@/lib/mysql";
-import { faqs as DEFAULT_FAQS, type Faq, type FaqStatus } from "@/lib/faq";
+import {
+  faqs as SEED_FAQS,
+  type Faq,
+  type FaqAnswerType,
+  type FaqStatus,
+} from "@/lib/faq";
+import { sanitizeFaqHtml } from "@/lib/faq-sanitize";
+import { toVideoEmbed } from "@/lib/video-embed";
 
 type FaqRow = {
   id: string;
   question: string;
+  answer_type?: FaqAnswerType | null;
   answer: string;
+  video_url?: string | null;
   status: FaqStatus;
+  is_active?: number | boolean;
+  created_at?: Date | string;
+  updated_at?: Date | string;
 };
 
-// Jersey FAQ answer update — replaces the outdated default answer in the
-// production `faqs` row, but ONLY while it still holds the exact old text.
-// If an admin has already customised the answer it is never overwritten.
-const JERSEY_FAQ_ID = "faq-jersey";
-const OLD_JERSEY_ANSWER =
-  "MediSpark-এর Course-এ ভর্তি হলেই আপনি MediSpark Jersey পাবেন।";
+const ANSWER_TYPES: FaqAnswerType[] = ["text", "video", "text_video"];
 
-async function migrateJerseyFaqAnswer(): Promise<void> {
-  try {
-    await query(
-      `UPDATE faqs SET answer = ? WHERE id = ? AND answer = ?`,
-      [
-        DEFAULT_FAQS.find((faq) => faq.id === JERSEY_FAQ_ID)?.answer ?? "",
-        JERSEY_FAQ_ID,
-        OLD_JERSEY_ANSWER,
-      ],
-    );
-  } catch {
-    // Table may not exist yet — ensureFaqsTable handles creation.
-  }
+function normalizeAnswerType(value: unknown): FaqAnswerType {
+  return ANSWER_TYPES.includes(value as FaqAnswerType)
+    ? (value as FaqAnswerType)
+    : "text";
 }
 
 async function ensureFaqsTable(): Promise<void> {
@@ -36,17 +34,66 @@ async function ensureFaqsTable(): Promise<void> {
       `CREATE TABLE IF NOT EXISTS faqs (
         id VARCHAR(64) NOT NULL PRIMARY KEY,
         question VARCHAR(500) NOT NULL,
+        answer_type ENUM('text','video','text_video') NOT NULL DEFAULT 'text',
         answer TEXT NOT NULL,
+        video_url VARCHAR(1024) NULL,
         status ENUM('published', 'unpublished') NOT NULL DEFAULT 'published',
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
         sort_order INT NOT NULL DEFAULT 0,
         updated_by VARCHAR(191) NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     );
+    // Older deployments — add the new columns when missing.
+    try {
+      await query(
+        `ALTER TABLE faqs
+           ADD COLUMN IF NOT EXISTS answer_type ENUM('text','video','text_video') NOT NULL DEFAULT 'text' AFTER question`,
+      );
+      await query(
+        `ALTER TABLE faqs ADD COLUMN IF NOT EXISTS video_url VARCHAR(1024) NULL AFTER answer`,
+      );
+      await query(
+        `ALTER TABLE faqs ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER status`,
+      );
+    } catch {
+      // Columns already exist.
+    }
+    // Seed the default FAQs once so the DB is the single source of truth.
+    await seedDefaultFaqs();
   } catch {
     // Table creation best-effort — may fail if DB not configured.
   }
+}
+
+async function seedDefaultFaqs(): Promise<void> {
+  const rows = await query<{ count: number }[]>(
+    "SELECT COUNT(*) AS count FROM faqs",
+  );
+  if (Number(rows[0]?.count ?? 0) > 0) return;
+  for (const faq of SEED_FAQS) {
+    await query(
+      `INSERT IGNORE INTO faqs (id, question, answer_type, answer, video_url, status, is_active, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        faq.id,
+        faq.question,
+        faq.answerType,
+        faq.answer,
+        faq.videoUrl,
+        faq.status,
+        faq.isActive ? 1 : 0,
+        faq.order,
+      ],
+    );
+  }
+}
+
+function toIso(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
 }
 
 function rowToFaq(row: FaqRow): Faq {
@@ -54,90 +101,112 @@ function rowToFaq(row: FaqRow): Faq {
     id: row.id,
     question: row.question,
     answer: row.answer,
+    videoUrl: row.video_url ?? null,
+    answerType: normalizeAnswerType(row.answer_type),
     order: 0,
     status: row.status === "unpublished" ? "unpublished" : "published",
+    isActive: row.is_active === undefined ? true : Boolean(row.is_active),
+    createdAt: toIso(row.created_at),
+    updatedAt: toIso(row.updated_at),
   };
 }
 
-/** All FAQs (including hidden), ordered — used by the Admin Panel. */
+/** All FAQs (including hidden/disabled), ordered — Admin Panel. */
 export async function fetchAllFaqs(): Promise<Faq[]> {
   try {
     await ensureFaqsTable();
-    await migrateJerseyFaqAnswer();
     const rows = await query<FaqRow[]>(
-      `SELECT id, question, answer, status
+      `SELECT id, question, answer_type, answer, video_url, status, is_active,
+              created_at, updated_at
        FROM faqs ORDER BY sort_order ASC`,
     );
-    if (!rows || rows.length === 0) return [...DEFAULT_FAQS].sort((a, b) => a.order - b.order);
     return rows.map(rowToFaq);
   } catch {
-    // Table not migrated yet — fall back to current static behaviour.
-    return getPublishedDefaultFaqs();
+    // Table not migrated yet — fall back to the seeded defaults.
+    return SEED_FAQS.map((faq) => ({ ...faq }));
   }
 }
 
-/** Published FAQs only, ordered — used by the live homepage. */
+/**
+ * Published AND enabled FAQs only, ordered by display order — the live
+ * homepage. 100% database-driven; an empty table renders no FAQ section.
+ */
 export async function fetchPublishedFaqs(): Promise<Faq[]> {
   try {
     await ensureFaqsTable();
-    await migrateJerseyFaqAnswer();
     const rows = await query<FaqRow[]>(
-      `SELECT id, question, answer, status
-       FROM faqs WHERE status = 'published' ORDER BY sort_order ASC`,
+      `SELECT id, question, answer_type, answer, video_url, status, is_active,
+              created_at, updated_at
+       FROM faqs WHERE status = 'published' AND is_active = 1
+       ORDER BY sort_order ASC`,
     );
-    // Empty table → show the default four FAQs instead of an empty section.
-    return rows.length > 0 ? rows.map(rowToFaq) : getPublishedDefaultFaqs();
+    return rows.map(rowToFaq);
   } catch {
-    return getPublishedDefaultFaqs();
+    return [];
   }
-}
-
-function getPublishedDefaultFaqs(): Faq[] {
-  return DEFAULT_FAQS.filter((faq) => faq.status === "published").sort(
-    (a, b) => a.order - b.order,
-  );
 }
 
 export type FaqSaveInput = {
   id?: unknown;
   question?: unknown;
   answer?: unknown;
+  videoUrl?: unknown;
+  answerType?: unknown;
   status?: unknown;
+  isActive?: unknown;
 };
 
-function str(value: unknown, max: number): string {
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
-}
-
 function normalizeFaqInput(
-  raw: Record<string, unknown>,
-): { valid: true; value: Faq } | { valid: false } {
-  const question = str(raw.question, 500);
-  const answer = str(raw.answer, 5000);
-  if (!question || !answer) return { valid: false };
+  item: FaqSaveInput,
+): { valid: boolean; value: Faq } {
+  const question =
+    typeof item.question === "string" ? item.question.trim() : "";
+  const rawAnswer = typeof item.answer === "string" ? item.answer.trim() : "";
+  const answerType = normalizeAnswerType(item.answerType);
+  const rawVideo =
+    typeof item.videoUrl === "string" ? item.videoUrl.trim() : "";
+
+  // Video is required only when the type includes it; text only when it
+  // includes text. Sanitise rich-text HTML server-side on every save.
+  const needsText = answerType !== "video";
+  const needsVideo = answerType !== "text";
+  const embed = needsVideo ? toVideoEmbed(rawVideo) : null;
+
+  let videoUrl: string | null = null;
+  if (needsVideo) {
+    if (!embed) return { valid: false, value: null as never };
+    videoUrl = embed.embedUrl;
+  }
+
+  if (
+    question.length === 0 ||
+    question.length > 500 ||
+    (needsText && rawAnswer.length === 0)
+  ) {
+    return { valid: false, value: null as never };
+  }
+
   const status: FaqStatus =
-    raw.status === "unpublished" || raw.status === "false" || raw.status === "0"
-      ? "unpublished"
+    item.status === "unpublished" || item.status === "published"
+      ? item.status
       : "published";
+
   return {
     valid: true,
     value: {
-      id:
-        typeof raw.id === "string" && raw.id.trim()
-          ? raw.id.trim().slice(0, 64)
-          : "",
+      id: typeof item.id === "string" && item.id ? item.id.slice(0, 64) : "",
       question,
-      answer,
+      answer: sanitizeFaqHtml(rawAnswer),
+      videoUrl,
+      answerType,
       order: 0,
       status,
+      isActive: item.isActive !== false && item.isActive !== "false" && item.isActive !== 0,
     },
   };
 }
 
-/**
- * Replace the full FAQ list (handles add / edit / delete / enable-disable /
- * reorder in one shot). Rows missing from the list are removed.
- */
+/** Replace the full FAQ list (add / edit / delete / toggle / reorder). */
 export async function saveFaqs(
   items: Array<Record<string, unknown>>,
   adminUid: string,
@@ -146,9 +215,11 @@ export async function saveFaqs(
 
   const normalized: Faq[] = [];
   for (let index = 0; index < items.length; index += 1) {
-    const entry = normalizeFaqInput(items[index]);
+    const entry = normalizeFaqInput(items[index] as FaqSaveInput);
     if (!entry.valid) {
-      throw new Error("Each FAQ needs a question and an answer.");
+      throw new Error(
+        "Each FAQ needs a question, a matching answer (text and/or a supported video URL), and a valid status.",
+      );
     }
     normalized.push({
       ...entry.value,
@@ -161,15 +232,28 @@ export async function saveFaqs(
   for (let index = 0; index < normalized.length; index += 1) {
     const faq = normalized[index];
     await query(
-      `INSERT INTO faqs (id, question, answer, status, sort_order, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO faqs (id, question, answer_type, answer, video_url, status, is_active, sort_order, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          question = VALUES(question),
+         answer_type = VALUES(answer_type),
          answer = VALUES(answer),
+         video_url = VALUES(video_url),
          status = VALUES(status),
+         is_active = VALUES(is_active),
          sort_order = VALUES(sort_order),
          updated_by = VALUES(updated_by)`,
-      [faq.id, faq.question, faq.answer, faq.status, index + 1, adminUid ?? null],
+      [
+        faq.id,
+        faq.question,
+        faq.answerType,
+        faq.answer,
+        faq.videoUrl,
+        faq.status,
+        faq.isActive ? 1 : 0,
+        index + 1,
+        adminUid ?? null,
+      ],
     );
   }
 

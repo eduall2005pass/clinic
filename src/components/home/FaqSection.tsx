@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import SectionHeader from "@/components/SectionHeader";
-import { getPublishedFaqs } from "@/lib/faq";
+import { FaqVideoPlayer } from "@/components/admin/FaqManager";
+import { sanitizeFaqHtml } from "@/lib/faq-sanitize";
+import { faqs as defaultFaqs } from "@/lib/faq";
 import type { Faq } from "@/lib/faq";
 
-export default  function FaqSection({
+/**
+ * Website FAQ accordion — 100% data-driven. Every question, answer, video,
+ * order and status comes from the MySQL `faqs` table via the server page
+ * (Admin Panel → Content → FAQ). No hard-coded FAQ content here.
+ */
+export default function FaqSection({
   title,
   description,
   faqs: faqsProp,
@@ -13,13 +20,20 @@ export default  function FaqSection({
   title?: string;
   description?: string;
   faqs?: Faq[];
-} = {}) {
+}) {
   const [faqs] = useState<Faq[]>(
-    () => faqsProp ?? getPublishedFaqs()
+    () =>
+      faqsProp ??
+      defaultFaqs
+        .filter((faq) => faq.status === "published" && faq.isActive)
+        .sort((a, b) => a.order - b.order)
   );
   const [openId, setOpenId] = useState<string | null>(
     faqs.length > 0 ? faqs[0].id : null
   );
+
+  // Nothing published + enabled in the Admin Panel → no section at all.
+  if (faqs.length === 0) return null;
 
   return (
     <section id="faq" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
@@ -75,9 +89,21 @@ export default  function FaqSection({
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <p className="px-5 pb-5 text-sm leading-relaxed text-neutral-400">
-                      {faq.answer}
-                    </p>
+                    <div className="px-5 pb-5">
+                      {/* Text answer — sanitised rich text (text / text+video). */}
+                      {faq.answerType !== "video" && faq.answer && (
+                        <div
+                          className="text-sm leading-relaxed text-neutral-300 [&_a]:text-primary-400 [&_a]:underline [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-bold [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5"
+                          dangerouslySetInnerHTML={{
+                            __html: sanitizeFaqHtml(faq.answer),
+                          }}
+                        />
+                      )}
+                      {/* Video answer — responsive 16:9 player (video / text+video). */}
+                      {faq.answerType !== "text" && open && faq.videoUrl ? (
+                        <FaqVideoPlayer url={faq.videoUrl} />
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </div>
