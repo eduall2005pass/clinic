@@ -15,7 +15,8 @@ import ThemeToggle from "@/components/ThemeToggle";
  * dedicated management page that follows the matching website flow.
  */
 const ADMIN_NAV = [
-  { label: "Home", href: "/admin" },
+  { label: "Homepage", href: "/admin" },
+  { label: "Website Information", href: "/admin/website-information" },
   { label: "Enrollment Control", href: "/admin/enrollment-control" },
   { label: "Home Control", href: "/admin/home-control" },
   { label: "Course Control", href: "/admin/course-control" },

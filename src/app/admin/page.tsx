@@ -9,7 +9,7 @@ import Link from "next/link";
 export const metadata = { title: "Admin Panel — MediSpark" };
 
 const CARDS: Array<{ href: string; icon: string; title: string }> = [
-  { href: "/", icon: "🏠", title: "Home" },
+  { href: "/admin/website-information", icon: "🌐", title: "Website Information" },
   { href: "/admin/enrollment-control", icon: "📋", title: "Enrollment Control" },
   { href: "/admin/home-control", icon: "🏡", title: "Home Control" },
   { href: "/admin/course-control", icon: "📚", title: "Course Control" },
