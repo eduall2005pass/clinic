@@ -1,4 +1,3 @@
-import Link from "next/link";
 import BannerSlider from "@/components/home/BannerSlider";
 import Hero from "@/components/home/Hero";
 import FeaturedCourses from "@/components/home/FeaturedCourses";
@@ -8,78 +7,41 @@ import JerseyGallery from "@/components/home/JerseyGallery";
 import Mentors from "@/components/home/Mentors";
 import StudentReviews from "@/components/home/StudentReviews";
 import FaqSection from "@/components/home/FaqSection";
+import PromotionsSection from "@/components/home/PromotionsSection";
+import Footer from "@/components/Footer";
+import HomeControlBar from "@/components/admin/HomeControlBar";
 import { fetchHomepageSections } from "@/lib/homepage-sections";
 import { fetchHeroSettings } from "@/lib/hero-settings";
 import { fetchPublishedReviewRecords } from "@/lib/reviews-store";
 import { fetchPublishedFaqs } from "@/lib/faq-store";
 import { fetchActiveJerseys } from "@/lib/content-admin";
-import AdminSectionHold from "@/components/admin/AdminSectionHold";
+import { fetchActiveSocialLinks } from "@/lib/social-links";
+import type { StudentReview } from "@/lib/reviews";
+import type { HomepageSection } from "@/lib/homepage-sections-constants";
 import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Admin → Home: a live copy of the Main Website Home Page with one Add
- * button per manageable section. Each button opens the existing manager
- * where the Add form lives (MySQL-backed, reflects on the website instantly).
+ * Admin → Home Control: the exact Main Website Home Page (same structure,
+ * layout, design, content and responsiveness) with one admin-only control
+ * bar BELOW each section: [Edit] everywhere, plus [+ Add ...] only where
+ * new items can be added. Edit/Add open the section's MySQL-backed
+ * interfaces; every target API re-verifies admin authorization.
  */
-function AddButton({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex items-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
-    >
-      + {label}
-    </Link>
-  );
-}
-
-function SectionWithAdd({
-  children,
-  add,
-  hold,
-}: {
-  children: ReactNode;
-  add: { href: string; label: string };
-  /** Press & Hold → Edit / Remove (admins only). */
-  hold?: { key: string; editHref: string; label: string };
-}) {
-  return (
-    <div className="relative">
-      {hold ? (
-        <AdminSectionHold
-          sectionKey={hold.key}
-          editHref={hold.editHref}
-          label={hold.label}
-        >
-          {children}
-        </AdminSectionHold>
-      ) : (
-        children
-      )}
-      <div className="flex justify-end px-4 pt-4 sm:px-6">
-        <AddButton {...add} />
-      </div>
-    </div>
-  );
-}
-
 export default async function HomeControlPage() {
-  const [sections, heroSettings, reviewRecords, publishedFaqs, activeJerseys] =
+  const [sections, heroSettings, reviewRecords, publishedFaqs, activeJerseys, socialLinks] =
     await Promise.all([
       fetchHomepageSections(),
       fetchHeroSettings(),
       fetchPublishedReviewRecords(),
       fetchPublishedFaqs(),
       fetchActiveJerseys(),
+      fetchActiveSocialLinks(),
     ]);
   const activeSections = sections.filter((section) => section.isActive);
-  const text = (section: (typeof sections)[number]) => ({
-    title: section.title ?? undefined,
-    description: section.description ?? undefined,
-  });
 
-  const publishedReviews = reviewRecords.map((record) => ({
+  const publishedReviews: StudentReview[] = reviewRecords.map((record, index) => ({
     id: record.id,
     studentName: record.studentName,
     studentAvatar: record.studentAvatar ?? "/avatars/student.svg",
@@ -87,142 +49,196 @@ export default async function HomeControlPage() {
     batchLabel: record.batchLabel,
     rating: record.rating,
     text: record.text,
-    createdAt: new Date(record.createdAt).toLocaleDateString("en-GB"),
-    order: 0,
-    status: "published" as const,
+    createdAt: new Date(record.createdAt).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }),
+    order: index,
+    status: "published",
   }));
 
-  function render(section: (typeof sections)[number]): ReactNode | null {
+  // Jersey visibility mirrors the Main Website exactly.
+  const jerseySection = sections.find((section) => section.key === "jersey");
+  const showJersey = Boolean(jerseySection?.isActive) && activeJerseys.length > 0;
+
+  function renderSectionNode(section: HomepageSection): ReactNode | null {
+    const textProps = {
+      title: section.title ?? undefined,
+      description: section.description ?? undefined,
+    };
+
     switch (section.key) {
       case "banner":
-        return (
-          <SectionWithAdd
-            key="banner"
-            add={{ href: "/admin/marketing/banners", label: "Add Banner" }}
-            hold={{ key: "banner", editHref: "/admin/website/homepage/hero", label: "Banner Slider" }}
-          >
-            <BannerSlider />
-          </SectionWithAdd>
-        );
+        return <BannerSlider />;
       case "hero":
-        return heroSettings.isActive ? (
-          <SectionWithAdd
-            key="hero"
-            add={{ href: "/admin/website/homepage", label: "Add Banner" }}
-            hold={{ key: "hero", editHref: "/admin/website/homepage/hero", label: "Hero" }}
-          >
-            <Hero hero={heroSettings} />
-          </SectionWithAdd>
-        ) : null;
+        // Hero visibility is controlled from Admin → Website → Hero Section.
+        return heroSettings.isActive ? <Hero hero={heroSettings} /> : null;
       case "featured-courses":
-        return (
-          <SectionWithAdd
-            key="featured-courses"
-            add={{ href: "/admin/marketing/featured-courses", label: "Add Course" }}
-            hold={{ key: "featured-courses", editHref: "/admin/marketing/featured-courses", label: "Featured Courses" }}
-          >
-            <FeaturedCourses {...text(section)} />
-          </SectionWithAdd>
-        );
+        return <FeaturedCourses {...textProps} />;
       case "why-medispark":
-        return (
-          <SectionWithAdd
-            key="why-medispark"
-            add={{ href: "/admin/website/homepage/cards", label: "Add Card" }}
-            hold={{ key: "why-medispark", editHref: "/admin/website/homepage/cards", label: "Why MediSpark" }}
-          >
-            <WhyMediSpark {...text(section)} />
-          </SectionWithAdd>
-        );
+        return <WhyMediSpark {...textProps} />;
       case "our-success":
-        return (
-          <SectionWithAdd
-            key="our-success"
-            add={{ href: "/admin/website/homepage/cards", label: "Add Card" }}
-            hold={{ key: "our-success", editHref: "/admin/website/homepage/cards", label: "Our Success" }}
-          >
-            <OurSuccess {...text(section)} />
-          </SectionWithAdd>
-        );
+        return <OurSuccess {...textProps} />;
       case "mentors":
-        return (
-          <SectionWithAdd
-            key="mentors"
-            add={{ href: "/admin/mentors/all", label: "Add Mentor" }}
-            hold={{ key: "mentors", editHref: "/admin/mentors/all", label: "Mentor" }}
-          >
-            <Mentors {...text(section)} />
-          </SectionWithAdd>
-        );
+        return <Mentors {...textProps} />;
       case "reviews":
-        return (
-          <SectionWithAdd
-            key="reviews"
-            add={{ href: "/admin/website/homepage/reviews", label: "Add Review" }}
-            hold={{ key: "reviews", editHref: "/admin/website/homepage/reviews", label: "Review" }}
-          >
-            <StudentReviews reviews={publishedReviews} {...text(section)} />
-          </SectionWithAdd>
-        );
+        return <StudentReviews reviews={publishedReviews} {...textProps} />;
       case "faq":
-        return (
-          <SectionWithAdd
-            key="faq"
-            add={{ href: "/admin/content/faq", label: "Add FAQ" }}
-            hold={{ key: "faq", editHref: "/admin/content/faq", label: "FAQ" }}
-          >
-            <FaqSection faqs={publishedFaqs} {...text(section)} />
-          </SectionWithAdd>
-        );
+        return <FaqSection faqs={publishedFaqs} {...textProps} />;
       default:
         return null;
     }
   }
 
-  const jerseySection = sections.find((section) => section.key === "jersey");
-  const showJersey =
-    Boolean(jerseySection?.isActive) && activeJerseys.length > 0;
+  /** Section content + its bottom control bar ([Edit] / [+ Add ...]). */
+  function controlled(
+    key: string,
+    node: ReactNode | null,
+    editHref: string,
+    add?: { href: string; label: string },
+  ): ReactNode | null {
+    if (node === null) return null;
+    return (
+      <div key={key}>
+        {node}
+        <HomeControlBar sectionKey={key} editHref={editHref} add={add} />
+      </div>
+    );
+  }
+
+  function renderControlledSection(section: HomepageSection): ReactNode | null {
+    switch (section.key) {
+      case "banner":
+        // The slider is fully dynamic — no manual banner entries exist.
+        // Edit opens the Sliding Banner interface showing its live sources.
+        return controlled("banner", renderSectionNode(section), "/admin/home-control/banner");
+      case "hero":
+        return controlled("hero", renderSectionNode(section), "/admin/website/homepage/hero");
+      case "featured-courses":
+        return controlled("featured-courses", renderSectionNode(section), "/admin/marketing/featured-courses", {
+          href: "/admin/marketing/featured-courses",
+          label: "Course",
+        });
+      case "why-medispark":
+        return controlled("why-medispark", renderSectionNode(section), "/admin/website/homepage/cards");
+      case "our-success":
+        return controlled("our-success", renderSectionNode(section), "/admin/website/homepage/cards");
+      case "mentors":
+        return controlled("mentors", renderSectionNode(section), "/admin/mentors/all", {
+          href: "/admin/mentors/all",
+          label: "Mentor",
+        });
+      case "faq":
+        return controlled("faq", renderSectionNode(section), "/admin/content/faq", {
+          href: "/admin/content/faq",
+          label: "FAQ",
+        });
+      default:
+        return null;
+    }
+  }
+
+  const jerseyNode: ReactNode = (
+    <JerseyGallery
+      jerseys={activeJerseys}
+      title={jerseySection?.title ?? undefined}
+      description={jerseySection?.description ?? undefined}
+    />
+  );
+
+  const ourSuccessActive = activeSections.some((section) => section.key === "our-success");
+
+  const socialLinksNode: ReactNode = (
+    <div className="border-t border-white/10 bg-dark-950 px-4 py-12 text-center sm:px-6">
+      <p className="text-lg font-extrabold tracking-tight text-heading">Social Links</p>
+      <p className="mt-1 text-xs text-neutral-500">Follow MediSpark</p>
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+        {socialLinks.length > 0 ? (
+          socialLinks.map((link) => (
+            <a
+              key={link.key}
+              href={link.url ?? "#"}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="rounded-full border border-white/15 bg-dark-900 px-4 py-2 text-xs font-bold text-neutral-200 transition hover:border-primary-500/60 hover:text-primary-300"
+            >
+              {link.label}
+            </a>
+          ))
+        ) : (
+          <p className="text-xs text-neutral-500">No social links yet.</p>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <section className="pb-10">
-      {/* Live copy of the homepage */}
-      {activeSections.map((section) => {
-        if (section.key === "jersey") return null;
-        if (showJersey && section.key === "our-success") {
-          return (
-            <div key={`group-${section.key}`}>
-              {render(section)}
-              <SectionWithAdd
-                add={{ href: "/admin/content/jersey", label: "Add Jersey" }}
-                hold={{
-                  key: "jersey",
-                  editHref: "/admin/content/jersey",
-                  label: "Jersey",
-                }}
-              >
-                <JerseyGallery
-                  jerseys={activeJerseys}
-                  title={jerseySection?.title ?? undefined}
-                  description={jerseySection?.description ?? undefined}
-                />
-              </SectionWithAdd>
-            </div>
-          );
-        }
-        return render(section);
-      })}
+      {/* Live copy of the homepage — identical to the Main Website */}
+      <PromotionsSection />
+      {activeSections
+        .filter((section) => section.key !== "jersey")
+        .flatMap((section) => {
+          const nodes = [renderControlledSection(section)];
+          // Exact website order: Our Success → Jersey → Mentors.
+          if (showJersey && section.key === "our-success") {
+            nodes.push(
+              controlled("jersey", jerseyNode, "/admin/content/jersey", {
+                href: "/admin/content/jersey",
+                label: "Jersey",
+              }),
+            );
+          } else if (showJersey && !ourSuccessActive && section.key === "mentors") {
+            nodes.unshift(
+              controlled("jersey", jerseyNode, "/admin/content/jersey", {
+                href: "/admin/content/jersey",
+                label: "Jersey",
+              }),
+            );
+          }
+          return nodes;
+        })}
+      {/* Fallback: both neighbours disabled but jersey still published. */}
+      {showJersey &&
+      !activeSections.some((section) => section.key === "our-success" || section.key === "mentors")
+        ? controlled("jersey", jerseyNode, "/admin/content/jersey", {
+            href: "/admin/content/jersey",
+            label: "Jersey",
+          })
+        : null}
 
-      {/* Social Links — lives in the site footer */}
-      <SectionWithAdd
-        add={{ href: "/admin/website/social-links", label: "Add Social Link" }}
-      >
-        <div className="border-t border-ink/10 bg-dark-950 px-4 py-10 text-center sm:px-6">
-          <p className="text-sm font-semibold text-heading">Social Links</p>
-          <p className="mt-1 text-xs text-neutral-500">
-            Managed in Website Settings — shown in the site footer.
-          </p>
-        </div>
-      </SectionWithAdd>
+      {/* Social Links — lives in the site footer on the Main Website */}
+      <div>
+        {socialLinksNode}
+        <HomeControlBar
+          sectionKey="social-links"
+          editHref="/admin/website/social-links"
+          add={{ href: "/admin/website/social-links", label: "Social Link" }}
+        />
+      </div>
+
+      {/* Footer — the EXACT Main Website footer component (same layout,
+          design, typography, links, social icons and responsiveness).
+          The bar below adds admin-only [Edit] / [+ Add ...] controls; Edit
+          opens one dedicated interface for every editable footer element. */}
+      <div>
+        <Footer />
+        <HomeControlBar
+          sectionKey="footer"
+          editHref="/admin/home-control/footer"
+          adds={[
+            {
+              href: "/admin/home-control/footer?add=footer-link",
+              label: "Footer Link",
+            },
+            {
+              href: "/admin/home-control/footer?add=contact-info",
+              label: "Contact Info",
+            },
+          ]}
+        />
+      </div>
     </section>
   );
 }
