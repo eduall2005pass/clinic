@@ -30,11 +30,11 @@ export default function ProfileCard({
   return (
     <section className="relative overflow-hidden rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20">
       <div className="pointer-events-none absolute inset-0 bg-medical-cross opacity-50" />
-      <div className="relative h-16 bg-gradient-to-r from-primary-700 via-primary-800 to-[#0a0a0a]" />
+      <div className="relative h-12 bg-gradient-to-r from-primary-700 via-primary-800 to-[#0a0a0a]" />
 
-      <div className="relative flex flex-col gap-5 px-6 pb-6 pt-0 sm:flex-row sm:items-end sm:justify-between">
+      <div className="relative flex flex-col gap-4 px-5 pb-4 pt-0 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-center gap-4">
-          <div className="relative -mt-7 h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 border-dark-900 bg-dark-800 shadow-lg shadow-black/40">
+          <div className="relative -mt-6 h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-dark-900 bg-dark-800 shadow-lg shadow-black/40">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -58,8 +58,8 @@ export default function ProfileCard({
             )}
           </div>
           <div>
-            <h2 className="text-lg font-bold text-heading">{name}</h2>
-            <div className="mt-1.5 flex items-center gap-2">
+            <h2 className="text-base font-bold text-heading">{name}</h2>
+            <div className="mt-1 flex items-center gap-2">
               <p className="text-sm font-medium text-neutral-400">
                 ID: {studentId}
               </p>
@@ -99,7 +99,7 @@ export default function ProfileCard({
           {/* View Details → — beside the notification icon; opens Student Profile */}
           <Link
             href="/dashboard/profile"
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-primary-500/40 bg-primary-600/10 px-4 py-2.5 text-sm font-semibold text-primary-300 transition hover:border-primary-500/60 hover:bg-primary-600/20 hover:text-primary-200"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-primary-500/40 bg-primary-600/10 px-3.5 py-2 text-sm font-semibold text-primary-300 transition hover:border-primary-500/60 hover:bg-primary-600/20 hover:text-primary-200"
           >
             View Details
             <span aria-hidden="true">→</span>

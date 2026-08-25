@@ -23,16 +23,16 @@ export default function DashboardSectionCard({
           onLockedClick?.();
         } : undefined}
         aria-disabled={locked || undefined}
-        className="group relative col-span-full flex w-full items-center gap-4 rounded-2xl border border-ink/10 bg-dark-900 p-5 text-left shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30 active:scale-[0.99] sm:gap-5 sm:p-6"
+        className="group relative col-span-full flex w-full items-center gap-4 rounded-2xl border border-primary-600/40 bg-gradient-to-r from-primary-600/10 via-dark-900 to-dark-900 p-6 text-left shadow-xl shadow-black/30 ring-1 ring-primary-600/20 transition duration-300 hover:-translate-y-1 hover:border-primary-500/70 hover:shadow-primary-900/40 hover:ring-primary-500/40 active:scale-[0.99] sm:gap-5 sm:p-7"
       >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-500 transition group-hover:bg-primary-600 group-hover:text-heading group-hover:shadow-md group-hover:shadow-primary-900/50 sm:h-14 sm:w-14">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-600/20 text-primary-400 shadow-md shadow-primary-900/30 transition group-hover:bg-primary-600 group-hover:text-white sm:h-16 sm:w-16">
           {section.icon}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold leading-snug text-heading transition group-hover:text-primary-400 sm:text-base">
+          <span className="block text-base font-extrabold leading-snug text-heading transition group-hover:text-primary-300 sm:text-lg">
             {section.title}
           </span>
-          <span className="mt-1 block text-xs leading-relaxed text-neutral-400 sm:text-sm">
+          <span className="mt-1 block text-xs leading-relaxed text-neutral-300 sm:text-sm">
             {section.description}
           </span>
         </span>
