@@ -1,12 +1,8 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Student Details" };
+export const metadata = { title: "Student Details — MediSpark Admin" };
 
+/** Per-student details are managed from Student Control and Enrollments. */
 export default function AdminStudentsDetailsPage() {
-  return (
-    <AdminPlaceholder
-      title="Student Details"
-      description="View detailed information for each student."
-    />
-  );
+  redirect("/admin/students/all");
 }

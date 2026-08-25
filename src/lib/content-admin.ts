@@ -7,7 +7,8 @@ export type Notification = {
   id: string;
   title: string;
   message: string;
-  audience: "all" | "students" | "admins";
+  audience: "all" | "students" | "admins" | "enrolled" | "student";
+  targetEmail: string | null;
   isActive: boolean;
   createdAt: string;
 };
@@ -27,6 +28,7 @@ type NotificationRow = {
   title: string;
   message: string;
   audience: string;
+  target_email?: string | null;
   is_active: number | boolean;
   created_at: Date | string;
 };
@@ -46,17 +48,29 @@ function toIso(value: Date | string): string {
   return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
 }
 
+const NOTIFICATION_AUDIENCES = [
+  "all",
+  "students",
+  "admins",
+  "enrolled",
+  "student",
+] as const;
+
+function normalizeAudience(value: string): Notification["audience"] {
+  // Legacy rows stored the enrolled broadcast as plain "students".
+  if (value === "enrolled" || value === "student" || value === "admins") {
+    return value;
+  }
+  return value === "students" ? "students" : "all";
+}
+
 function mapNotificationRow(row: NotificationRow): Notification {
   return {
     id: row.id,
     title: row.title,
     message: row.message,
-    audience:
-      row.audience === "students"
-        ? "students"
-        : row.audience === "admins"
-          ? "admins"
-          : "all",
+    audience: normalizeAudience(row.audience),
+    targetEmail: row.target_email ?? null,
     isActive: Boolean(row.is_active),
     createdAt: toIso(row.created_at),
   };
@@ -69,11 +83,22 @@ async function ensureNotificationsTable(): Promise<void> {
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
-    audience ENUM('all','students','admins') NOT NULL DEFAULT 'all',
+    audience ENUM('all','students','admins','enrolled','student') NOT NULL DEFAULT 'all',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(191) NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // Older deployments: widen the audience enum + add specific-target columns.
+  try {
+    await exec(
+      `ALTER TABLE notifications
+         MODIFY audience ENUM('all','students','admins','enrolled','student') NOT NULL DEFAULT 'all',
+         ADD COLUMN target_uid VARCHAR(128) NULL AFTER created_by,
+         ADD COLUMN target_email VARCHAR(191) NULL AFTER target_uid`,
+    );
+  } catch {
+    // Already migrated — safe to ignore.
+  }
 }
 
 export async function fetchNotifications(all = false): Promise<Notification[]> {
@@ -88,14 +113,36 @@ export async function fetchNotifications(all = false): Promise<Notification[]> {
   }
 }
 
-/** Active notifications relevant to students (audience = all or students). */
-export async function fetchStudentNotifications(): Promise<Notification[]> {
+/**
+ * Active notifications relevant to a specific student:
+ *  - audience "all" (+ legacy "students") → everyone
+ *  - audience "enrolled" → only students with an ACTIVE enrollment
+ *  - audience "student" → only the targeted student
+ */
+export async function fetchStudentNotifications(
+  studentUid?: string,
+): Promise<Notification[]> {
   try {
     await ensureNotificationsTable();
+    if (!studentUid) {
+      const rows = await query<NotificationRow[]>(
+        `SELECT * FROM notifications
+         WHERE is_active = 1 AND audience IN ('all','students')
+         ORDER BY created_at DESC LIMIT 200`,
+      );
+      return rows.map(mapNotificationRow);
+    }
     const rows = await query<NotificationRow[]>(
-      `SELECT * FROM notifications
-       WHERE is_active = 1 AND audience IN ('all','students')
-       ORDER BY created_at DESC LIMIT 200`,
+      `SELECT n.* FROM notifications n
+       WHERE n.is_active = 1 AND (
+         n.audience IN ('all','students')
+         OR (n.audience = 'enrolled' AND EXISTS (
+               SELECT 1 FROM enrollments e
+               WHERE e.student_uid = ? AND e.enrollment_status = 'active'))
+         OR (n.audience = 'student' AND n.target_uid = ?)
+       )
+       ORDER BY n.created_at DESC LIMIT 200`,
+      [studentUid, studentUid],
     );
     return rows.map(mapNotificationRow);
   } catch {
@@ -112,20 +159,43 @@ export async function saveNotification(
   const message = typeof input.message === "string" ? input.message.trim() : "";
   if (title.length < 2) throw new Error("Notification title is required.");
   if (message.length < 2) throw new Error("Notification message is required.");
-  const audience =
-    input.audience === "students" || input.audience === "admins"
+  const rawAudience =
+    typeof input.audience === "string" &&
+    (NOTIFICATION_AUDIENCES as readonly string[]).includes(input.audience)
       ? input.audience
       : "all";
+  // A specific-student notification requires a target.
+  const targetEmail =
+    typeof input.targetEmail === "string" && input.targetEmail.trim()
+      ? input.targetEmail.trim().toLowerCase()
+      : null;
+  const targetUid =
+    typeof input.targetUid === "string" && input.targetUid.trim()
+      ? input.targetUid.trim()
+      : null;
+  const audience = (
+    rawAudience === "student" && !targetEmail && !targetUid ? "all" : rawAudience
+  ) as Notification["audience"];
   const id =
     typeof input.id === "string" && input.id.trim()
       ? input.id.trim()
       : `ntf-${Date.now()}`;
   await exec(
-    `INSERT INTO notifications (id, title, message, audience, is_active, created_by)
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO notifications (id, title, message, audience, is_active, created_by, target_uid, target_email)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE title = VALUES(title), message = VALUES(message),
-       audience = VALUES(audience), is_active = VALUES(is_active)`,
-    [id, title, message, audience, input.isActive === false ? 0 : 1, adminUid],
+       audience = VALUES(audience), is_active = VALUES(is_active),
+       target_uid = VALUES(target_uid), target_email = VALUES(target_email)`,
+    [
+      id,
+      title,
+      message,
+      audience,
+      input.isActive === false ? 0 : 1,
+      adminUid,
+      targetUid,
+      targetEmail,
+    ],
   );
   return fetchNotifications(true);
 }

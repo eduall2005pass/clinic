@@ -128,8 +128,8 @@ export default async function HomeControlPage() {
         return (
           <SectionWithAdd
             key="why-medispark"
-            add={{ href: "/admin/website/homepage", label: "Add Card" }}
-            hold={{ key: "why-medispark", editHref: "/admin/website/homepage", label: "Why MediSpark" }}
+            add={{ href: "/admin/website/homepage/cards", label: "Add Card" }}
+            hold={{ key: "why-medispark", editHref: "/admin/website/homepage/cards", label: "Why MediSpark" }}
           >
             <WhyMediSpark {...text(section)} />
           </SectionWithAdd>
@@ -138,8 +138,8 @@ export default async function HomeControlPage() {
         return (
           <SectionWithAdd
             key="our-success"
-            add={{ href: "/admin/website/homepage", label: "Add Card" }}
-            hold={{ key: "our-success", editHref: "/admin/website/homepage", label: "Our Success" }}
+            add={{ href: "/admin/website/homepage/cards", label: "Add Card" }}
+            hold={{ key: "our-success", editHref: "/admin/website/homepage/cards", label: "Our Success" }}
           >
             <OurSuccess {...text(section)} />
           </SectionWithAdd>

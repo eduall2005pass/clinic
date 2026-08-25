@@ -1,15 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
 import { query } from "@/lib/mysql";
-import { logAdminAction, AVAILABLE_ROLES } from "@/lib/administration";
-import type { AdminAccountRow } from "@/lib/administration";
+import {
+  logAdminAction,
+  AVAILABLE_ROLES,
+  type AdminAccountRow,
+} from "@/lib/administration";
+import { isFirebaseAdminConfigured, getFirebaseAdminAuth } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
 
 const SAFE_COLUMNS =
   "uid, email, display_name AS displayName, role, is_active AS isActive, created_at AS createdAt";
 
-export async function GET() {
+/** Resolve a Firebase UID from an email when the caller did not supply one. */
+async function resolveUidFromEmail(
+  email: string,
+): Promise<string | null> {
+  if (!isFirebaseAdminConfigured) return null;
+  try {
+    const user = await getFirebaseAdminAuth().getUserByEmail(email);
+    return user.uid;
+  } catch {
+    return null;
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const admin = await requirePermission(request, "manageAdmins");
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   try {
     const admins = await query<Record<string, unknown>[]>(
       `SELECT uid, email, display_name AS displayName, photo_url AS photoUrl, role, is_active AS isActive, created_at AS createdAt FROM admins ORDER BY created_at ASC`,
@@ -41,31 +62,38 @@ export async function GET() {
  * authorization row in the `admins` table.
  */
 export async function PUT(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageAdmins");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   const body = (await request.json().catch(() => null)) as
     | { uid?: unknown; email?: unknown; displayName?: unknown; role?: unknown }
     | null;
-  if (typeof body?.uid !== "string" || !/^[A-Za-z0-9_-]{10,191}$/.test(body.uid)) {
-    return NextResponse.json(
-      { error: "A valid Firebase UID is required." },
-      { status: 400 },
-    );
-  }
   if (
-    typeof body.email !== "string" ||
+    typeof body?.email !== "string" ||
     !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email)
   ) {
     return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
+  }
+  let uid: string | null =
+    typeof body.uid === "string" && /^[A-Za-z0-9_-]{10,191}$/.test(body.uid)
+      ? body.uid
+      : await resolveUidFromEmail(body.email.trim().toLowerCase());
+  if (!uid) {
+    return NextResponse.json(
+      {
+        error:
+          "A valid Firebase UID is required — or the Google account must have signed in at least once so the UID can be resolved.",
+      },
+      { status: 400 },
+    );
   }
   const role = normalizeRole(body.role);
   try {
     await query(
       `INSERT INTO admins (uid, email, display_name, role, is_active) VALUES (?, ?, ?, ?, 1)
-       ON DUPLICATE KEY UPDATE email = VALUES(email), display_name = VALUES(display_name)`,
-      [body.uid, body.email.trim().toLowerCase(), body.displayName?.toString().trim() || null, role],
+       ON DUPLICATE KEY UPDATE email = VALUES(email), display_name = VALUES(display_name), role = VALUES(role)`,
+      [uid, body.email.trim().toLowerCase(), body.displayName?.toString().trim() || null, role],
     );
     await logAdminAction(admin, "admin.add", `${body.email} role=${role}`, request);
     const admins = await query(`SELECT ${SAFE_COLUMNS} FROM admins ORDER BY created_at ASC`);
@@ -79,7 +107,7 @@ export async function PUT(request: NextRequest) {
 
 /** Edit an admin's profile and/or role: { uid, displayName?, email?, role? }. */
 export async function PATCH(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageAdmins");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -138,7 +166,7 @@ export async function PATCH(request: NextRequest) {
 
 /** Activate/deactivate an admin: { uid, isActive: boolean }. */
 export async function POST(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageAdmins");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -185,7 +213,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requireAdmin(request);
+  const admin = await requirePermission(request, "manageAdmins");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

@@ -1,15 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { QaQuestion, QaSubject } from "@/lib/qa";
-import { getSubject, getQuestionsBySubject } from "@/lib/qa";
 import QaSubjectPicker from "@/components/QaSubjectPicker";
 import type { SubjectStats } from "@/components/QaSubjectPicker";
 import QaQuestionItem from "@/components/QaQuestionItem";
 import QaAskForm from "@/components/QaAskForm";
 import QaGuideline from "@/components/QaGuideline";
-
-type NewQuestion = Omit<QaQuestion, "id" | "createdAt" | "status">;
+import { useAuth } from "@/lib/auth-context";
 
 export default function QaExplorer({
   subjects,
@@ -18,12 +17,12 @@ export default function QaExplorer({
   subjects: QaSubject[];
   questions: QaQuestion[];
 }) {
+  const router = useRouter();
+  const { user } = useAuth();
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(
     null
   );
   const [askOpen, setAskOpen] = useState(false);
-  const [localQuestions, setLocalQuestions] =
-    useState<QaQuestion[]>(questions);
 
   const subjectStats = useMemo(
     () =>
@@ -32,7 +31,9 @@ export default function QaExplorer({
           stats[subject.id] = { total: null, answered: null };
           return stats;
         }
-        const subjectQuestions = getQuestionsBySubject(subject.id);
+        const subjectQuestions = questions.filter(
+          (question) => question.subjectId === subject.id
+        );
         stats[subject.id] = {
           total: subjectQuestions.length,
           answered: subjectQuestions.filter(
@@ -41,37 +42,59 @@ export default function QaExplorer({
         };
         return stats;
       }, {}),
-    [subjects]
+    [subjects, questions]
   );
 
-  const selectedSubject = selectedSubjectId
-    ? getSubject(selectedSubjectId)
-    : undefined;
+  const selectedSubject =
+    selectedSubjectId === "guideline"
+      ? { id: "guideline", name: "Guideline", order: 999 }
+      : subjects.find((subject) => subject.id === selectedSubjectId);
 
   const isGuideline = selectedSubjectId === "guideline";
 
   const visibleQuestions = selectedSubjectId
-    ? localQuestions.filter(
+    ? questions.filter(
         (question) => question.subjectId === selectedSubjectId
       )
     : [];
 
-  const handleAskSubmit = (question: NewQuestion) => {
-    setLocalQuestions((current) => [
-      {
-        ...question,
-        id: `local-${Date.now()}`,
-        createdAt: new Date().toLocaleString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
+  // Persist the question to MySQL via /api/qa, then refresh server data.
+  const handleAskSubmit = async ({
+    subjectId,
+    text,
+  }: {
+    subjectId: string;
+    text: string;
+  }): Promise<{ ok: boolean; error?: string }> => {
+    if (!user) {
+      return { ok: false, error: "Sign in to ask a question." };
+    }
+    try {
+      const res = await fetch("/api/qa", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await user.getIdToken()}`,
+        },
+        body: JSON.stringify({
+          subjectId,
+          text,
         }),
-        status: "unanswered",
-      },
-      ...current,
-    ]);
+      });
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      if (!res.ok) {
+        return { ok: false, error: data?.error ?? "Failed to submit your question." };
+      }
+      router.refresh();
+      return { ok: true };
+    } catch {
+      return {
+        ok: false,
+        error: "Network error — could not submit your question.",
+      };
+    }
   };
 
   const closeAsk = () => {

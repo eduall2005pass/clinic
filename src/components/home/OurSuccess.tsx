@@ -1,7 +1,6 @@
 import type { SVGProps } from "react";
 import SectionHeader from "@/components/SectionHeader";
-import { getPublishedSuccessItems } from "@/lib/success";
-import type { SuccessIcon } from "@/lib/success";
+import { fetchHomeCards } from "@/lib/home-cards";
 
 type SuccessIconProps = SVGProps<SVGSVGElement>;
 
@@ -113,7 +112,7 @@ function ChartIcon(props: SuccessIconProps) {
   );
 }
 
-const successIcons: Record<SuccessIcon, (props: SuccessIconProps) => React.JSX.Element> = {
+const successIcons: Record<string, (props: SuccessIconProps) => React.JSX.Element> = {
   users: UsersIcon,
   exam: ExamIcon,
   graduation: GraduationIcon,
@@ -122,14 +121,30 @@ const successIcons: Record<SuccessIcon, (props: SuccessIconProps) => React.JSX.E
   chart: ChartIcon,
 };
 
-export default  function OurSuccess({
+type Item = {
+  key: string;
+  title: string;
+  value: string | null;
+  description: string;
+  icon: string;
+};
+
+export default async function OurSuccess({
   title,
   description,
 }: {
   title?: string;
   description?: string;
 } = {}) {
-  const items = getPublishedSuccessItems();
+  // MySQL-backed cards — managed from Admin → Home Control (+ Add Card).
+  const records = await fetchHomeCards("success", true);
+  const items: Item[] = records.map((record) => ({
+    key: record.key,
+    title: record.title,
+    value: record.value,
+    description: record.description,
+    icon: record.icon,
+  }));
 
   return (
     <section id="our-success" className="relative scroll-mt-24 overflow-hidden border-t border-ink/5 bg-dark-900">
@@ -145,10 +160,10 @@ export default  function OurSuccess({
         {items.length > 0 ? (
           <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-4">
             {items.map((item) => {
-              const Icon = successIcons[item.icon];
+              const Icon = successIcons[item.icon] ?? UsersIcon;
               return (
                 <article
-                  key={item.id}
+                  key={item.key}
                   className="group relative flex flex-col items-center overflow-hidden rounded-2xl border border-ink/10 bg-dark-950/60 px-4 py-6 text-center shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
                 >
                   <span className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-primary-600/70 to-transparent opacity-0 transition duration-300 group-hover:opacity-100" />

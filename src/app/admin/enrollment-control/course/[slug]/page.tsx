@@ -11,10 +11,10 @@ type Application = {
   studentUid: string;
   studentName?: string;
   studentId?: string;
-  email?: string;
+  studentEmail?: string;
   courseId: string;
   courseName: string;
-  enrollmentStatus: string;
+  status: string;
   enrollmentDate?: string;
 };
 
@@ -178,7 +178,7 @@ export default function CourseApplicationsPage({
                     {application.studentName || application.studentUid}
                   </p>
                   <p className="truncate text-[11px] text-neutral-500">
-                    {[application.studentId, application.email]
+                    {[application.studentId, application.studentEmail]
                       .filter(Boolean)
                       .join(" · ") || application.studentUid}
                   </p>
@@ -190,16 +190,16 @@ export default function CourseApplicationsPage({
                 </div>
                 <span
                   className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold capitalize ${
-                    statusStyles[application.enrollmentStatus] ??
+                    statusStyles[application.status] ??
                     "border-ink/10 bg-ink/5 text-neutral-300"
                   }`}
                 >
-                  {application.enrollmentStatus}
+                  {application.status}
                 </span>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2 border-t border-ink/10 pt-4">
-                {application.enrollmentStatus !== "active" && (
+                {application.status !== "active" && (
                   <button
                     type="button"
                     onClick={() => void setStatus(application, "active")}
@@ -209,7 +209,7 @@ export default function CourseApplicationsPage({
                     {busyId === application.id ? "Processing…" : "Accept Enrollment"}
                   </button>
                 )}
-                {application.enrollmentStatus === "pending" && (
+                {application.status === "pending" && (
                   <button
                     type="button"
                     onClick={() => void setStatus(application, "cancelled")}
@@ -219,7 +219,7 @@ export default function CourseApplicationsPage({
                     Reject
                   </button>
                 )}
-                {application.enrollmentStatus === "active" && (
+                {application.status === "active" && (
                   <button
                     type="button"
                     onClick={() => void setStatus(application, "cancelled")}

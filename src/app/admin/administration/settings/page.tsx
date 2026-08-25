@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { SettingsIcon } from "@/components/admin/icons";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Admin Settings — MediSpark Admin",
-  description: "Configure how the admin panel itself works.",
-};
+export const metadata = { title: "Admin Settings — MediSpark Admin" };
 
-export default function AdminSettingsPage() {
-  return <AdminPlaceholder title="Admin Settings" description="Configure how the admin panel itself works." icon={SettingsIcon} />;
+/**
+ * Admin panel configuration lives in Security Settings (session/lockout
+ * policy) and Role Management (access matrix); the admin's own account is
+ * managed under Profile. This route forwards there.
+ */
+export default function AdministrationSettingsPage() {
+  redirect("/admin/administration/security");
 }

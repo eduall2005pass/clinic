@@ -17,28 +17,41 @@ type AdminAccount = {
 
 type RoleAssignment = { email: string; role: string };
 
-const ROLE_OPTIONS = ["admin", "content", "exams", "courses", "students", "viewer"];
+const ROLE_OPTIONS = [
+  { value: "super-admin", label: "Super Admin" },
+  { value: "admin", label: "Admin" },
+  { value: "content-manager", label: "Content Manager" },
+  { value: "course-manager", label: "Course Manager" },
+  { value: "exam-manager", label: "Exam Manager" },
+] as const;
+
+const ROLE_LABELS: Record<string, string> = Object.fromEntries(
+  ROLE_OPTIONS.map((role) => [role.value, role.label]),
+);
 
 export default function AdminCenterPage() {
   const toast = useAdminToast();
   const { user, authLoading } = useAuth();
   const [admins, setAdmins] = useState<AdminAccount[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
+    setLoadError(false);
     try {
       const res = await fetch("/api/admin/accounts", {
         headers: { Authorization: `Bearer ${await user.getIdToken()}` },
         cache: "no-store",
       });
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
       const data = (await res.json()) as { admins?: AdminAccount[] };
       setAdmins(Array.isArray(data.admins) ? data.admins : []);
     } catch {
       setAdmins([]);
+      setLoadError(true);
     }
   }, [user]);
 
@@ -114,12 +127,12 @@ export default function AdminCenterPage() {
     const nextActive = !(Number(admin.isActive) === 1);
     try {
       const res = await fetch("/api/admin/accounts", {
-        method: "PATCH",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${await user.getIdToken()}`,
         },
-        body: JSON.stringify({ email: admin.email, isActive: nextActive }),
+        body: JSON.stringify({ uid: admin.uid, isActive: nextActive }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -187,6 +200,17 @@ export default function AdminCenterPage() {
         </h2>
         {admins === null ? (
           <AccessLoading label="Loading admins…" />
+        ) : loadError ? (
+          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-6 text-center">
+            <p className="text-sm text-red-400">Failed to load the admin list.</p>
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-primary-500/60"
+            >
+              Retry
+            </button>
+          </div>
         ) : admins.length === 0 ? (
           <p className="mt-4 rounded-xl border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-neutral-500">
             No admin accounts found.
@@ -210,12 +234,12 @@ export default function AdminCenterPage() {
                   aria-label={`Role for ${admin.email}`}
                   className="rounded-lg border border-ink/15 bg-dark-850 px-2.5 py-1.5 text-xs font-semibold capitalize text-heading outline-none focus:border-primary-500/60"
                 >
-                  {(ROLE_OPTIONS.includes(admin.role)
-                    ? ROLE_OPTIONS
-                    : [admin.role, ...ROLE_OPTIONS]
+                  {(ROLE_OPTIONS.some((role) => role.value === admin.role)
+                    ? ROLE_OPTIONS.map((role) => role.value)
+                    : [admin.role ?? "admin", ...ROLE_OPTIONS.map((role) => role.value)]
                   ).map((role) => (
                     <option key={role} value={role} className="capitalize">
-                      {role}
+                      {ROLE_LABELS[role] ?? role}
                     </option>
                   ))}
                 </select>
