@@ -22,7 +22,7 @@ User communicates in Bengali/Banglish — reply in the same style.
   - GIPK note: server generates invisible `my_row_id` PKs; real keys exist as
     `uq_<table>_pk` UNIQUE indexes — keep that pattern for new tables
 - **Legacy VM:** MariaDB on Azure VM `52.184.98.228:3000` is retired (data migrated
-  2026-08-25). VM still runs nginx + medifiles upload service.
+  2026-08-25). Media now runs on the separate medispark VM (20.219.193.182).
   - SSH key on this machine is broken (`Permission denied`) — needs fixing separately
 - **Auth:** Firebase (Google sign-in). Admins = rows in `admins` table:
   eduall2005pass@gmail.com, siyammd553@gmail.com
@@ -55,20 +55,24 @@ git pull medispark main
 ## Database rules
 - ALL data lives in Azure MySQL. Never use Firestore/Supabase/local disk for data.
 - **Media files** (logo, favicon, banners, course images, profile pictures,
-  audio) live on the **Azure VM disk** at `/var/www/medispark-uploads/<dir>/`
-  and are served over HTTPS by nginx at
-  `https://eduspark2024.duckdns.org/medifiles/...` (static, Range support).
+  audio) live on the **medispark VM** (`20.219.193.182`, user `siam`, hostname
+  `medispark`) at `/var/www/medispark-uploads/<dir>/` and are served over HTTPS
+  by nginx at `https://medispark.duckdns.org/medifiles/...` (static, Range
+  support). SSH is password-auth.
 - `src/lib/storage.ts` `saveFile()` forwards bytes to the VM upload service
   (`medifiles.service`, systemd, listens on 127.0.0.1:4021 behind nginx at
   `/medifiles-upload` + `/medifiles-delete`; token-auth via `X-Medifiles-Token`
   = `MEDIA_UPLOAD_TOKEN`). Only the returned URL is stored — DB stores no blobs.
+- Config env vars: `MEDIA_UPLOAD_TOKEN`, `MEDIA_FILES_BASE_URL`,
+  `MEDIA_UPLOAD_URL`, `MEDIA_DELETE_URL` (all set in Vercel prod +
+  `/etc/medifiles.env` on VM). Server source: `server/medifiles-server.mjs`;
+  unit file `deploy/medifiles.service`; nginx site
+  `/etc/nginx/sites-available/medispark` (also in repo:
+  `deploy/medifiles-nginx.conf`).
 - Legacy: the `uploads` table (LONGBLOB) still exists; `/api/files/[id]`
-  serves old rows. New uploads never touch the database.
-- Config: env vars `MEDIA_UPLOAD_TOKEN` (Vercel prod + `/etc/medifiles.env`
-  on VM), optional overrides `MEDIA_FILES_BASE_URL`, `MEDIA_UPLOAD_URL`,
-  `MEDIA_DELETE_URL`. Server source: `server/medifiles-server.mjs`;
-  unit file `deploy/medifiles.service`; nginx snippet
-  `/etc/nginx/snippets/medifiles.conf` (also in repo: `deploy/medifiles-nginx.conf`).
+  serves old rows. Old VM `52.184.98.228` (eduspark2024.duckdns.org) is
+  retired — all DB media URLs were migrated to medispark.duckdns.org
+  (2026-08-25). Its SSH key no longer works.
 - Schema lives in `src/sql/*.sql`. After changing schema:
   1. Add/update a migration file in `src/sql/`
   2. Apply it: `ssh azureuser@VM 'sudo mysql bloodare_medispark' < src/sql/<file>.sql`
