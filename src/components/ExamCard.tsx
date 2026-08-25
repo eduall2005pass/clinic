@@ -100,12 +100,25 @@ function dateInfo(exam: PublicExam): string {
   return exam.examTime ? `${prefix} ${exam.examDate} · ${exam.examTime}` : `${prefix} ${exam.examDate}`;
 }
 
-export default function ExamCard({ exam }: { exam: PublicExam }) {
+export default function ExamCard({
+  exam,
+  /** When set, every action button opens this details page instead of the
+   *  student participation flow (used by the Admin Panel mirror pages). */
+  detailsHref,
+  /** Extra management controls rendered under the main action button —
+   *  only supplied by the Admin Panel; students never see this. */
+  manage,
+}: {
+  exam: PublicExam;
+  detailsHref?: string;
+  manage?: React.ReactNode;
+}) {
   const status = statusMeta[exam.status];
   const action = actionMeta[exam.status];
   const category = categorizeExam(exam);
   const CategoryIcon = categoryMeta[category].icon;
   const isLive = exam.status === "Live";
+  const href = detailsHref ?? `/exam/${exam.id}`;
 
   const cardClasses = isLive
     ? "border-primary-600/60 ring-1 ring-primary-600/40 shadow-xl shadow-primary-900/40 hover:border-primary-500 hover:shadow-primary-800/50"
@@ -125,6 +138,12 @@ export default function ExamCard({ exam }: { exam: PublicExam }) {
           <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
           {status.label}
         </span>
+
+        {!exam.published && (
+          <span className="flex items-center gap-1.5 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-3 py-1 text-[11px] font-extrabold tracking-wider text-yellow-300">
+            DRAFT
+          </span>
+        )}
 
         <span
           className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${
@@ -187,7 +206,7 @@ export default function ExamCard({ exam }: { exam: PublicExam }) {
             )}
           </p>
 
-          {isLive ? (
+          {isLive && !detailsHref ? (
             <StartExamButton
               exam={exam}
               className={`${buttonClasses} flex items-center justify-center gap-2 bg-primary-600 text-white shadow-md shadow-primary-900/50 hover:bg-primary-500`}
@@ -197,7 +216,7 @@ export default function ExamCard({ exam }: { exam: PublicExam }) {
             </StartExamButton>
           ) : (
             <Link
-              href={`/exam/${exam.id}`}
+              href={href}
               className={`${buttonClasses} flex items-center justify-center gap-2 ${
                 exam.status === "Upcoming"
                   ? "border border-primary-600/50 bg-primary-600/10 text-primary-300 hover:bg-primary-600/20"
@@ -208,6 +227,8 @@ export default function ExamCard({ exam }: { exam: PublicExam }) {
               <span aria-hidden="true">&rarr;</span>
             </Link>
           )}
+
+          {manage}
         </div>
       </div>
     </article>

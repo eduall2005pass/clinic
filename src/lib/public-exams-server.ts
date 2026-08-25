@@ -21,6 +21,8 @@ function toPublicExam(exam: Exam): PublicExam {
   return {
     id: exam.id,
     name: exam.title,
+    description: exam.description ?? null,
+    bannerUrl: exam.bannerUrl ?? null,
     batch,
     courseType: exam.courseType,
     subject: exam.subject,
@@ -70,4 +72,19 @@ export async function fetchExamPageById(
     (exam) => exam.id === id && exam.status !== "draft",
   );
   return found ? toPublicExam(found) : null;
+}
+
+/**
+ * Admin variant — same shape as the public catalog but includes drafts
+ * (published=false) so the Admin Panel can manage exams before publishing.
+ * Same MySQL data as the main website; nothing is hardcoded.
+ */
+export async function fetchAdminPublicExams(): Promise<PublicExam[]> {
+  const exams = await fetchExams();
+  return exams
+    .filter((exam) => exam.kind !== "enrolled")
+    .map((exam) => ({
+      ...toPublicExam(exam),
+      published: exam.status !== "draft",
+    }));
 }

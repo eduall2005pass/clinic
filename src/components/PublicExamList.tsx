@@ -25,17 +25,27 @@ export default function PublicExamList({
   exams,
   batches,
   category,
+  /** Admin Panel extras — the layout stays identical to the website. */
+  detailsBase,
+  showDrafts = false,
+  renderManage,
 }: {
   exams: PublicExam[];
   batches: string[];
   /** When set, only exams of this course category are shown. */
   category?: ExamCategory;
+  /** Base href for the exam-details page (admin mirror pages). */
+  detailsBase?: string;
+  /** Include draft exams (Admin Panel only). */
+  showDrafts?: boolean;
+  /** Per-card management controls (Admin Panel only). */
+  renderManage?: (exam: PublicExam) => React.ReactNode;
 }) {
   const [batch, setBatch] = useState("All Batches");
 
   const filtered = exams.filter(
     (exam) =>
-      exam.published &&
+      (showDrafts || exam.published) &&
       (batch === "All Batches" || exam.batch === batch) &&
       (category ? categorizeExam(exam) === category : true)
   );
@@ -117,7 +127,16 @@ export default function PublicExamList({
                     {groups[section.key].length > 0 ? (
                       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         {groups[section.key].map((exam) => (
-                          <ExamCard key={exam.id} exam={exam} />
+                          <ExamCard
+                            key={exam.id}
+                            exam={exam}
+                            detailsHref={
+                              detailsBase
+                                ? `${detailsBase}/${exam.id}`
+                                : undefined
+                            }
+                            manage={renderManage?.(exam)}
+                          />
                         ))}
                       </div>
                     ) : (

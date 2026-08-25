@@ -486,7 +486,7 @@ export function AdminSubjectPapersView({
 
 /* ── Level 4: Paper → Chapters → Classes / Exams / Materials ────────────── */
 
-type TabKey = "classes" | "exams" | "materials";
+export type TabKey = "classes" | "exams" | "materials";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "classes", label: "Classes" },
@@ -505,7 +505,6 @@ export function AdminPaperContentView({
 }) {
   const { course, state, load } = useAdminCourseLearning(slug);
   const subject = course ? findSubject(course, subjectId) : null;
-  const [tab, setTab] = useState<TabKey>("classes");
 
   const chapters = useMemo(() => {
     if (!subject) return [];
@@ -540,21 +539,6 @@ export function AdminPaperContentView({
         : "Paper";
   const base = `/admin/enrolled-courses/${encodeURIComponent(slug)}/subjects/${encodeURIComponent(subjectId)}`;
 
-  const manageHref =
-    tab === "classes"
-      ? "/admin/courses/classes"
-      : tab === "exams"
-        ? "/admin/exams/enrolled"
-        : "/admin/courses/papers";
-
-  const visibleChapters = chapters.filter((chapter) =>
-    tab === "classes"
-      ? chapter.classes.length > 0
-      : tab === "exams"
-        ? chapter.exams.length > 0
-        : chapter.materials.length > 0,
-  );
-
   return (
     <section className="mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-6 sm:py-10">
       <AdminBackLink href={base} label={subject.name} />
@@ -571,146 +555,356 @@ export function AdminPaperContentView({
         </p>
       </header>
 
-      <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-        <div className="flex flex-wrap items-center gap-2">
-          {TABS.map((item) => {
-            const active = tab === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setTab(item.key)}
-                aria-pressed={active}
-                className={`shrink-0 rounded-full px-5 py-2 text-sm font-bold transition ${
-                  active
-                    ? "bg-primary-600 text-white shadow-md shadow-primary-900/40 hover:bg-primary-700"
-                    : "border border-neutral-200 bg-white font-semibold text-zinc-500 hover:border-primary-500/60 hover:text-zinc-900 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-400 admin-dark:hover:text-zinc-50"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-          <span className="ml-auto">
-            <AdminManageButton href={manageHref} label={`Manage ${TABS.find((t) => t.key === tab)?.label ?? ""}`} />
-          </span>
+      {/* Exactly one row per content type — each chapter opens its own page */}
+      {TABS.map((item) => {
+        const typeChapters = chapters.filter((chapter) =>
+          item.key === "classes"
+            ? chapter.classes.length > 0
+            : item.key === "exams"
+              ? chapter.exams.length > 0
+              : chapter.materials.length > 0,
+        );
+        const total = typeChapters.reduce(
+          (sum, chapter) =>
+            sum +
+            (item.key === "classes"
+              ? chapter.classes.length
+              : item.key === "exams"
+                ? chapter.exams.length
+                : chapter.materials.length),
+          0,
+        );
+        return (
+          <section
+            key={item.key}
+            className="rounded-2xl border border-neutral-200 bg-white shadow-lg shadow-black/5 admin-dark:border-zinc-800 admin-dark:bg-zinc-900"
+          >
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-5 py-4 admin-dark:border-zinc-800">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-extrabold text-zinc-900 admin-dark:text-zinc-50">
+                  {item.label}
+                </h2>
+                <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400">
+                  {total} item{total === 1 ? "" : "s"}
+                </span>
+              </div>
+              <AdminManageButton href={manageHrefFor(item.key)} label={`Manage ${item.label}`} />
+            </header>
+
+            <div className="px-5 py-4">
+              {typeChapters.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-neutral-300 p-5 text-center text-sm text-zinc-500 admin-dark:border-zinc-700 admin-dark:text-zinc-400">
+                  No {item.label.toLowerCase()} published in this paper yet.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {typeChapters.map((chapter) => (
+                    <Link
+                      key={chapter.id}
+                      href={`${base}/papers/${encodeURIComponent(paperId)}/chapters/${encodeURIComponent(chapter.id)}?kind=${item.key}`}
+                      className="group rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 transition hover:border-primary-600/60 hover:text-primary-500 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-200"
+                    >
+                      {chapter.name}
+                      <span className="ml-1.5 text-xs font-semibold opacity-60">
+                        {item.key === "classes"
+                          ? chapter.classes.length
+                          : item.key === "exams"
+                            ? chapter.exams.length
+                            : chapter.materials.length}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <p className="mt-3 text-xs text-zinc-500 admin-dark:text-zinc-400">
+                Click a chapter to open its dedicated page.
+              </p>
+            </div>
+          </section>
+        );
+      })}
+    </section>
+  );
+}
+
+function manageHrefFor(kind: TabKey): string {
+  return kind === "classes"
+    ? "/admin/courses/classes"
+    : kind === "exams"
+      ? "/admin/exams/enrolled"
+      : "/admin/courses/papers";
+}
+
+/* ── Level 5: Chapter page — one dedicated page per chapter/kind ────────── */
+
+export function AdminChapterView({
+  slug,
+  subjectId,
+  paperId,
+  chapterId,
+  kind,
+}: {
+  slug: string;
+  subjectId: string;
+  paperId: string;
+  chapterId: string;
+  kind: TabKey;
+}) {
+  const { course, state, load } = useAdminCourseLearning(slug);
+  const subject = course ? findSubject(course, subjectId) : null;
+
+  if (state !== "ready" || !course || !subject) {
+    return <AdminLevelStates state={state} load={load} />;
+  }
+
+  const paper = subject.papers.find((item) => item.id === paperId);
+  const paperName =
+    paperId === ADMIN_GENERAL_PAPER_ID
+      ? "All Chapters"
+      : paper
+        ? paper.name
+        : "Paper";
+  const chapter = chaptersForPaper(subject, paperId).find(
+    (item) => item.id === chapterId,
+  );
+  const base = `/admin/enrolled-courses/${encodeURIComponent(slug)}/subjects/${encodeURIComponent(subjectId)}`;
+
+  if (!chapter) {
+    return (
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center">
+          <p className="font-bold text-yellow-700 admin-dark:text-yellow-300">Chapter not found</p>
+          <div className="mt-4 flex justify-center">
+            <AdminBackLink href={base} label={`Back to ${subject.name}`} />
+          </div>
         </div>
+      </section>
+    );
+  }
+
+  const chapterBase =
+    base +
+    `/papers/${encodeURIComponent(paperId)}/chapters/${encodeURIComponent(chapterId)}`;
+
+  const items: {
+    id: string;
+    title: string;
+    subtitle: string;
+    href: string;
+    external?: boolean;
+  }[] =
+    kind === "classes"
+      ? chapter.classes.map((cls) => ({
+          id: cls.id,
+          title: cls.title,
+          subtitle: cls.durationMinutes > 0 ? `${cls.durationMinutes} min` : "Class",
+          href: `/admin/enrolled-courses/${encodeURIComponent(slug)}/classes/${encodeURIComponent(cls.id)}`,
+        }))
+      : kind === "exams"
+        ? chapter.exams.map((exam) => ({
+            id: exam.id,
+            title: exam.title,
+            subtitle: `${exam.durationMinutes} min · ${exam.totalMarks} marks`,
+            href: `${chapterBase}/${kind}/${encodeURIComponent(exam.id)}`,
+          }))
+        : chapter.materials.map((material) => ({
+            id: String(material.id),
+            title: material.title,
+            subtitle: materialTypeLabels[material.materialType] ?? "Material",
+            href: `${chapterBase}/${kind}/${encodeURIComponent(material.id)}`,
+          }));
+
+  const kindLabel =
+    kind === "classes" ? "Classes / Lectures" : kind === "exams" ? "Exams" : "Materials";
+
+  return (
+    <section className="mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-6 sm:py-10">
+      <AdminBackLink href={base} label={`${subject.name} — ${paperName}`} />
+
+      <header>
+        <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
+          {kindLabel}
+        </p>
+        <h1 className="mt-2 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50 sm:text-3xl">
+          {chapter.name}
+        </h1>
+        <p className="mt-1 text-sm text-zinc-500 admin-dark:text-zinc-400">
+          {items.length} item{items.length === 1 ? "" : "s"} — click any item to open its details.
+        </p>
+      </header>
+
+      <div className="flex">
+        <AdminManageButton href={manageHrefFor(kind)} label={`Manage ${kindLabel}`} />
       </div>
 
-      {visibleChapters.length === 0 ? (
+      {items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 p-10 text-center admin-dark:border-zinc-700 admin-dark:bg-zinc-900/60">
           <p className="font-semibold text-zinc-900 admin-dark:text-zinc-50">Nothing here yet</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500 admin-dark:text-zinc-400">
-            No {tab} have been published in this paper / segment yet.
+          <p className="mt-1 text-sm text-zinc-500 admin-dark:text-zinc-400">
+            Content will appear here once added from the manager above.
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {visibleChapters.map((chapter) => (
-            <div key={chapter.id}>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 text-base font-extrabold text-zinc-900 admin-dark:text-zinc-50">
-                  <span className="h-4 w-1 rounded-full bg-primary-500" />
-                  {chapter.name}
-                </h2>
-                <AdminManageButton href="/admin/courses/chapters" label="Manage Chapter" />
-              </div>
-
-              {tab === "classes" && (
-                <ul className="mt-3 space-y-2">
-                  {chapter.classes.map((cls) => (
-                    <li key={cls.id}>
-                      <Link
-                        href={`/admin/enrolled-courses/${encodeURIComponent(slug)}/classes/${encodeURIComponent(cls.id)}`}
-                        className="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-neutral-50 admin-dark:border-zinc-800 admin-dark:bg-zinc-900 admin-dark:hover:bg-zinc-800/60"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-600/15 text-primary-500">
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-zinc-900 group-hover:text-primary-500 admin-dark:text-zinc-50 admin-dark:group-hover:text-primary-400">
-                            {cls.title}
-                          </span>
-                          <span className="text-[11px] text-zinc-500 admin-dark:text-zinc-500">
-                            {cls.durationMinutes > 0 ? `${cls.durationMinutes} min` : "Class"}
-                          </span>
-                        </span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
-                        </svg>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {tab === "exams" && (
-                <ul className="mt-3 space-y-2">
-                  {chapter.exams.map((exam) => (
-                    <li key={exam.id}>
-                      <Link
-                        href="/admin/exams/enrolled"
-                        className="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-neutral-50 admin-dark:border-zinc-800 admin-dark:bg-zinc-900 admin-dark:hover:bg-zinc-800/60"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-500">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                          </svg>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-zinc-900 group-hover:text-primary-500 admin-dark:text-zinc-50 admin-dark:group-hover:text-primary-400">
-                            {exam.title}
-                          </span>
-                          <span className="text-[11px] text-zinc-500 admin-dark:text-zinc-500">
-                            Exam · {exam.durationMinutes} min · {exam.totalMarks} marks
-                          </span>
-                        </span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
-                        </svg>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {tab === "materials" && (
-                <ul className="mt-3 space-y-2">
-                  {chapter.materials.map((material) => (
-                    <li key={material.id}>
-                      <a
-                        href={material.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-neutral-50 admin-dark:border-zinc-800 admin-dark:bg-zinc-900 admin-dark:hover:bg-zinc-800/60"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                          </svg>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-zinc-900 group-hover:text-primary-500 admin-dark:text-zinc-50 admin-dark:group-hover:text-primary-400">
-                            {material.title}
-                          </span>
-                          <span className="text-[11px] text-zinc-500 admin-dark:text-zinc-500">
-                            {materialTypeLabels[material.materialType] ?? "Material"}
-                          </span>
-                        </span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M14 5h7m0 0v7m0-7L10 16" />
-                        </svg>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+        <ul className="space-y-2.5">
+          {items.map((item, index) => (
+            <li key={item.id}>
+              <Link
+                href={item.href}
+                target={item.external ? "_blank" : undefined}
+                rel={item.external ? "noopener noreferrer" : undefined}
+                className="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 transition hover:border-primary-600/50 hover:bg-neutral-50 admin-dark:border-zinc-800 admin-dark:bg-zinc-900 admin-dark:hover:bg-zinc-800/60"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-600/15 text-xs font-extrabold text-primary-500">
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-zinc-900 group-hover:text-primary-500 admin-dark:text-zinc-50 admin-dark:group-hover:text-primary-400">
+                    {item.title}
+                  </span>
+                  <span className="text-[11px] text-zinc-500 admin-dark:text-zinc-500">{item.subtitle}</span>
+                </span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
+                </svg>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
+    </section>
+  );
+}
+
+/* ── Level 6: Content details — one dedicated page per exam/material ───── */
+
+export function AdminContentView({
+  slug,
+  subjectId,
+  paperId,
+  chapterId,
+  kind,
+  contentId,
+}: {
+  slug: string;
+  subjectId: string;
+  paperId: string;
+  chapterId: string;
+  kind: Exclude<TabKey, "classes">;
+  contentId: string;
+}) {
+  const { course, state, load } = useAdminCourseLearning(slug);
+  const subject = course ? findSubject(course, subjectId) : null;
+
+  if (state !== "ready" || !course || !subject) {
+    return <AdminLevelStates state={state} load={load} />;
+  }
+  const base = `/admin/enrolled-courses/${encodeURIComponent(slug)}/subjects/${encodeURIComponent(subjectId)}`;
+
+  const chapter = chaptersForPaper(subject, paperId).find(
+    (item) => item.id === chapterId,
+  );
+  const chapterHref =
+    base +
+    `/papers/${encodeURIComponent(paperId)}/chapters/${encodeURIComponent(chapterId)}`;
+
+  let title = "";
+  let subtitle = "";
+  let body: React.ReactNode = null;
+
+  if (kind === "exams") {
+    const exam = chapter?.exams.find((item) => item.id === contentId);
+    if (!exam) {
+      return (
+        <DetailNotFound slug={slug} label="Exam not found" backHref={chapterHref} />
+      );
+    }
+    title = exam.title;
+    subtitle = "Exam";
+    body = (
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <DetailBox label="Duration" value={`${exam.durationMinutes} min`} />
+        <DetailBox label="Total Marks" value={exam.totalMarks} />
+        <DetailBox label="Course" value={course.name} />
+      </dl>
+    );
+  } else {
+    const material = chapter?.materials.find(
+      (item) => String(item.id) === contentId,
+    );
+    if (!material) {
+      return (
+        <DetailNotFound slug={slug} label="Material not found" backHref={chapterHref} />
+      );
+    }
+    title = material.title;
+    subtitle = materialTypeLabels[material.materialType] ?? "Material";
+    body = (
+      <dl className="grid gap-3 sm:grid-cols-2">
+        <DetailBox label="Type" value={subtitle} />
+        <DetailBox label="Course" value={course.name} />
+        <div className="sm:col-span-2 rounded-xl border border-neutral-200 bg-white p-3 admin-dark:border-zinc-800 admin-dark:bg-zinc-900">
+          <dt className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">File</dt>
+          <dd className="mt-1 break-all text-sm">
+            <a href={material.fileUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-500 hover:underline">
+              {material.fileUrl}
+            </a>
+          </dd>
+        </div>
+      </dl>
+    );
+  }
+  return (
+    <section className="mx-auto max-w-4xl space-y-5 px-4 py-8 sm:px-6 sm:py-10">
+      <AdminBackLink href={chapterHref} label={chapter?.name ?? "Back"} />
+
+      <header>
+        <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
+          Content Details · {subtitle}
+        </p>
+        <h1 className="mt-2 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50 sm:text-3xl">
+          {title}
+        </h1>
+      </header>
+
+      {body}
+
+      <div className="flex flex-wrap gap-3 pt-2">
+        <AdminManageButton
+          href={manageHrefFor(kind)}
+          label={`Manage in ${kind === "exams" ? "Exams" : "Papers & Materials"}`}
+        />
+      </div>
+    </section>
+  );
+}
+
+function DetailBox({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-white p-3 admin-dark:border-zinc-800 admin-dark:bg-zinc-900">
+      <dt className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">{label}</dt>
+      <dd className="mt-1 text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-50">{value}</dd>
+    </div>
+  );
+}
+
+function DetailNotFound({
+  slug,
+  label,
+  backHref,
+}: {
+  slug: string;
+  label: string;
+  backHref: string;
+}) {
+  void slug;
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center">
+        <p className="font-bold text-yellow-700 admin-dark:text-yellow-300">{label}</p>
+        <div className="mt-4 flex justify-center">
+          <AdminBackLink href={backHref} label="Back to Chapter" />
+        </div>
+      </div>
     </section>
   );
 }

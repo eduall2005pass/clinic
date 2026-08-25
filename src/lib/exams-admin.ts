@@ -15,6 +15,10 @@ export type ExamQuestionOption = string;
 export type Exam = {
   id: string;
   title: string;
+  /** Public description shown on the exam details page. */
+  description: string | null;
+  /** Public banner image shown on the exam details page. */
+  bannerUrl: string | null;
   kind: ExamKind;
   batchId: string;
   subject: string;
@@ -78,6 +82,8 @@ export type ExamSettings = {
 type ExamRow = {
   id: string;
   title: string;
+  description: string | null;
+  banner_url: string | null;
   kind: string;
   batch_id: string;
   subject: string;
@@ -127,6 +133,8 @@ function rowToExam(row: ExamRow): Exam {
   return {
     id: row.id,
     title: row.title,
+    description: row.description ?? null,
+    bannerUrl: row.banner_url ?? null,
     kind:
       row.kind === "practice"
         ? "practice"
@@ -216,6 +224,13 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — column may already exist.
   }
+  // Public exam page content managed from the Admin Panel.
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS description TEXT NULL AFTER title`);
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS banner_url VARCHAR(1024) NULL AFTER description`);
+  } catch {
+    // Best effort — columns may already exist.
+  }
   await exec(`CREATE TABLE IF NOT EXISTS exam_courses (
     exam_id VARCHAR(64) NOT NULL,
     course_id VARCHAR(191) NOT NULL,
@@ -235,9 +250,10 @@ async function ensureTables(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 }
 
-const EXAM_COLUMNS = `id, title, kind, batch_id, subject, chapter_id, sort_order,
-  course_type, duration_minutes, total_marks, negative_marks, question_count,
-  status, scheduled_at, ends_at, answer_key`;
+const EXAM_COLUMNS = `id, title, description, banner_url, kind, batch_id,
+  subject, chapter_id, sort_order, course_type, duration_minutes,
+  total_marks, negative_marks, question_count, status, scheduled_at, ends_at,
+  answer_key`;
 
 // ── Exams CRUD ───────────────────────────────────────────────────────────
 
@@ -338,8 +354,10 @@ export async function saveExam(
 
   await exec(
     `INSERT INTO exams (${EXAM_COLUMNS}, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE title = VALUES(title), kind = VALUES(kind), batch_id = VALUES(batch_id),
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE title = VALUES(title), description = VALUES(description),
+       banner_url = VALUES(banner_url),
+       kind = VALUES(kind), batch_id = VALUES(batch_id),
        subject = VALUES(subject), chapter_id = VALUES(chapter_id), sort_order = VALUES(sort_order),
        course_type = VALUES(course_type),
        duration_minutes = VALUES(duration_minutes),
@@ -350,6 +368,8 @@ export async function saveExam(
     [
       id,
       title,
+      asString(input.description) || null,
+      asString(input.bannerUrl) || null,
       kind,
       asString(input.batchId),
       asString(input.subject),

@@ -19,7 +19,7 @@ const ADMIN_NAV = [
   { label: "Public Exam", href: "/admin/public-exam" },
   { label: "Q&A", href: "/admin/qa" },
   { label: "Dashboard", href: "/admin/dashboard" },
-  { label: "My Enrolled Course", href: "/admin/my-enrolled-course" },
+  { label: "Course Content", href: "/admin/course-content" },
 ] as const;
 
 export default function WebsiteAdminShell({

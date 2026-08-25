@@ -19,6 +19,10 @@ export type CourseType = "Academic" | "Admission";
 export type PublicExam = {
   id: string;
   name: string;
+  /** Public description (admin-managed) shown on the details page. */
+  description?: string | null;
+  /** Public banner image (admin-managed) shown on the details page. */
+  bannerUrl?: string | null;
   batch: string;
   courseType: CourseType;
   subject: string;

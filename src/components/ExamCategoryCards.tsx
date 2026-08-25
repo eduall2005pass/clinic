@@ -72,8 +72,15 @@ const categoryCards: {
  * cards stacked vertically (1 card per row on every screen size), icon on
  * the left with the category name beside it. Clicking a card opens that
  * category's own Public Exams page. Not tabs, not a dropdown.
+ *
+ * `basePath` lets the Admin Panel reuse this exact UI with its own routes
+ * (/admin/exams/public/category/…) while students keep /exam/category/….
  */
-export default function ExamCategoryCards() {
+export default function ExamCategoryCards({
+  basePath = "/exam/category",
+}: {
+  basePath?: string;
+}) {
   return (
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <div className="mb-8 flex items-end justify-between gap-4">
@@ -92,7 +99,7 @@ export default function ExamCategoryCards() {
         {categoryCards.map(({ key, label, Icon }) => (
           <Link
             key={key}
-            href={`/exam/category/${key}`}
+            href={`${basePath}/${key}`}
             className="group flex w-full items-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-3.5 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/30 active:scale-[0.99] sm:gap-4 sm:p-5"
           >
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-300 transition duration-300 group-hover:bg-primary-600 group-hover:text-white sm:h-13 sm:w-13">
