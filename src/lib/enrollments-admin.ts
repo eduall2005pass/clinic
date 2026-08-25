@@ -1,4 +1,5 @@
-import { query, exec } from "@/lib/mysql";
+import { query, exec, withTransaction } from "@/lib/mysql";
+import type { PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import { getCourse, getPayableFee } from "@/lib/courses";
 import type { EnrollmentStatus } from "@/lib/enrollments";
 
@@ -149,6 +150,21 @@ export async function fetchEnrollmentsAdmin(
   }
 }
 
+/** Current status of one enrollment row (null when missing). */
+export async function getEnrollmentStatusById(
+  id: number,
+): Promise<EnrollmentStatus | null> {
+  try {
+    const rows = await query<{ enrollment_status: string }[]>(
+      "SELECT enrollment_status FROM enrollments WHERE id = ? LIMIT 1",
+      [id],
+    );
+    return rows.length > 0 ? normalizeStatus(rows[0].enrollment_status) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Approve / cancel / complete an enrollment. */
 export async function setEnrollmentStatus(
   id: number,
@@ -162,6 +178,168 @@ export async function setEnrollmentStatus(
     return result.affectedRows > 0;
   } catch {
     return false;
+  }
+}
+
+// ── Pending application Accept / Reject (transactional, audited) ──────────
+
+export type ApplicationActionResult =
+  | { ok: true; message: string }
+  | { ok: false; error: string };
+
+type ApplicationRow = RowDataPacket & {
+  id: number;
+  enrollment_status: string;
+  student_uid: string;
+  course_id: string;
+  course_kind: "free" | "paid";
+};
+
+let approvalColumnsEnsured = false;
+
+/** Best-effort self-heal so the action never fails on a missing column. */
+async function ensureApprovalColumns(): Promise<void> {
+  if (approvalColumnsEnsured) return;
+  try {
+    const columns = await query<{ COLUMN_NAME: string }[]>(
+      `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'enrollments'
+         AND COLUMN_NAME IN ('approved_at', 'approved_by', 'rejected_at', 'rejected_by')`,
+    );
+    const present = new Set(columns.map((column) => column.COLUMN_NAME));
+    if (!present.has("approved_at")) {
+      await exec("ALTER TABLE enrollments ADD COLUMN approved_at TIMESTAMP NULL DEFAULT NULL");
+    }
+    if (!present.has("approved_by")) {
+      await exec("ALTER TABLE enrollments ADD COLUMN approved_by VARCHAR(191) NULL");
+    }
+    if (!present.has("rejected_at")) {
+      await exec("ALTER TABLE enrollments ADD COLUMN rejected_at TIMESTAMP NULL DEFAULT NULL");
+    }
+    if (!present.has("rejected_by")) {
+      await exec("ALTER TABLE enrollments ADD COLUMN rejected_by VARCHAR(191) NULL");
+    }
+    approvalColumnsEnsured = true;
+  } catch {
+    // Migration may be applied out-of-band; the UPDATE below will surface real errors.
+  }
+}
+
+/**
+ * Accept a pending application after manual payment verification:
+ * pending → active (grants access to THAT course only), records approval
+ * date/time and the admin who performed it. Transactional with row lock:
+ *   - rejects already-accepted / rejected applications
+ *   - cannot create duplicate active enrollments
+ *     (UNIQUE(student_uid, course_id) + single-row activation)
+ */
+export async function acceptEnrollmentApplication(
+  id: number,
+  adminUid: string,
+): Promise<ApplicationActionResult> {
+  await ensureApprovalColumns();
+  try {
+    return await withTransaction(async (connection: PoolConnection) => {
+      const [rows] = await connection.execute<ApplicationRow[]>(
+        `SELECT id, enrollment_status, student_uid, course_id, course_kind
+         FROM enrollments WHERE id = ? FOR UPDATE`,
+        [id],
+      );
+      const application = rows[0];
+      if (!application) {
+        return { ok: false as const, error: "Application not found." };
+      }
+      if (application.enrollment_status === "active") {
+        return { ok: false as const, error: "This application is already accepted." };
+      }
+      if (application.enrollment_status !== "pending") {
+        return {
+          ok: false as const,
+          error: `Already processed — current status: ${application.enrollment_status}.`,
+        };
+      }
+
+      // Atomic accept — guarded on still-pending so concurrent accepts lose.
+      const [result] = await connection.execute<ResultSetHeader>(
+        `UPDATE enrollments
+         SET enrollment_status = 'active', approved_at = NOW(), approved_by = ?
+         WHERE id = ? AND enrollment_status = 'pending'`,
+        [adminUid, id],
+      );
+      if (result.affectedRows !== 1) {
+        return {
+          ok: false as const,
+          error: "Another admin just processed this application.",
+        };
+      }
+
+      // Keep the courses registry consistent for this specific course.
+      await connection.execute(
+        "INSERT IGNORE INTO courses (course_id, kind) VALUES (?, ?)",
+        [application.course_id, application.course_kind],
+      );
+
+      return {
+        ok: true as const,
+        message: "Enrollment accepted — student is now an active enrolled student.",
+      };
+    });
+  } catch (error) {
+    console.error("acceptEnrollmentApplication failed:", error);
+    return { ok: false, error: "Failed to accept the application." };
+  }
+}
+
+/**
+ * Reject a pending application: pending → cancelled, records rejection
+ * date/time and the admin. No course access is granted. Same transactional
+ * guards as accept.
+ */
+export async function rejectEnrollmentApplication(
+  id: number,
+  adminUid: string,
+): Promise<ApplicationActionResult> {
+  await ensureApprovalColumns();
+  try {
+    return await withTransaction(async (connection: PoolConnection) => {
+      const [rows] = await connection.execute<ApplicationRow[]>(
+        `SELECT id, enrollment_status FROM enrollments WHERE id = ? FOR UPDATE`,
+        [id],
+      );
+      const application = rows[0];
+      if (!application) {
+        return { ok: false as const, error: "Application not found." };
+      }
+      if (application.enrollment_status === "active") {
+        return {
+          ok: false as const,
+          error: "Cannot reject — this enrollment is already accepted. Revoke access instead.",
+        };
+      }
+      if (application.enrollment_status !== "pending") {
+        return {
+          ok: false as const,
+          error: `Already processed — current status: ${application.enrollment_status}.`,
+        };
+      }
+
+      const [result] = await connection.execute<ResultSetHeader>(
+        `UPDATE enrollments
+         SET enrollment_status = 'cancelled', rejected_at = NOW(), rejected_by = ?
+         WHERE id = ? AND enrollment_status = 'pending'`,
+        [adminUid, id],
+      );
+      if (result.affectedRows !== 1) {
+        return {
+          ok: false as const,
+          error: "Another admin just processed this application.",
+        };
+      }
+      return { ok: true as const, message: "Application rejected." };
+    });
+  } catch (error) {
+    console.error("rejectEnrollmentApplication failed:", error);
+    return { ok: false, error: "Failed to reject the application." };
   }
 }
 
