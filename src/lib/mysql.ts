@@ -71,6 +71,25 @@ export async function exec(
   return result;
 }
 
+/**
+ * MySQL-safe "add column if missing". MariaDB's `ADD COLUMN IF NOT EXISTS`
+ * is not supported by Azure MySQL, so callers self-heal through this instead.
+ * `definition` includes the column name, e.g. "`title` VARCHAR(255) NULL".
+ */
+export async function ensureColumn(
+  table: string,
+  column: string,
+  definition: string,
+): Promise<void> {
+  const rows = await query<{ n: number }[]>(
+    `SELECT COUNT(*) AS n FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
+    [table, column],
+  );
+  if ((rows[0]?.n ?? 0) > 0) return;
+  await exec(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
+}
+
 export function parseDate(raw: unknown): string {
   if (raw instanceof Date) return raw.toISOString();
   if (typeof raw === "string") {

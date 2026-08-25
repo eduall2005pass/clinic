@@ -1,4 +1,4 @@
-import { exec, parseJsonColumn, query } from "@/lib/mysql";
+import { exec, parseJsonColumn, query, ensureColumn } from "@/lib/mysql";
 
 // Admin Panel → Exams. Exams, question bank, enrollments, results and
 // settings all live in MySQL. `exam_questions.exam_id = NULL` marks a
@@ -200,7 +200,7 @@ async function ensureTables(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   // Exams created before end-time support need the column added.
   try {
-    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS ends_at DATETIME NULL AFTER scheduled_at`);
+    await ensureColumn("exams", "ends_at", "DATETIME NULL AFTER scheduled_at");
   } catch {
     // Best effort — column may already exist.
   }
@@ -214,20 +214,20 @@ async function ensureTables(): Promise<void> {
   }
   // Chapter linkage for the student course-content Exam card.
   try {
-    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS chapter_id VARCHAR(64) NULL AFTER subject`);
+    await ensureColumn("exams", "chapter_id", "VARCHAR(64) NULL AFTER subject");
   } catch {
     // Best effort — column may already exist.
   }
   // Admin-controlled exam ordering inside a chapter.
   try {
-    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0 AFTER chapter_id`);
+    await ensureColumn("exams", "sort_order", "INT NOT NULL DEFAULT 0 AFTER chapter_id");
   } catch {
     // Best effort — column may already exist.
   }
   // Public exam page content managed from the Admin Panel.
   try {
-    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS description TEXT NULL AFTER title`);
-    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS banner_url VARCHAR(1024) NULL AFTER description`);
+    await ensureColumn("exams", "description", "TEXT NULL AFTER title");
+    await ensureColumn("exams", "banner_url", "VARCHAR(1024) NULL AFTER description");
   } catch {
     // Best effort — columns may already exist.
   }
@@ -591,9 +591,9 @@ async function ensureResultTables(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   // Databases created before the richer result storage need these columns.
   try {
-    await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS time_taken_seconds INT NULL`);
-    await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS merit_position INT NULL`);
-    await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS details JSON NULL`);
+    await ensureColumn("exam_results", "time_taken_seconds", "INT NULL");
+    await ensureColumn("exam_results", "merit_position", "INT NULL");
+    await ensureColumn("exam_results", "details", "JSON NULL");
   } catch {
     // Best effort — columns may already exist.
   }

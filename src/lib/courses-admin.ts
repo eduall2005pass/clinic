@@ -1,4 +1,4 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, query, ensureColumn } from "@/lib/mysql";
 import { removeFile, isLocalUpload } from "@/lib/storage";
 
 // Admin Panel → Courses. The full catalog lives in MySQL (`catalog_courses`).
@@ -163,7 +163,7 @@ async function ensureTables(): Promise<void> {
   // Databases created before the featured flag need the column added.
   try {
     await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS is_featured TINYINT(1) NOT NULL DEFAULT 0`,
+      `ensureColumn("catalog_courses", "is_featured", "TINYINT(1) NOT NULL DEFAULT 0")`,
     );
   } catch {
     // Best effort — column may already exist.
@@ -171,7 +171,7 @@ async function ensureTables(): Promise<void> {
   // Course-wise content structure (direct / paper / subject selection).
   try {
     await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS content_layout ENUM('auto','direct','paper','subject') NOT NULL DEFAULT 'auto' AFTER availability`,
+      `ensureColumn("catalog_courses", "content_layout", "ENUM('auto','direct','paper','subject') NOT NULL DEFAULT 'auto' AFTER availability")`,
     );
   } catch {
     // Best effort — column may already exist.

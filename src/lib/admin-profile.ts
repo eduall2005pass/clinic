@@ -1,4 +1,4 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, query, ensureColumn } from "@/lib/mysql";
 import { saveFile, removeFile, isLocalUpload } from "@/lib/storage";
 
 // Admin Panel → Profile. Display profile lives in the `admins` table;
@@ -49,8 +49,8 @@ export async function fetchAdminProfile(uid: string): Promise<AdminProfile | nul
 }
 
 async function ensureProfileColumns(): Promise<void> {
-  await exec(`ALTER TABLE admins ADD COLUMN IF NOT EXISTS photo_url VARCHAR(1024) NULL`);
-  await exec(`ALTER TABLE admins ADD COLUMN IF NOT EXISTS phone_number VARCHAR(32) NULL`);
+  await ensureColumn("admins", "photo_url", "VARCHAR(1024) NULL");
+  await ensureColumn("admins", "phone_number", "VARCHAR(32) NULL");
 }
 
 export async function updateAdminProfile(

@@ -1,4 +1,4 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, query, ensureColumn } from "@/lib/mysql";
 import { saveFile } from "@/lib/storage";
 
 export const BANNER_STORAGE_DIR = "website-banners";
@@ -73,12 +73,9 @@ async function ensureBannersTable(): Promise<void> {
   );
   // Older databases may pre-date the title/is_active columns.
   try {
-    await exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS title VARCHAR(255) NULL");
-    await exec(
-      "ALTER TABLE banners ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1",
-    );
-    await exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS start_at DATETIME NULL");
-    await exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS end_at DATETIME NULL");
+    await ensureColumn("banners", "title", "VARCHAR(255) NULL");
+    await ensureColumn("banners", "is_active", "TINYINT(1) NOT NULL DEFAULT 1\", ); await ensureColumn(\"banners\", \"start_at\", \"DATETIME NULL");
+    await ensureColumn("banners", "end_at", "DATETIME NULL");
   } catch {
     // Best effort — column may already exist.
   }
