@@ -226,13 +226,14 @@ function PaperSelection({
       name: paper.name,
       chapters: chaptersForPaper(subject, paper.id),
     })),
-    // Chapters without a paper fall into a General group so nothing is lost.
-    ...(subject.chapters.some((chapter) => !chapter.paperId)
+    // Chapters without a paper (or with a missing/inactive paper) fall into
+    // a General group so nothing is ever lost.
+    ...(orphanChapters(subject).length > 0
       ? [{
           id: GENERAL_PAPER_ID,
           kindLabel: "General",
           name: "All Chapters",
-          chapters: chaptersForPaper(subject, GENERAL_PAPER_ID),
+          chapters: orphanChapters(subject),
         }]
       : []),
   ];
@@ -440,8 +441,20 @@ function findSubject(course: CourseLearningData, subjectId: string): SubjectTree
 }
 
 function chaptersForPaper(subject: SubjectTree, paperId: string): ChapterItem[] {
-  return subject.chapters.filter((chapter) =>
-    paperId === GENERAL_PAPER_ID ? !chapter.paperId : chapter.paperId === paperId,
+  if (paperId === GENERAL_PAPER_ID) return orphanChapters(subject);
+  return subject.chapters.filter((chapter) => chapter.paperId === paperId);
+}
+
+/**
+ * Chapters without a paper, or whose paper row is missing/inactive. These
+ * must NEVER disappear from the UI (a deleted/deactivated paper used to make
+ * its chapters invisible → students saw "no content"), so they always fall
+ * back to the General group.
+ */
+function orphanChapters(subject: SubjectTree): ChapterItem[] {
+  const validPaperIds = new Set(subject.papers.map((paper) => paper.id));
+  return subject.chapters.filter(
+    (chapter) => !chapter.paperId || !validPaperIds.has(chapter.paperId),
   );
 }
 
@@ -521,13 +534,14 @@ function SubjectPapersContent({
       name: paper.name,
       chapters: chaptersForPaper(subject, paper.id),
     })),
-    // Chapters without a paper go into a General group so nothing is lost.
-    ...(subject.chapters.some((chapter) => !chapter.paperId)
+    // Chapters without a paper (or with a missing/inactive paper) go into a
+    // General group so nothing is lost.
+    ...(orphanChapters(subject).length > 0
       ? [{
           id: GENERAL_PAPER_ID,
           kindLabel: "General",
           name: "All Chapters",
-          chapters: chaptersForPaper(subject, GENERAL_PAPER_ID),
+          chapters: orphanChapters(subject),
         }]
       : []),
   ];
