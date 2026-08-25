@@ -78,6 +78,7 @@ export const adminCategories: AdminCategory[] = [
       { label: "Categories", href: "/admin/courses/categories" },
       { label: "Subjects", href: "/admin/courses/subjects" },
       { label: "Chapters", href: "/admin/courses/chapters" },
+      { label: "Papers & Materials", href: "/admin/courses/papers" },
       { label: "Classes", href: "/admin/courses/classes" },
       { label: "Pricing", href: "/admin/courses/pricing" },
       { label: "Discounts", href: "/admin/courses/discounts" },

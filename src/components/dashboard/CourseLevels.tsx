@@ -27,7 +27,7 @@ const materialTypeLabels: Record<string, string> = {
 /** Pseudo-id for chapters that belong to no paper/segment. */
 export const GENERAL_PAPER_ID = "general";
 
-function useCourseLearning(slug: string) {
+export function useCourseLearning(slug: string) {
   const { user, authLoading } = useAuth();
   const [course, setCourse] = useState<CourseLearningData | null>(null);
   const [state, setState] = useState<LoadState>("loading");
@@ -145,7 +145,7 @@ function ProgressBar({ percent }: { percent: number }) {
   );
 }
 
-function BackLink({ href, label }: { href: string; label: string }) {
+export function BackLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
@@ -170,7 +170,7 @@ function countsOf(chapters: ChapterItem[]) {
   );
 }
 
-function recordRecentView(
+export function recordRecentView(
   user: { getIdToken: () => Promise<string> } | null,
   itemType: "course" | "class" | "exam" | "material",
   itemId: string,
@@ -193,6 +193,109 @@ function recordRecentView(
 
 /* ── Level 1: Course → Subjects ─────────────────────────────────────────── */
 
+
+/**
+ * Paper Selection — exactly one card per paper/segment (e.g.
+ * "জীববিজ্ঞান ১ম পত্র (উদ্ভিদবিজ্ঞান)" / "জীববিজ্ঞান ২য় পত্র (প্রাণীবিজ্ঞান)").
+ * Papers and their chapters are managed from the Admin Panel.
+ */
+function PaperSelection({
+  slug,
+  subject,
+  backHref,
+  backLabel,
+  heading,
+}: {
+  slug: string;
+  subject: SubjectTree;
+  backHref: string;
+  backLabel: string;
+  heading?: string;
+}) {
+  const showBack = Boolean(backHref && backLabel);
+  const base = `/dashboard/enrolled-courses/${encodeURIComponent(slug)}/subjects/${encodeURIComponent(subject.id)}`;
+  const entries: {
+    id: string;
+    kindLabel: string;
+    name: string;
+    chapters: ChapterItem[];
+  }[] = [
+    ...subject.papers.map((paper) => ({
+      id: paper.id,
+      kindLabel: paper.kind === "segment" ? "Segment" : "Paper",
+      name: paper.name,
+      chapters: chaptersForPaper(subject, paper.id),
+    })),
+    // Chapters without a paper fall into a General group so nothing is lost.
+    ...(subject.chapters.some((chapter) => !chapter.paperId)
+      ? [{
+          id: GENERAL_PAPER_ID,
+          kindLabel: "General",
+          name: "All Chapters",
+          chapters: chaptersForPaper(subject, GENERAL_PAPER_ID),
+        }]
+      : []),
+  ];
+
+  return (
+    <div>
+      {showBack && (
+        <BackLink href={backHref} label={backLabel} />
+      )}
+      <header className="mt-5">
+        <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
+          Paper Selection
+        </p>
+        <h1 className="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
+          {heading ?? subject.name}
+        </h1>
+        <p className="mt-1 text-sm text-neutral-400">
+          Select your paper to open its classes, exams and materials.
+        </p>
+      </header>
+
+      {entries.length === 0 ? (
+        <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
+          <p className="font-semibold text-heading">Content coming soon</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
+            No papers or chapters have been published for this subject yet.
+          </p>
+        </div>
+      ) : (
+        <ul className="mt-6 space-y-3">
+          {entries.map((entry) => {
+            const counts = countsOf(entry.chapters);
+            return (
+              <li key={entry.id}>
+                <Link
+                  href={`${base}/papers/${encodeURIComponent(entry.id)}`}
+                  className="group flex items-center gap-4 rounded-2xl border border-ink/10 bg-dark-900 p-4 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/30 active:scale-[0.99] sm:p-5"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                      {entry.kindLabel}
+                    </span>
+                    <span className="block truncate text-base font-extrabold text-heading transition group-hover:text-primary-400">
+                      {entry.name}
+                    </span>
+                    <span className="mt-1.5 block">
+                      <ContentCountBadges counts={counts} />
+                    </span>
+                  </span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
+                  </svg>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
 export function CourseSubjectsView({ slug }: { slug: string }) {
   return (
     <PermissionGate
@@ -208,6 +311,10 @@ export function CourseSubjectsView({ slug }: { slug: string }) {
 function CourseSubjectsContent({ slug }: { slug: string }) {
   const { course, state, load, forbiddenKind } = useCourseLearning(slug);
   const { user } = useAuth();
+  // Single-subject course (e.g. Biology) skips the subject list and opens the
+  // Paper Selection page directly.
+  const singleSubject =
+    course && course.subjects.length === 1 ? course.subjects[0] : null;
 
   // Opening the course records it in the student's Recently Viewed history.
   useEffect(() => {
@@ -262,12 +369,20 @@ function CourseSubjectsContent({ slug }: { slug: string }) {
         </div>
       </header>
 
-      {/* Subject list */}
-      <div className="mt-10">
-        <h2 className="text-lg font-bold text-heading">Subjects</h2>
-        <p className="mt-1 text-xs text-neutral-400">
-          Choose a subject to see its papers / segments.
-        </p>
+      {singleSubject ? (
+        <PaperSelection
+          slug={slug}
+          subject={singleSubject}
+          backHref="/dashboard/enrolled-courses"
+          backLabel="My Enrolled Courses"
+          heading={course.name}
+        />
+      ) : (
+        <div className="mt-10">
+          <h2 className="text-lg font-bold text-heading">Subjects</h2>
+          <p className="mt-1 text-xs text-neutral-400">
+            Choose a subject to see its papers / segments.
+          </p>
 
         {course.subjects.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
@@ -312,7 +427,8 @@ function CourseSubjectsContent({ slug }: { slug: string }) {
             })}
           </ul>
         )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -478,14 +594,6 @@ function SubjectPapersContent({
 
 /* ── Level 3: Paper → Classes / Exams / Materials, grouped by Chapter ──── */
 
-type TabKey = "classes" | "exams" | "materials";
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "classes", label: "Classes" },
-  { key: "exams", label: "Exams" },
-  { key: "materials", label: "Materials" },
-];
-
 export function PaperContentView({
   slug,
   subjectId,
@@ -518,7 +626,10 @@ function PaperChapterView({
   const { course, state, load, forbiddenKind } = useCourseLearning(slug);
   const subject = course ? findSubject(course, subjectId) : null;
   const { user } = useAuth();
-  const [tab, setTab] = useState<TabKey>("classes");
+  // Per-card chapter selection — one independent selection per content card.
+  const [classChapterId, setClassChapterId] = useState<string | null>(null);
+  const [examChapterId, setExamChapterId] = useState<string | null>(null);
+  const [materialChapterId, setMaterialChapterId] = useState<string | null>(null);
 
   const chapters = useMemo(() => {
     if (!subject) return [];
@@ -549,16 +660,7 @@ function PaperChapterView({
       : paper
         ? `${paper.kind === "segment" ? "Segment" : "Paper"} — ${paper.name}`
         : "Paper";
-  const counts = countsOf(chapters);
   const base = `/dashboard/enrolled-courses/${encodeURIComponent(slug)}/subjects/${encodeURIComponent(subjectId)}`;
-
-  const visibleChapters = chapters.filter((chapter) =>
-    tab === "classes"
-      ? chapter.classes.length > 0
-      : tab === "exams"
-        ? chapter.exams.length > 0
-        : chapter.materials.length > 0,
-  );
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -572,161 +674,248 @@ function PaperChapterView({
           {subject.name}
         </h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Organized by chapter — pick a class, exam or material below.
+          Choose a card, then pick a chapter to open its content.
         </p>
       </header>
 
-      {/* Tabs */}
-      <div className="mt-6 -mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-        <div className="flex flex-nowrap gap-2 sm:flex-wrap">
-          {TABS.map((item) => {
-            const active = tab === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setTab(item.key)}
-                aria-pressed={active}
-                className={`shrink-0 rounded-full px-5 py-2 text-sm font-bold transition ${
-                  active
-                    ? "bg-primary-600 text-white shadow-md shadow-primary-900/40 hover:bg-primary-700"
-                    : "border border-ink/15 bg-ink/5 font-semibold text-neutral-400 hover:border-primary-500/60 hover:text-heading"
-                }`}
-              >
-                {item.label}
-                <span className="ml-1.5 text-xs opacity-70">
-                  {counts[item.key]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Exactly 3 cards — Class / Exam / Materials. Chapter is the last level. */}
+      <div className="mt-8 space-y-6">
+        <ContentCard
+          title="Class"
+          iconClass="bg-sky-500/15 text-sky-400"
+          iconPath="M8 5v14l11-7z"
+          filledIcon
+          chapters={chapters.filter((chapter) => chapter.classes.length > 0)}
+          countKey="classes"
+          selectedId={classChapterId}
+          onSelect={(id) =>
+            setClassChapterId((current) => (current === id ? null : id))
+          }
+        >
+          {(chapter) => (
+            <ul className="space-y-2">
+              {chapter.classes.map((cls, index) => (
+                <li key={cls.id}>
+                  <Link
+                    href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/classes/${encodeURIComponent(cls.id)}`}
+                    onClick={() => recordRecentView(user, "class", cls.id)}
+                    className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                  >
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${cls.completed ? "bg-emerald-500/15 text-emerald-400" : "bg-primary-600/15 text-primary-500"}`}>
+                      {cls.completed ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
+                        {index + 1}. {cls.title}
+                      </span>
+                      <span className="text-[11px] text-neutral-500">
+                        {cls.durationMinutes > 0 ? cls.durationMinutes + " min" : "Class"}
+                        {cls.lastSeenSeconds > 30 && !cls.completed ? " · resume" : ""}
+                      </span>
+                    </span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
+                    </svg>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ContentCard>
+
+        <ContentCard
+          title="Exam"
+          iconClass="bg-violet-500/15 text-violet-400"
+          iconPath="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+          chapters={chapters.filter((chapter) => chapter.exams.length > 0)}
+          countKey="exams"
+          selectedId={examChapterId}
+          onSelect={(id) =>
+            setExamChapterId((current) => (current === id ? null : id))
+          }
+        >
+          {(chapter) => (
+            <ul className="space-y-2">
+              {chapter.exams.map((exam, index) => (
+                <li key={exam.id}>
+                  <Link
+                    href="/exam"
+                    onClick={() => recordRecentView(user, "exam", exam.id)}
+                    className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-400">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
+                        {index + 1}. {exam.title}
+                      </span>
+                      <span className="text-[11px] text-neutral-500">
+                        Exam · {exam.durationMinutes} min · {exam.totalMarks} marks
+                      </span>
+                    </span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
+                    </svg>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ContentCard>
+
+        <ContentCard
+          title="Materials"
+          iconClass="bg-emerald-500/15 text-emerald-400"
+          iconPath="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+          chapters={chapters.filter((chapter) => chapter.materials.length > 0)}
+          countKey="materials"
+          selectedId={materialChapterId}
+          onSelect={(id) =>
+            setMaterialChapterId((current) => (current === id ? null : id))
+          }
+        >
+          {(chapter) => (
+            <ul className="space-y-2">
+              {chapter.materials.map((material, index) => (
+                <li key={material.id}>
+                  <a
+                    href={material.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() =>
+                      recordRecentView(user, "material", String(material.id))
+                    }
+                    className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                      </svg>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
+                        {index + 1}. {material.title}
+                      </span>
+                      <span className="text-[11px] text-neutral-500">
+                        {materialTypeLabels[material.materialType] ?? "Material"}
+                      </span>
+                    </span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5h7m0 0v7m0-7L10 16" />
+                    </svg>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ContentCard>
       </div>
-
-      {/* Content grouped BY CHAPTER — chapter is the last level. */}
-      {visibleChapters.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
-          <p className="font-semibold text-heading">Nothing here yet</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
-            No {tab} have been published in this paper / segment. Please check back later.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-6 space-y-8">
-          {visibleChapters.map((chapter) => (
-            <div key={chapter.id}>
-              <h2 className="flex items-center gap-2 text-base font-extrabold text-heading">
-                <span className="h-4 w-1 rounded-full bg-primary-500" />
-                {chapter.name}
-              </h2>
-
-              {tab === "classes" && (
-                <ul className="mt-3 space-y-2">
-                  {chapter.classes.map((cls) => (
-                    <li key={cls.id}>
-                      <Link
-                        href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/classes/${encodeURIComponent(cls.id)}`}
-                        onClick={() => recordRecentView(user, "class", cls.id)}
-                        className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
-                      >
-                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${cls.completed ? "bg-emerald-500/15 text-emerald-400" : "bg-primary-600/15 text-primary-500"}`}>
-                          {cls.completed ? (
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
-                          )}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
-                            {cls.title}
-                          </span>
-                          <span className="text-[11px] text-neutral-500">
-                            {cls.durationMinutes > 0 ? `${cls.durationMinutes} min` : "Class"}
-                            {cls.lastSeenSeconds > 30 && !cls.completed ? " · resume" : ""}
-                          </span>
-                        </span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
-                        </svg>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {tab === "exams" && (
-                <ul className="mt-3 space-y-2">
-                  {chapter.exams.map((exam) => (
-                    <li key={exam.id}>
-                      <Link
-                        href="/exam"
-                        onClick={() => recordRecentView(user, "exam", exam.id)}
-                        className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-400">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                          </svg>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
-                            {exam.title}
-                          </span>
-                          <span className="text-[11px] text-neutral-500">
-                            Exam · {exam.durationMinutes} min · {exam.totalMarks} marks
-                          </span>
-                        </span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
-                        </svg>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {tab === "materials" && (
-                <ul className="mt-3 space-y-2">
-                  {chapter.materials.map((material) => (
-                    <li key={material.id}>
-                      <a
-                        href={material.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() =>
-                          recordRecentView(user, "material", String(material.id))
-                        }
-                        className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                          </svg>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
-                            {material.title}
-                          </span>
-                          <span className="text-[11px] text-neutral-500">
-                            {materialTypeLabels[material.materialType] ?? "Material"}
-                          </span>
-                        </span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M14 5h7m0 0v7m0-7L10 16" />
-                        </svg>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </section>
+  );
+}
+
+/** One of the three paper-content cards: title + clickable chapter buttons +
+ *  the selected chapter's ordered content list. */
+function ContentCard({
+  title,
+  iconClass,
+  iconPath,
+  filledIcon = false,
+  chapters,
+  countKey,
+  selectedId,
+  onSelect,
+  children,
+}: {
+  title: string;
+  iconClass: string;
+  iconPath: string;
+  filledIcon?: boolean;
+  chapters: ChapterItem[];
+  countKey: "classes" | "exams" | "materials";
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  children: (chapter: ChapterItem) => React.ReactNode;
+}) {
+  const selected = chapters.find((chapter) => chapter.id === selectedId) ?? null;
+  const total = chapters.reduce(
+    (sum, chapter) => sum + chapter[countKey].length,
+    0,
+  );
+
+  return (
+    <article className="rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20">
+      <header className="flex items-center gap-3 border-b border-ink/10 px-5 py-4">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>
+          <svg viewBox="0 0 24 24" fill={filledIcon ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+            <path d={iconPath} />
+          </svg>
+        </span>
+        <h2 className="text-lg font-extrabold text-heading">{title}</h2>
+        <span className="ml-auto rounded-full bg-dark-850 px-2.5 py-0.5 text-xs font-semibold text-neutral-400">
+          {total} item{total === 1 ? "" : "s"}
+        </span>
+      </header>
+
+      <div className="px-5 py-4">
+        {chapters.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-ink/15 bg-dark-950/60 p-5 text-center text-sm text-neutral-400">
+            No {title.toLowerCase()} published in this paper yet.
+          </p>
+        ) : (
+          <>
+            {/* Chapter buttons */}
+            <div className="flex flex-wrap gap-2">
+              {chapters.map((chapter) => {
+                const active = selectedId === chapter.id;
+                return (
+                  <button
+                    key={chapter.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onSelect(chapter.id)}
+                    className={`rounded-xl px-4 py-2 text-sm font-bold transition active:scale-[0.98] ${
+                      active
+                        ? "bg-primary-600 text-white shadow-md shadow-primary-900/40 hover:bg-primary-700"
+                        : "border border-ink/15 bg-ink/5 font-semibold text-neutral-300 hover:border-primary-500/60 hover:text-heading"
+                    }`}
+                  >
+                    {chapter.name}
+                    <span className="ml-1.5 text-xs opacity-70">
+                      {chapter[countKey].length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selected chapter content — organized sequence */}
+            {selected ? (
+              <div className="mt-4 rounded-xl border border-ink/10 bg-dark-950/60 p-3.5">
+                <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                  {selected.name}
+                </p>
+                {children(selected)}
+              </div>
+            ) : (
+              <p className="mt-4 text-xs text-neutral-500">
+                Select a chapter above to view its {title.toLowerCase()}.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </article>
   );
 }

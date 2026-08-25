@@ -29,6 +29,8 @@ export type Exam = {
   answerKey: Record<string, number> | null;
   /** Courses whose enrolled students may take this exam (kind = "enrolled"). */
   courseIds: string[];
+  /** Chapter this exam belongs to (course content Exam card). */
+  chapterId: string | null;
 };
 
 export type ExamQuestion = {
@@ -86,6 +88,7 @@ type ExamRow = {
   scheduled_at: Date | string | null;
   ends_at?: Date | string | null;
   answer_key: string | null;
+  chapter_id: string | null;
 };
 
 type QuestionRow = {
@@ -144,6 +147,7 @@ function rowToExam(row: ExamRow): Exam {
     endsAt: toIso(row.ends_at),
     answerKey,
     courseIds: [],
+    chapterId: row.chapter_id ?? null,
   };
 }
 
@@ -196,6 +200,12 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — already widened.
   }
+  // Chapter linkage for the student course-content Exam card.
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS chapter_id VARCHAR(64) NULL AFTER subject`);
+  } catch {
+    // Best effort — column may already exist.
+  }
   await exec(`CREATE TABLE IF NOT EXISTS exam_courses (
     exam_id VARCHAR(64) NOT NULL,
     course_id VARCHAR(191) NOT NULL,
@@ -215,8 +225,9 @@ async function ensureTables(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 }
 
-const EXAM_COLUMNS = `id, title, kind, batch_id, subject, course_type, duration_minutes,
-  total_marks, negative_marks, question_count, status, scheduled_at, ends_at, answer_key`;
+const EXAM_COLUMNS = `id, title, kind, batch_id, subject, chapter_id, course_type,
+  duration_minutes, total_marks, negative_marks, question_count, status,
+  scheduled_at, ends_at, answer_key`;
 
 // ── Exams CRUD ───────────────────────────────────────────────────────────
 
@@ -305,12 +316,14 @@ export async function saveExam(
   if (kind === "enrolled" && courseIds.length === 0) {
     throw new Error("Assign at least one course to an enrolled exam.");
   }
+  const chapterId = asString(input.chapterId) || null;
 
   await exec(
     `INSERT INTO exams (${EXAM_COLUMNS}, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE title = VALUES(title), kind = VALUES(kind), batch_id = VALUES(batch_id),
-       subject = VALUES(subject), course_type = VALUES(course_type), duration_minutes = VALUES(duration_minutes),
+       subject = VALUES(subject), chapter_id = VALUES(chapter_id), course_type = VALUES(course_type),
+       duration_minutes = VALUES(duration_minutes),
        total_marks = VALUES(total_marks), negative_marks = VALUES(negative_marks),
        question_count = VALUES(question_count), status = VALUES(status),
        scheduled_at = VALUES(scheduled_at), ends_at = VALUES(ends_at),
@@ -321,6 +334,7 @@ export async function saveExam(
       kind,
       asString(input.batchId),
       asString(input.subject),
+      chapterId,
       input.courseType === "Admission" ? "Admission" : "Academic",
       Math.max(1, Number(input.durationMinutes) || 30),
       Number(totals[0]?.marks ?? input.totalMarks) || 0,
@@ -349,6 +363,7 @@ export async function saveExam(
   if (!rows[0]) throw new Error("Failed to save the exam.");
   const exam = rowToExam(rows[0]);
   exam.courseIds = courseIds;
+  exam.chapterId = chapterId;
   return exam;
 }
 

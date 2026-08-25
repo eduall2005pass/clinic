@@ -1,0 +1,196 @@
+"use client";
+
+import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
+import {
+  BackLink,
+  LevelStates,
+  recordRecentView,
+  useCourseLearning,
+} from "@/components/dashboard/CourseLevels";
+import type { ContentKind } from "@/components/dashboard/CourseContentCards";
+import { contentBase, flatChapters } from "@/components/dashboard/CourseContentCards";
+
+const KIND_META: Record<ContentKind, { title: string; emptyLabel: string }> = {
+  classes: { title: "Classes", emptyLabel: "classes" },
+  exams: { title: "Exams", emptyLabel: "exams" },
+  materials: { title: "Materials", emptyLabel: "materials" },
+};
+
+function EmptyNotice({ what }: { what: string }) {
+  return (
+    <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
+      <p className="font-semibold text-heading">Nothing here yet</p>
+      <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
+        No {what} have been published in this chapter. Please check back later.
+      </p>
+    </div>
+  );
+}
+
+export default function ChapterDirectContentView({
+  slug,
+  chapterId,
+  kind,
+}: {
+  slug: string;
+  chapterId: string;
+  kind: ContentKind;
+}) {
+  const { user } = useAuth();
+  const { course, state, load, forbiddenKind } = useCourseLearning(slug);
+
+  if (state !== "ready" || !course) {
+    return (
+      <LevelStates
+        state={state}
+        load={load}
+        slug={slug}
+        forbiddenKind={forbiddenKind}
+      />
+    );
+  }
+
+  const chapter =
+    flatChapters(course).find((item) => item.id === chapterId) ?? null;
+  const meta = KIND_META[kind];
+
+  if (!chapter) {
+    return (
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center">
+          <p className="font-bold text-yellow-300">Chapter not found</p>
+          <BackLink href={contentBase(slug)} label={`Back to ${course.name}`} />
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+      <BackLink href={contentBase(slug)} label={course.name} />
+
+      <header className="mt-5">
+        <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
+          {meta.title}
+        </p>
+        <h1 className="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
+          {chapter.name}
+        </h1>
+        <p className="mt-1 text-sm text-neutral-400">
+          All {meta.emptyLabel} in this chapter, in order.
+        </p>
+      </header>
+
+      {/* ── Classes ─────────────────────────────────────────────────────── */}
+      {kind === "classes" &&
+        (chapter.classes.length === 0 ? (
+          <EmptyNotice what="classes" />
+        ) : (
+          <ol className="mt-6 space-y-2">
+            {chapter.classes.map((cls, index) => (
+              <li key={cls.id}>
+                <Link
+                  href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/classes/${encodeURIComponent(cls.id)}`}
+                  onClick={() => recordRecentView(user, "class", cls.id)}
+                  className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                >
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-extrabold ${
+                      cls.completed
+                        ? "bg-emerald-500/15 text-emerald-400"
+                        : "bg-primary-600/15 text-primary-500"
+                    }`}
+                  >
+                    {cls.completed ? "✓" : index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
+                      {cls.title}
+                    </span>
+                    <span className="text-[11px] text-neutral-500">
+                      {cls.durationMinutes > 0 ? `${cls.durationMinutes} min` : "Class"}
+                      {cls.lastSeenSeconds > 30 && !cls.completed ? " · resume" : ""}
+                    </span>
+                  </span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
+                  </svg>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        ))}
+
+      {/* ── Exams ───────────────────────────────────────────────────────── */}
+      {kind === "exams" &&
+        (chapter.exams.length === 0 ? (
+          <EmptyNotice what="exams" />
+        ) : (
+          <ol className="mt-6 space-y-2">
+            {chapter.exams.map((exam, index) => (
+              <li key={exam.id}>
+                <Link
+                  href="/exam"
+                  onClick={() => recordRecentView(user, "exam", exam.id)}
+                  className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-sm font-extrabold text-violet-400">
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
+                      {exam.title}
+                    </span>
+                    <span className="text-[11px] text-neutral-500">
+                      Exam · {exam.durationMinutes} min · {exam.totalMarks} marks
+                    </span>
+                  </span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
+                  </svg>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        ))}
+
+      {/* ── Materials (PDFs open in a new tab) ──────────────────────────── */}
+      {kind === "materials" &&
+        (chapter.materials.length === 0 ? (
+          <EmptyNotice what="materials" />
+        ) : (
+          <ol className="mt-6 space-y-2">
+            {chapter.materials.map((material, index) => (
+              <li key={material.id}>
+                <a
+                  href={material.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() =>
+                    recordRecentView(user, "material", String(material.id))
+                  }
+                  className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-sm font-extrabold text-emerald-400">
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
+                      {material.title}
+                    </span>
+                    <span className="text-[11px] text-neutral-500">
+                      {material.materialType.toUpperCase()} · Material {index + 1}
+                    </span>
+                  </span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5h7m0 0v7m0-7L10 16" />
+                  </svg>
+                </a>
+              </li>
+            ))}
+          </ol>
+        ))}
+    </section>
+  );
+}

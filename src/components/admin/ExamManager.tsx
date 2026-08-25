@@ -31,6 +31,7 @@ export type Exam = {
   endsAt: string | null;
   answerKey: Record<string, number> | null;
   courseIds?: string[];
+  chapterId?: string | null;
 };
 
 const EMPTY = {
@@ -39,6 +40,7 @@ const EMPTY = {
   kind: "public" as Exam["kind"],
   batchId: "hsc-28",
   subject: "",
+  chapterId: "",
   courseType: "Academic" as "Academic" | "Admission",
   durationMinutes: "30",
   negativeMarks: "0.25",
@@ -49,6 +51,7 @@ const EMPTY = {
 };
 
 type CourseOption = { slug: string; name: string };
+type ChapterOption = { id: string; name: string };
 
 export default function ExamManager({
   title,
@@ -68,6 +71,7 @@ export default function ExamManager({
   const [form, setForm] = useState(EMPTY);
   const [courseIds, setCourseIds] = useState<string[]>([]);
   const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
+  const [chapterOptions, setChapterOptions] = useState<ChapterOption[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -99,6 +103,15 @@ export default function ExamManager({
       .catch(() => setCourseOptions([]));
   }, [gate.ready, allowEnrolled]);
 
+  // Chapter options — exams attach to a chapter for the course-content Exam card.
+  useEffect(() => {
+    if (!gate.ready) return;
+    fetch("/api/admin/chapters", { cache: "no-store", headers: gate.headers })
+      .then((response) => response.json())
+      .then((data: { chapters?: ChapterOption[] }) => setChapterOptions(data.chapters ?? []))
+      .catch(() => setChapterOptions([]));
+  }, [gate.ready]); // eslint-disable-line react-hooks/exhaustive-deps -- gate.headers is stable
+
   if (!gate.ready) {
     return gate.denied ? (
       <AccessMessage title="Administrators only" message="Exam management is restricted to authorized administrators." actionLabel="Back to Admin Home" actionHref="/admin" />
@@ -122,6 +135,7 @@ export default function ExamManager({
       kind: exam.kind,
       batchId: exam.batchId || "hsc-28",
       subject: exam.subject,
+      chapterId: exam.chapterId ?? "",
       courseType: exam.courseType,
       durationMinutes: String(exam.durationMinutes),
       negativeMarks: String(exam.negativeMarks),
@@ -256,7 +270,10 @@ export default function ExamManager({
                     </span>
                   </div>
                   <p className="mt-2 text-xs font-semibold text-zinc-500">
-                    {exam.kind} · {exam.subject || "general"} · {exam.questionCount} questions ·{" "}
+                    {exam.kind} · {exam.subject || "general"}
+                    {exam.chapterId &&
+                      ` · ${chapterOptions.find((chapter) => chapter.id === exam.chapterId)?.name ?? exam.chapterId}`}{" "}
+                    · {exam.questionCount} questions ·{" "}
                     {exam.totalMarks} marks · {exam.durationMinutes} min
                     {exam.negativeMarks > 0 && ` · −${exam.negativeMarks} negative`}
                   </p>
@@ -387,6 +404,16 @@ export default function ExamManager({
                   }>
                   <option value="Academic">Academic</option>
                   <option value="Admission">Admission</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="ex-chapter">Chapter (course content)</label>
+                <select id="ex-chapter" className={inputClass} value={form.chapterId}
+                  onChange={(event) => setForm({ ...form, chapterId: event.target.value })}>
+                  <option value="">None</option>
+                  {chapterOptions.map((chapter) => (
+                    <option key={chapter.id} value={chapter.id}>{chapter.name}</option>
+                  ))}
                 </select>
               </div>
               <div>

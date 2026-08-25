@@ -71,7 +71,11 @@ function EnrolledCourseCard({ course }: { course: EnrolledCourseSummary }) {
         <div className="mt-auto pt-5">
           {isActive ? (
             <Link
-              href={`/dashboard/enrolled-courses/${encodeURIComponent(course.slug)}`}
+              href={
+                course.directContent
+                  ? `/dashboard/enrolled-courses/${encodeURIComponent(course.slug)}/content`
+                  : `/dashboard/enrolled-courses/${encodeURIComponent(course.slug)}`
+              }
               className="block w-full rounded-xl bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
             >
               View Course Content

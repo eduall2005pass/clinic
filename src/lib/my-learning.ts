@@ -14,6 +14,9 @@ export type EnrolledCourseSummary = {
   courseKind: "free" | "paid";
   enrollmentStatus: string;
   enrollmentDate: string;
+  /** True for SSC Biology / HSC Botany / HSC Zoology — they open the dedicated
+   *  Class / Exam / Materials content page instead of the subject drill-down. */
+  directContent: boolean;
   progress: {
     totalClasses: number;
     completedClasses: number;
@@ -141,6 +144,26 @@ export async function hasActiveEnrollment(
   return rows.length > 0;
 }
 
+/**
+ * Courses that use the dedicated Course Content page (Class / Exam / Materials
+ * cards with chapter buttons) instead of the subject → paper drill-down.
+ * Matched on the normalized course name/slug so it works regardless of the
+ * exact catalog wording ("SSC Biology", "HSC Botany", "HSC Zoology", …).
+ */
+const DIRECT_CONTENT_MATCHERS = ["sscbiology", "botany", "zoology"];
+
+export function usesDirectCourseContent(
+  name?: string | null,
+  slug?: string | null,
+): boolean {
+  const normalized = `${name ?? ""} ${slug ?? ""}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  return DIRECT_CONTENT_MATCHERS.some((matcher) =>
+    normalized.includes(matcher),
+  );
+}
+
 // ── Enrolled course list ──────────────────────────────────────────────────
 
 type EnrolledCourseRow = {
@@ -230,6 +253,10 @@ export async function getMyEnrolledCourses(
           row.enrollment_date instanceof Date
             ? row.enrollment_date.toISOString()
             : String(row.enrollment_date ?? ""),
+        directContent: usesDirectCourseContent(
+          toStringOrNull(row.name),
+          row.slug,
+        ),
         progress: {
           totalClasses,
           completedClasses,
@@ -265,6 +292,7 @@ export async function getMyEnrolledCourses(
         row.enrollment_date instanceof Date
           ? row.enrollment_date.toISOString()
           : String(row.enrollment_date ?? ""),
+      directContent: usesDirectCourseContent(toStringOrNull(row.name), row.slug),
       progress: { totalClasses: 0, completedClasses: 0, percent: 0 },
     }));
   }
