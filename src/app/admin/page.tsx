@@ -1,3 +1,4 @@
+import Link from "next/link";
 import BannerSlider from "@/components/home/BannerSlider";
 import Hero from "@/components/home/Hero";
 import FeaturedCourses from "@/components/home/FeaturedCourses";
@@ -199,30 +200,30 @@ export default async function AdminHomePage() {
       {/* Quick access to the remaining homepage-wide managers. */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="flex flex-wrap justify-center gap-3">
-          <a
+          <Link
             href="/admin/website/homepage"
             className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
           >
             Sections &amp; Ordering
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/homepage-courses"
             className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
           >
             Course Cards
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/mentors/all"
             className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
           >
             Add New Mentor
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/content/faq"
             className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
           >
             Add New FAQ
-          </a>
+          </Link>
         </div>
       </section>
     </div>
