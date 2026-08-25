@@ -47,7 +47,12 @@ export type ChapterItem = {
   paperId: string | null;
   classes: ClassItem[];
   materials: MaterialItem[];
-  exams: { id: string; title: string; durationMinutes: number; totalMarks: number }[];
+  exams: {
+    id: string;
+    title: string;
+    durationMinutes: number;
+    totalMarks: number;
+  }[];
 };
 
 export type PaperItem = {
@@ -97,7 +102,9 @@ function toStringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-async function loadProgress(uid: string): Promise<Map<string, { completed: boolean; lastSeenSeconds: number }>> {
+async function loadProgress(
+  uid: string,
+): Promise<Map<string, { completed: boolean; lastSeenSeconds: number }>> {
   const rows = await query<
     { class_id: string; completed: number; last_seen_seconds: number }[]
   >(
@@ -107,7 +114,10 @@ async function loadProgress(uid: string): Promise<Map<string, { completed: boole
   return new Map(
     rows.map((row) => [
       row.class_id,
-      { completed: row.completed === 1, lastSeenSeconds: toNumber(row.last_seen_seconds) },
+      {
+        completed: row.completed === 1,
+        lastSeenSeconds: toNumber(row.last_seen_seconds),
+      },
     ]),
   );
 }
@@ -167,26 +177,74 @@ export async function getMyEnrolledCourses(
     [uid],
   );
 
-  const progressRows = await query<{ course_slug: string; total: number; done: number }[]>(
-    `SELECT a.course_slug,
-            COUNT(cl.id) AS total,
-            SUM(CASE WHEN p.completed = 1 THEN 1 ELSE 0 END) AS done
-       FROM course_subject_assignments a
-       JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
-       JOIN course_classes cl ON cl.chapter_id = ch.id AND cl.is_active = 1
-       LEFT JOIN student_class_progress p
-              ON p.class_id = cl.id AND p.student_uid = ?
-      WHERE a.course_slug IN (${rows.map(() => "?").join(",") || "''"})
-      GROUP BY a.course_slug`,
-    [uid, ...rows.map((row) => row.slug)],
-  );
-  const progressMap = new Map(progressRows.map((row) => [row.course_slug, row]));
+  // No enrollment records → an EMPTY list, never an error. (Previously the
+  // progress query below ran even with zero enrollments, so a missing
+  // learning table turned "no courses" into a 500 for every student.)
+  if (rows.length === 0) return [];
 
-  return rows.map((row) => {
-    const progress = progressMap.get(row.slug);
-    const totalClasses = toNumber(progress?.total ?? 0);
-    const completedClasses = toNumber(progress?.done ?? 0);
-    return {
+  // Progress is supplementary — if the learning tables are missing or the
+  // aggregate fails, courses must still render (with 0% progress) instead of
+  // the whole request failing.
+  try {
+    const progressRows = await query<
+      { course_slug: string; total: number; done: number }[]
+    >(
+      `SELECT a.course_slug,
+              COUNT(cl.id) AS total,
+              SUM(CASE WHEN p.completed = 1 THEN 1 ELSE 0 END) AS done
+         FROM course_subject_assignments a
+         JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
+         JOIN course_classes cl ON cl.chapter_id = ch.id AND cl.is_active = 1
+         LEFT JOIN student_class_progress p
+                ON p.class_id = cl.id AND p.student_uid = ?
+        WHERE a.course_slug IN (${rows.map(() => "?").join(",")})
+        GROUP BY a.course_slug`,
+      [uid, ...rows.map((row) => row.slug)],
+    );
+    const progressMap = new Map(
+      progressRows.map((row) => [row.course_slug, row]),
+    );
+
+    return rows.map((row) => {
+      const progress = progressMap.get(row.slug);
+      const totalClasses = toNumber(progress?.total ?? 0);
+      const completedClasses = toNumber(progress?.done ?? 0);
+      return {
+        slug: row.slug,
+        name: toStringOrNull(row.name) ?? row.slug,
+        category: row.category ?? "",
+        batchId: row.batch_id ?? "",
+        imageUrl: toStringOrNull(row.image_url) ?? "",
+        shortDescription: toStringOrNull(row.short_description) ?? "",
+        fee: toNumber(row.fee),
+        discountFee:
+          row.discount_fee !== null && row.discount_fee !== undefined
+            ? toNumber(row.discount_fee)
+            : null,
+        courseKind: row.course_kind,
+        enrollmentStatus: row.enrollment_status,
+        enrollmentDate:
+          row.enrollment_date instanceof Date
+            ? row.enrollment_date.toISOString()
+            : String(row.enrollment_date ?? ""),
+        progress: {
+          totalClasses,
+          completedClasses,
+          percent:
+            totalClasses > 0
+              ? Math.round((completedClasses / totalClasses) * 100)
+              : 0,
+        },
+      };
+    });
+  } catch (error) {
+    // Log the real cause for debugging, then degrade gracefully — courses
+    // must still render even when the learning tables are not migrated yet.
+    console.error(
+      "[my-learning] progress aggregate failed; serving courses without progress:",
+      error,
+    );
+    return rows.map((row) => ({
       slug: row.slug,
       name: toStringOrNull(row.name) ?? row.slug,
       category: row.category ?? "",
@@ -204,16 +262,9 @@ export async function getMyEnrolledCourses(
         row.enrollment_date instanceof Date
           ? row.enrollment_date.toISOString()
           : String(row.enrollment_date ?? ""),
-      progress: {
-        totalClasses,
-        completedClasses,
-        percent:
-          totalClasses > 0
-            ? Math.round((completedClasses / totalClasses) * 100)
-            : 0,
-      },
-    };
-  });
+      progress: { totalClasses: 0, completedClasses: 0, percent: 0 },
+    }));
+  }
 }
 
 // ── Full course learning tree ─────────────────────────────────────────────
@@ -241,8 +292,18 @@ type EnrollmentMetaRow = {
 };
 
 type SubjectRow = { id: string; name: string };
-type PaperRow = { id: string; subject_id: string; name: string; kind: "paper" | "segment" };
-type ChapterRow = { id: string; subject_id: string; paper_id: string | null; name: string };
+type PaperRow = {
+  id: string;
+  subject_id: string;
+  name: string;
+  kind: "paper" | "segment";
+};
+type ChapterRow = {
+  id: string;
+  subject_id: string;
+  paper_id: string | null;
+  name: string;
+};
 type ClassRow = {
   id: string;
   chapter_id: string;
@@ -286,21 +347,19 @@ export async function getCourseLearningData(
   );
   // Fall back to the enrollment's own stored course info when the catalog
   // row is missing — an active enrollment must always open its course page.
-  const catalog: CatalogRow =
-    catalogRows[0] ??
-    {
-      slug,
-      name: toStringOrNull(enrollment.course_name) ?? slug,
-      category: enrollment.course_type ?? "Academic",
-      batch_id: "",
-      image_url: null,
-      short_description: null,
-      description: null,
-      teacher_name: null,
-      duration: null,
-      fee: 0,
-      discount_fee: null,
-    };
+  const catalog: CatalogRow = catalogRows[0] ?? {
+    slug,
+    name: toStringOrNull(enrollment.course_name) ?? slug,
+    category: enrollment.course_type ?? "Academic",
+    batch_id: "",
+    image_url: null,
+    short_description: null,
+    description: null,
+    teacher_name: null,
+    duration: null,
+    fee: 0,
+    discount_fee: null,
+  };
 
   const [subjects, progress, favourites] = await Promise.all([
     query<SubjectRow[]>(
@@ -463,7 +522,9 @@ function buildCourseData(
   }
 
   for (const exam of content?.exams ?? []) {
-    const chapter = exam.chapter_id ? chapterById.get(exam.chapter_id) : undefined;
+    const chapter = exam.chapter_id
+      ? chapterById.get(exam.chapter_id)
+      : undefined;
     if (!chapter) continue;
     chapter.exams.push({
       id: exam.id,
@@ -478,7 +539,8 @@ function buildCourseData(
     0,
   );
   const completedClasses = [...chapterById.values()].reduce(
-    (sum, chapter) => sum + chapter.classes.filter((cls) => cls.completed).length,
+    (sum, chapter) =>
+      sum + chapter.classes.filter((cls) => cls.completed).length,
     0,
   );
 
@@ -854,8 +916,7 @@ export async function getRecentlyViewed(
         itemType: "class",
         itemId: row.item_id,
         title: row.title,
-        subtitle:
-          `${row.duration_minutes > 0 ? row.duration_minutes + " min · " : ""}${row.course_name ?? ""}`,
+        subtitle: `${row.duration_minutes > 0 ? row.duration_minutes + " min · " : ""}${row.course_name ?? ""}`,
         href: `/dashboard/enrolled-courses/${encodeURIComponent(row.course_slug)}/classes/${encodeURIComponent(row.item_id)}`,
         external: false,
         viewedAt: toIso(row.viewed_at),
@@ -866,8 +927,7 @@ export async function getRecentlyViewed(
         itemType: "exam",
         itemId: row.item_id,
         title: row.title,
-        subtitle:
-          `${row.duration_minutes > 0 ? row.duration_minutes + " min · " : ""}${row.total_marks > 0 ? row.total_marks + " marks · " : ""}${row.course_name ?? "Exam"}`,
+        subtitle: `${row.duration_minutes > 0 ? row.duration_minutes + " min · " : ""}${row.total_marks > 0 ? row.total_marks + " marks · " : ""}${row.course_name ?? "Exam"}`,
         href: "/exam",
         external: false,
         viewedAt: toIso(row.viewed_at),
@@ -1010,7 +1070,11 @@ export async function getContinueLearningItems(
     bucket.totalClasses += 1;
     const stamp = stampByClass.get(row.class_id);
     if (stamp?.completed) bucket.completedClasses += 1;
-    if (stamp && stamp.lastSeenSeconds > 0 && stamp.updatedAt > bucket.lastActivityAt) {
+    if (
+      stamp &&
+      stamp.lastSeenSeconds > 0 &&
+      stamp.updatedAt > bucket.lastActivityAt
+    ) {
       bucket.lastActivityAt = stamp.updatedAt;
     }
   }

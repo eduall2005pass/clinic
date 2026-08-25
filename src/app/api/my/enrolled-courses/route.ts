@@ -13,7 +13,9 @@ export async function GET(request: NextRequest) {
   try {
     const courses = await getMyEnrolledCourses(user.uid);
     return NextResponse.json({ courses });
-  } catch {
+  } catch (error) {
+    // Surface the real cause in server logs for debugging.
+    console.error("[api/my/enrolled-courses] failed:", error);
     return NextResponse.json(
       { error: "Could not load your enrolled courses." },
       { status: 500 },

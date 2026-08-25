@@ -114,11 +114,19 @@ export default function EnrolledCoursesList() {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
-      if (!response.ok) throw new Error("failed");
+      if (!response.ok) {
+        // Log the real failure for debugging before showing the friendly error.
+        console.error(
+          `[enrolled-courses] API ${response.status}:`,
+          await response.text().catch(() => ""),
+        );
+        throw new Error(`API ${response.status}`);
+      }
       const data = (await response.json()) as { courses?: EnrolledCourseSummary[] };
       setCourses(Array.isArray(data.courses) ? data.courses : []);
       setState("ready");
-    } catch {
+    } catch (error) {
+      console.error("[enrolled-courses] load failed:", error);
       setState("error");
     }
   }, [user]);
