@@ -63,6 +63,7 @@ export default function DashboardHome() {
               <DashboardSectionCard
                 key={section.href}
                 section={section}
+                wide={section.href === "/dashboard/enrolled-courses"}
                 locked={locked}
                 onLockedClick={() => setPermissionOpen(true)}
               />
