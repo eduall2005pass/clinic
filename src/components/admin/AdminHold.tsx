@@ -29,7 +29,7 @@ export default function AdminHold({
   /** …or runs this callback instead. */
   onEdit?: () => void;
   /** Supported backend remove actions. */
-  removeKind?: "homepage-section" | "mentor";
+  removeKind?: "homepage-section" | "mentor" | "dashboard-card";
   removeId?: string;
   label?: string;
 }) {
@@ -117,6 +117,17 @@ export default function AdminHold({
             Authorization: `Bearer ${await auth?.currentUser?.getIdToken() ?? ""}`,
           },
           body: JSON.stringify({ sections }),
+        });
+      } else if (removeKind === "dashboard-card") {
+        // Hide the dashboard card for every student (reversible via
+        // Dashboard Control → manage).
+        await fetch("/api/admin/dashboard-cards", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${await auth?.currentUser?.getIdToken() ?? ""}`,
+          },
+          body: JSON.stringify({ key: removeId, isActive: false }),
         });
       } else if (removeKind === "mentor") {
         await fetch("/api/mentors", {
