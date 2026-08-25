@@ -186,6 +186,15 @@ function CoursesViewInner({
     );
   }
 
+  return <DefaultGrid categories={categories} />;
+}
+
+
+function DefaultGrid({
+  categories,
+}: {
+  categories: CategoryRecord[];
+}) {
   return (
     <main className="flex-1 bg-dark-950">
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -202,7 +211,7 @@ function CoursesViewInner({
           </p>
         </header>
 
-        {/* Managed from Admin → Courses → Categories (course_categories table). */}
+        {/* Managed from Admin -> Courses -> Categories (course_categories table). */}
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {categories.map((category) => (
             <CategoryCard
@@ -228,7 +237,7 @@ export default function CoursesView({
   categories: CategoryRecord[];
 }) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<DefaultGrid categories={categories} />}>
       <CoursesViewInner courses={courses} categories={categories} />
     </Suspense>
   );
