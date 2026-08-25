@@ -1,93 +1,243 @@
-import { HubHeader, ManagementCard } from "@/components/admin/hub-ui";
+import type { Metadata } from "next";
+import Link from "next/link";
+import CategoryCard from "@/components/CategoryCard";
+import { batchFilterOptions, getPayableFee } from "@/lib/courses";
+import { getLiveCourses } from "@/lib/course-catalog";
+import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
+import AdminBatchCourseList from "@/components/admin/AdminCoursesReplica";
+import CourseManagerChip from "@/components/admin/CourseManagerChip";
+
+export const dynamic = "force-dynamic";
 
 /**
- * Admin → Course. Mirrors the Main Website Courses flow
- * (Categories → Courses → Subject → Paper → Class/Exam/Materials → Chapter)
- * and links the matching management pages for every level.
+ * Admin → Courses. A same-to-same visual replica of the Main Website Courses
+ * page (same layout, cards, filters, category structure, typography and
+ * spacing — same MySQL data), with floating management controls attached.
+ * Clicking a course card opens the same Course Details flow as the website.
  */
-export default function AdminCourseHub() {
+export const metadata: Metadata = {
+  title: "Courses — MediSpark Admin",
+  description: "Admin view of the Main Website Courses page with manage controls.",
+};
+
+const CATEGORY_TYPES = {
+  ssc: "SSC Academic",
+  hsc: "HSC Academic",
+  medical: "Medical Admission",
+  varsity: "Varsity Admission",
+} as const;
+
+type CategoryParam = keyof typeof CATEGORY_TYPES;
+
+const iconProps = {
+  className: "h-8 w-8",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  viewBox: "0 0 24 24",
+} as const;
+
+const CATEGORY_ICONS: Record<CategoryParam, React.ReactNode> = {
+  ssc: (
+    <svg {...iconProps}>
+      <path d="M14 22v-4a2 2 0 1 0-4 0v4" />
+      <path d="m18 10 3.447 1.724a1 1 0 0 1 .553.894V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7.382a1 1 0 0 1 .553-.894L6 10" />
+      <path d="M18 5v17" />
+      <path d="m4 6 7.106-3.553a2 2 0 0 1 1.788 0L20 6" />
+      <path d="M6 5v17" />
+      <circle cx="12" cy="9" r="2" />
+    </svg>
+  ),
+  hsc: (
+    <svg {...iconProps}>
+      <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a2 2 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+      <path d="M22 10v6" />
+      <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
+    </svg>
+  ),
+  medical: (
+    <svg {...iconProps}>
+      <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" />
+      <path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4" />
+      <circle cx="20" cy="10" r="2" />
+    </svg>
+  ),
+  varsity: (
+    <svg {...iconProps}>
+      <line x1="3" x2="21" y1="22" y2="22" />
+      <line x1="6" x2="6" y1="18" y2="11" />
+      <line x1="10" x2="10" y1="18" y2="11" />
+      <line x1="14" x2="14" y1="18" y2="11" />
+      <line x1="18" x2="18" y1="18" y2="11" />
+      <polygon points="12 2 20 7 4 7" />
+    </svg>
+  ),
+};
+
+/** Icon per category slug — used when a DB category has no image. */
+function iconForSlug(slug: string): React.ReactNode {
+  const key = (Object.keys(CATEGORY_ICONS) as CategoryParam[]).find((param) =>
+    slug.toLowerCase().includes(param),
+  );
+  return CATEGORY_ICONS[key ?? "hsc"];
+}
+
+export default async function AdminCoursesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string; kind?: string }>;
+}) {
+  const { category, kind } = await searchParams;
+  const categoryParam = category?.toLowerCase();
+  const courseType =
+    categoryParam && categoryParam in CATEGORY_TYPES
+      ? CATEGORY_TYPES[categoryParam as CategoryParam]
+      : null;
+
+  // Admin sees EVERY course (published + unpublished) — same data source as
+  // the website, filtered only by the same rules the website applies per view.
+  const allCourses = await getLiveCourses();
+
+  if (!courseType && kind?.toLowerCase() === "paid") {
+    const paidCourses = allCourses.filter((course) => getPayableFee(course) > 0);
+    const batchOptions = [
+      ...new Map(
+        [...batchFilterOptions.ssc, ...batchFilterOptions.hsc].map(
+          (option) => [option.id, option],
+        ),
+      ).values(),
+    ];
+    return (
+      <main className="flex-1 bg-dark-950">
+        <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <BackToCoursesLink />
+          <AdminToolbar />
+
+          <header className="mb-10">
+            <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-500">
+              Courses
+            </p>
+            <h1 className="mt-2 text-3xl font-extrabold text-heading sm:text-4xl">
+              Paid Courses
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
+              Browse our premium paid programs — enroll to unlock full classes,
+              exams, materials and Q&amp;A support.
+            </p>
+          </header>
+
+          <AdminBatchCourseList options={batchOptions} courses={paidCourses} />
+        </section>
+      </main>
+    );
+  }
+
+  if (courseType) {
+    const typeCourses = allCourses.filter(
+      (course) => course.category === courseType,
+    );
+    return (
+      <main className="flex-1 bg-dark-950">
+        <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <BackToCoursesLink />
+          <AdminToolbar />
+
+          <header className="mb-10">
+            <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-500">
+              Courses
+            </p>
+            <h1 className="mt-2 text-3xl font-extrabold text-heading sm:text-4xl">
+              {courseType} Courses
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
+              Select your batch to see the relevant {courseType} course lineup.
+            </p>
+          </header>
+
+          {/* Same 4-option batch filters as the dedicated category pages. */}
+          <AdminBatchCourseList
+            options={
+              categoryParam === "ssc"
+                ? batchFilterOptions.ssc
+                : batchFilterOptions.hsc
+            }
+            courses={typeCourses}
+          />
+        </section>
+      </main>
+    );
+  }
+
+  const categories = await fetchActiveCourseCategories();
+
   return (
-    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <HubHeader
-        eyebrow="Admin · Course"
-        title="Course Management"
-        description="The same course browsing flow as the Main Website — manage categories, courses, subjects, papers, chapters, classes, exams, materials and pricing."
-      />
+    <main className="flex-1 bg-dark-950">
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <AdminToolbar />
 
-      {/* Category level — same 4 categories as the website */}
-      <h2 className="mt-8 text-base font-extrabold text-heading">Course Categories</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <ManagementCard
-          href="/admin/courses/ssc"
-          title="SSC Academic"
-          description="Manage SSC academic courses shown on the website."
-        />
-        <ManagementCard
-          href="/admin/courses/academic"
-          title="HSC Academic"
-          description="Manage HSC academic courses shown on the website."
-        />
-        <ManagementCard
-          href="/admin/courses/admission"
-          title="Medical Admission"
-          description="Manage medical admission courses."
-        />
-        <ManagementCard
-          href="/admin/courses/varsity"
-          title="Varsity Admission"
-          description="Manage varsity admission courses."
-        />
-      </div>
+        <header className="mb-10 text-center">
+          <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
+            Explore Programs
+          </p>
+          <h1 className="mt-2 text-3xl font-extrabold text-heading sm:text-4xl">
+            Choose Your Path
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
+            Select a program to browse batch-wise courses built for SSC/HSC
+            board exam success and medical &amp; varsity admission preparation.
+          </p>
+        </header>
 
-      {/* Structure management */}
-      <h2 className="mt-10 text-base font-extrabold text-heading">
-        Course Content Hierarchy
-      </h2>
-      <p className="mt-1 text-xs text-neutral-400">
-        Course → Subject → Paper / Segment → Class · Exam · Materials → Chapter → Content
-      </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <ManagementCard
-          href="/admin/courses/all"
-          title="All Courses"
-          description="Add, edit, delete courses — name, thumbnail, description, status."
-        />
-        <ManagementCard
-          href="/admin/courses/categories"
-          title="Course Categories"
-          description="Category cards on the /courses landing page."
-        />
-        <ManagementCard
-          href="/admin/courses/subjects"
-          title="Subjects"
-          description="Subjects assigned to each course."
-        />
-        <ManagementCard
-          href="/admin/courses/papers"
-          title="Papers & Materials"
-          description="১ম/২য় পত্র per subject, chapter assignment and PDF materials."
-        />
-        <ManagementCard
-          href="/admin/courses/chapters"
-          title="Chapters"
-          description="Add, rename, reorder chapters per subject."
-        />
-        <ManagementCard
-          href="/admin/courses/classes"
-          title="Classes"
-          description="Video classes under each chapter."
-        />
-        <ManagementCard
-          href="/admin/courses/pricing"
-          title="Pricing & Discounts"
-          description="Course fees and discount prices."
-        />
-        <ManagementCard
-          href="/admin/courses/coupons"
-          title="Coupons"
-          description="Coupon codes students can apply at enrollment."
-        />
-      </div>
-    </section>
+        {/* Managed from Admin → Courses → Categories (course_categories table). */}
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          {categories.map((category) => (
+            <CategoryCard
+              key={category.id}
+              href={category.href || "/courses"}
+              title={category.name}
+              description={category.description ?? ""}
+              image={category.imageUrl}
+              icon={iconForSlug(category.slug)}
+            />
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function BackToCoursesLink() {
+  return (
+    <Link
+      href="/admin/course"
+      className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-400 transition hover:text-primary-400"
+    >
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        viewBox="0 0 24 24"
+      >
+        <path d="M19 12H5" />
+        <path d="m12 19-7-7 7-7" />
+      </svg>
+      All Courses
+    </Link>
+  );
+}
+
+function AdminToolbar() {
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <CourseManagerChip href="/admin/courses/all" label="+ Add / Edit Course" />
+      <CourseManagerChip href="/admin/courses/categories" label="Manage Categories" />
+      <CourseManagerChip href="/admin/courses/pricing" label="Pricing & Discounts" />
+      <CourseManagerChip href="/admin/courses/coupons" label="Coupons" />
+    </div>
   );
 }
