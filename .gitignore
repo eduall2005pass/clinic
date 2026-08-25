@@ -49,3 +49,4 @@ next-env.d.ts
 
 # Firebase service account (server-side token verification)
 .firebase-sa.json
+AGENTS.md

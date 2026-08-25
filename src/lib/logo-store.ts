@@ -102,7 +102,7 @@ export async function fetchActiveLogo(): Promise<LogoInfo | null> {
       : logo;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    // If table missing, try to create it and retry once (self-heal on Interserver)
+    // If table missing, try to create it and retry once (self-heal if the table is missing)
     if (
       msg.includes("doesn't exist") ||
       msg.includes("Unknown table") ||
