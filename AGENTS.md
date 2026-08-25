@@ -44,17 +44,19 @@ git pull medispark main
 - After finishing any change: commit + `git push medispark main` immediately so
   the other person gets it and Vercel auto-deploys.
 
-## Deploy flow (IMPORTANT)
-- Git remote `medisparkbd` = https://github.com/eduall2005pass/medisparkbd →
-  **connected to Vercel project `medisparkbd` (auto-deploys on push).**
-- Remote `medispark` = https://github.com/eduall2005pass/medispark is a mirror
-  of the same code (no auto-deploy). Push BOTH after finishing work:
-  ```bash
-  git push medisparkbd main && git push medispark main
-  ```
+## Deploy flow (IMPORTANT — two-track setup)
+- **Collaborator track:** remote `clinic` (eduall2005pass/clinic) → Vercel
+  project `medispark` → live at bloodarenabd.tech (still on old VM MariaDB).
+  Collaborator works HERE.
+- **Verify track:** remote `medisparkbd` (eduall2005pass/medisparkbd) → Vercel
+  project `medisparkbd` → medisparkbd-ecru.vercel.app (Azure MySQL +
+  medispark.duckdns.org media).
+- A GitHub Action in clinic auto-syncs every clinic push into medisparkbd,
+  which auto-deploys. Trees of both repos must stay IDENTICAL — never edit
+  medisparkbd directly except through the sync (or keep both in sync manually).
+- Code must stay compatible with BOTH databases (see mysql.ts SSL logic).
 - Manual alternative: `vercel --prod`.
-- Legacy remote `clinic` (eduall2005pass/clinic) = old project; remote `origin`
-  (siyammd553-gif/MediSparklatest) has no push access — ignore both.
+- Remote `origin` (siyammd553-gif/MediSparklatest) has no push access — ignore.
 
 ## Database rules
 - ALL data lives in Azure MySQL. Never use Firestore/Supabase/local disk for data.
