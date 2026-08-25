@@ -9,6 +9,9 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Sync clinic main into medisparkbd (same tree, fast-forward)
         env:
           TOKEN: ${{ secrets.MEDISPARKBD_TOKEN }}
