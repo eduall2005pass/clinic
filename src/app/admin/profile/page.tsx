@@ -22,6 +22,12 @@ type Overview = {
 
 const QUICK_LINKS = [
   {
+    title: "Open Admin Panel",
+    description:
+      "Full control of the live website — courses, content hierarchy, exams, enrollments and settings.",
+    href: "/admin",
+  },
+  {
     title: "Account Settings",
     description: "Update your display name, phone number and profile picture.",
     href: "/admin/profile/account",

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
+import { MediaUploadField } from "@/components/admin/MediaUploadField";
 import {
   useAdminGate,
   noticeClass,
@@ -413,8 +414,15 @@ function MaterialsManager({
               </select>
             </label>
             <label className="block">
-              <span className={labelClass}>File URL / Link</span>
-              <input className={inputClass} value={fileUrl} placeholder="/uploads/... or https://" onChange={(event) => setFileUrl(event.target.value)} />
+              <span className={labelClass}>PDF file or link</span>
+              <MediaUploadField
+                id={`material-file-${chapterId}`}
+                value={fileUrl}
+                onChange={(url) => setFileUrl(url)}
+                directory="course-materials"
+                accept="application/pdf,.pdf"
+                placeholder="Upload a PDF or paste a link"
+              />
             </label>
           </div>
           <button type="button" disabled={busy} onClick={() => void addMaterial()} className={buttonPrimaryClass + " mt-4"}>
