@@ -79,7 +79,9 @@ export default function ProfileCard({
 
           <Link
             href="/dashboard/notifications"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-primary-600/15 hover:text-primary-400"
+            aria-label="Notifications"
+            title="Notifications"
+            className="inline-flex items-center justify-center rounded-xl border border-ink/15 bg-ink/5 p-2.5 text-heading transition hover:border-primary-500/60 hover:bg-primary-600/15 hover:text-primary-400"
           >
             <svg
               className="h-5 w-5"
@@ -92,7 +94,6 @@ export default function ProfileCard({
               <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
               <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
             </svg>
-            Notifications
           </Link>
 
           {/* View Details → — beside the notification icon; opens Student Profile */}
