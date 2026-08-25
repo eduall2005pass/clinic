@@ -26,9 +26,14 @@ export function getMysqlPool(): mysql.Pool | null {
       database: mysqlDatabase,
       user: mysqlUser,
       password: mysqlPassword,
-      connectionLimit: 5,
+      // Vercel lambdas each own a pool; keep the per-instance footprint small
+      // so total connections stay well under the server's max_connections.
+      connectionLimit: 3,
+      maxIdle: 1,
+      idleTimeout: 60000,
       connectTimeout: 10000,
       waitForConnections: true,
+      enableKeepAlive: true,
       // Azure Database for MySQL enforces TLS connections.
       ssl:
         process.env.MYSQL_SSL === "false"
