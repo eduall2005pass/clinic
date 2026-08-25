@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { TicketIcon } from "@/components/admin/icons";
+import CouponsManager from "@/app/admin/courses/coupons/page";
 
 export const metadata: Metadata = {
   title: "Coupons — MediSpark Admin",
   description: "Create and manage discount coupons for campaigns.",
 };
 
+/**
+ * Marketing → Coupons reuses the same MySQL-backed coupon manager as
+ * Course Control (single source of truth, no duplicate UI).
+ */
 export default function MarketingCouponsPage() {
-  return <AdminPlaceholder title="Coupons" description="Create and manage discount coupons for campaigns." icon={TicketIcon} />;
+  return <CouponsManager />;
 }

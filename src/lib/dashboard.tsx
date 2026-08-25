@@ -186,6 +186,9 @@ export type DashboardSubItem = {
   description: string;
 };
 
+/** Icon registry for DB-driven dashboard cards (see src/lib/dashboard-cards.ts). */
+
+
 /**
  * Final dashboard navigation hierarchy — sub-units shown inside each
  * section page. Student Profile and Exam Results intentionally have none:

@@ -65,7 +65,7 @@ export default function StudentControlPage() {
   async function setActive(student: Student, isActive: boolean) {
     if (!user) return;
     try {
-      await fetch("/api/admin/students", {
+      const res = await fetch("/api/admin/students", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -73,13 +73,17 @@ export default function StudentControlPage() {
         },
         body: JSON.stringify({ uid: student.uid, isActive }),
       });
+      if (!res.ok) {
+        setError(true);
+        return;
+      }
       setStudents((prev) =>
         (prev ?? []).map((item) =>
           item.uid === student.uid ? { ...item, isActive } : item,
         ),
       );
     } catch {
-      // keep previous state
+      setError(true);
     }
   }
 

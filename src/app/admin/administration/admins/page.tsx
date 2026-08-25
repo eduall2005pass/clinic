@@ -24,12 +24,28 @@ type AdminAccount = {
   createdAt?: string;
 };
 
-const ROLES = ["super-admin", "admin", "moderator"] as const;
+const ROLES = [
+  "super-admin",
+  "admin",
+  "content-manager",
+  "course-manager",
+  "exam-manager",
+] as const;
+
+const ROLE_LABELS: Record<string, string> = {
+  "super-admin": "Super Admin",
+  admin: "Admin",
+  "content-manager": "Content Manager",
+  "course-manager": "Course Manager",
+  "exam-manager": "Exam Manager",
+};
 
 const roleBadgeClass: Record<string, string> = {
   "super-admin": "bg-violet-100 text-violet-800 admin-dark:bg-violet-500/15 admin-dark:text-violet-300",
   admin: "bg-sky-100 text-sky-800 admin-dark:bg-sky-500/15 admin-dark:text-sky-300",
-  moderator: "bg-amber-100 text-amber-800 admin-dark:bg-amber-500/15 admin-dark:text-amber-300",
+  "content-manager": "bg-emerald-100 text-emerald-800 admin-dark:bg-emerald-500/15 admin-dark:text-emerald-300",
+  "course-manager": "bg-indigo-100 text-indigo-800 admin-dark:bg-indigo-500/15 admin-dark:text-indigo-300",
+  "exam-manager": "bg-amber-100 text-amber-800 admin-dark:bg-amber-500/15 admin-dark:text-amber-300",
 };
 
 export default function AdminsPage() {
@@ -144,7 +160,7 @@ export default function AdminsPage() {
             onChange={(event) => setForm({ ...form, displayName: event.target.value })} />
           <select className={inputClass} aria-label="Role" value={form.role}
             onChange={(event) => setForm({ ...form, role: event.target.value })}>
-            {ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+            {ROLES.map((role) => <option key={role} value={role}>{ROLE_LABELS[role]}</option>)}
           </select>
           <button type="submit" disabled={busy} className={buttonPrimaryClass}>+ Add</button>
         </form>
@@ -164,7 +180,7 @@ export default function AdminsPage() {
                     <span className="truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
                       {admin.displayName ?? "—"}{isSelf && " (you)"}
                     </span>
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${roleBadgeClass[role]}`}>{role}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${roleBadgeClass[role]}`}>{ROLE_LABELS[role] ?? role}</span>
                     {!active && (
                       <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 admin-dark:bg-red-500/15 admin-dark:text-red-300">
                         deactivated
@@ -181,7 +197,7 @@ export default function AdminsPage() {
                   value={role}
                   onChange={(event) => void assignRole(admin.uid, event.target.value)}
                 >
-                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                  {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                 </select>
                 <button
                   type="button"

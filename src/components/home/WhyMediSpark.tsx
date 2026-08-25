@@ -1,7 +1,9 @@
 import type { SVGProps } from "react";
 import SectionHeader from "@/components/SectionHeader";
+import { fetchHomeCards } from "@/lib/home-cards";
 
 type Benefit = {
+  key: string;
   title: string;
   description: string;
   Icon: (props: SVGProps<SVGSVGElement>) => React.JSX.Element;
@@ -120,52 +122,33 @@ function MentorIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-const benefits: Benefit[] = [
-  {
-    title: "Structured Courses",
-    description:
-      "Chapter-based lessons across HSC subjects and the medical admission syllabus.",
-    Icon: BookIcon,
-  },
-  {
-    title: "Exam-Ready Practice",
-    description:
-      "Model tests and chapter-wise exams to build real exam confidence.",
-    Icon: ExamIcon,
-  },
-  {
-    title: "Expert Q&A",
-    description:
-      "Ask questions and get clear answers from mentors and fellow students.",
-    Icon: ChatIcon,
-  },
-  {
-    title: "Track Your Progress",
-    description:
-      "Monitor your preparation and stay on top of your study goals.",
-    Icon: ChartIcon,
-  },
-  {
-    title: "Recorded Video Classes",
-    description:
-      "Watch classes anytime and revise every topic at your own pace.",
-    Icon: VideoIcon,
-  },
-  {
-    title: "Mentor Support",
-    description:
-      "Guidance from experienced mentors at every step of your journey.",
-    Icon: MentorIcon,
-  },
-];
+const iconRegistry: Record<
+  string,
+  (props: SVGProps<SVGSVGElement>) => React.JSX.Element
+> = {
+  book: BookIcon,
+  exam: ExamIcon,
+  chat: ChatIcon,
+  chart: ChartIcon,
+  video: VideoIcon,
+  mentor: MentorIcon,
+};
 
-export default  function WhyMediSpark({
+export default async function WhyMediSpark({
   title,
   description,
 }: {
   title?: string;
   description?: string;
 } = {}) {
+  // MySQL-backed cards — managed from Admin → Home Control (+ Add Card).
+  const records = await fetchHomeCards("why", true);
+  const benefits: Benefit[] = records.map((record) => ({
+    key: record.key,
+    title: record.title,
+    description: record.description,
+    Icon: iconRegistry[record.icon] ?? BookIcon,
+  }));
   return (
     <section className="relative overflow-hidden border-t border-ink/5 bg-dark-900">
       <div className="pointer-events-none absolute inset-0 bg-grid-lines" />
@@ -178,24 +161,30 @@ export default  function WhyMediSpark({
         />
 
         <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4">
-          {benefits.map((benefit) => (
-            <div
-              key={benefit.title}
-              className="group flex flex-col items-center rounded-2xl border border-ink/10 bg-dark-950/60 p-4 text-center shadow-lg shadow-black/20 transition duration-300 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:p-6"
-            >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50 sm:h-12 sm:w-12">
-                <benefit.Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-              </span>
-              <div className="mt-3 min-w-0">
-                <h3 className="text-sm font-bold leading-snug text-heading sm:text-base">
-                  {benefit.title}
-                </h3>
-                <p className="mt-1 text-xs leading-snug text-neutral-400 sm:text-sm">
-                  {benefit.description}
-                </p>
+          {benefits.length === 0 ? (
+            <p className="col-span-2 rounded-xl border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-neutral-500">
+              Cards will appear here once published by the admin.
+            </p>
+          ) : (
+            benefits.map((benefit) => (
+              <div
+                key={benefit.key}
+                className="group flex flex-col items-center rounded-2xl border border-ink/10 bg-dark-950/60 p-4 text-center shadow-lg shadow-black/20 transition duration-300 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:p-6"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50 sm:h-12 sm:w-12">
+                  <benefit.Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                </span>
+                <div className="mt-3 min-w-0">
+                  <h3 className="text-sm font-bold leading-snug text-heading sm:text-base">
+                    {benefit.title}
+                  </h3>
+                  <p className="mt-1 text-xs leading-snug text-neutral-400 sm:text-sm">
+                    {benefit.description}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </section>

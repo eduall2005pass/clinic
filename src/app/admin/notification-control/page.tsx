@@ -10,6 +10,7 @@ type Notification = {
   title: string;
   message: string;
   audience: string;
+  targetEmail?: string | null;
   isActive: boolean;
 };
 
@@ -18,6 +19,7 @@ type Student = {
   fullName?: string;
   name?: string;
   email?: string;
+  isActive?: number | boolean | null;
 };
 
 type Mode = "all" | "enrolled" | "specific";
@@ -90,38 +92,56 @@ export default function NotificationControlPage() {
         Authorization: `Bearer ${await user.getIdToken()}`,
       };
       if (mode === "specific") {
-        // Targeted push notification for the selected student.
         const selectedStudent =
           students.find((s) => s.email === studentEmail) ?? null;
-        const res = await fetch("/api/admin/push", {
+        // 1) Persist to the student's inbox (audience "student").
+        const inboxRes = await fetch("/api/admin/notifications", {
           method: "POST",
           headers: auth,
           body: JSON.stringify({
             title: title.trim(),
-            body: message.trim(),
-            audience: "specific",
-            email: studentEmail,
+            message: message.trim(),
+            audience: "student",
+            targetUid: selectedStudent?.uid,
+            targetEmail: studentEmail,
+            isActive: true,
           }),
         });
-        const data = (await res.json()) as { error?: string };
-        if (!res.ok) {
-          toast.showToast("error", data.error ?? "Failed to send.");
+        const inboxData = (await inboxRes.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        if (!inboxRes.ok) {
+          toast.showToast("error", inboxData?.error ?? "Failed to save.");
           return;
+        }
+        // 2) Best-effort web push to the student's registered devices.
+        try {
+          await fetch("/api/admin/push", {
+            method: "POST",
+            headers: auth,
+            body: JSON.stringify({
+              title: title.trim(),
+              body: message.trim(),
+              audience: "specific",
+              email: studentEmail,
+            }),
+          });
+        } catch {
+          // Push is optional — the inbox notification is already stored.
         }
         toast.showToast(
           "success",
           `Notification sent to ${selectedStudent?.fullName ?? studentEmail}.`,
         );
+        await loadNotifications();
       } else {
-        // In-app notification — enrolled students get a targeted title tag.
-        const audience = mode === "all" ? "all" : "students";
-        const finalTitle =
-          mode === "enrolled" ? `[Enrolled] ${title.trim()}` : title.trim();
+        // In-app broadcast — "all" students or only actively enrolled ones.
+        const audience = mode === "all" ? "all" : "enrolled";
         const res = await fetch("/api/admin/notifications", {
           method: "POST",
           headers: auth,
           body: JSON.stringify({
-            title: finalTitle,
+            title: title.trim(),
             message: message.trim(),
             audience,
             isActive: true,
