@@ -8,12 +8,22 @@ Next.js 16 (App Router) + React 19 + TypeScript + Tailwind, package manager: **p
 User communicates in Bengali/Banglish — reply in the same style.
 
 ## Infrastructure (current, as of 2026-08)
-- **Hosting:** Vercel (project `medispark`, account `eduall2005pass-8109s-projects`)
+- **Hosting:** Vercel — production project `medisparkbd` (account `eduall2005pass-8109s-projects`),
+  connected to GitHub repo `eduall2005pass/medispark`. Legacy project `medispark`
+  (repo `eduall2005pass/clinic`) still holds the old deployment.
 - **Domain:** bloodarenabd.tech → Vercel DNS (ns1/ns2.vercel-dns.com)
-- **MySQL:** MariaDB on Azure VM `52.184.98.228` port **3000** (3306 is blocked by NSG; no NSG access)
-  - SSH: `ssh -i ~/Desktop/kali_key.pem azureuser@52.184.98.228`
-  - DB: `bloodare_medispark`, user `medispark`
-  - Always-on: systemd `mariadb` enabled
+- **MySQL:** Azure Database for MySQL Flexible Server (managed PaaS)
+  - Host: `eduall2005pass.mysql.database.azure.com` port **3306**, TLS required
+    (`src/lib/mysql.ts` enables SSL automatically for azure.com hosts)
+  - Resource group `mysql`, SKU Standard_B1ms Burstable, HA off
+  - Admin user `siam`; DB `bloodare_medispark`
+  - Firewall: allow-all (0.0.0.0/0) because Vercel has no static egress IPs;
+    security relies on TLS + credentials
+  - GIPK note: server generates invisible `my_row_id` PKs; real keys exist as
+    `uq_<table>_pk` UNIQUE indexes — keep that pattern for new tables
+- **Legacy VM:** MariaDB on Azure VM `52.184.98.228:3000` is retired (data migrated
+  2026-08-25). VM still runs nginx + medifiles upload service.
+  - SSH key on this machine is broken (`Permission denied`) — needs fixing separately
 - **Auth:** Firebase (Google sign-in). Admins = rows in `admins` table:
   eduall2005pass@gmail.com, siyammd553@gmail.com
 - **Secrets:** all credentials live in `~/deploy.env` (never commit secrets).
@@ -24,21 +34,23 @@ Two people work on this repo independently and both commit/push, so local
 codebases drift apart. **Before starting ANY work, always sync first:**
 
 ```bash
-git pull clinic main
+git pull medispark main
 ```
 
 - If there are local uncommitted changes, stash or commit them before pulling.
 - Prefer fast-forward pulls; if diverged, rebase local commits on top:
-  `git pull --rebase clinic main`
+  `git pull --rebase medispark main`
 - Never force-push. If a push is rejected, pull --rebase first, then push again.
-- After finishing any change: commit + `git push clinic main` immediately so
+- After finishing any change: commit + `git push medispark main` immediately so
   the other person gets it and Vercel auto-deploys.
 
 ## Deploy flow (IMPORTANT)
-- Git remote `clinic` = https://github.com/eduall2005pass/clinic → connected to Vercel.
-- **`git push clinic main` triggers automatic production deploy.**
+- Git remote `medispark` = https://github.com/eduall2005pass/medispark →
+  connected to Vercel project `medisparkbd`.
+- **`git push medispark main` triggers automatic production deploy.**
 - Manual alternative: `vercel --prod`.
-- Remote `origin` (siyammd553-gif/MediSparklatest) has no push access — ignore it.
+- Legacy remote `clinic` (eduall2005pass/clinic) = old project; remote `origin`
+  (siyammd553-gif/MediSparklatest) has no push access — ignore both.
 
 ## Database rules
 - ALL data lives in Azure MySQL. Never use Firestore/Supabase/local disk for data.

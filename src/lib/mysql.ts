@@ -29,6 +29,13 @@ export function getMysqlPool(): mysql.Pool | null {
       connectionLimit: 5,
       connectTimeout: 10000,
       waitForConnections: true,
+      // Azure Database for MySQL enforces TLS connections.
+      ssl:
+        process.env.MYSQL_SSL === "false"
+          ? undefined
+          : /azure\.com$/.test(mysqlHost) || process.env.MYSQL_SSL === "true"
+            ? { rejectUnauthorized: false }
+            : undefined,
       // Report matched rows (not just changed rows) so "affectedRows > 0"
       // stays true when an UPDATE sets a column to its current value.
       flags: ["FOUND_ROWS"],
