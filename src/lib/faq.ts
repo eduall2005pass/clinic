@@ -32,7 +32,7 @@ export const faqs: Faq[] = [
     id: "faq-jersey",
     question: "Jersey কীভাবে পাব?",
     answer:
-      "MediSpark-এর Course-এ ভর্তি হলেই আপনি MediSpark Jersey পাবেন।",
+      "MediSpark-এর Mega Exam-এ সেরা ফলাফল করে Top Position অর্জন করলে আপনি MediSpark-এর বিশেষ Jersey পাওয়ার সুযোগ পাবেন।",
     order: 3,
     status: "published",
   },

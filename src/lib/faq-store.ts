@@ -8,6 +8,28 @@ type FaqRow = {
   status: FaqStatus;
 };
 
+// Jersey FAQ answer update — replaces the outdated default answer in the
+// production `faqs` row, but ONLY while it still holds the exact old text.
+// If an admin has already customised the answer it is never overwritten.
+const JERSEY_FAQ_ID = "faq-jersey";
+const OLD_JERSEY_ANSWER =
+  "MediSpark-এর Course-এ ভর্তি হলেই আপনি MediSpark Jersey পাবেন।";
+
+async function migrateJerseyFaqAnswer(): Promise<void> {
+  try {
+    await query(
+      `UPDATE faqs SET answer = ? WHERE id = ? AND answer = ?`,
+      [
+        DEFAULT_FAQS.find((faq) => faq.id === JERSEY_FAQ_ID)?.answer ?? "",
+        JERSEY_FAQ_ID,
+        OLD_JERSEY_ANSWER,
+      ],
+    );
+  } catch {
+    // Table may not exist yet — ensureFaqsTable handles creation.
+  }
+}
+
 async function ensureFaqsTable(): Promise<void> {
   try {
     await query(
@@ -41,6 +63,7 @@ function rowToFaq(row: FaqRow): Faq {
 export async function fetchAllFaqs(): Promise<Faq[]> {
   try {
     await ensureFaqsTable();
+    await migrateJerseyFaqAnswer();
     const rows = await query<FaqRow[]>(
       `SELECT id, question, answer, status
        FROM faqs ORDER BY sort_order ASC`,
@@ -57,6 +80,7 @@ export async function fetchAllFaqs(): Promise<Faq[]> {
 export async function fetchPublishedFaqs(): Promise<Faq[]> {
   try {
     await ensureFaqsTable();
+    await migrateJerseyFaqAnswer();
     const rows = await query<FaqRow[]>(
       `SELECT id, question, answer, status
        FROM faqs WHERE status = 'published' ORDER BY sort_order ASC`,
