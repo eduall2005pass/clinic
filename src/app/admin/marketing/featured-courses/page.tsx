@@ -66,7 +66,7 @@ export default function FeaturedCoursesPage() {
         const token = await user!.getIdToken();
         const headers = { Authorization: `Bearer ${token}` };
         const [featuredResponse, catalogResponse] = await Promise.all([
-          fetch("/api/featured-courses?all=1", {
+          fetch("/api/featured-courses/all", {
             headers,
             cache: "no-store",
           }),

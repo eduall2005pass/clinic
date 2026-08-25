@@ -75,7 +75,7 @@ export default function CourseCategoryManager({
     async function load() {
       try {
         const token = await user!.getIdToken();
-        const response = await fetch("/api/course-categories?all=1", {
+        const response = await fetch("/api/course-categories/all", {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });

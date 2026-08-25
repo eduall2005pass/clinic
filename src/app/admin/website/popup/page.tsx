@@ -81,7 +81,7 @@ export default function PopupAnnouncementManagementPage() {
     async function load() {
       try {
         const token = user ? await user.getIdToken() : null;
-        const res = await fetch("/api/announcements?all=1", {
+        const res = await fetch("/api/announcements/all", {
           cache: "no-store",
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });

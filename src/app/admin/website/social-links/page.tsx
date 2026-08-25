@@ -46,7 +46,7 @@ export default function SocialLinksManagementPage() {
     async function load() {
       try {
         const token = user ? await user.getIdToken() : null;
-        const res = await fetch("/api/social-links?all=1", {
+        const res = await fetch("/api/social-links", {
           cache: "no-store",
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });

@@ -13,16 +13,7 @@ const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
 };
 
-export async function GET(request: NextRequest) {
-  const url = new URL(request.url);
-  if (url.searchParams.get("all") === "1") {
-    const admin = await requirePermission(request, "manageCourses");
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    }
-    const courses = await fetchAllFeaturedCourses();
-    return NextResponse.json({ courses }, { headers: CACHE_HEADERS });
-  }
+export async function GET() {
   const slugs = await fetchActiveFeaturedSlugs();
   return NextResponse.json({ slugs }, { headers: CACHE_HEADERS });
 }

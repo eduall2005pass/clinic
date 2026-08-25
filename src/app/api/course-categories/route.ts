@@ -14,19 +14,7 @@ import {
 // Public content: edge-cached for fast loads (60s revalidation).
 export const revalidate = 60;
 
-export async function GET(request: NextRequest) {
-  const url = new URL(request.url);
-  if (url.searchParams.get("all") === "1") {
-    const admin = await requirePermission(request, "manageCourses");
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    }
-    const categories = await fetchAllCourseCategories();
-    return NextResponse.json(
-      { categories },
-      { headers: { "Cache-Control": "no-store" } },
-    );
-  }
+export async function GET() {
   const categories = await fetchActiveCourseCategories();
   return NextResponse.json(
     { categories },

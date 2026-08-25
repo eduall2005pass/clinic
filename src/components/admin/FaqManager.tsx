@@ -171,7 +171,7 @@ export default function FaqManager({
     if (!user) return;
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/faqs?all=1", {
+      const response = await fetch("/api/faqs/all", {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
