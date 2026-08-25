@@ -7,17 +7,6 @@ import type { EnrolledCourseSummary } from "@/lib/my-learning";
 
 type LoadState = "loading" | "error" | "ready";
 
-function formatDate(value: string): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
-
 function EnrolledCourseCard({ course }: { course: EnrolledCourseSummary }) {
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30">
@@ -163,12 +152,6 @@ export default function EnrolledCoursesList() {
               : "Courses you are enrolled in will appear here."}
           </p>
         </div>
-        <Link
-          href="/courses"
-          className="rounded-xl border border-ink/15 bg-ink/5 px-5 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
-        >
-          Explore Courses
-        </Link>
       </div>
 
       {pendingCount > 0 && (
@@ -199,12 +182,6 @@ export default function EnrolledCoursesList() {
             You have not enrolled in any course yet. Browse the catalog and
             enroll — your courses will show up here.
           </p>
-          <Link
-            href="/courses"
-            className="mt-6 inline-block rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
-          >
-            Explore Courses
-          </Link>
         </div>
       ) : (
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
