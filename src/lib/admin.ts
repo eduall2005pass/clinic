@@ -15,28 +15,50 @@ export type AdminAccount = {
  * Admin accounts are stored in the `admins` table — see
  * src/sql/logo-admin-migration.sql. Writes to website settings are
  * rejected unless the caller resolves to an admin here.
+ *
+ * Falls back to matching by verified email so accounts keep their access
+ * even when the underlying Firebase project (and therefore UID) changes.
  */
-export async function isAdminUid(uid: string): Promise<boolean> {
+export async function isAdminUid(
+  uid: string | null,
+  email?: string | null,
+): Promise<boolean> {
   if (!isMysqlConfigured) return false;
+
+  if (uid) {
+    try {
+      // Inactive admins are no longer authorized — see Admin Management.
+      const rows = await query<{ uid: string }[]>(
+        "SELECT uid FROM admins WHERE uid = ? AND is_active = 1 LIMIT 1",
+        [uid],
+      );
+      if (rows.length > 0) return true;
+    } catch {
+      // Migration (src/sql/admins-management-migration.sql) may not be
+      // applied yet — fall back to plain lookup so nobody gets locked out.
+      try {
+        const rows = await query<{ uid: string }[]>(
+          "SELECT uid FROM admins WHERE uid = ? LIMIT 1",
+          [uid],
+        );
+        if (rows.length > 0) return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  // Email fallback keeps access working even when the underlying Firebase
+  // project (and therefore UID) changes. Only verified emails are trusted.
+  if (!email) return false;
   try {
     const rows = await query<{ uid: string }[]>(
-      // Inactive admins are no longer authorized — see Admin Management.
-      "SELECT uid FROM admins WHERE uid = ? AND is_active = 1 LIMIT 1",
-      [uid],
+      "SELECT uid FROM admins WHERE LOWER(email) = LOWER(?) AND is_active = 1 LIMIT 1",
+      [email],
     );
     return rows.length > 0;
   } catch {
-    // Migration (src/sql/admins-management-migration.sql) may not be
-    // applied yet — fall back to plain lookup so nobody gets locked out.
-    try {
-      const rows = await query<{ uid: string }[]>(
-        "SELECT uid FROM admins WHERE uid = ? LIMIT 1",
-        [uid],
-      );
-      return rows.length > 0;
-    } catch {
-      return false;
-    }
+    return false;
   }
 }
 
@@ -71,7 +93,11 @@ export async function requireAdmin(
 ): Promise<DecodedIdToken | null> {
   const user = await getFirebaseUser(request);
   if (!user) return null;
-  return (await isAdminUid(user.uid)) ? user : null;
+  const emailOk = user.email_verified === true;
+  const authorized =
+    (await isAdminUid(user.uid)) ||
+    (emailOk ? await isAdminUid(null, user.email) : false);
+  return authorized ? user : null;
 }
 
 /**
