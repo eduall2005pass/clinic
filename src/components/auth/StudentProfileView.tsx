@@ -158,7 +158,7 @@ export default function StudentProfileView() {
 
   return (
     <main className="flex-1 bg-dark-950">
-      <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:max-w-4xl">
+      <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20">
           <div className="pointer-events-none absolute inset-0 bg-medical-cross opacity-50" />
           <div className="relative h-20 bg-gradient-to-r from-primary-700 via-primary-800 to-[#0a0a0a]" />

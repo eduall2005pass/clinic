@@ -94,9 +94,8 @@ export default function ExamCategoryCards({
         </div>
       </div>
 
-      {/* Exactly 4 cards — stacked 1 per row on mobile/tablet, 2×2 grid on
-          desktop (lg+). Equal height & width in every layout. */}
-      <div className="flex flex-col gap-3 sm:gap-4 lg:grid lg:grid-cols-2">
+      {/* Exactly 4 cards — vertical stack, 1 per row, equal height & width. */}
+      <div className="flex flex-col gap-3 sm:gap-4">
         {categoryCards.map(({ key, label, Icon }) => (
           <Link
             key={key}

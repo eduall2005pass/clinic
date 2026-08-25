@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { loginHref } from "@/lib/nav-links";
@@ -35,7 +35,6 @@ const MENU_ITEM_ICONS: Record<string, React.ReactNode> = {
 
 export default function Navbar({ config }: { config?: NavbarConfig }) {
   const router = useRouter();
-  const pathname = usePathname();
   const settings = config ?? DEFAULT_NAVBAR_CONFIG;
   const { user } = useAuth();
   const actionHref = user ? "/dashboard" : loginHref;
@@ -80,12 +79,6 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
     return /^\/#[\w-]+$/.test(href);
   }
 
-  /** Active state for desktop inline links (ignores "#section" hashes). */
-  function isActiveHref(href: string): boolean {
-    const path = href.split("#")[0] || "/";
-    return path === "/" ? pathname === "/" : pathname.startsWith(path);
-  }
-
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
@@ -95,41 +88,6 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
         >
           <Logo size="large" />
         </Link>
-
-        {/* Desktop inline navigation — replaces the hamburger at lg+. */}
-        <div className="hidden items-center gap-1 lg:flex">
-          {menuItems.map((item) =>
-            item.href ? (
-              <Link
-                key={item.key}
-                href={item.href}
-                onClick={(event) => {
-                  if (isSectionLink(item.href as string)) {
-                    event.preventDefault();
-                    void goToSection(item.href as string);
-                  }
-                }}
-                aria-current={isActiveHref(item.href as string) ? "page" : undefined}
-                className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${
-                  isActiveHref(item.href as string)
-                    ? "bg-primary-500/10 text-primary-400"
-                    : "text-neutral-300 hover:bg-primary-500/10 hover:text-heading"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ) : (
-              <span
-                key={item.key}
-                aria-disabled="true"
-                title="Coming soon"
-                className="cursor-not-allowed rounded-lg px-3.5 py-2 text-sm font-semibold text-neutral-600"
-              >
-                {item.label}
-              </span>
-            ),
-          )}
-        </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <Link
@@ -202,7 +160,7 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
           )}
 
           {settings.showMoreMenu && (
-            <div className="relative lg:hidden">
+            <div className="relative">
               <button
                 type="button"
                 onClick={() => setMenuOpen((open) => !open)}

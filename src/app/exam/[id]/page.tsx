@@ -37,7 +37,7 @@ export default async function ExamDetailPage({ params, searchParams }: ExamPageP
 
   return (
     <main className="flex-1 bg-dark-950">
-      <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:max-w-4xl">
+      <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <div className="grid gap-6 sm:grid-cols-3">
           {[
             { label: "Total Marks", value: `${exam.totalMarks}` },
