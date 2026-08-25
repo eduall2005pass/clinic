@@ -29,6 +29,7 @@ export default function ClassesPage() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [classes, setClasses] = useState<CourseClass[] | null>(null);
   const [form, setForm] = useState({ chapterId: "", title: "", videoUrl: "", noteUrl: "", durationMinutes: "0", isFree: false });
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
 
@@ -71,6 +72,7 @@ export default function ClassesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", ...gate.headers },
         body: JSON.stringify({
+          ...(editingId ? { id: editingId } : {}),
           ...form,
           title: form.title.trim(),
           durationMinutes: Number(form.durationMinutes) || 0,
@@ -83,10 +85,24 @@ export default function ClassesPage() {
       }
       setClasses(data?.classes ?? []);
       setForm({ chapterId: "", title: "", videoUrl: "", noteUrl: "", durationMinutes: "0", isFree: false });
-      setNotice({ kind: "success", text: "Class added." });
+      setEditingId(null);
+      setNotice({ kind: "success", text: editingId ? "Class updated." : "Class added." });
     } finally {
       setBusy(false);
     }
+  }
+
+  function startEdit(item: CourseClass) {
+    setEditingId(item.id);
+    setForm({
+      chapterId: item.chapterId,
+      title: item.title,
+      videoUrl: item.videoUrl ?? "",
+      noteUrl: item.noteUrl ?? "",
+      durationMinutes: String(item.durationMinutes ?? 0),
+      isFree: item.isFree,
+    });
+    setNotice(null);
   }
 
   async function remove(id: string) {
@@ -105,14 +121,37 @@ export default function ClassesPage() {
     }
   }
 
+  async function move(index: number, direction: -1 | 1) {
+    if (!classes) return;
+    const target = index + direction;
+    if (target < 0 || target >= classes.length) return;
+    const next = [...classes];
+    [next[index], next[target]] = [next[target], next[index]];
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/classes", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({ order: next.map((item) => item.id) }),
+      });
+      const data = (await response.json().catch(() => null)) as { classes?: CourseClass[] } | null;
+      if (data?.classes) setClasses(data.classes);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const chapterLabel = (id: string) => chapters.find((chapter) => chapter.id === id)?.name ?? id;
+
+  const iconButton =
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-30";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
         <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Classes</h2>
         <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
-          Video classes under each chapter.
+          Video classes under each chapter. Add, edit, reorder and delete.
         </p>
       </header>
 
@@ -127,6 +166,11 @@ export default function ClassesPage() {
               void create();
             }}
           >
+            {editingId && (
+              <p className="sm:col-span-2 rounded-lg border border-primary-500/40 bg-primary-600/10 px-3 py-2 text-xs font-bold text-primary-600 admin-dark:text-primary-300">
+                Editing class — change the fields and press &quot;Save Class&quot;.
+              </p>
+            )}
             <div>
               <label className={labelClass} htmlFor="cls-chapter">Chapter</label>
               <select id="cls-chapter" className={inputClass} value={form.chapterId}
@@ -163,26 +207,48 @@ export default function ClassesPage() {
                   onChange={(event) => setForm({ ...form, isFree: event.target.checked })} />
                 Free preview
               </label>
-              <button type="submit" disabled={busy} className={buttonPrimaryClass}>+ Add</button>
+              <div className="flex items-end gap-2">
+                {editingId && (
+                  <button type="button" disabled={busy}
+                    onClick={() => {
+                      setEditingId(null);
+                      setForm({ chapterId: "", title: "", videoUrl: "", noteUrl: "", durationMinutes: "0", isFree: false });
+                    }}
+                    className="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-semibold text-zinc-600 transition hover:border-primary-500/60 admin-dark:border-zinc-700 admin-dark:text-zinc-300">
+                    Cancel
+                  </button>
+                )}
+                <button type="submit" disabled={busy} className={buttonPrimaryClass}>
+                  {editingId ? "Save Class" : "+ Add"}
+                </button>
+              </div>
             </div>
           </form>
         )}
 
         <ul className="mt-5 space-y-2">
-          {(classes ?? []).map((item) => (
+          {(classes ?? []).map((item, index) => (
             <li key={item.id} className="flex items-center gap-3 rounded-xl bg-neutral-50 px-4 py-2.5 admin-dark:bg-zinc-800/60">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold text-zinc-900 admin-dark:text-zinc-100">
-                  {item.title}{item.isFree ? " · Free" : ""}
+                  {index + 1}. {item.title}{item.isFree ? " · Free" : ""}
                 </span>
                 <span className="block truncate text-xs text-zinc-500">
                   {chapterLabel(item.chapterId)} · {item.videoUrl ? "video ✓" : "no video"}
                 </span>
               </span>
-              <button type="button" disabled={busy} aria-label={`Delete ${item.title}`} className={buttonDangerClass}
-                onClick={() => void remove(item.id)}>
-                ✕
-              </button>
+              <span className="flex shrink-0 gap-1">
+                <button type="button" disabled={busy || index === 0} aria-label={`Move ${item.title} up`} className={iconButton}
+                  onClick={() => void move(index, -1)}>↑</button>
+                <button type="button" disabled={busy || index === (classes?.length ?? 0) - 1} aria-label={`Move ${item.title} down`} className={iconButton}
+                  onClick={() => void move(index, 1)}>↓</button>
+                <button type="button" disabled={busy} aria-label={`Edit ${item.title}`} className={iconButton}
+                  onClick={() => startEdit(item)}>✎</button>
+                <button type="button" disabled={busy} aria-label={`Delete ${item.title}`} className={buttonDangerClass}
+                  onClick={() => void remove(item.id)}>
+                  ✕
+                </button>
+              </span>
             </li>
           ))}
           {(classes ?? []).length === 0 && (

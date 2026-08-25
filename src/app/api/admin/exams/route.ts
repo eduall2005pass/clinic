@@ -6,6 +6,7 @@ import {
   saveExam,
   deleteExam,
   setExamStatus,
+  reorderExams,
   EXAM_KINDS,
   type ExamKind,
   type ExamStatus,
@@ -61,6 +62,31 @@ export async function POST(request: NextRequest) {
       error instanceof Error ? error.message : "Failed to save the exam.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
+}
+
+/** Change display order: { order: [id, …] }. */
+export async function PUT(request: NextRequest) {
+  const admin = await requirePermission(request, "manageExams");
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => null)) as
+    | { order?: unknown }
+    | null;
+  if (
+    !body ||
+    !Array.isArray(body.order) ||
+    !body.order.every((item) => typeof item === "string" && item.length > 0)
+  ) {
+    return NextResponse.json(
+      { error: "Invalid request body — expected { order: [id, …] }." },
+      { status: 400 },
+    );
+  }
+  await reorderExams(body.order as string[]);
+  await logAdminAction(admin, "exam.update", "reorder", request);
+  const exams = await fetchExams();
+  return NextResponse.json({ exams });
 }
 
 /** Quick publish/unpublish/close: { id, status }. */

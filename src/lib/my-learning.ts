@@ -1,4 +1,9 @@
 import { query } from "@/lib/mysql";
+import {
+  isDirectContent,
+  type CourseContentLayout,
+} from "@/lib/course-content";
+import { fetchCatalogCourses } from "@/lib/courses-admin";
 
 // ── Shared types (consumed by API routes + client components) ────────────
 
@@ -14,9 +19,11 @@ export type EnrolledCourseSummary = {
   courseKind: "free" | "paid";
   enrollmentStatus: string;
   enrollmentDate: string;
-  /** True for SSC Biology / HSC Botany / HSC Zoology — they open the dedicated
-   *  Class / Exam / Materials content page instead of the subject drill-down. */
+  /** True when View Course Content opens the dedicated Class / Exam /
+   *  Materials page (admin-set structure, or legacy name heuristic). */
   directContent: boolean;
+  /** Admin-selected content structure for the course. */
+  contentLayout: CourseContentLayout;
   progress: {
     totalClasses: number;
     completedClasses: number;
@@ -91,6 +98,8 @@ export type CourseLearningData = {
     completedClasses: number;
     percent: number;
   };
+  /** Admin-selected content structure ("auto" = legacy name heuristic). */
+  contentLayout: CourseContentLayout;
   subjects: SubjectTree[];
 };
 
@@ -103,6 +112,12 @@ function toNumber(value: unknown): number {
 
 function toStringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function toLayout(value: unknown): CourseContentLayout {
+  return value === "direct" || value === "paper" || value === "subject"
+    ? value
+    : "auto";
 }
 
 async function loadProgress(
@@ -144,24 +159,13 @@ export async function hasActiveEnrollment(
   return rows.length > 0;
 }
 
-/**
- * Courses that use the dedicated Course Content page (Class / Exam / Materials
- * cards with chapter buttons) instead of the subject → paper drill-down.
- * Matched on the normalized course name/slug so it works regardless of the
- * exact catalog wording ("SSC Biology", "HSC Botany", "HSC Zoology", …).
- */
-const DIRECT_CONTENT_MATCHERS = ["sscbiology", "botany", "zoology"];
-
+/** Kept as a thin alias — the logic now lives in @/lib/course-content so
+ *  client components can use it too (this module is server-only). */
 export function usesDirectCourseContent(
   name?: string | null,
   slug?: string | null,
 ): boolean {
-  const normalized = `${name ?? ""} ${slug ?? ""}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-  return DIRECT_CONTENT_MATCHERS.some((matcher) =>
-    normalized.includes(matcher),
-  );
+  return isDirectContent("auto", name, slug);
 }
 
 // ── Enrolled course list ──────────────────────────────────────────────────
@@ -178,6 +182,7 @@ type EnrolledCourseRow = {
   course_kind: "free" | "paid";
   enrollment_status: string;
   enrollment_date: Date | string;
+  content_layout: string | null;
 };
 
 export async function getMyEnrolledCourses(
@@ -194,7 +199,7 @@ export async function getMyEnrolledCourses(
             COALESCE(NULLIF(c.name, ''), e.course_name) AS name,
             COALESCE(c.category, e.course_type) AS category,
             c.batch_id, c.image_url, c.short_description, c.fee, c.discount_fee,
-            e.course_kind, e.enrollment_status, e.enrollment_date
+            c.content_layout, e.course_kind, e.enrollment_status, e.enrollment_date
        FROM enrollments e
        LEFT JOIN catalog_courses c ON c.slug = e.course_id
       WHERE e.student_uid = ?
@@ -238,6 +243,7 @@ export async function getMyEnrolledCourses(
       const progress = progressMap.get(row.slug);
       const totalClasses = toNumber(progress?.total ?? 0);
       const completedClasses = toNumber(progress?.done ?? 0);
+      const contentLayout = toLayout(row.content_layout);
       return {
         slug: row.slug,
         name: toStringOrNull(row.name) ?? row.slug,
@@ -256,10 +262,8 @@ export async function getMyEnrolledCourses(
           row.enrollment_date instanceof Date
             ? row.enrollment_date.toISOString()
             : String(row.enrollment_date ?? ""),
-        directContent: usesDirectCourseContent(
-          toStringOrNull(row.name),
-          row.slug,
-        ),
+        contentLayout,
+        directContent: isDirectContent(contentLayout, toStringOrNull(row.name), row.slug),
         progress: {
           totalClasses,
           completedClasses,
@@ -277,27 +281,31 @@ export async function getMyEnrolledCourses(
       "[my-learning] progress aggregate failed; serving courses without progress:",
       error,
     );
-    return rows.map((row) => ({
-      slug: row.slug,
-      name: toStringOrNull(row.name) ?? row.slug,
-      category: row.category ?? "",
-      batchId: row.batch_id ?? "",
-      imageUrl: toStringOrNull(row.image_url) ?? "",
-      shortDescription: toStringOrNull(row.short_description) ?? "",
-      fee: toNumber(row.fee),
-      discountFee:
-        row.discount_fee !== null && row.discount_fee !== undefined
-          ? toNumber(row.discount_fee)
-          : null,
-      courseKind: row.course_kind,
-      enrollmentStatus: row.enrollment_status,
-      enrollmentDate:
-        row.enrollment_date instanceof Date
-          ? row.enrollment_date.toISOString()
-          : String(row.enrollment_date ?? ""),
-      directContent: usesDirectCourseContent(toStringOrNull(row.name), row.slug),
-      progress: { totalClasses: 0, completedClasses: 0, percent: 0 },
-    }));
+    return rows.map((row) => {
+      const contentLayout = toLayout(row.content_layout);
+      return {
+        slug: row.slug,
+        name: toStringOrNull(row.name) ?? row.slug,
+        category: row.category ?? "",
+        batchId: row.batch_id ?? "",
+        imageUrl: toStringOrNull(row.image_url) ?? "",
+        shortDescription: toStringOrNull(row.short_description) ?? "",
+        fee: toNumber(row.fee),
+        discountFee:
+          row.discount_fee !== null && row.discount_fee !== undefined
+            ? toNumber(row.discount_fee)
+            : null,
+        courseKind: row.course_kind,
+        enrollmentStatus: row.enrollment_status,
+        enrollmentDate:
+          row.enrollment_date instanceof Date
+            ? row.enrollment_date.toISOString()
+            : String(row.enrollment_date ?? ""),
+        contentLayout,
+        directContent: isDirectContent(contentLayout, toStringOrNull(row.name), row.slug),
+        progress: { totalClasses: 0, completedClasses: 0, percent: 0 },
+      };
+    });
   }
 }
 
@@ -315,6 +323,7 @@ type CatalogRow = {
   duration: string | null;
   fee: number;
   discount_fee: number | null;
+  content_layout?: string | null;
 };
 
 type EnrollmentMetaRow = {
@@ -391,7 +400,7 @@ export async function getCourseLearningData(
   }
 
   const catalogRows = await query<CatalogRow[]>(
-    "SELECT slug, name, category, batch_id, image_url, short_description, description, teacher_name, duration, fee, discount_fee FROM catalog_courses WHERE slug = ? LIMIT 1",
+    "SELECT slug, name, category, batch_id, image_url, short_description, description, teacher_name, duration, fee, discount_fee, content_layout FROM catalog_courses WHERE slug = ? LIMIT 1",
     [slug],
   );
   // Fall back to the enrollment's own stored course info when the catalog
@@ -408,6 +417,7 @@ export async function getCourseLearningData(
     duration: null,
     fee: 0,
     discount_fee: null,
+    content_layout: null,
   };
 
   const [subjects, progress, favourites] = await Promise.all([
@@ -500,7 +510,7 @@ export async function getCourseLearningData(
             `SELECT id, chapter_id, title, duration_minutes, total_marks
                FROM exams
               WHERE chapter_id IN (${chapterPlaceholders}) AND status = 'published'
-              ORDER BY scheduled_at DESC`,
+              ORDER BY sort_order ASC, scheduled_at DESC`,
             chapterIds,
           ),
         [],
@@ -652,8 +662,263 @@ function buildCourseData(
           ? Math.round((completedClasses / totalClasses) * 100)
           : 0,
     },
+    contentLayout: toLayout(catalog.content_layout),
     subjects: tree,
   };
+}
+
+// ── Admin panel: full course content tree (no enrollment required) ───────
+//
+// Same hierarchy, same tables and same shape as the student flow — only the
+// access rule differs: admins browse EVERY course regardless of enrollment.
+// Student permissions stay enrollment-based on all /api/my/* routes.
+
+export type AdminCourseSummary = {
+  slug: string;
+  name: string;
+  category: string;
+  batchId: string;
+  imageUrl: string;
+  shortDescription: string;
+  fee: number;
+  discountFee: number | null;
+  courseKind: "free" | "paid";
+  counts: {
+    subjects: number;
+    chapters: number;
+    classes: number;
+    exams: number;
+    materials: number;
+  };
+};
+
+export async function getAdminCourseSummaries(): Promise<AdminCourseSummary[]> {
+  const catalog = await fetchCatalogCourses();
+  if (catalog.length === 0) return [];
+
+  const [subjectCounts, chapterCounts, classCounts, examCounts, materialCounts] =
+    await Promise.all([
+      safe(
+        "admin subject counts",
+        () =>
+          query<{ course_slug: string; cnt: string | number }[]>(
+            `SELECT a.course_slug, COUNT(DISTINCT s.id) AS cnt
+               FROM course_subject_assignments a
+               JOIN course_subjects s ON s.id = a.subject_id AND s.is_active = 1
+              GROUP BY a.course_slug`,
+          ),
+        [] as { course_slug: string; cnt: string | number }[],
+      ),
+      safe(
+        "admin chapter counts",
+        () =>
+          query<{ course_slug: string; cnt: string | number }[]>(
+            `SELECT a.course_slug, COUNT(ch.id) AS cnt
+               FROM course_subject_assignments a
+               JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
+              GROUP BY a.course_slug`,
+          ),
+        [] as { course_slug: string; cnt: string | number }[],
+      ),
+      safe(
+        "admin class counts",
+        () =>
+          query<{ course_slug: string; cnt: string | number }[]>(
+            `SELECT a.course_slug, COUNT(cl.id) AS cnt
+               FROM course_subject_assignments a
+               JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
+               JOIN course_classes cl ON cl.chapter_id = ch.id AND cl.is_active = 1
+              GROUP BY a.course_slug`,
+          ),
+        [] as { course_slug: string; cnt: string | number }[],
+      ),
+      safe(
+        "admin exam counts",
+        () =>
+          query<{ course_slug: string; cnt: string | number }[]>(
+            `SELECT a.course_slug, COUNT(ex.id) AS cnt
+               FROM course_subject_assignments a
+               JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
+               JOIN exams ex ON ex.chapter_id = ch.id AND ex.status = 'published'
+              GROUP BY a.course_slug`,
+          ),
+        [] as { course_slug: string; cnt: string | number }[],
+      ),
+      safe(
+        "admin material counts",
+        () =>
+          query<{ course_slug: string; cnt: string | number }[]>(
+            `SELECT a.course_slug, COUNT(m.id) AS cnt
+               FROM course_subject_assignments a
+               JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
+               JOIN course_materials m ON m.chapter_id = ch.id AND m.is_active = 1
+              GROUP BY a.course_slug`,
+          ),
+        [] as { course_slug: string; cnt: string | number }[],
+      ),
+    ]);
+
+  const toCountMap = (
+    rows: { course_slug: string; cnt: string | number }[],
+  ): Map<string, number> =>
+    new Map(rows.map((row) => [row.course_slug, Number(row.cnt) || 0]));
+
+  const subjectsMap = toCountMap(subjectCounts);
+  const chaptersMap = toCountMap(chapterCounts);
+  const classesMap = toCountMap(classCounts);
+  const examsMap = toCountMap(examCounts);
+  const materialsMap = toCountMap(materialCounts);
+
+  return catalog.map((course) => {
+    const payableFee =
+      course.discountFee !== null && course.discountFee !== undefined
+        ? course.discountFee
+        : course.fee;
+    return {
+      slug: course.slug,
+      name: course.name,
+      category: course.category,
+      batchId: course.batchId ?? "",
+      imageUrl: course.image ?? "",
+      shortDescription: course.shortDescription ?? "",
+      fee: course.fee,
+      discountFee: course.discountFee,
+      courseKind: payableFee > 0 ? "paid" : "free",
+      counts: {
+        subjects: subjectsMap.get(course.slug) ?? 0,
+        chapters: chaptersMap.get(course.slug) ?? 0,
+        classes: classesMap.get(course.slug) ?? 0,
+        exams: examsMap.get(course.slug) ?? 0,
+        materials: materialsMap.get(course.slug) ?? 0,
+      },
+    };
+  });
+}
+
+/** Admin variant of getCourseLearningData — no enrollment check, no personal progress. */
+export async function getAdminCourseLearningData(
+  slug: string,
+): Promise<CourseLearningData | null> {
+  const catalogRows = await query<CatalogRow[]>(
+    "SELECT slug, name, category, batch_id, image_url, short_description, description, teacher_name, duration, fee, discount_fee, content_layout FROM catalog_courses WHERE slug = ? LIMIT 1",
+    [slug],
+  );
+  const catalog = catalogRows[0];
+  if (!catalog) return null;
+
+  const payableFee =
+    catalog.discount_fee !== null && catalog.discount_fee !== undefined
+      ? catalog.discount_fee
+      : catalog.fee;
+  const syntheticEnrollment: EnrollmentMetaRow = {
+    course_kind: payableFee > 0 ? "paid" : "free",
+    course_name: catalog.name,
+    course_type: catalog.category,
+    enrollment_status: "active",
+    enrollment_date: "",
+  };
+
+  const subjects = await safe<SubjectRow[]>(
+    "subjects query",
+    () =>
+      query<SubjectRow[]>(
+        `SELECT s.id, s.name
+           FROM course_subjects s
+           JOIN course_subject_assignments a ON a.subject_id = s.id
+          WHERE a.course_slug = ? AND s.is_active = 1
+          ORDER BY s.sort_order, s.name`,
+        [slug],
+      ),
+    [],
+  );
+
+  if (subjects.length === 0) {
+    return buildCourseData(catalog, syntheticEnrollment, [], new Map(), new Set());
+  }
+
+  const subjectIds = subjects.map((subject) => subject.id);
+  const subjectPlaceholders = subjectIds.map(() => "?").join(",");
+
+  const [papers, chapters] = await Promise.all([
+    safe<PaperRow[]>(
+      "papers query",
+      () =>
+        query<PaperRow[]>(
+          `SELECT id, subject_id, name, kind FROM course_papers
+            WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+            ORDER BY sort_order, name`,
+          subjectIds,
+        ),
+      [],
+    ),
+    safe<ChapterRow[]>(
+      "chapters query",
+      () =>
+        query<ChapterRow[]>(
+          `SELECT id, subject_id, paper_id, name FROM course_chapters
+            WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+            ORDER BY sort_order, name`,
+          subjectIds,
+        ),
+      [],
+    ),
+  ]);
+
+  const chapterIds = chapters.map((chapter) => chapter.id);
+
+  let classes: ClassRow[] = [];
+  let materials: MaterialRow[] = [];
+  let exams: ExamRow[] = [];
+
+  if (chapterIds.length > 0) {
+    const chapterPlaceholders = chapterIds.map(() => "?").join(",");
+    [classes, materials, exams] = await Promise.all([
+      safe<ClassRow[]>(
+        "classes query",
+        () =>
+          query<ClassRow[]>(
+            `SELECT id, chapter_id, title, video_url, note_url, duration_minutes, is_free
+               FROM course_classes
+              WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
+              ORDER BY sort_order, created_at`,
+            chapterIds,
+          ),
+        [],
+      ),
+      safe<MaterialRow[]>(
+        "materials query",
+        () =>
+          query<MaterialRow[]>(
+            `SELECT id, chapter_id, title, material_type, file_url
+               FROM course_materials
+              WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
+              ORDER BY sort_order, id`,
+            chapterIds,
+          ),
+        [],
+      ),
+      safe<ExamRow[]>(
+        "exams query",
+        () =>
+          query<ExamRow[]>(
+            `SELECT id, chapter_id, title, duration_minutes, total_marks
+               FROM exams
+              WHERE chapter_id IN (${chapterPlaceholders}) AND status = 'published'
+              ORDER BY sort_order ASC, scheduled_at DESC`,
+            chapterIds,
+          ),
+        [],
+      ),
+    ]);
+  }
+
+  return buildCourseData(catalog, syntheticEnrollment, subjects, new Map(), new Set(), {
+    papers,
+    chapters,
+    classes,
+    materials,
+    exams,
+  });
 }
 
 // ── Course progress (subject-wise + chapter-wise) ────────────────────────

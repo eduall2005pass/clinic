@@ -1,12 +1,7 @@
-import type { Metadata } from "next";
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
-import { ReviewsIcon } from "@/components/admin/icons";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Reviews — MediSpark Admin",
-  description: "Moderate and publish student reviews.",
-};
-
+// Reviews are managed by the live MySQL-backed manager — this legacy
+// placeholder route forwards there so no dead-end remains in the admin IA.
 export default function ContentReviewsPage() {
-  return <AdminPlaceholder title="Reviews" description="Moderate and publish student reviews." icon={ReviewsIcon} />;
+  redirect("/admin/website/homepage/reviews");
 }

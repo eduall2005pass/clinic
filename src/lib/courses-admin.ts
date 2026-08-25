@@ -24,6 +24,22 @@ export function normalizeCatalogCategory(value: unknown): CatalogCourseCategory 
     : "HSC Academic";
 }
 
+/** Which content structure the student site opens for this course. */
+export type CourseContentLayout = "auto" | "direct" | "paper" | "subject";
+
+const COURSE_CONTENT_LAYOUTS: CourseContentLayout[] = [
+  "auto",
+  "direct",
+  "paper",
+  "subject",
+];
+
+export function normalizeContentLayout(value: unknown): CourseContentLayout {
+  return (COURSE_CONTENT_LAYOUTS as string[]).includes(value as string)
+    ? (value as CourseContentLayout)
+    : "auto";
+}
+
 export type CatalogCourse = {
   slug: string;
   name: string;
@@ -45,6 +61,7 @@ export type CatalogCourse = {
   availability: "available" | "hidden";
   couponEnabled: boolean;
   featured: boolean;
+  contentLayout: CourseContentLayout;
 };
 
 type CatalogCourseRow = {
@@ -68,6 +85,7 @@ type CatalogCourseRow = {
   availability: string;
   coupon_enabled: number | boolean;
   is_featured?: number | boolean | null;
+  content_layout?: string | null;
 };
 
 function parseJsonArray(raw: string | null): string[] {
@@ -110,6 +128,7 @@ function rowToCourse(row: CatalogCourseRow): CatalogCourse {
     status: row.status === "published" ? "published" : "unpublished",
     availability: row.availability === "hidden" ? "hidden" : "available",
     couponEnabled: Boolean(row.coupon_enabled),
+    contentLayout: normalizeContentLayout(row.content_layout),
     featured: Boolean(row.is_featured),
   };
 }
@@ -145,6 +164,14 @@ async function ensureTables(): Promise<void> {
   try {
     await exec(
       `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS is_featured TINYINT(1) NOT NULL DEFAULT 0`,
+    );
+  } catch {
+    // Best effort — column may already exist.
+  }
+  // Course-wise content structure (direct / paper / subject selection).
+  try {
+    await exec(
+      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS content_layout ENUM('auto','direct','paper','subject') NOT NULL DEFAULT 'auto' AFTER availability`,
     );
   } catch {
     // Best effort — column may already exist.
@@ -239,8 +266,8 @@ export async function saveCatalogCourse(
        (slug, name, category, batch_id, image_url, short_description, description,
         teacher_name, teacher_photo_url, teacher_designation, duration,
         fee, discount_fee, features, overview_title, overview,
-        status, availability, coupon_enabled, is_featured, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        status, availability, coupon_enabled, is_featured, content_layout, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        name = VALUES(name), category = VALUES(category), batch_id = VALUES(batch_id),
        image_url = VALUES(image_url), short_description = VALUES(short_description),
@@ -251,7 +278,7 @@ export async function saveCatalogCourse(
        overview_title = VALUES(overview_title), overview = VALUES(overview),
        status = VALUES(status), availability = VALUES(availability),
        coupon_enabled = VALUES(coupon_enabled), is_featured = VALUES(is_featured),
-       updated_by = VALUES(updated_by)`,
+       content_layout = VALUES(content_layout), updated_by = VALUES(updated_by)`,
     [
       slug,
       name,
@@ -273,6 +300,7 @@ export async function saveCatalogCourse(
       input.availability === "hidden" ? "hidden" : "available",
       input.couponEnabled ? 1 : 0,
       input.featured ? 1 : 0,
+      normalizeContentLayout(input.contentLayout),
       adminUid,
     ],
   );
@@ -747,5 +775,17 @@ export async function saveClass(
 export async function deleteClass(id: string): Promise<CourseClass[]> {
   await ensureChapterTables();
   await exec(`DELETE FROM course_classes WHERE id = ?`, [id]);
+  return fetchClasses();
+}
+
+/** Change display order of classes from an ordered id list. */
+export async function reorderClasses(orderedIds: string[]): Promise<CourseClass[]> {
+  await ensureChapterTables();
+  for (let index = 0; index < orderedIds.length; index += 1) {
+    await exec(`UPDATE course_classes SET sort_order = ? WHERE id = ?`, [
+      index + 1,
+      orderedIds[index],
+    ]);
+  }
   return fetchClasses();
 }

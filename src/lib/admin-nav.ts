@@ -70,6 +70,7 @@ export const adminCategories: AdminCategory[] = [
     icon: CoursesIcon,
     permission: "manageCourses",
     subsections: [
+      { label: "Enrolled Courses", href: "/admin/enrolled-courses" },
       { label: "All Courses", href: "/admin/courses/all" },
       { label: "SSC Academic", href: "/admin/courses/ssc" },
       { label: "HSC Academic", href: "/admin/courses/academic" },
@@ -81,7 +82,7 @@ export const adminCategories: AdminCategory[] = [
       { label: "Papers & Materials", href: "/admin/courses/papers" },
       { label: "Classes", href: "/admin/courses/classes" },
       { label: "Pricing", href: "/admin/courses/pricing" },
-      { label: "Discounts", href: "/admin/courses/discounts" },
+      { label: "Discounts", href: "/admin/courses/pricing" },
       { label: "Coupons", href: "/admin/courses/coupons" },
     ],
   },

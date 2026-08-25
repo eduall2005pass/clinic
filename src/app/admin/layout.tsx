@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import AdminShell from "@/components/admin/AdminShell";
+import WebsiteAdminShell from "@/components/admin/WebsiteAdminShell";
 
 export const metadata: Metadata = {
-  title: "Admin Panel — MediSpark Control Center",
+  title: "Admin Panel — MediSpark",
   description:
-    "MediSpark admin control center — manage website content, courses, students, exams, mentors and more.",
+    "MediSpark admin management panel — same flow as the website, with full content control.",
 };
 
 export default function AdminLayout({
@@ -12,5 +12,5 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AdminShell>{children}</AdminShell>;
+  return <WebsiteAdminShell>{children}</WebsiteAdminShell>;
 }

@@ -273,3 +273,15 @@ export async function deleteMaterial(id: number): Promise<void> {
   await ensurePaperTables();
   await exec(`DELETE FROM course_materials WHERE id = ?`, [id]);
 }
+
+/** Change display order of materials from an ordered id list. */
+export async function reorderMaterials(orderedIds: number[]): Promise<ReturnType<typeof fetchMaterials>> {
+  await ensurePaperTables();
+  for (let index = 0; index < orderedIds.length; index += 1) {
+    await exec(`UPDATE course_materials SET sort_order = ? WHERE id = ?`, [
+      index + 1,
+      orderedIds[index],
+    ]);
+  }
+  return fetchMaterials();
+}

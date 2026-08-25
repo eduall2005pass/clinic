@@ -13,6 +13,8 @@ import type {
   CourseLearningData,
   SubjectTree,
 } from "@/lib/my-learning";
+import { isDirectContent } from "@/lib/course-content";
+import DirectContentView from "@/components/dashboard/CourseContentCards";
 
 type LoadState = "loading" | "error" | "forbidden" | "ready";
 
@@ -328,6 +330,24 @@ function CourseSubjectsContent({ slug }: { slug: string }) {
     return <LevelStates state={state} load={load} slug={slug} forbiddenKind={forbiddenKind} />;
   }
 
+  // Admin-selected content structure decides what "View Course Content" opens.
+  // 'auto' keeps the legacy behaviour (direct for SSC Bio/Botany/Zoology,
+  // paper selection for single-subject courses, subject list otherwise).
+  const layout = course.contentLayout;
+  const direct =
+    isDirectContent(layout, course.name, course.slug);
+  const useSubjectSelection =
+    !direct &&
+    (layout === "subject" ||
+      // Auto: multi-subject Medical Admission opens the icon grid directly.
+      (layout === "auto" &&
+        course.category === "Medical Admission" &&
+        course.subjects.length > 1));
+
+  if (direct) {
+    return <DirectContentView slug={slug} />;
+  }
+
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <BackLink href="/dashboard/enrolled-courses" label="My Enrolled Courses" />
@@ -370,7 +390,9 @@ function CourseSubjectsContent({ slug }: { slug: string }) {
         </div>
       </header>
 
-      {singleSubject ? (
+      {useSubjectSelection ? (
+        <SubjectSelection slug={slug} course={course} />
+      ) : singleSubject ? (
         <PaperSelection
           slug={slug}
           subject={singleSubject}
@@ -439,6 +461,119 @@ function CourseSubjectsContent({ slug }: { slug: string }) {
 function findSubject(course: CourseLearningData, subjectId: string): SubjectTree | null {
   return course.subjects.find((subject) => subject.id === subjectId) ?? null;
 }
+
+/**
+ * Subject icon picked from the subject name (Bengali or English). Purely
+ * presentational — the subject list itself always comes from the database.
+ */
+export function subjectIcon(name: string): React.ReactNode {
+  const n = name.toLowerCase();
+  if (/জীব|উদ্ভিদ|প্রাণী|bio|botany|zoology/.test(n)) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 21V9m0 0c0-3-2.5-6-7-6 0 4.5 3 6 7 6zm0 3c0-3 2.5-5 6.5-5 .5 4-2.5 5-6.5 5zM12 21H8" />
+      </svg>
+    );
+  }
+  if (/রসায়ন|chem/.test(n)) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10 3v6L5 18a2 2 0 001.8 3h10.4A2 2 0 0019 18l-5-9V3M8.5 3h7M7.5 15h9" />
+      </svg>
+    );
+  }
+  if (/পদার্থ|phys/.test(n)) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+        <ellipse cx="12" cy="12" rx="9" ry="3.6" />
+        <ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)" />
+        <ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(120 12 12)" />
+      </svg>
+    );
+  }
+  if (/সাধারণ জ্ঞান|gk|general knowledge/.test(n)) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <circle cx="12" cy="12" r="9" />
+        <path strokeLinecap="round" d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z" />
+      </svg>
+    );
+  }
+  // English / higher math / default — open book.
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+    </svg>
+  );
+}
+
+/**
+ * Subject Selection page (e.g. Complete Medical Admission Course): one icon
+ * card per subject, straight from the database. Clicking a card opens that
+ * subject's Class / Exam / Materials content page.
+ */
+function SubjectSelection({
+  slug,
+  course,
+}: {
+  slug: string;
+  course: CourseLearningData;
+}) {
+  return (
+    <div className="mt-10">
+      <h2 className="text-lg font-bold text-heading">Subjects</h2>
+      <p className="mt-1 text-xs text-neutral-400">
+        Choose a subject to open its classes, exams and materials.
+      </p>
+
+      {course.subjects.length === 0 ? (
+        <div className="mt-6 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
+          <p className="font-semibold text-heading">Content coming soon</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
+            This course has no subjects published yet. Please check back later.
+          </p>
+        </div>
+      ) : (
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {course.subjects.map((subject, index) => {
+            const counts = countsOf(subject.chapters);
+            return (
+              <li key={subject.id}>
+                <Link
+                  href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/subjects/${encodeURIComponent(subject.id)}/content`}
+                  className="group flex h-full items-center gap-4 rounded-2xl border border-ink/10 bg-dark-900 p-4 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/30 active:scale-[0.99] sm:p-5"
+                >
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white">
+                    {subjectIcon(subject.name)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-extrabold leading-snug text-heading transition group-hover:text-primary-400">
+                      {index + 1}. {subject.name}
+                    </span>
+                    <span className="text-xs text-neutral-500">
+                      {subject.chapters.length} chapter{subject.chapters.length === 1 ? "" : "s"}
+                      {" · "}
+                      {counts.classes} class{counts.classes === 1 ? "" : "es"}
+                      {" · "}
+                      {counts.exams} exam{counts.exams === 1 ? "" : "s"}
+                      {" · "}
+                      {counts.materials} material{counts.materials === 1 ? "" : "s"}
+                    </span>
+                  </span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
+                  </svg>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 
 function chaptersForPaper(subject: SubjectTree, paperId: string): ChapterItem[] {
   if (paperId === GENERAL_PAPER_ID) return orphanChapters(subject);

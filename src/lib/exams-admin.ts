@@ -31,6 +31,8 @@ export type Exam = {
   courseIds: string[];
   /** Chapter this exam belongs to (course content Exam card). */
   chapterId: string | null;
+  /** Admin-controlled display order inside a chapter. */
+  sortOrder: number;
 };
 
 export type ExamQuestion = {
@@ -89,6 +91,7 @@ type ExamRow = {
   ends_at?: Date | string | null;
   answer_key: string | null;
   chapter_id: string | null;
+  sort_order?: string | number | null;
 };
 
 type QuestionRow = {
@@ -148,6 +151,7 @@ function rowToExam(row: ExamRow): Exam {
     answerKey,
     courseIds: [],
     chapterId: row.chapter_id ?? null,
+    sortOrder: toNumber(row.sort_order ?? null),
   };
 }
 
@@ -206,6 +210,12 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — column may already exist.
   }
+  // Admin-controlled exam ordering inside a chapter.
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0 AFTER chapter_id`);
+  } catch {
+    // Best effort — column may already exist.
+  }
   await exec(`CREATE TABLE IF NOT EXISTS exam_courses (
     exam_id VARCHAR(64) NOT NULL,
     course_id VARCHAR(191) NOT NULL,
@@ -225,9 +235,9 @@ async function ensureTables(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 }
 
-const EXAM_COLUMNS = `id, title, kind, batch_id, subject, chapter_id, course_type,
-  duration_minutes, total_marks, negative_marks, question_count, status,
-  scheduled_at, ends_at, answer_key`;
+const EXAM_COLUMNS = `id, title, kind, batch_id, subject, chapter_id, sort_order,
+  course_type, duration_minutes, total_marks, negative_marks, question_count,
+  status, scheduled_at, ends_at, answer_key`;
 
 // ── Exams CRUD ───────────────────────────────────────────────────────────
 
@@ -249,8 +259,8 @@ export async function fetchExams(kind?: ExamKind): Promise<Exam[]> {
   try {
     await ensureTables();
     const rows = kind
-      ? await query<ExamRow[]>(`SELECT ${EXAM_COLUMNS} FROM exams WHERE kind = ? ORDER BY created_at DESC`, [kind])
-      : await query<ExamRow[]>(`SELECT ${EXAM_COLUMNS} FROM exams ORDER BY created_at DESC`);
+      ? await query<ExamRow[]>(`SELECT ${EXAM_COLUMNS} FROM exams WHERE kind = ? ORDER BY sort_order ASC, created_at DESC`, [kind])
+      : await query<ExamRow[]>(`SELECT ${EXAM_COLUMNS} FROM exams ORDER BY sort_order ASC, created_at DESC`);
     let assignments: Map<string, string[]> | null = null;
     if (rows.some((row) => row.kind === "enrolled")) {
       assignments = await fetchCourseAssignments();
@@ -317,12 +327,21 @@ export async function saveExam(
     throw new Error("Assign at least one course to an enrolled exam.");
   }
   const chapterId = asString(input.chapterId) || null;
+  // Keep the admin's explicit order; new exams without one go to the end.
+  let sortOrder = Math.max(0, Number(input.sortOrder) || 0);
+  if (!sortOrder && !id) {
+    const maxRows = await query<{ m: string | number | null }[]>(
+      `SELECT MAX(sort_order) AS m FROM exams`,
+    );
+    sortOrder = toNumber(maxRows[0]?.m ?? null) + 1;
+  }
 
   await exec(
     `INSERT INTO exams (${EXAM_COLUMNS}, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE title = VALUES(title), kind = VALUES(kind), batch_id = VALUES(batch_id),
-       subject = VALUES(subject), chapter_id = VALUES(chapter_id), course_type = VALUES(course_type),
+       subject = VALUES(subject), chapter_id = VALUES(chapter_id), sort_order = VALUES(sort_order),
+       course_type = VALUES(course_type),
        duration_minutes = VALUES(duration_minutes),
        total_marks = VALUES(total_marks), negative_marks = VALUES(negative_marks),
        question_count = VALUES(question_count), status = VALUES(status),
@@ -335,6 +354,7 @@ export async function saveExam(
       asString(input.batchId),
       asString(input.subject),
       chapterId,
+      sortOrder,
       input.courseType === "Admission" ? "Admission" : "Academic",
       Math.max(1, Number(input.durationMinutes) || 30),
       Number(totals[0]?.marks ?? input.totalMarks) || 0,
@@ -365,6 +385,17 @@ export async function saveExam(
   exam.courseIds = courseIds;
   exam.chapterId = chapterId;
   return exam;
+}
+
+/** Change display order of exams from an ordered id list. */
+export async function reorderExams(orderedIds: string[]): Promise<void> {
+  await ensureTables();
+  for (let index = 0; index < orderedIds.length; index += 1) {
+    await exec(`UPDATE exams SET sort_order = ? WHERE id = ?`, [
+      index + 1,
+      orderedIds[index],
+    ]);
+  }
 }
 
 export async function deleteExam(id: string): Promise<void> {

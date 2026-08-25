@@ -16,6 +16,7 @@ import {
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
 import {
   type CatalogCourseCategory,
+  type CourseContentLayout,
 } from "@/lib/courses-admin";
 
 export type CatalogCourse = {
@@ -39,6 +40,7 @@ export type CatalogCourse = {
   availability: "available" | "hidden";
   couponEnabled: boolean;
   featured: boolean;
+  contentLayout: CourseContentLayout;
 };
 
 const EMPTY_FORM = {
@@ -58,6 +60,7 @@ const EMPTY_FORM = {
   status: "unpublished" as "published" | "unpublished",
   couponEnabled: false,
   featured: false,
+  contentLayout: "auto" as "auto" | "direct" | "paper" | "subject",
 };
 
 type FormState = typeof EMPTY_FORM;
@@ -80,6 +83,7 @@ function toForm(course: CatalogCourse): FormState {
     status: course.status,
     couponEnabled: course.couponEnabled,
     featured: course.featured,
+    contentLayout: course.contentLayout ?? "auto",
   };
 }
 
@@ -410,6 +414,18 @@ export default function CourseManager({
                 <label className={labelClass} htmlFor="cm-duration">Duration</label>
                 <input id="cm-duration" className={inputClass} value={form.duration}
                   onChange={(e) => setForm({ ...form, duration: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="cm-layout">Content structure (student site)</label>
+                <select id="cm-layout" className={inputClass} value={form.contentLayout}
+                  onChange={(e) =>
+                    setForm({ ...form, contentLayout: e.target.value as FormState["contentLayout"] })
+                  }>
+                  <option value="auto">Auto (based on course type)</option>
+                  <option value="direct">Direct — Class / Exam / Materials cards</option>
+                  <option value="paper">Paper Selection (১ম / ২য় পত্র)</option>
+                  <option value="subject">Subject Selection (Medical Admission)</option>
+                </select>
               </div>
               <div>
                 <MediaUploadField

@@ -5,6 +5,7 @@ import {
   fetchMaterials,
   saveMaterial,
   deleteMaterial,
+  reorderMaterials,
 } from "@/lib/course-papers";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,38 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save the material.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+/** Change display order: { order: [id, …] }. */
+export async function PUT(request: NextRequest) {
+  const admin = await requirePermission(request, "manageCourses");
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => null)) as
+    | { order?: unknown }
+    | null;
+  if (
+    !body ||
+    !Array.isArray(body.order) ||
+    !body.order.every((item) => Number.isFinite(Number(item)))
+  ) {
+    return NextResponse.json(
+      { error: "Invalid request body — expected { order: [id, …] }." },
+      { status: 400 },
+    );
+  }
+  try {
+    const materials = await reorderMaterials(
+      (body.order as unknown[]).map((item) => Number(item)),
+    );
+    await logAdminAction(admin, "material.update", "reorder", request);
+    return NextResponse.json({ materials });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to reorder materials.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

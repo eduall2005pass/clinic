@@ -74,7 +74,15 @@ const CARDS: CardDef[] = [
   },
 ];
 
-export default function DirectContentView({ slug }: { slug: string }) {
+export default function DirectContentView({
+  slug,
+  subjectId,
+}: {
+  slug: string;
+  /** When set, only this subject's chapters are shown and the header shows
+   *  the subject name (per-subject content page for multi-subject courses). */
+  subjectId?: string;
+}) {
   const { course, state, load, forbiddenKind } = useCourseLearning(slug);
 
   if (state !== "ready" || !course) {
@@ -88,11 +96,33 @@ export default function DirectContentView({ slug }: { slug: string }) {
     );
   }
 
-  const chapters = flatChapters(course);
+  const subject = subjectId
+    ? course.subjects.find((item) => item.id === subjectId) ?? null
+    : null;
+  if (subjectId && !subject) {
+    return (
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center">
+          <p className="font-bold text-yellow-300">Subject not found</p>
+          <BackLink
+            href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}`}
+            label={`Back to ${course.name}`}
+          />
+        </div>
+      </section>
+    );
+  }
+
+  const chapters = subject ? subject.chapters : flatChapters(course);
+  const title = subject ? subject.name : course.name;
+  const backHref = subject
+    ? `/dashboard/enrolled-courses/${encodeURIComponent(slug)}`
+    : "/dashboard/enrolled-courses";
+  const backLabel = subject ? course.name : "My Enrolled Courses";
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-      <BackLink href="/dashboard/enrolled-courses" label="My Enrolled Courses" />
+      <BackLink href={backHref} label={backLabel} />
 
       {/* Course header */}
       <header className="mt-5 grid gap-6 md:grid-cols-[minmax(0,320px)_1fr]">
@@ -114,9 +144,14 @@ export default function DirectContentView({ slug }: { slug: string }) {
             <span className="rounded-full border border-ink/10 bg-ink/5 px-2.5 py-1 text-xs font-bold text-neutral-300">
               {course.category}
             </span>
+            {subject ? (
+              <span className="rounded-full border border-primary-500/40 bg-dark-950/80 px-2.5 py-1 text-xs font-bold text-primary-300">
+                {subject.name}
+              </span>
+            ) : null}
           </div>
           <h1 className="mt-3 text-2xl font-extrabold text-heading sm:text-3xl">
-            {course.name}
+            {title}
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-400">
             Select a card below, then choose a chapter to open its content.

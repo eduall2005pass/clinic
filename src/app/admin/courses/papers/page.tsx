@@ -347,6 +347,7 @@ function MaterialsManager({
   const [title, setTitle] = useState("");
   const [type, setType] = useState("pdf");
   const [fileUrl, setFileUrl] = useState("");
+  const [reorderBusy, setReorderBusy] = useState(false);
 
   const loadMaterials = useCallback(async () => {
     if (!chapterId) return;
@@ -359,14 +360,30 @@ function MaterialsManager({
     } catch {
       setMaterials([]);
     }
-  }, [chapterId, setMaterials]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterId]);
 
   useEffect(() => {
-    if (chapterId) {
-      const timer = setTimeout(() => void loadMaterials(), 0);
-      return () => clearTimeout(timer);
-    }
+    if (chapterId) void loadMaterials();
+    else setMaterials(null);
   }, [chapterId, loadMaterials]);
+
+  async function move(index: number, direction: -1 | 1) {
+    if (!materials) return;
+    const target = index + direction;
+    if (target < 0 || target >= materials.length) return;
+    const next = [...materials];
+    [next[index], next[target]] = [next[target], next[index]];
+    setReorderBusy(true);
+    try {
+      const ok = await call("/api/admin/materials", "PUT", {
+        order: next.map((item) => item.id),
+      });
+      if (ok) await loadMaterials();
+    } finally {
+      setReorderBusy(false);
+    }
+  }
 
   async function addMaterial() {
     if (!chapterId || !title.trim() || !fileUrl.trim()) {
@@ -443,25 +460,35 @@ function MaterialsManager({
               {materials.length === 0 && (
                 <li className="text-sm text-neutral-500">No materials for this chapter yet.</li>
               )}
-              {materials.map((material) => (
+              {materials.map((material, index) => (
                 <li key={material.id} className="flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-950/60 px-3.5 py-2.5">
                   <span className="min-w-0 flex-1 truncate text-sm text-neutral-200">
-                    {material.title}{" "}
+                    {index + 1}. {material.title}{" "}
                     <span className="text-[10px] font-bold uppercase text-neutral-500">{material.materialType}</span>
                   </span>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={async () => {
-                      if (!window.confirm(`Delete material "${material.title}"?`)) return;
-                      if (await call("/api/admin/materials", "DELETE", { id: material.id })) {
-                        await loadMaterials();
-                      }
-                    }}
-                    className={buttonDangerClass + " px-3 py-1 text-xs"}
-                  >
-                    Delete
-                  </button>
+                  <span className="flex shrink-0 gap-1.5">
+                    <button type="button" disabled={reorderBusy || index === 0}
+                      aria-label={`Move ${material.title} up`}
+                      onClick={() => void move(index, -1)}
+                      className="rounded-lg border border-ink/15 px-2 py-1 text-xs text-neutral-300 disabled:opacity-40">↑</button>
+                    <button type="button" disabled={reorderBusy || index === materials.length - 1}
+                      aria-label={`Move ${material.title} down`}
+                      onClick={() => void move(index, 1)}
+                      className="rounded-lg border border-ink/15 px-2 py-1 text-xs text-neutral-300 disabled:opacity-40">↓</button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={async () => {
+                        if (!window.confirm(`Delete material "${material.title}"?`)) return;
+                        if (await call("/api/admin/materials", "DELETE", { id: material.id })) {
+                          await loadMaterials();
+                        }
+                      }}
+                      className={buttonDangerClass + " px-3 py-1 text-xs"}
+                    >
+                      Delete
+                    </button>
+                  </span>
                 </li>
               ))}
             </ul>

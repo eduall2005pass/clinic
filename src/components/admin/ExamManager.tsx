@@ -32,6 +32,7 @@ export type Exam = {
   answerKey: Record<string, number> | null;
   courseIds?: string[];
   chapterId?: string | null;
+  sortOrder?: number | null;
 };
 
 const EMPTY = {
@@ -73,6 +74,7 @@ export default function ExamManager({
   const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
   const [chapterOptions, setChapterOptions] = useState<ChapterOption[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSortOrder, setEditingSortOrder] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -124,6 +126,7 @@ export default function ExamManager({
     setForm(EMPTY);
     setCourseIds([]);
     setEditingId(null);
+    setEditingSortOrder(null);
     setShowForm(true);
     setNotice(null);
   }
@@ -145,6 +148,7 @@ export default function ExamManager({
       endsAt: exam.endsAt ? exam.endsAt.slice(0, 16) : "",
     });
     setCourseIds(exam.courseIds ?? []);
+    setEditingSortOrder(exam.sortOrder ?? null);
     setEditingId(exam.id);
     setShowForm(true);
     setNotice(null);
@@ -163,6 +167,7 @@ export default function ExamManager({
         headers: { "Content-Type": "application/json", ...gate.headers },
         body: JSON.stringify({
           ...form,
+          ...(editingSortOrder !== null ? { sortOrder: editingSortOrder } : {}),
           courseIds: form.kind === "enrolled" ? courseIds : [],
           durationMinutes: Number(form.durationMinutes) || 30,
           negativeMarks: Number(form.negativeMarks) || 0,
@@ -235,6 +240,31 @@ export default function ExamManager({
     }
   }
 
+  async function move(index: number, direction: -1 | 1) {
+    if (!exams) return;
+    const target = index + direction;
+    if (target < 0 || target >= exams.length) return;
+    const next = [...exams];
+    [next[index], next[target]] = [next[target], next[index]];
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/exams", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({ order: next.map((item) => item.id) }),
+      });
+      if (!response.ok) {
+        setNotice({ kind: "error", text: "Failed to reorder." });
+        return;
+      }
+      await load();
+      setNotice({ kind: "success", text: "Exam order updated." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -251,7 +281,7 @@ export default function ExamManager({
         <p className={`${cardClass} mt-5 p-8 text-center text-sm text-zinc-500`}>No exams yet.</p>
       ) : (
         <ul className="mt-5 space-y-3">
-          {exams.map((exam) => (
+          {exams.map((exam, examIndex) => (
             <li key={exam.id} className={`${cardClass} p-4 sm:p-5`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -289,6 +319,22 @@ export default function ExamManager({
                   )}
                 </div>
                 <div className="flex shrink-0 gap-2">
+                  <span className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      disabled={busy || examIndex === 0}
+                      aria-label={`Move ${exam.title} up`}
+                      onClick={() => void move(examIndex, -1)}
+                      className="rounded-lg border border-neutral-200 px-2 text-xs text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 disabled:opacity-30"
+                    >↑</button>
+                    <button
+                      type="button"
+                      disabled={busy || examIndex === (exams?.length ?? 0) - 1}
+                      aria-label={`Move ${exam.title} down`}
+                      onClick={() => void move(examIndex, 1)}
+                      className="rounded-lg border border-neutral-200 px-2 text-xs text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 disabled:opacity-30"
+                    >↓</button>
+                  </span>
                   <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonSecondaryClass}>
                     Questions ({exam.questionCount})
                   </button>
