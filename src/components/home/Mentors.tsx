@@ -76,17 +76,17 @@ export default async function Mentors({
                   mentor.isDeveloper) && (
                   <div className="mt-5 flex flex-col items-center gap-2.5">
                     {mentor.isFounder && (
-                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold tracking-wide text-black">
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-blue-500/40 bg-blue-600/10 px-4 py-2 text-xs font-bold tracking-wide text-blue-400">
                         Founder of MediSpark
                       </span>
                     )}
                     {mentor.isCoFounder && (
-                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold tracking-wide text-black">
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-blue-500/40 bg-blue-600/10 px-4 py-2 text-xs font-bold tracking-wide text-blue-400">
                         Co-Founder of MediSpark
                       </span>
                     )}
                     {mentor.isDeveloper && (
-                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold tracking-wide text-black">
+                      <span className="inline-flex w-full max-w-[240px] items-center justify-center rounded-xl border border-blue-500/40 bg-blue-600/10 px-4 py-2 text-xs font-bold tracking-wide text-blue-400">
                         Developer of MediSpark
                       </span>
                     )}
