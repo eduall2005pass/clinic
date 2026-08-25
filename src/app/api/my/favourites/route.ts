@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFirebaseUser } from "@/lib/auth-api";
 import { exec, isMysqlConfigured, query } from "@/lib/mysql";
+import { itemInEnrolledCourse } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +22,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   try {
+    // Only return favourites whose item is still inside an enrolled course.
     const rows = await query<{ item_type: string; item_id: string }[]>(
-      "SELECT item_type, item_id FROM student_favourites WHERE student_uid = ? ORDER BY created_at DESC",
-      [user.uid],
+      `SELECT f.item_type, f.item_id
+         FROM student_favourites f
+        WHERE f.student_uid = ?
+          AND (
+            (f.item_type = 'class' AND EXISTS (
+               SELECT 1 FROM course_classes cl
+                JOIN course_chapters ch ON ch.id = cl.chapter_id
+                JOIN course_subject_assignments a ON a.subject_id = ch.subject_id
+                JOIN enrollments e ON e.course_id = a.course_slug
+                     AND e.student_uid = ? AND e.enrollment_status = 'active'
+               WHERE cl.id = f.item_id))
+            OR
+            (f.item_type = 'material' AND EXISTS (
+               SELECT 1 FROM course_materials m
+                JOIN course_chapters ch ON ch.id = m.chapter_id
+                JOIN course_subject_assignments a ON a.subject_id = ch.subject_id
+                JOIN enrollments e ON e.course_id = a.course_slug
+                     AND e.student_uid = ? AND e.enrollment_status = 'active'
+               WHERE m.id = f.item_id))
+          )
+        ORDER BY f.created_at DESC`,
+      [user.uid, user.uid, user.uid],
     );
     return NextResponse.json({
       favourites: rows.map((row) => ({
@@ -49,6 +71,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid favourite item." }, { status: 400 });
   }
   try {
+    // Course-wise permission check: the item must belong to a course the
+    // student is ACTIVELY enrolled in — favourites cannot point outside.
+    const allowed = await itemInEnrolledCourse(
+      user.uid,
+      parsed.itemType as "class" | "material",
+      parsed.itemId,
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Not available in your enrolled courses." },
+        { status: 403 },
+      );
+    }
     // Toggle: remove if already a favourite, otherwise add.
     const deleted = await exec(
       "DELETE FROM student_favourites WHERE student_uid = ? AND item_type = ? AND item_id = ?",
