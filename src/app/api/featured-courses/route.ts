@@ -9,7 +9,9 @@ import {
 // Public content: edge-cached for fast loads (60s revalidation).
 export const revalidate = 60;
 
-const NO_CACHE_HEADERS = { "Cache-Control": "no-store" };
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+};
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -19,10 +21,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
     const courses = await fetchAllFeaturedCourses();
-    return NextResponse.json({ courses }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ courses }, { headers: CACHE_HEADERS });
   }
   const slugs = await fetchActiveFeaturedSlugs();
-  return NextResponse.json({ slugs }, { headers: NO_CACHE_HEADERS });
+  return NextResponse.json({ slugs }, { headers: CACHE_HEADERS });
 }
 
 /** Replace the full featured list (select / toggle / reorder). */

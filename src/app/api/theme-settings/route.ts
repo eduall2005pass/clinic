@@ -9,13 +9,13 @@ import {
 // Public content: edge-cached for fast loads (60s revalidation).
 export const revalidate = 60;
 
-const NO_CACHE_HEADERS = {
-  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
 };
 
 export async function GET() {
   const theme = await fetchThemeSettings();
-  return NextResponse.json({ theme }, { headers: NO_CACHE_HEADERS });
+  return NextResponse.json({ theme }, { headers: CACHE_HEADERS });
 }
 
 export async function PUT(request: NextRequest) {
@@ -38,7 +38,7 @@ export async function PUT(request: NextRequest) {
   try {
     const normalized = normalizeThemeSettingsInput(body);
     const theme = await saveThemeSettings(normalized, admin.uid);
-    return NextResponse.json({ theme }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ theme }, { headers: CACHE_HEADERS });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save theme settings.";
