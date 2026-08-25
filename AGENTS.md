@@ -9,7 +9,7 @@ User communicates in Bengali/Banglish — reply in the same style.
 
 ## Infrastructure (current, as of 2026-08)
 - **Hosting:** Vercel — production project `medisparkbd` (account `eduall2005pass-8109s-projects`),
-  connected to GitHub repo `eduall2005pass/medispark`. Legacy project `medispark`
+  connected to GitHub repo `eduall2005pass/medisparkbd`. Mirror repo: `medispark`. Legacy Vercel project `medispark`
   (repo `eduall2005pass/clinic`) still holds the old deployment.
 - **Domain:** bloodarenabd.tech → Vercel DNS (ns1/ns2.vercel-dns.com)
 - **MySQL:** Azure Database for MySQL Flexible Server (managed PaaS)
@@ -45,9 +45,13 @@ git pull medispark main
   the other person gets it and Vercel auto-deploys.
 
 ## Deploy flow (IMPORTANT)
-- Git remote `medispark` = https://github.com/eduall2005pass/medispark →
-  connected to Vercel project `medisparkbd`.
-- **`git push medispark main` triggers automatic production deploy.**
+- Git remote `medisparkbd` = https://github.com/eduall2005pass/medisparkbd →
+  **connected to Vercel project `medisparkbd` (auto-deploys on push).**
+- Remote `medispark` = https://github.com/eduall2005pass/medispark is a mirror
+  of the same code (no auto-deploy). Push BOTH after finishing work:
+  ```bash
+  git push medisparkbd main && git push medispark main
+  ```
 - Manual alternative: `vercel --prod`.
 - Legacy remote `clinic` (eduall2005pass/clinic) = old project; remote `origin`
   (siyammd553-gif/MediSparklatest) has no push access — ignore both.
