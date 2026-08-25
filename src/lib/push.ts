@@ -31,7 +31,7 @@ export function currentPushState(): PushPermissionState {
 async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
   // The worker uses ES module imports, so it must be registered as a module.
   const registration = await navigator.serviceWorker.register(
-    "/firebase-messaging-sw.js",
+    "/firebase-messaging-sw.js?v=2",
     { type: "module" },
   );
   await navigator.serviceWorker.ready;

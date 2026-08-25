@@ -1,7 +1,7 @@
 /* MediSpark push notification service worker (Firebase Cloud Messaging).
    Config values are public Firebase web SDK identifiers. */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getMessaging, onBackgroundMessage } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging.js";
+import { getMessaging, onBackgroundMessage } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-sw.js";
 
 initializeApp({
   apiKey: "AIzaSyCmDXN01lk15m7ZDGTTyUN7D9YFljMPX8I",
