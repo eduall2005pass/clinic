@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
@@ -19,6 +20,8 @@ export default function FreeEnrollmentPage() {
   const { courses, error } = useControlCourses();
   const [freeAutoEnroll, setFreeAutoEnroll] = useState<boolean | null>(null);
   const [savingToggle, setSavingToggle] = useState(false);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [categoryId, setCategoryId] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -31,6 +34,13 @@ export default function FreeEnrollmentPage() {
         if (res.ok) {
           const data = (await res.json()) as { freeAutoEnroll?: boolean };
           setFreeAutoEnroll(data.freeAutoEnroll !== false);
+        }
+        const catRes = await fetch("/api/course-categories", { cache: "no-store" });
+        if (catRes.ok) {
+          const data = (await catRes.json()) as {
+            categories?: Array<{ id: string; name: string }>;
+          };
+          setCategories(Array.isArray(data.categories) ? data.categories : []);
         }
       } catch {
         // stays null → toggle disabled
@@ -69,7 +79,17 @@ export default function FreeEnrollmentPage() {
 
   if (authLoading) return <AccessLoading label="Loading…" />;
 
-  const freeCourses = (courses ?? []).filter((course) => course.kind === "free");
+  const freeCourses = (courses ?? []).filter((course) => {
+    if (course.kind !== "free") return false;
+    if (!categoryId) return true;
+    const catName =
+      categories.find((c) => c.id === categoryId)?.name ?? "";
+    return (
+      course.category === catName ||
+      (course.category ?? "").toLowerCase().replace(/\s+/g, "-") ===
+        categoryId.toLowerCase()
+    );
+  });
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -114,11 +134,48 @@ export default function FreeEnrollmentPage() {
         </div>
       </div>
 
-      {/* Manual enrollment — course-wise */}
+      {/* Manual enrollment — Category → Course → Applications */}
       <h2 className="mt-8 text-lg font-bold text-heading">Manual Enrollment</h2>
       <p className="mt-1 text-xs text-neutral-500">
-        Pick a course to review its enrollment applications.
+        Flow: Category → Course → Applications. No payment info required for
+        free courses.
       </p>
+
+      {/* 1 · Category */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setCategoryId("")}
+          aria-pressed={categoryId === ""}
+          className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+            categoryId === ""
+              ? "border-primary-500/60 bg-primary-600/15 text-primary-300"
+              : "border-ink/15 bg-ink/5 text-neutral-300 hover:border-primary-500/50 hover:text-heading"
+          }`}
+        >
+          All Categories
+        </button>
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            type="button"
+            onClick={() => setCategoryId(category.id)}
+            aria-pressed={categoryId === category.id}
+            className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+              categoryId === category.id
+                ? "border-primary-500/60 bg-primary-600/15 text-primary-300"
+                : "border-ink/15 bg-ink/5 text-neutral-300 hover:border-primary-500/50 hover:text-heading"
+            }`}
+          >
+            {category.name}
+          </button>
+        ))}
+      </div>
+
+      {/* 2 · Course */}
+      <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-neutral-500">
+        2 · Courses{categoryId ? ` — ${categories.find((c) => c.id === categoryId)?.name ?? ""}` : ""}
+      </h3>
 
       {error ? (
         <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
