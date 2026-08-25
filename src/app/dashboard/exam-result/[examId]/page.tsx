@@ -17,13 +17,7 @@ export default async function ExamResultDetailPage({
     <main className="flex-1 bg-dark-950">
       <AccessGate
         requirement="registered"
-        title="Registration Required"
-        message="You need to register to view your exam results."
-        actionLabel="Register Now"
-        actionHref="/register"
         loadingLabel="Loading result..."
-        secondaryLabel="Back to Dashboard"
-        secondaryHref="/dashboard"
       >
         <ExamResultDetailView examId={decodeURIComponent(examId)} />
       </AccessGate>

@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { isActiveEnrollment } from "@/lib/enrollments";
+import PermissionGate, {
+  courseDeniedGuidance,
+} from "@/components/auth/PermissionGate";
+import PermissionGuidanceCard from "@/components/auth/PermissionGuidanceCard";
 import type { CourseLearningData } from "@/lib/my-learning";
 
 type LoadState = "loading" | "error" | "forbidden" | "ready" | "missing";
@@ -97,9 +102,30 @@ export default function ClassPlayerView({
   slug: string;
   classId: string;
 }) {
-  const { user, authLoading } = useAuth();
+  return (
+    <PermissionGate
+      requirement="course"
+      courseSlug={slug}
+      loadingLabel="Loading class..."
+    >
+      <ClassPlayerBody slug={slug} classId={classId} />
+    </PermissionGate>
+  );
+}
+
+function ClassPlayerBody({
+  slug,
+  classId,
+}: {
+  slug: string;
+  classId: string;
+}) {
+  const { user, authLoading, enrollments, access } = useAuth();
   const [course, setCourse] = useState<CourseLearningData | null>(null);
   const [state, setState] = useState<LoadState>("loading");
+  const [forbiddenKind, setForbiddenKind] = useState<
+    "free" | "paid" | undefined
+  >(undefined);
   const [rate, setRate] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastSavedRef = useRef(0);
@@ -143,6 +169,10 @@ export default function ClassPlayerView({
         },
       );
       if (response.status === 403) {
+        const data = (await response.json().catch(() => null)) as {
+          courseKind?: "free" | "paid";
+        } | null;
+        setForbiddenKind(data?.courseKind);
         setState("forbidden");
         return;
       }
@@ -209,21 +239,16 @@ export default function ClassPlayerView({
   }
 
   if (state === "forbidden") {
+    const active = enrollments.filter(isActiveEnrollment);
     return (
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center">
-          <p className="font-bold text-yellow-300">Not enrolled</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-yellow-200/70">
-            You are not actively enrolled in this course.
-          </p>
-          <Link
-            href="/dashboard/enrolled-courses"
-            className="mt-6 inline-block rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700"
-          >
-            My Enrolled Courses
-          </Link>
-        </div>
-      </section>
+      <PermissionGuidanceCard
+        guidance={courseDeniedGuidance({
+          courseSlug: slug,
+          courseKind: forbiddenKind,
+          hasAnyEnrollment: active.length > 0,
+          hasPaidEnrollment: access.hasPaidEnrollment,
+        })}
+      />
     );
   }
 

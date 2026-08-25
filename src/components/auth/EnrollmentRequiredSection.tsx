@@ -15,16 +15,7 @@ export default function EnrollmentRequiredSection({
   subUnits?: DashboardSubItem[];
 }) {
   return (
-    <AccessGate
-      requirement="enrolled"
-      title="Course Enrollment Required"
-      message="Please enroll in a course to access your learning dashboard."
-      actionLabel="Explore Courses"
-      actionHref="/courses"
-      loadingLabel={`Loading ${title}...`}
-      secondaryLabel="Back to Dashboard"
-      secondaryHref="/dashboard"
-    >
+    <AccessGate requirement="enrolled" loadingLabel={`Loading ${title}...`}>
       {subUnits && subUnits.length > 0 ? (
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
           <h2 className="text-lg font-bold text-heading">Sub-sections</h2>

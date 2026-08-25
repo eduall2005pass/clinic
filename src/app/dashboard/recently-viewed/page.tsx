@@ -13,13 +13,7 @@ export default function RecentlyViewedPage() {
     <main className="flex-1 bg-dark-950">
       <AccessGate
         requirement="enrolled"
-        title="Course Enrollment Required"
-        message="Please enroll in a course to access your learning dashboard."
-        actionLabel="Explore Courses"
-        actionHref="/courses"
         loadingLabel="Loading your recently viewed items..."
-        secondaryLabel="Back to Dashboard"
-        secondaryHref="/dashboard"
       >
         <RecentlyViewedView />
       </AccessGate>

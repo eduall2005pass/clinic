@@ -24,13 +24,7 @@ export default function NotificationsPage() {
       <div className="flex w-full justify-center">
         <AccessGate
           requirement="registered"
-          title="Registration Required"
-          message="You need to register to view your notifications."
-          actionLabel="Register Now"
-          actionHref="/register"
           loadingLabel="Loading notifications..."
-          secondaryLabel="Back to Dashboard"
-          secondaryHref="/dashboard"
         >
           <NotificationsList />
         </AccessGate>

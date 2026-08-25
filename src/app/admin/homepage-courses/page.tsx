@@ -140,8 +140,6 @@ export default function HomepageCoursesAdminPage() {
         message="Homepage Courses management is restricted to authorized administrators."
         actionLabel="Back to Home"
         actionHref="/"
-        secondaryLabel="Go to Dashboard"
-        secondaryHref="/dashboard"
       />
     );
   }

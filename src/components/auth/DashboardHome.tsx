@@ -1,18 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProfileCard from "@/components/dashboard/ProfileCard";
 import DashboardSectionCard from "@/components/dashboard/DashboardSectionCard";
+import AccessPermissionModal from "@/components/dashboard/AccessPermissionModal";
 import { dashboardSections } from "@/lib/dashboard";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
+
+/** Sections a registered student may open WITHOUT any course enrollment. */
+const ENROLLMENT_FREE_SECTIONS = new Set([
+  "/dashboard/profile",
+  "/dashboard/exam-result",
+]);
 
 export default function DashboardHome() {
   const router = useRouter();
   const { user, profile, access, authLoading, profileLoading, configured } =
     useAuth();
+  const [permissionOpen, setPermissionOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading || !configured) return;
@@ -29,6 +36,10 @@ export default function DashboardHome() {
     return <AccessLoading label="Loading your dashboard..." />;
   }
 
+  // Registered + no enrolled course → every course-dependent card opens the
+  // Access Permission Card instead of its page. The user stays logged in.
+  const hasEnrollment = access.hasEnrollment;
+
   return (
     <main className="flex-1 bg-dark-950">
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -38,51 +49,32 @@ export default function DashboardHome() {
           avatarUrl={profile.profilePictureUrl}
         />
 
-        {!access.hasEnrollment ? (
-          <div className="mt-8 rounded-2xl border border-primary-600/30 bg-primary-600/10 p-10 text-center">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600/15 text-primary-500">
-              <svg
-                className="h-7 w-7"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-              </svg>
-            </span>
-            <h2 className="mt-5 text-xl font-bold text-heading">
-              Enroll in a Course to Get Started
-            </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-neutral-400">
-              Please enroll in a course to access your learning dashboard —
-              classes, materials, exams, favourites, progress and more.
-            </p>
-            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                href="/courses"
-                className="rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
-              >
-                Explore Courses
-              </Link>
-              <Link
-                href="/dashboard/profile"
-                className="rounded-xl border border-ink/15 bg-ink/5 px-6 py-3 font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
-              >
-                View My Profile
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-            {dashboardSections.map((section) => (
-              <DashboardSectionCard key={section.href} section={section} />
-            ))}
-          </div>
+        {!hasEnrollment && (
+          <p className="mt-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-center text-xs font-semibold text-yellow-200/80">
+            You are not enrolled in any course yet — enroll to unlock all
+            dashboard features.
+          </p>
         )}
+
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          {dashboardSections.map((section) => {
+            const locked = !hasEnrollment && !ENROLLMENT_FREE_SECTIONS.has(section.href);
+            return (
+              <DashboardSectionCard
+                key={section.href}
+                section={section}
+                locked={locked}
+                onLockedClick={() => setPermissionOpen(true)}
+              />
+            );
+          })}
+        </div>
       </section>
+
+      <AccessPermissionModal
+        open={permissionOpen}
+        onClose={() => setPermissionOpen(false)}
+      />
     </main>
   );
 }

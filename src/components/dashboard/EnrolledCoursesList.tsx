@@ -21,7 +21,8 @@ function formatDate(value: string): string {
 function EnrolledCourseCard({ course }: { course: EnrolledCourseSummary }) {
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30">
-      <div className="relative aspect-video w-full overflow-hidden bg-dark-800">
+      {/* Course thumbnail — consistent 16:9 ratio, rounded corners */}
+      <div className="aspect-video w-full overflow-hidden bg-dark-800">
         {course.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -35,35 +36,19 @@ function EnrolledCourseCard({ course }: { course: EnrolledCourseSummary }) {
             MS
           </div>
         )}
-        <span className="absolute left-3 top-3 rounded-full border border-primary-500/40 bg-dark-950/80 px-2.5 py-1 text-xs font-bold text-primary-400">
-          {course.courseKind === "paid" ? "Paid" : "Free"}
-        </span>
       </div>
 
       <div className="flex flex-1 flex-col p-5">
+        {/* Course name */}
         <h2 className="text-lg font-extrabold leading-snug text-heading">
           {course.name}
         </h2>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {course.category ? (
-            <span className="rounded-full border border-primary-500/40 bg-primary-600/10 px-2.5 py-0.5 text-[11px] font-bold text-primary-400">
-              {course.category}
-            </span>
-          ) : null}
-          {course.batchId ? (
-            <span className="rounded-full border border-ink/10 bg-ink/5 px-2.5 py-0.5 text-[11px] font-bold uppercase text-neutral-300">
-              {course.batchId}
-            </span>
-          ) : null}
-        </div>
-        <p className="mt-2 line-clamp-2 text-xs text-neutral-400">
-          {course.shortDescription}
-        </p>
 
+        {/* Progress — percentage + visual bar */}
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs font-semibold">
             <span className="text-neutral-400">Progress</span>
-            <span className="text-primary-500">{course.progress.percent}%</span>
+            <span className="text-primary-500">{course.progress.percent}% Complete</span>
           </div>
           <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-ink/10">
             <div
@@ -71,30 +56,17 @@ function EnrolledCourseCard({ course }: { course: EnrolledCourseSummary }) {
               style={{ width: `${course.progress.percent}%` }}
             />
           </div>
-          <p className="mt-1 text-[11px] text-neutral-500">
-            {course.progress.completedClasses}/{course.progress.totalClasses} classes completed
-          </p>
         </div>
 
-        <div className="mt-auto flex items-center gap-3 pt-5">
+        {/* Single primary action */}
+        <div className="mt-auto pt-5">
           <Link
             href={`/dashboard/enrolled-courses/${encodeURIComponent(course.slug)}`}
-            className="flex-1 rounded-xl bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+            className="block w-full rounded-xl bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
           >
-            Continue Learning
-          </Link>
-          <Link
-            href={`/courses/${encodeURIComponent(course.slug)}`}
-            className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-center text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
-          >
-            Details
+            View Course Content
           </Link>
         </div>
-        {course.enrollmentDate ? (
-          <p className="mt-3 text-[11px] text-neutral-500">
-            Enrolled on {formatDate(course.enrollmentDate)}
-          </p>
-        ) : null}
       </div>
     </article>
   );

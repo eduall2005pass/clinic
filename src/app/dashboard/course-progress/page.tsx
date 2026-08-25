@@ -13,13 +13,7 @@ export default function CourseProgressPage() {
     <main className="flex-1 bg-dark-950">
       <AccessGate
         requirement="enrolled"
-        title="Course Enrollment Required"
-        message="Please enroll in a course to track your learning progress."
-        actionLabel="Explore Courses"
-        actionHref="/courses"
         loadingLabel="Loading your course progress..."
-        secondaryLabel="Back to Dashboard"
-        secondaryHref="/dashboard"
       >
         <CourseProgressView />
       </AccessGate>

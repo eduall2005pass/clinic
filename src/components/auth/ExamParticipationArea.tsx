@@ -392,8 +392,6 @@ export default function ExamParticipationArea({
         message="You can view this Public Exam without an account, but you must be logged in to start or submit an exam."
         actionLabel="Login to Start Exam"
         actionHref={loginHref}
-        secondaryLabel="Back to Public Exams"
-        secondaryHref="/exam"
       />
     );
   }
@@ -406,8 +404,6 @@ export default function ExamParticipationArea({
         message="You can view this Public Exam without an account, but you must complete your student registration to start or submit an exam."
         actionLabel="Complete Registration"
         actionHref="/register"
-        secondaryLabel="Back to Public Exams"
-        secondaryHref="/exam"
       />
     );
   }

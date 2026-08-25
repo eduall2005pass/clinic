@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { isActiveEnrollment } from "@/lib/enrollments";
+import PermissionGate, {
+  courseDeniedGuidance,
+} from "@/components/auth/PermissionGate";
+import PermissionGuidanceCard from "@/components/auth/PermissionGuidanceCard";
 import type {
   ChapterItem,
   CourseLearningData,
@@ -26,6 +31,9 @@ function useCourseLearning(slug: string) {
   const { user, authLoading } = useAuth();
   const [course, setCourse] = useState<CourseLearningData | null>(null);
   const [state, setState] = useState<LoadState>("loading");
+  const [forbiddenKind, setForbiddenKind] = useState<
+    "free" | "paid" | undefined
+  >(undefined);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -37,6 +45,10 @@ function useCourseLearning(slug: string) {
         { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
       );
       if (response.status === 403) {
+        const data = (await response.json().catch(() => null)) as {
+          courseKind?: "free" | "paid";
+        } | null;
+        setForbiddenKind(data?.courseKind);
         setState("forbidden");
         return;
       }
@@ -55,7 +67,7 @@ function useCourseLearning(slug: string) {
     if (user) void load();
   }, [authLoading, user, load]);
 
-  return { course, state, load, authLoading, user };
+  return { course, state, load, authLoading, user, forbiddenKind };
 }
 
 function LoadingView({ label }: { label: string }) {
@@ -71,29 +83,26 @@ export function LevelStates({
   state,
   load,
   slug,
+  forbiddenKind,
 }: {
   state: LoadState;
   load: () => Promise<void>;
   slug: string;
+  forbiddenKind?: "free" | "paid";
 }) {
+  const { enrollments, access } = useAuth();
   if (state === "loading") return <LoadingView label="Loading course..." />;
   if (state === "forbidden") {
+    const active = enrollments.filter(isActiveEnrollment);
     return (
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center">
-          <p className="font-bold text-yellow-300">Not enrolled</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-yellow-200/70">
-            You are not actively enrolled in this course, so its content is not
-            available.
-          </p>
-          <Link
-            href="/dashboard/enrolled-courses"
-            className="mt-6 inline-block rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
-          >
-            My Enrolled Courses
-          </Link>
-        </div>
-      </section>
+      <PermissionGuidanceCard
+        guidance={courseDeniedGuidance({
+          courseSlug: slug,
+          courseKind: forbiddenKind,
+          hasAnyEnrollment: active.length > 0,
+          hasPaidEnrollment: access.hasPaidEnrollment,
+        })}
+      />
     );
   }
   if (state === "error") {
@@ -185,7 +194,19 @@ function recordRecentView(
 /* ── Level 1: Course → Subjects ─────────────────────────────────────────── */
 
 export function CourseSubjectsView({ slug }: { slug: string }) {
-  const { course, state, load } = useCourseLearning(slug);
+  return (
+    <PermissionGate
+      requirement="course"
+      courseSlug={slug}
+      loadingLabel="Loading course..."
+    >
+      <CourseSubjectsContent slug={slug} />
+    </PermissionGate>
+  );
+}
+
+function CourseSubjectsContent({ slug }: { slug: string }) {
+  const { course, state, load, forbiddenKind } = useCourseLearning(slug);
   const { user } = useAuth();
 
   // Opening the course records it in the student's Recently Viewed history.
@@ -196,7 +217,7 @@ export function CourseSubjectsView({ slug }: { slug: string }) {
   }, [state, course, slug, user]);
 
   if (state !== "ready" || !course) {
-    return <LevelStates state={state} load={load} slug={slug} />;
+    return <LevelStates state={state} load={load} slug={slug} forbiddenKind={forbiddenKind} />;
   }
 
   return (
@@ -333,7 +354,25 @@ export function SubjectPapersView({
   slug: string;
   subjectId: string;
 }) {
-  const { course, state, load } = useCourseLearning(slug);
+  return (
+    <PermissionGate
+      requirement="course"
+      courseSlug={slug}
+      loadingLabel="Loading course..."
+    >
+      <SubjectPapersContent slug={slug} subjectId={subjectId} />
+    </PermissionGate>
+  );
+}
+
+function SubjectPapersContent({
+  slug,
+  subjectId,
+}: {
+  slug: string;
+  subjectId: string;
+}) {
+  const { course, state, load, forbiddenKind } = useCourseLearning(slug);
   const subject = course ? findSubject(course, subjectId) : null;
 
   if (state !== "ready" || !course || !subject) {
@@ -350,7 +389,7 @@ export function SubjectPapersView({
         </section>
       );
     }
-    return <LevelStates state={state} load={load} slug={slug} />;
+    return <LevelStates state={state} load={load} slug={slug} forbiddenKind={forbiddenKind} />;
   }
 
   const base = `/dashboard/enrolled-courses/${encodeURIComponent(slug)}/subjects/${encodeURIComponent(subjectId)}`;
@@ -456,7 +495,27 @@ export function PaperContentView({
   subjectId: string;
   paperId: string;
 }) {
-  const { course, state, load } = useCourseLearning(slug);
+  return (
+    <PermissionGate
+      requirement="course"
+      courseSlug={slug}
+      loadingLabel="Loading course..."
+    >
+      <PaperChapterView slug={slug} subjectId={subjectId} paperId={paperId} />
+    </PermissionGate>
+  );
+}
+
+function PaperChapterView({
+  slug,
+  subjectId,
+  paperId,
+}: {
+  slug: string;
+  subjectId: string;
+  paperId: string;
+}) {
+  const { course, state, load, forbiddenKind } = useCourseLearning(slug);
   const subject = course ? findSubject(course, subjectId) : null;
   const { user } = useAuth();
   const [tab, setTab] = useState<TabKey>("classes");
@@ -480,7 +539,7 @@ export function PaperContentView({
         </section>
       );
     }
-    return <LevelStates state={state} load={load} slug={slug} />;
+    return <LevelStates state={state} load={load} slug={slug} forbiddenKind={forbiddenKind} />;
   }
 
   const paper = subject.papers.find((item) => item.id === paperId);

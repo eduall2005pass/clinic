@@ -11,14 +11,8 @@ export const metadata: Metadata = {
 export default function EnrolledCoursesPage() {
   return (
     <AccessGate
-      requirement="registered"
-      title="Registration Required"
-      message="You need to register to view your enrolled courses."
-      actionLabel="Register Now"
-      actionHref="/register"
+      requirement="enrolled"
       loadingLabel="Loading your enrolled courses..."
-      secondaryLabel="Back to Dashboard"
-      secondaryHref="/dashboard"
     >
       <EnrolledCoursesList />
       <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6">

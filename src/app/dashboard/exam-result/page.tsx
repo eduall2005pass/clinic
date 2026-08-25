@@ -13,13 +13,7 @@ export default function ExamResultPage() {
     <main className="flex-1 bg-dark-950">
       <AccessGate
         requirement="registered"
-        title="Registration Required"
-        message="You need to register to view your exam results."
-        actionLabel="Register Now"
-        actionHref="/register"
         loadingLabel="Loading your exam results..."
-        secondaryLabel="Back to Dashboard"
-        secondaryHref="/dashboard"
       >
         <ExamResultsView />
       </AccessGate>
