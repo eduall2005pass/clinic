@@ -69,7 +69,7 @@ export default function PapersPage() {
         }),
       ]);
       const papersData = (await papersRes.json()) as { papers?: Paper[] };
-      const chaptersData = (await chaptersData_json(chaptersRes)) as { chapters?: Chapter[] };
+      const chaptersData = (await chaptersRes.json()) as { chapters?: Chapter[] };
       setPapers(papersData.papers ?? []);
       setChapters(chaptersData.chapters ?? []);
     } catch {
@@ -79,13 +79,21 @@ export default function PapersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjectId]);
 
-  function chaptersData_json(res: Response) {
-    return res.json();
-  }
-
   useEffect(() => {
-    if (gate.ready) void loadSubjectData();
-  }, [gate.ready, loadSubjectData]);
+    if (!gate.ready) return;
+    let cancelled = false;
+    const run = async () => {
+      await loadSubjectData();
+    };
+    // Defer the fetch out of the synchronous effect body.
+    void Promise.resolve().then(() => {
+      if (!cancelled) return run();
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gate.ready, subjectId]);
 
   async function call(url: string, method: string, body?: unknown) {
     setBusy(true);
@@ -351,12 +359,13 @@ function MaterialsManager({
     } catch {
       setMaterials([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chapterId]);
+  }, [chapterId, setMaterials]);
 
   useEffect(() => {
-    if (chapterId) void loadMaterials();
-    else setMaterials(null);
+    if (chapterId) {
+      const timer = setTimeout(() => void loadMaterials(), 0);
+      return () => clearTimeout(timer);
+    }
   }, [chapterId, loadMaterials]);
 
   async function addMaterial() {
