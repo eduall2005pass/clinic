@@ -35,6 +35,9 @@ export type Course = {
   status: CourseStatus;
   availability: CourseAvailability;
   couponEnabled: boolean;
+  /** Live counts from the learning tables (optional — hidden when unknown). */
+  totalClasses?: number;
+  totalExams?: number;
 };
 
 export const batches: Batch[] = [

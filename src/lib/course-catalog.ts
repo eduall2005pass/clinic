@@ -1,4 +1,5 @@
 import { fetchCatalogCourses, type CatalogCourse } from "@/lib/courses-admin";
+import { query } from "@/lib/mysql";
 import {
   courses as staticCourses,
   type Course,
@@ -10,7 +11,41 @@ import {
 // Admin Panel → Courses). Falls back to the static catalog in @/lib/courses
 // when the DB is unreachable or the table has no rows yet.
 
-function toCourse(row: CatalogCourse): Course {
+/** Class/exam totals per course from the live learning tables. */
+async function fetchContentCounts(): Promise<{
+  classes: Map<string, number>;
+  exams: Map<string, number>;
+}> {
+  const classes = new Map<string, number>();
+  const exams = new Map<string, number>();
+  try {
+    const classRows = await query<{ course_slug: string; cnt: string | number }[]>(
+      `SELECT a.course_slug, COUNT(cl.id) AS cnt
+         FROM course_subject_assignments a
+         JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
+         JOIN course_classes cl ON cl.chapter_id = ch.id AND cl.is_active = 1
+        GROUP BY a.course_slug`,
+    );
+    for (const row of classRows) classes.set(row.course_slug, Number(row.cnt) || 0);
+
+    const examRows = await query<{ course_slug: string; cnt: string | number }[]>(
+      `SELECT a.course_slug, COUNT(ex.id) AS cnt
+         FROM course_subject_assignments a
+         JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
+         JOIN exams ex ON ex.chapter_id = ch.id AND ex.status = 'published'
+        GROUP BY a.course_slug`,
+    );
+    for (const row of examRows) exams.set(row.course_slug, Number(row.cnt) || 0);
+  } catch {
+    // Counts are optional — missing tables simply hide the stats on cards.
+  }
+  return { classes, exams };
+}
+
+function toCourse(
+  row: CatalogCourse,
+  counts?: { classes: Map<string, number>; exams: Map<string, number> },
+): Course {
   return {
     slug: row.slug,
     name: row.name,
@@ -31,6 +66,8 @@ function toCourse(row: CatalogCourse): Course {
     status: (row.status === "published" ? "published" : "unpublished") as CourseStatus,
     availability: (row.availability === "hidden" ? "hidden" : "available") as CourseAvailability,
     couponEnabled: row.couponEnabled,
+    totalClasses: counts?.classes.get(row.slug),
+    totalExams: counts?.exams.get(row.slug),
   };
 }
 
@@ -38,7 +75,10 @@ function toCourse(row: CatalogCourse): Course {
 export async function getLiveCourses(): Promise<Course[]> {
   try {
     const rows = await fetchCatalogCourses();
-    if (rows.length > 0) return rows.map(toCourse);
+    if (rows.length > 0) {
+      const counts = await fetchContentCounts();
+      return rows.map((row) => toCourse(row, counts));
+    }
   } catch {
     // fall through to static
   }
