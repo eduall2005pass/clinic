@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { AccessGate } from "@/components/auth/AccessGuard";
 import QaPageClient from "@/components/auth/QaPageClient";
 import { qaSubjects, qaQuestions } from "@/lib/qa";
