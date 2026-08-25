@@ -62,15 +62,23 @@ export async function getEnrollment(
   );
 }
 
+/** Payment proof submitted with a paid-course enrollment (Step 4). */
+export type EnrollmentPayment = {
+  transactionId: string;
+  paidAmount: number;
+  senderMobile: string;
+};
+
 /**
  * Creates an enrollment record via the API. Free courses become active
- * immediately; paid courses start as pending until payment/approval is
- * completed.
+ * immediately; paid courses require payment proof and start as a
+ * pending-validation application until an admin approves it.
  */
 export async function enrollInCourse(
   course: Course,
   user: User,
   couponCode?: string | null,
+  payment?: EnrollmentPayment,
 ): Promise<Enrollment> {
   const response = await fetch("/api/enrollments", {
     method: "POST",
@@ -82,6 +90,7 @@ export async function enrollInCourse(
       courseKind: getCourseKind(course),
       fee: getPayableFee(course),
       ...(couponCode ? { couponCode } : {}),
+      ...(payment ?? {}),
     }),
   });
   const data = (await response.json().catch(() => null)) as {
