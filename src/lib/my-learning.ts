@@ -199,7 +199,10 @@ export async function getMyEnrolledCourses(
        LEFT JOIN catalog_courses c ON c.slug = e.course_id
       WHERE e.student_uid = ?
         AND e.enrollment_status IN ('active', 'pending')
-      ORDER BY e.updated_at DESC`,
+      -- Active courses always come first; existing order kept within each
+      -- status group (most recently updated first).
+      ORDER BY CASE WHEN e.enrollment_status = 'active' THEN 0 ELSE 1 END,
+               e.updated_at DESC`,
     [uid],
   );
 
