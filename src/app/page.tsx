@@ -42,8 +42,6 @@ function renderSection(section: HomepageSection) {
       return <Mentors key={section.key} {...textProps} />;
     case "reviews":
       return <StudentReviews key={section.key} {...textProps} />;
-    case "faq":
-      return <FaqSection key={section.key} {...textProps} />;
     default:
       return null;
   }
