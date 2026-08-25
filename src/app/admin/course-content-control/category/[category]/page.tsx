@@ -53,6 +53,7 @@ export default function CategoryCoursesPage({
   }, [category]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
