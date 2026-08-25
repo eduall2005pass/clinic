@@ -51,9 +51,14 @@ git pull medispark main
 - **Verify track:** remote `medisparkbd` (eduall2005pass/medisparkbd) → Vercel
   project `medisparkbd` → medisparkbd-ecru.vercel.app (Azure MySQL +
   medispark.duckdns.org media).
-- A GitHub Action in clinic auto-syncs every clinic push into medisparkbd,
-  which auto-deploys. Trees of both repos must stay IDENTICAL — never edit
-  medisparkbd directly except through the sync (or keep both in sync manually).
+- **Manual sync flow (no automation):** when collaborator pushes to clinic,
+  pull from clinic, verify the changes work with Azure MySQL + new media
+  server, then push to `medisparkbd` (auto-deploys) and verify there.
+  ```bash
+  git pull clinic main
+  # ...check/adjust if needed...
+  git push clinic main && git push medisparkbd main
+  ```
 - Code must stay compatible with BOTH databases (see mysql.ts SSL logic).
 - Manual alternative: `vercel --prod`.
 - Remote `origin` (siyammd553-gif/MediSparklatest) has no push access — ignore.
