@@ -46,6 +46,8 @@ export default function CourseApplicationsPage({
   const [applications, setApplications] = useState<Application[] | null>(null);
   const [error, setError] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  /** Application awaiting rejection confirmation. */
+  const [rejectTarget, setRejectTarget] = useState<Application | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -74,7 +76,14 @@ export default function CourseApplicationsPage({
     void load();
   }, [authLoading, user, load]);
 
-  async function setStatus(application: Application, status: string) {
+  /**
+   * Accept / reject go through the transactional action endpoints
+   * (pending → active/cancelled with audit); other statuses stay legacy.
+   */
+  async function setStatus(
+    application: Application,
+    update: { action: "accept" | "reject" } | { status: string },
+  ) {
     if (!user) return;
     setBusyId(application.id);
     try {
@@ -85,7 +94,11 @@ export default function CourseApplicationsPage({
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ id: application.id, status }),
+        body: JSON.stringify(
+          "action" in update
+            ? { id: application.id, action: update.action }
+            : { id: application.id, status: update.status },
+        ),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -94,16 +107,19 @@ export default function CourseApplicationsPage({
       }
       toast.showToast(
         "success",
-        status === "active"
+        "action" in update && update.action === "accept"
           ? `${application.studentName || "Student"} accepted — enrollment is now ACTIVE and course access granted.`
-          : `Application marked ${status}.`,
+          : "action" in update
+            ? `${application.studentName || "Application"} rejected.`
+            : `Application marked ${update.status}.`,
       );
-      // Refresh list — accepted applications leave the pending view.
+      // Refresh list — processed applications leave the pending view.
       await load();
     } catch {
       toast.showToast("error", "Failed to update the application.");
     } finally {
       setBusyId(null);
+      setRejectTarget(null);
     }
   }
 
@@ -245,7 +261,9 @@ export default function CourseApplicationsPage({
                 {application.status !== "active" && (
                   <button
                     type="button"
-                    onClick={() => void setStatus(application, "active")}
+                    onClick={() =>
+                      void setStatus(application, { action: "accept" })
+                    }
                     disabled={busyId === application.id}
                     className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-900/40 transition hover:bg-emerald-700 disabled:opacity-50"
                   >
@@ -255,7 +273,7 @@ export default function CourseApplicationsPage({
                 {application.status === "pending" && (
                   <button
                     type="button"
-                    onClick={() => void setStatus(application, "cancelled")}
+                    onClick={() => setRejectTarget(application)}
                     disabled={busyId === application.id}
                     className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-2 text-xs font-bold text-red-400 transition hover:bg-red-500/15 disabled:opacity-50"
                   >
@@ -265,7 +283,9 @@ export default function CourseApplicationsPage({
                 {application.status === "active" && (
                   <button
                     type="button"
-                    onClick={() => void setStatus(application, "cancelled")}
+                    onClick={() =>
+                      void setStatus(application, { status: "cancelled" })
+                    }
                     disabled={busyId === application.id}
                     className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 px-4 py-2 text-xs font-bold text-yellow-400 transition hover:bg-yellow-500/15 disabled:opacity-50"
                   >
@@ -277,6 +297,49 @@ export default function CourseApplicationsPage({
           ))}
         </ul>
       )}
+
+      {/* Reject confirmation */}
+      {rejectTarget ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm rejection"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-heading">Reject this application?</h2>
+            <p className="mt-2 text-sm leading-relaxed text-neutral-400">
+              <span className="font-bold text-heading">
+                {rejectTarget.studentName || rejectTarget.studentUid}
+              </span>{" "}
+              will be rejected for{" "}
+              <span className="font-semibold text-neutral-200">
+                {rejectTarget.courseName}
+              </span>
+              . No course access will be granted and the application will be
+              removed from Pending Applications.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setRejectTarget(null)}
+                disabled={busyId === rejectTarget.id}
+                className="rounded-xl border border-ink/20 px-5 py-2.5 text-sm font-bold text-neutral-300 transition hover:border-ink/40 hover:text-heading disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void setStatus(rejectTarget, { action: "reject" })}
+                disabled={busyId === rejectTarget.id}
+                className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-red-900/40 transition hover:bg-red-700 active:scale-[0.98] disabled:opacity-50"
+              >
+                {busyId === rejectTarget.id ? "Rejecting…" : "Yes, Reject"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
