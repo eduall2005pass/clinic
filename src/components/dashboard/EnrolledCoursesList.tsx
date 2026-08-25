@@ -8,10 +8,13 @@ import type { EnrolledCourseSummary } from "@/lib/my-learning";
 type LoadState = "loading" | "error" | "ready";
 
 function EnrolledCourseCard({ course }: { course: EnrolledCourseSummary }) {
+  // Only ACTIVE enrollment grants content access; pending is view-only.
+  const isActive = course.enrollmentStatus === "active";
+
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30">
       {/* Course thumbnail — consistent 16:9 ratio, rounded corners */}
-      <div className="aspect-video w-full overflow-hidden bg-dark-800">
+      <div className="relative aspect-video w-full overflow-hidden bg-dark-800">
         {course.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -25,6 +28,21 @@ function EnrolledCourseCard({ course }: { course: EnrolledCourseSummary }) {
             MS
           </div>
         )}
+        {/* Enrollment status badge — on top of the thumbnail */}
+        <span
+          className={`absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide backdrop-blur ${
+            isActive
+              ? "border border-emerald-500/40 bg-dark-950/80 text-emerald-400"
+              : "border border-yellow-500/40 bg-dark-950/80 text-yellow-300"
+          }`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              isActive ? "bg-emerald-400" : "animate-pulse bg-yellow-400"
+            }`}
+          />
+          {isActive ? "Active" : "Pending"}
+        </span>
       </div>
 
       <div className="flex flex-1 flex-col p-5">
@@ -47,14 +65,28 @@ function EnrolledCourseCard({ course }: { course: EnrolledCourseSummary }) {
           </div>
         </div>
 
-        {/* Single primary action */}
+        {/* Single primary action — disabled while enrollment is pending.
+            Server-side, /api/my/courses/[slug] rejects non-active
+            enrollment too, so the restriction is real, not just visual. */}
         <div className="mt-auto pt-5">
-          <Link
-            href={`/dashboard/enrolled-courses/${encodeURIComponent(course.slug)}`}
-            className="block w-full rounded-xl bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
-          >
-            View Course Content
-          </Link>
+          {isActive ? (
+            <Link
+              href={`/dashboard/enrolled-courses/${encodeURIComponent(course.slug)}`}
+              className="block w-full rounded-xl bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+            >
+              View Course Content
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              title="Enrollment pending approval"
+              className="block w-full cursor-not-allowed rounded-xl border border-ink/15 bg-dark-850 px-4 py-2.5 text-center text-sm font-semibold text-neutral-500"
+            >
+              Approval Pending
+            </button>
+          )}
         </div>
       </div>
     </article>

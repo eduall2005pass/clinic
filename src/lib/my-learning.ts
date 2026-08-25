@@ -163,6 +163,9 @@ export async function getMyEnrolledCourses(
   // Active enrollment covers all three paths: enrolled (free), purchased
   // (paid + approved) and assigned by an admin. Pending/cancelled rows are
   // never shown as courses.
+  // Include BOTH active and pending enrollments: active courses are fully
+  // accessible; pending ones render with a disabled state. The content API
+  // (/api/my/courses/[slug]) independently rejects non-active enrollment.
   const rows = await query<EnrolledCourseRow[]>(
     `SELECT e.course_id AS slug,
             COALESCE(NULLIF(c.name, ''), e.course_name) AS name,
@@ -172,7 +175,7 @@ export async function getMyEnrolledCourses(
        FROM enrollments e
        LEFT JOIN catalog_courses c ON c.slug = e.course_id
       WHERE e.student_uid = ?
-        AND e.enrollment_status = 'active'
+        AND e.enrollment_status IN ('active', 'pending')
       ORDER BY e.updated_at DESC`,
     [uid],
   );
