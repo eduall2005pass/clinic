@@ -111,7 +111,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <link rel="icon" href={initialSettings.faviconUrl} />
         )}
       </head>
-      <body className="flex min-h-full flex-col bg-dark-950 pb-16 text-neutral-300">
+      <body className="flex min-h-full flex-col bg-dark-950 pb-16 text-neutral-300 lg:pb-0">
         <ThemeProvider>
           <WebsiteSettingsProvider initialSettings={initialSettings}>
             <LogoProvider

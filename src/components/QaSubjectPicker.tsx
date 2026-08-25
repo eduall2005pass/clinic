@@ -116,7 +116,7 @@ export default function QaSubjectPicker({
         </p>
       </div>
 
-      <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4">
+      <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         {subjects.map((subject) => {
           const subjectStats = stats[subject.id];
           return (

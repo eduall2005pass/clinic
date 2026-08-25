@@ -177,7 +177,7 @@ export default  function WhyMediSpark({
           description={description ?? "One platform for your HSC academics and medical admission journey."}
         />
 
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
           {benefits.map((benefit) => (
             <div
               key={benefit.title}
