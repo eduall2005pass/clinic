@@ -780,3 +780,13 @@ export async function hasEnrolledExamAccess(
     return false;
   }
 }
+
+/**
+ * Public exams highlighted as banner slides on the homepage.
+ * The slider currently generates slides from admin banners and featured
+ * courses only — no manual "featured exam" flag exists yet, so this
+ * returns an empty list until that source is introduced.
+ */
+export async function fetchFeaturedPublicExams(): Promise<Exam[]> {
+  return [];
+}
