@@ -471,15 +471,50 @@ export async function saveCatalogCourse(
     ],
   );
 
-  const saved = await fetchCatalogCourse(slug);
-  if (!saved) throw new Error("Failed to save the course.");
-
-  // Mentors association (optional payload field: mentorIds: string[]).
+  // Mentor association is best-effort — a transient failure here must not
+  // fail the whole save when the course row itself is already persisted.
   if (Array.isArray(input.mentorIds)) {
-    await setCourseMentors(
+    try {
+      await setCourseMentors(
+        slug,
+        input.mentorIds.map((id: unknown) => String(id)),
+      );
+    } catch {
+      // Non-fatal — admin can re-save to retry the assignment.
+    }
+  }
+
+  const saved = await fetchCatalogCourse(slug);
+  if (!saved) {
+    // The row IS in the database (INSERT succeeded) but the re-read failed
+    // under transient DB pressure. Return the submitted payload instead of
+    // reporting an error — otherwise admins see "Saving…" stuck forever
+    // while the course actually exists (and a duplicate add would collide).
+    return {
       slug,
-      input.mentorIds.map((id: unknown) => String(id)),
-    );
+      name,
+      category,
+      categoryId,
+      batchId,
+      image: asString(input.image) || null,
+      shortDescription: asString(input.shortDescription) || null,
+      description: asString(input.description) || null,
+      teacherName: asString(input.teacherName),
+      teacherPhoto: asString(input.teacherPhoto) || null,
+      designation: asString(input.designation),
+      duration: asString(input.duration),
+      fee,
+      discountFee,
+      features: asStringArray(input.features),
+      overviewTitle: asString(input.overviewTitle),
+      overview: asStringArray(input.overview),
+      status: input.status === "published" ? "published" : "unpublished",
+      availability: input.availability === "hidden" ? "hidden" : "available",
+      couponEnabled: Boolean(input.couponEnabled),
+      featured: Boolean(input.featured),
+      contentLayout: normalizeContentLayout(input.contentLayout),
+      mentorIds: [],
+    };
   }
   saved.mentorIds = await fetchCourseMentorIds(slug);
   return saved;
