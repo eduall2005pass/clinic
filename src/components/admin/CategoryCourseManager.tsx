@@ -262,7 +262,14 @@ export default function CategoryCourseManager({
   }
 
   async function handleDelete(slug: string, name: string) {
-    if (!window.confirm(`Delete “${name}”? This cannot be undone.`)) return;
+    if (
+      !window.confirm(
+        `Delete “${name}” completely?\n\n` +
+          `Removes the course, its subject/content links, mentors, featured entry and homepage card. ` +
+          `Student enrollment records are kept.\n\nThis cannot be undone.`,
+      )
+    )
+      return;
     setBusy(true);
     try {
       const response = await fetch("/api/admin/courses", {

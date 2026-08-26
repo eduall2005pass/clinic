@@ -555,11 +555,36 @@ export async function setCatalogCourseFlags(
 }
 
 /** Delete a course and clean up its local uploaded image. */
+/**
+ * Completely remove a course: the catalog record itself plus every
+ * Course-Control-linked reference — subject assignments (content bridge),
+ * mentor assignments, ★ Featured marketing entry and its Home Control card.
+ * Student enrollment records are intentionally KEPT (data protection) so
+ * purchase history never disappears silently.
+ */
 export async function deleteCatalogCourse(slug: string): Promise<boolean> {
   await ensureTables();
   const existing = await fetchCatalogCourse(slug);
   if (!existing) return false;
   await exec(`DELETE FROM catalog_courses WHERE slug = ?`, [slug]);
+  // Content bridge + per-course extras.
+  try {
+    await exec(`DELETE FROM course_subject_assignments WHERE course_slug = ?`, [slug]);
+    await exec(`DELETE FROM course_mentors WHERE course_slug = ?`, [slug]);
+  } catch {
+    // Tables may predate these features — ignore and continue.
+  }
+  // Marketing/homepage references so the course vanishes everywhere.
+  try {
+    await exec(`DELETE FROM featured_courses WHERE course_slug = ?`, [slug]);
+  } catch {
+    // Optional table.
+  }
+  try {
+    await exec(`DELETE FROM homepage_courses WHERE slug = ?`, [slug]);
+  } catch {
+    // Optional table.
+  }
   // Keep the legacy `courses` registry (referenced by enrollments) intact.
   if (existing.image && isLocalUpload(existing.image)) {
     await removeFile(existing.image);
