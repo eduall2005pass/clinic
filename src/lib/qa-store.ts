@@ -389,29 +389,47 @@ export async function fetchQaBrowseSubjects(): Promise<QaSubject[]> {
   if (!isMysqlConfigured) return [];
   try {
     await ensureTables();
-    const rows = await query<{ id: string; name: string }[]>(
-      `SELECT ids.id, MIN(ids.name) AS name
+    await ensureQaSeed();
+    const rows = await query<{ id: string; name: string; ord: number }[]>(
+      `SELECT ids.id, MIN(ids.name) AS name, MIN(ids.ord) AS ord
          FROM (
-           SELECT cs.id AS id, cs.name AS name
+           SELECT cs.id AS id, cs.name AS name, cs.sort_order AS ord
              FROM course_subjects cs
              JOIN course_subject_assignments a ON a.subject_id = cs.id
             WHERE cs.is_active = 1
             UNION
-           SELECT qs.subject_id AS id, qs.name AS name
+           SELECT qs.subject_id AS id, qs.name AS name, qs.sort_order AS ord
              FROM qa_subjects qs
-            WHERE EXISTS (
-              SELECT 1 FROM qa_questions q WHERE q.subject_id = qs.subject_id)
+            WHERE qs.is_active = 1
          ) AS ids
         GROUP BY ids.id
-        ORDER BY name ASC`,
+        ORDER BY ord ASC, name ASC`,
     );
-    return rows.map((row, index) => ({
+    // Fallback to seed when DB has no rows yet (e.g., fresh install with no course assignments).
+    // Guarantees the 5 core Q&A subjects are always present; Guideline is appended caller-side.
+    if (rows.length === 0) {
+      return SEED_SUBJECTS.map((s) => ({ id: s.id, name: s.name, order: s.order }));
+    }
+    // Ensure the canonical 5 are present even if course_subjects filtering hid them.
+    // Deduplicate by id OR name (covers course_subjects that use UUIDs but same display name).
+    const presentIds = new Set(rows.map((r) => r.id));
+    const presentNames = new Set(rows.map((r) => r.name.toLowerCase().trim()));
+    const missing = SEED_SUBJECTS.filter(
+      (s) => !presentIds.has(s.id) && !presentNames.has(s.name.toLowerCase()),
+    );
+    const merged = [
+      ...rows.map((row) => ({ id: row.id, name: row.name, ord: Number(row.ord) || 999 })),
+      ...missing.map((s) => ({ id: s.id, name: s.name, ord: s.order })),
+    ];
+    merged.sort((a, b) => a.ord - b.ord || a.name.localeCompare(b.name));
+    return merged.map((row, index) => ({
       id: row.id,
       name: row.name,
       order: index + 1,
     }));
   } catch {
-    return [];
+    // On query failure, still return the seeded subjects so the UI never shows only Guideline.
+    return SEED_SUBJECTS.map((s) => ({ id: s.id, name: s.name, order: s.order }));
   }
 }
 
