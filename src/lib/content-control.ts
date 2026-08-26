@@ -52,11 +52,11 @@ export async function getTypeChapters(
        FROM course_chapters ch
       WHERE COALESCE(ch.course_slug,'') = ?
         AND COALESCE(ch.subject_id,'') = ?
-        AND COALESCE(ch.paper_id,'') = ''
+        AND COALESCE(ch.paper_id,'') = ?
         AND ch.content_type = ?
         AND ch.is_active = 1
       ORDER BY ch.sort_order, ch.name`,
-    [scope.courseSlug, scope.subjectId ?? "", contentType],
+    [scope.courseSlug, scope.subjectId ?? "", scope.paperId ?? "", contentType],
   ) as never;
 }
 
@@ -72,8 +72,8 @@ export async function addTypeChapter(
   );
   await exec(
     `INSERT INTO course_chapters (id, subject_id, paper_id, course_slug, name, content_type, sort_order, is_active)
-     VALUES (?, ?, '', ?, ?, ?, ?, 1)`,
-    [id, scope.subjectId ?? "", scope.courseSlug, name, contentType, Number(rows[0]?.next ?? 1)],
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+    [id, scope.subjectId ?? "", scope.paperId ?? "", scope.courseSlug, name, contentType, Number(rows[0]?.next ?? 1)],
   );
 }
 

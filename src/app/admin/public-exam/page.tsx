@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HubHeader, ManagementCard } from "@/components/admin/hub-ui";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
+import { examCategoryLabel } from "@/lib/public-exams";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +34,13 @@ export default async function AdminPublicExamHub() {
       <HubHeader
         eyebrow="Admin · Public Exam"
         title="Public Exam Control"
-        description="Categories below are synchronized from Course Control (read-only). Open a category to manage only its public exams — questions, exam settings, participants and results."
+        description="Category → Exam. Categories below are synchronized with the Main Website Public Exam section by the same category ID — open a category and use + Add Exam; new exams appear on the website automatically."
       />
 
-      {/* Category list — synced from Course Control, no Add/Edit/Delete here. */}
+      {/* Category list — synced ids, exam labels, no Add/Edit/Delete here. */}
       <div className="mt-8">
         <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">
-          Categories (from Course Control)
+          Exam Categories
         </p>
         {categories.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 admin-dark:border-zinc-700">
@@ -57,7 +58,7 @@ export default async function AdminPublicExamHub() {
                   {iconForSlug(category.slug)}
                 </span>
                 <h2 className="mt-3 font-bold text-zinc-900 transition group-hover:text-primary-600 admin-dark:text-zinc-100">
-                  {category.name}
+                  {examCategoryLabel(category)}
                 </h2>
                 <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500">
                   View and manage this category&apos;s public exams →

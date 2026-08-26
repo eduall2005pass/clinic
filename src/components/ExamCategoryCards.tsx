@@ -43,32 +43,32 @@ const categoryCards: {
 }[] = [
   {
     key: "ssc-academic",
-    label: "SSC Academic",
+    label: "SSC Academic Exam",
     description: "Board-style MCQ model tests for SSC students.",
     Icon: BookIcon,
   },
   {
     key: "hsc-academic",
-    label: "HSC Academic",
+    label: "HSC Academic Exam",
     description: "Full-length HSC academic exam preparation.",
     Icon: GraduationCapIcon,
   },
   {
     key: "medical-admission",
-    label: "Medical Admission",
+    label: "Medical Admission Exam",
     description: "Medical admission mock tests with negative marking.",
     Icon: StethoscopeIcon,
   },
   {
     key: "varsity-admission",
-    label: "Varsity Admission",
+    label: "University Admission Exam",
     description: "University admission practice by latest patterns.",
     Icon: BuildingIcon,
   },
 ];
 
 /**
- * The Public Exam section entry point — exactly 4 separate course-category
+ * The Public Exam section entry point — exactly 4 separate exam-category
  * cards stacked vertically (1 card per row on every screen size), icon on
  * the left with the category name beside it. Clicking a card opens that
  * category's own Public Exams page. Not tabs, not a dropdown.

@@ -12,7 +12,7 @@ import {
 // when the DB is unreachable or the table has no rows yet.
 
 /** Class/exam totals per course from the live learning tables. */
-async function fetchContentCounts(): Promise<{
+export async function fetchContentCounts(): Promise<{
   classes: Map<string, number>;
   exams: Map<string, number>;
 }> {

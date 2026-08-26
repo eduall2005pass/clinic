@@ -132,7 +132,6 @@ export default function AdminPublicExamCategory({
       <PublicExamList
         exams={exams ?? []}
         batches={["HSC 26", "HSC 27", "HSC 28"]}
-        category={category}
         detailsBase="/admin/exams/public/exam"
         showDrafts
         renderManage={(exam) => (

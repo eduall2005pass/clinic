@@ -1,10 +1,17 @@
-import { fetchExams, type Exam } from "@/lib/exams-admin";
+import {
+  fetchExams,
+  fetchPublishedPublicExams,
+  type Exam,
+} from "@/lib/exams-admin";
+import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
 import type { Eligibility } from "@/lib/eligibility";
 import {
   batchLabel,
   deriveStatus,
+  examCategorySlugs,
   formatExamTime,
   negativeMarksFor,
+  type ExamCategory,
   type PublicExam,
 } from "@/lib/public-exams";
 
@@ -20,6 +27,7 @@ function toPublicExam(exam: Exam): PublicExam {
 
   return {
     id: exam.id,
+    categoryId: exam.categoryId ?? null,
     name: exam.title,
     description: exam.description ?? null,
     bannerUrl: exam.bannerUrl ?? null,
@@ -44,12 +52,38 @@ function toPublicExam(exam: Exam): PublicExam {
  * Live exam catalog for the public site — reads published/closed exams
  * straight from MySQL so admin-panel edits show up immediately.
  * Enrolled exams are excluded — they are gated by course enrollment.
+ * Pass categoryId to get ONLY one Public Exam Control category's exams
+ * (SQL-level WHERE category_id = ? — same records as the Admin Panel).
  */
-export async function fetchPublicExams(): Promise<PublicExam[]> {
-  const exams = await fetchExams();
-  return exams
-    .filter((exam) => exam.status !== "draft" && exam.kind !== "enrolled")
-    .map(toPublicExam);
+export async function fetchPublicExams(
+  options: { categoryId?: string } = {},
+): Promise<PublicExam[]> {
+  const exams = options.categoryId
+    ? await fetchPublishedPublicExams(options.categoryId)
+    : await fetchExams().then((all) =>
+        all.filter((exam) => exam.status !== "draft" && exam.kind !== "enrolled"),
+      );
+  return exams.map(toPublicExam);
+}
+
+/**
+ * Resolve a website category URL key (ssc-academic …) to its real Public
+ * Exam Control category id in Course Control. Returns null when Course
+ * Control has no matching category.
+ */
+export async function resolveExamCategoryId(
+  key: ExamCategory,
+): Promise<string | null> {
+  const slug = examCategorySlugs[key];
+  if (!slug) return null;
+  const categories = await fetchActiveCourseCategories();
+  return (
+    categories.find(
+      (category) =>
+        category.slug.toLowerCase() === slug ||
+        category.slug.toLowerCase().startsWith(slug),
+    )?.id ?? null
+  );
 }
 
 export async function fetchPublicExamById(

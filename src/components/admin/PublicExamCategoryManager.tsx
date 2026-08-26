@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import ExamManager, { type FixedCategory } from "@/components/admin/ExamManager";
+import { examCategoryLabel } from "@/lib/public-exams";
 
 /**
- * One Course Control category's public exam list. Reuses the SAME
- * ExamManager card/edit/question system for every category — nothing is
- * duplicated per category and no category management appears here.
+ * One Public Exam category's exam list (Category → Exam, no Course layer).
+ * Reuses the SAME ExamManager card/edit/question system for every category
+ * — nothing is duplicated per category and no category management appears
+ * here. The exam label never uses the word "Course".
  */
 export default function PublicExamCategoryManager({
   category,
 }: {
   category: FixedCategory;
 }) {
+  const label = examCategoryLabel(category);
   return (
     <div>
       <nav className="mx-auto flex max-w-4xl items-center gap-2 px-4 pt-6 text-xs font-semibold text-zinc-500 sm:px-6">
@@ -20,11 +23,11 @@ export default function PublicExamCategoryManager({
           Public Exam Control
         </Link>
         <span aria-hidden="true">→</span>
-        <span className="text-zinc-900 admin-dark:text-zinc-100">{category.name}</span>
+        <span className="text-zinc-900 admin-dark:text-zinc-100">{label}</span>
       </nav>
       <ExamManager
-        title={`${category.name} — Public Exams`}
-        description={`Only the public exams belonging to “${category.name}” are listed here. New exams created below automatically receive this category.`}
+        title={`${label} — Public Exams`}
+        description={`Only the public exams belonging to “${label}” are listed here. Every exam created with + Add Exam below automatically receives this category and appears under it on the Main Website.`}
         fixedCategory={category}
       />
     </div>

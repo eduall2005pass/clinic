@@ -44,6 +44,8 @@ export type CatalogCourse = {
   slug: string;
   name: string;
   category: CatalogCourseCategory;
+  /** Course Control master category id (categories → courses link). */
+  categoryId?: string | null;
   batchId: string;
   image: string | null;
   shortDescription: string | null;
@@ -62,6 +64,11 @@ export type CatalogCourse = {
   couponEnabled: boolean;
   featured: boolean;
   contentLayout: CourseContentLayout;
+  /** Derived counts (category-scoped reads only). */
+  totalClasses?: number;
+  totalExams?: number;
+  /** Mentors assigned to this course (single-course reads). */
+  mentorIds?: string[];
 };
 
 type CatalogCourseRow = {
@@ -109,6 +116,7 @@ export function rowToCourse(row: CatalogCourseRow): CatalogCourse {
     slug: row.slug,
     name: row.name,
     category: normalizeCatalogCategory(row.category),
+    categoryId: (row as { category_id?: string | null }).category_id ?? null,
     batchId: row.batch_id,
     image: row.image_url,
     shortDescription: row.short_description,
@@ -292,7 +300,46 @@ export async function getCoursesByCategory(
        ORDER BY c.sort_order ASC, c.name ASC`,
       [categoryId],
     );
-    return { ok: true, courses: rows.map(rowToCourse) };
+    const courses = rows.map(rowToCourse);
+
+    // Derived totals (classes / published exams) via the subject bridge —
+    // same definition as the public course catalog cards.
+    try {
+      const slugs = courses.map((course) => course.slug);
+      if (slugs.length > 0) {
+        const placeholders = slugs.map(() => "?").join(",");
+        const [classRows, examRows] = await Promise.all([
+          query<{ course_slug: string; cnt: string | number }[]>(
+            `SELECT a.course_slug, COUNT(cl.id) AS cnt
+               FROM course_subject_assignments a
+               JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
+               JOIN course_classes cl ON cl.chapter_id = ch.id AND cl.is_active = 1
+              WHERE a.course_slug IN (${placeholders})
+              GROUP BY a.course_slug`,
+            slugs,
+          ),
+          query<{ course_slug: string; cnt: string | number }[]>(
+            `SELECT a.course_slug, COUNT(ex.id) AS cnt
+               FROM course_subject_assignments a
+               JOIN course_chapters ch ON ch.subject_id = a.subject_id AND ch.is_active = 1
+               JOIN exams ex ON ex.chapter_id = ch.id AND ex.status = 'published'
+              WHERE a.course_slug IN (${placeholders})
+              GROUP BY a.course_slug`,
+            slugs,
+          ),
+        ]);
+        const classMap = new Map(classRows.map((r) => [r.course_slug, toNumber(r.cnt)]));
+        const examMap = new Map(examRows.map((r) => [r.course_slug, toNumber(r.cnt)]));
+        for (const course of courses) {
+          course.totalClasses = classMap.get(course.slug) ?? 0;
+          course.totalExams = examMap.get(course.slug) ?? 0;
+        }
+      }
+    } catch {
+      // Counts are supplementary — never fail the category listing.
+    }
+
+    return { ok: true, courses };
   } catch {
     return { ok: false, reason: "db-error" };
   }
@@ -319,7 +366,10 @@ export async function fetchCatalogCourse(
       `SELECT * FROM catalog_courses WHERE slug = ? LIMIT 1`,
       [slug],
     );
-    return rows[0] ? rowToCourse(rows[0]) : null;
+    if (!rows[0]) return null;
+    const course = rowToCourse(rows[0]);
+    course.mentorIds = await fetchCourseMentorIds(slug);
+    return course;
   } catch {
     return null;
   }
@@ -421,15 +471,68 @@ export async function saveCatalogCourse(
 
   const saved = await fetchCatalogCourse(slug);
   if (!saved) throw new Error("Failed to save the course.");
+
+  // Mentors association (optional payload field: mentorIds: string[]).
+  if (Array.isArray(input.mentorIds)) {
+    await setCourseMentors(
+      slug,
+      input.mentorIds.map((id: unknown) => String(id)),
+    );
+  }
+  saved.mentorIds = await fetchCourseMentorIds(slug);
   return saved;
+}
+
+// ── Course ↔ Mentors association ─────────────────────────────────────────
+
+async function ensureCourseMentorsTable(): Promise<void> {
+  await exec(`CREATE TABLE IF NOT EXISTS course_mentors (
+    course_slug VARCHAR(191) NOT NULL,
+    mentor_id VARCHAR(191) NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (course_slug, mentor_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+}
+
+/** Mentor ids assigned to a course (ordered). */
+export async function fetchCourseMentorIds(slug: string): Promise<string[]> {
+  try {
+    await ensureCourseMentorsTable();
+    const rows = await query<Array<{ mentor_id: string }>>(
+      `SELECT mentor_id FROM course_mentors
+        WHERE course_slug = ? ORDER BY sort_order ASC, mentor_id ASC`,
+      [slug],
+    );
+    return rows.map((row) => row.mentor_id);
+  } catch {
+    return [];
+  }
+}
+
+/** Replace a course's mentor assignment list. */
+export async function setCourseMentors(
+  slug: string,
+  mentorIds: string[],
+): Promise<void> {
+  await ensureCourseMentorsTable();
+  const unique = Array.from(
+    new Set(mentorIds.map((id) => id.trim()).filter(Boolean)),
+  );
+  await exec(`DELETE FROM course_mentors WHERE course_slug = ?`, [slug]);
+  for (let index = 0; index < unique.length; index += 1) {
+    await exec(
+      `INSERT IGNORE INTO course_mentors (course_slug, mentor_id, sort_order)
+       VALUES (?, ?, ?)`,
+      [slug, unique[index], index + 1],
+    );
+  }
 }
 
 /** Quick flags update — publish/unpublish and/or feature a course. */
 export async function setCatalogCourseFlags(
   slug: string,
   patch: { status?: "published" | "unpublished"; featured?: boolean },
-): Promise<CatalogCourse> {
-  await ensureTables();
+): Promise<CatalogCourse> {  await ensureTables();
   const existing = await fetchCatalogCourse(slug);
   if (!existing) throw new Error("Course not found.");
   const sets: string[] = [];

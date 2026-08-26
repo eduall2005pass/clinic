@@ -24,7 +24,7 @@ function emptyGroups(): CategoryGroups {
 export default function PublicExamList({
   exams,
   batches,
-  category,
+  categoryId,
   /** Admin Panel extras — the layout stays identical to the website. */
   detailsBase,
   showDrafts = false,
@@ -32,8 +32,8 @@ export default function PublicExamList({
 }: {
   exams: PublicExam[];
   batches: string[];
-  /** When set, only exams of this course category are shown. */
-  category?: ExamCategory;
+  /** Real category id — exams arrive pre-filtered; skip the legacy heuristic. */
+  categoryId?: string | null;
   /** Base href for the exam-details page (admin mirror pages). */
   detailsBase?: string;
   /** Include draft exams (Admin Panel only). */
@@ -46,8 +46,7 @@ export default function PublicExamList({
   const filtered = exams.filter(
     (exam) =>
       (showDrafts || exam.published) &&
-      (batch === "All Batches" || exam.batch === batch) &&
-      (category ? categorizeExam(exam) === category : true)
+      (batch === "All Batches" || exam.batch === batch),
   );
 
   const grouped = useMemo(() => {
@@ -56,10 +55,15 @@ export default function PublicExamList({
       map.set(category.key, emptyGroups());
     }
     for (const exam of filtered) {
-      map.get(categorizeExam(exam))?.[exam.status].push(exam);
+      // Pre-filtered by real category id → keep every exam in view.
+      const key = categoryId
+        ? undefined
+        : categorizeExam(exam);
+      if (!key) continue;
+      map.get(key)?.[exam.status].push(exam);
     }
     return map;
-  }, [filtered]);
+  }, [filtered, categoryId]);
 
   const selectClass =
     "rounded-lg border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm font-semibold text-heading transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30";
@@ -98,6 +102,44 @@ export default function PublicExamList({
       )}
 
       <div className="space-y-14">
+        {categoryId ? (
+          /* Single pre-filtered category — status sections only. */
+          <div className="space-y-8">
+            {examSections.map((section) => (
+              <div key={section.key}>
+                <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-heading">
+                  {section.label}
+                  <span className="rounded-full bg-dark-850 px-2 py-0.5 text-xs font-semibold text-neutral-400">
+                    {filtered.filter((exam) => exam.status === section.key).length}
+                  </span>
+                </h3>
+                {filtered.some((exam) => exam.status === section.key) ? (
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {filtered
+                      .filter((exam) => exam.status === section.key)
+                      .map((exam) => (
+                        <ExamCard
+                          key={exam.id}
+                          exam={exam}
+                          detailsHref={
+                            detailsBase
+                              ? `${detailsBase}/${exam.id}`
+                              : undefined
+                          }
+                          manage={renderManage?.(exam)}
+                        />
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    No {section.label.toLowerCase()} right now.
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+        <>
         {examCategories.map((category) => {
           const groups = grouped.get(category.key) ?? emptyGroups();
           const categoryTotal =
@@ -150,6 +192,8 @@ export default function PublicExamList({
             </div>
           );
         })}
+        </>
+        )}
       </div>
     </section>
   );

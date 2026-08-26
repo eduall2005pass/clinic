@@ -917,3 +917,33 @@ export async function fetchFeaturedPublicExams(): Promise<Exam[]> {
     return [];
   }
 }
+
+/**
+ * Published public exams for the Main Website, optionally scoped to ONE
+ * Public Exam Control category (SQL-level WHERE category_id = ?). This is
+ * the shared Admin Panel → Database → Main Website relationship: an exam
+ * created under a category in Public Exam Control appears under that same
+ * category on the website automatically.
+ */
+export async function fetchPublishedPublicExams(
+  categoryId?: string,
+): Promise<Exam[]> {
+  try {
+    await ensureTables();
+    const params: unknown[] = [];
+    let where = `kind = 'public' AND status <> 'draft'`;
+    if (categoryId && categoryId.trim()) {
+      where += ` AND category_id = ?`;
+      params.push(categoryId.trim());
+    }
+    const rows = await query<ExamRow[]>(
+      `SELECT ${EXAM_COLUMNS} FROM exams
+       WHERE ${where}
+       ORDER BY sort_order ASC, created_at DESC`,
+      params,
+    );
+    return rows.map(rowToExam);
+  } catch {
+    return [];
+  }
+}
