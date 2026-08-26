@@ -282,3 +282,17 @@ body {
 .bg-dna {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='120' viewBox='0 0 40 120'%3E%3Cg fill='none' stroke='rgba(229,9,20,0.07)' stroke-width='1.5'%3E%3Cpath d='M8 0c12 15-12 30 0 45s-12 30 0 45-12 30 0 45'/%3E%3Cpath d='M32 0c-12 15 12 30 0 45s12 30 0 45 12 30 0 45'/%3E%3Cpath d='M10 15h20M10 45h20M10 75h20M10 105h20'/%3E%3C/g%3E%3C/svg%3E");
 }
+/* ── Desktop smoothness ────────────────────────────────────────────────
+   Reserve the vertical-scrollbar gutter at all times so navigating between
+   pages of different heights never shifts the layout sideways (the classic
+   desktop "vibration"). Clip stray horizontal overflow without creating a
+   scroll container (clip keeps position: sticky working, hidden breaks it).
+   Mobile is unaffected — overlay scrollbars reserve no space there. */
+html {
+  scrollbar-gutter: stable;
+}
+
+html,
+body {
+  overflow-x: clip;
+}
