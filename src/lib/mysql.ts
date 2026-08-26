@@ -26,7 +26,13 @@ export function getMysqlPool(): mysql.Pool | null {
       database: mysqlDatabase,
       user: mysqlUser,
       password: mysqlPassword,
-      connectionLimit: 5,
+      // Azure Flexible Server caps total connections (B1ms ≈ 171). Every
+      // warm Vercel instance holds its own pool, so keep per-instance usage
+      // small and release idle connections quickly or bursts exhaust the
+      // server ("Too many connections" breaks saves mid-request).
+      connectionLimit: 3,
+      maxIdle: 1,
+      idleTimeout: 10_000,
       connectTimeout: 10000,
       waitForConnections: true,
       // Azure Database for MySQL enforces TLS connections.
