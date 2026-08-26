@@ -7,31 +7,30 @@ import {
   batches,
   type ExamCategory,
 } from "@/lib/public-exams";
-import { fetchPublicExams } from "@/lib/public-exams-server";
+import {
+  fetchPublicExams,
+  resolveExamCategoryId,
+} from "@/lib/public-exams-server";
 
 export const dynamic = "force-dynamic";
 
 const categoryMeta: Record<
   ExamCategory,
-  { label: string; description: string }
+  { description: string }
 > = {
   "ssc-academic": {
-    label: "SSC Public Exams",
     description:
       "SSC academic model tests — live, upcoming and previous exams in one place.",
   },
   "hsc-academic": {
-    label: "HSC Public Exams",
     description:
       "HSC academic model tests — live, upcoming and previous exams in one place.",
   },
   "medical-admission": {
-    label: "Medical Admission Public Exams",
     description:
       "Medical admission mock exams — live, upcoming and previous in one place.",
   },
   "varsity-admission": {
-    label: "Varsity Admission Public Exams",
     description:
       "University admission practice exams — live, upcoming and previous in one place.",
   },
@@ -45,9 +44,9 @@ export async function generateMetadata({
   params,
 }: CategoryPageProps): Promise<Metadata> {
   const { category } = await params;
-  const meta = categoryMeta[category as ExamCategory];
-  if (!meta) return { title: "Exam Category Not Found" };
-  return { title: meta.label, description: meta.description };
+  const valid = examCategories.find((item) => item.key === category);
+  if (!valid) return { title: "Exam Category Not Found" };
+  return { title: valid.label, description: categoryMeta[valid.key].description };
 }
 
 export default async function ExamCategoryPage({ params }: CategoryPageProps) {
@@ -57,8 +56,12 @@ export default async function ExamCategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
-  const meta = categoryMeta[valid.key];
-  const exams = await fetchPublicExams();
+  // Resolve the URL key to its real Course Control category id, then fetch
+  // ONLY that category's exams (SQL WHERE category_id = ?). Admin-created
+  // exams appear here automatically — no heuristic matching.
+  const categoryId = await resolveExamCategoryId(valid.key);
+  if (!categoryId) notFound();
+  const exams = await fetchPublicExams({ categoryId });
 
   return (
     <main className="flex-1 bg-dark-950">
@@ -70,16 +73,18 @@ export default async function ExamCategoryPage({ params }: CategoryPageProps) {
           ← All Categories
         </Link>
         <h1 className="mt-3 text-2xl font-extrabold text-heading sm:text-3xl">
-          {meta.label}
+          {valid.label}
         </h1>
-        <p className="mt-1 text-sm text-neutral-400">{meta.description}</p>
+        <p className="mt-1 text-sm text-neutral-400">
+          {categoryMeta[valid.key].description}
+        </p>
       </section>
 
       {/* Inside every category: Live Exams → Upcoming Exams → Previous Exams */}
       <PublicExamList
         exams={exams}
         batches={batches}
-        category={valid.key}
+        categoryId={categoryId}
       />
     </main>
   );

@@ -16,6 +16,7 @@ import {
 import ExamQuestions from "@/components/admin/ExamQuestions";
 import ExamRulesEditor from "@/components/admin/ExamRulesEditor";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
+import { examCategoryLabel } from "@/lib/public-exams";
 
 export type Exam = {
   id: string;
@@ -539,7 +540,7 @@ export default function ExamManager({
                   <>
                     <input id="ex-kind" className={inputClass} value="Public" disabled />
                     <p className="mt-1 text-[11px] text-zinc-500">
-                      Category: <span className="font-bold">{fixedCategory.name}</span> (from Course Control — fixed)
+                      Category: <span className="font-bold">{examCategoryLabel(fixedCategory)}</span> (fixed — auto-assigned)
                     </p>
                   </>
                 ) : (
@@ -563,7 +564,7 @@ export default function ExamManager({
                     <option value="">Select a category…</option>
                     {categoryOptions.map((category) => (
                       <option key={category.id} value={category.id}>
-                        {category.name}
+                        {examCategoryLabel(category)}
                       </option>
                     ))}
                   </select>

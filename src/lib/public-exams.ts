@@ -18,6 +18,8 @@ export type CourseType = "Academic" | "Admission";
 
 export type PublicExam = {
   id: string;
+  /** Owning Public Exam Control category (course_categories.id). */
+  categoryId?: string | null;
   name: string;
   /** Public description (admin-managed) shown on the details page. */
   description?: string | null;
@@ -48,18 +50,26 @@ export type ExamCategory =
   | "medical-admission"
   | "varsity-admission";
 
+/** URL key → Course Control category slug (the shared database relationship). */
+export const examCategorySlugs: Record<ExamCategory, string> = {
+  "ssc-academic": "ssc",
+  "hsc-academic": "hsc",
+  "medical-admission": "medical",
+  "varsity-admission": "varsity",
+};
+
 export const examCategories: { key: ExamCategory; label: string }[] = [
-  { key: "ssc-academic", label: "SSC Academic" },
-  { key: "hsc-academic", label: "HSC Academic" },
-  { key: "medical-admission", label: "Medical Admission" },
-  { key: "varsity-admission", label: "Varsity Admission" },
+  { key: "ssc-academic", label: "SSC Academic Exam" },
+  { key: "hsc-academic", label: "HSC Academic Exam" },
+  { key: "medical-admission", label: "Medical Admission Exam" },
+  { key: "varsity-admission", label: "University Admission Exam" },
 ];
 
 export const categoryLabels: Record<ExamCategory, string> = {
-  "ssc-academic": "SSC Academic",
-  "hsc-academic": "HSC Academic",
-  "medical-admission": "Medical Admission",
-  "varsity-admission": "Varsity Admission",
+  "ssc-academic": "SSC Academic Exam",
+  "hsc-academic": "HSC Academic Exam",
+  "medical-admission": "Medical Admission Exam",
+  "varsity-admission": "University Admission Exam",
 };
 
 export const categoryDescriptions: Record<ExamCategory, string> = {
@@ -68,6 +78,27 @@ export const categoryDescriptions: Record<ExamCategory, string> = {
   "medical-admission": "Medical admission test preparation with model exams and practice tests.",
   "varsity-admission": "University admission test preparation with model exams and practice tests.",
 };
+
+/**
+ * Display label for a Public Exam category — NEVER contains the word
+ * "Course" (Public Exam Control is not Course Control). The four canonical
+ * Course Control categories get their fixed exam names; any custom category
+ * gets a generic "… Exam" label. Both the Admin Panel and the Main Website
+ * use this so names always match while IDs stay the shared relationship.
+ */
+export function examCategoryLabel(category: {
+  name: string;
+  slug?: string;
+}): string {
+  const token = `${category.slug ?? ""} ${category.name}`.toLowerCase();
+  if (/varsity|universit/.test(token)) return "University Admission Exam";
+  if (/^ssc[\s-]|ssc academic/.test(token)) return "SSC Academic Exam";
+  if (/^hsc[\s-]|hsc academic/.test(token)) return "HSC Academic Exam";
+  if (/medical/.test(token)) return "Medical Admission Exam";
+  let label = category.name.replace(/\bcourses?\b/gi, "Exam").trim();
+  if (!/exam/i.test(label)) label = `${label} Exam`;
+  return label;
+}
 
 /**
  * Display-only grouping used by the Public Exam page layout.
