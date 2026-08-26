@@ -161,7 +161,7 @@ export default function AdminCenterPage() {
       </p>
 
       {/* Add admin */}
-      <div className="mt-8 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mt-8 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
         <h2 className="text-lg font-bold text-heading">Add New Admin</h2>
         <p className="mt-1 text-xs text-neutral-500">
           The Google account must have signed in at least once — only the
@@ -173,14 +173,14 @@ export default function AdminCenterPage() {
             value={newEmail}
             onChange={(event) => setNewEmail(event.target.value)}
             placeholder="admin@gmail.com"
-            className="w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+            className="w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
           />
           <input
             type="text"
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
             placeholder="Display name (optional)"
-            className="w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+            className="w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
           />
           <button
             type="button"
@@ -194,7 +194,7 @@ export default function AdminCenterPage() {
       </div>
 
       {/* Admin list */}
-      <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+      <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
         <h2 className="text-lg font-bold text-heading">
           All Admins ({admins?.length ?? 0})
         </h2>
@@ -206,7 +206,7 @@ export default function AdminCenterPage() {
             <button
               type="button"
               onClick={() => void load()}
-              className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-primary-500/60"
+              className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-[#93c5fd]"
             >
               Retry
             </button>
@@ -220,7 +220,7 @@ export default function AdminCenterPage() {
             {admins.map((admin) => (
               <li
                 key={admin.email}
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-ink/10 bg-dark-950/60 px-4 py-3"
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-4 py-3"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-heading">
@@ -232,7 +232,7 @@ export default function AdminCenterPage() {
                   value={admin.role ?? "admin"}
                   onChange={(event) => void updateRole(admin, event.target.value)}
                   aria-label={`Role for ${admin.email}`}
-                  className="rounded-lg border border-ink/15 bg-dark-850 px-2.5 py-1.5 text-xs font-semibold capitalize text-heading outline-none focus:border-primary-500/60"
+                  className="rounded-lg border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-2.5 py-1.5 text-xs font-semibold capitalize text-heading outline-none focus:border-[#2f6bce]/60"
                 >
                   {(ROLE_OPTIONS.some((role) => role.value === admin.role)
                     ? ROLE_OPTIONS.map((role) => role.value)

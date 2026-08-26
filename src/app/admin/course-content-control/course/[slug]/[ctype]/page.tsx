@@ -103,7 +103,7 @@ export default function TypeChaptersPage({
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <Link href={backHref} className="text-sm font-semibold text-neutral-400 hover:text-primary-400">
+      <Link href={backHref} className="text-sm font-semibold text-neutral-400 hover:text-[#1a3a78]">
         ← Back
       </Link>
       <h1 className="mt-3 break-words text-2xl font-extrabold capitalize text-heading">
@@ -120,11 +120,11 @@ export default function TypeChaptersPage({
       ) : (
         <ul className="mt-6 space-y-2">
           {chapters.map((chapter) => (
-            <li key={chapter.id} className="rounded-xl border border-ink/10 bg-dark-900 p-4">
+            <li key={chapter.id} className="rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-4">
               {editId === chapter.id ? (
                 <div className="flex flex-wrap gap-2">
                   <input value={editName} onChange={(e) => setEditName(e.target.value)}
-                    className="min-w-0 flex-1 rounded-lg border border-primary-500/40 bg-dark-850 px-3 py-2 text-sm text-heading outline-none" />
+                    className="min-w-0 flex-1 rounded-lg border border-primary-500/40 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2 text-sm text-heading outline-none" />
                   <button type="button"
                     onClick={async () => {
                       if (await post({ action: "rename-chapter", id: chapter.id, name: editName }, "Chapter updated.")) setEditId(null);
@@ -142,7 +142,7 @@ export default function TypeChaptersPage({
                     return (
                       <Link
                         href={link.href}
-                        className="rounded-lg border border-ink/15 bg-ink/5 px-3 py-1.5 text-[11px] font-bold text-heading hover:border-primary-500/60"
+                        className="rounded-lg border border-ink/15 bg-ink/5 px-3 py-1.5 text-[11px] font-bold text-heading hover:border-[#93c5fd]"
                       >
                         {link.label}
                       </Link>
@@ -169,14 +169,14 @@ export default function TypeChaptersPage({
           [ + Add Chapter ]
         </button>
         <button type="button" onClick={() => setEditId("__list__")}
-          className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold text-heading hover:border-primary-500/60">
+          className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold text-heading hover:border-[#93c5fd]">
           [ Edit ]
         </button>
       </div>
       {adding && (
         <div className="mt-3 flex flex-wrap gap-2">
           <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Chapter 13"
-            className="min-w-0 flex-1 rounded-xl border border-primary-500/40 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none" />
+            className="min-w-0 flex-1 rounded-xl border border-primary-500/40 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none" />
           <button type="button"
             onClick={async () => {
               if (!newName.trim()) return;

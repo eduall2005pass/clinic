@@ -124,14 +124,14 @@ export default function QuestionBankPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Question Bank</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Question Bank</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Reusable MCQ questions. Attach them to exams when building papers.
         </p>
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
           {editingId ? "Edit question" : "Add question"}
         </h3>
         <form
@@ -164,7 +164,7 @@ export default function QuestionBankPage() {
                   type="button"
                   onClick={() => setForm({ ...form, correctIndex: index })}
                   className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
-                    form.correctIndex === index ? "bg-emerald-500/10 text-emerald-600" : "bg-zinc-500/10 text-zinc-400"
+                    form.correctIndex === index ? "bg-emerald-500/10 text-emerald-600" : "bg-zinc-500/10 text-slate-400"
                   }`}
                 >
                   {form.correctIndex === index ? "correct ✓" : "mark correct"}
@@ -204,26 +204,26 @@ export default function QuestionBankPage() {
         {(questions ?? []).map((question) => (
           <li key={question.id} className={`${cardClass} p-4`}>
             <div className="flex items-start justify-between gap-3">
-              <p className="min-w-0 flex-1 text-sm font-semibold text-zinc-900 admin-dark:text-zinc-100">{question.question}</p>
+              <p className="min-w-0 flex-1 text-sm font-semibold text-[#0b1e3a] admin-dark:text-zinc-100">{question.question}</p>
               <button type="button" disabled={busy} className={buttonSecondaryClass}
                 onClick={() => startEdit(question)}>Edit</button>
               <button type="button" disabled={busy} aria-label="Delete question" className={buttonDangerClass}
                 onClick={() => question.id !== null && void remove(question.id)}>✕</button>
             </div>
-            <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+            <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
               {question.options.map((option, index) => (
                 <li key={index} className={index === question.correctIndex ? "font-bold text-emerald-600" : ""}>
                   {String.fromCharCode(65 + index)}. {option}{index === question.correctIndex ? " ✓" : ""}
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-xs text-zinc-400">
+            <p className="mt-2 text-xs text-slate-400">
               {question.subject || "general"} · {question.marks} marks
             </p>
           </li>
         ))}
         {(questions ?? []).length === 0 && questions !== null && (
-          <li className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+          <li className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
             The bank is empty — add your first question above.
           </li>
         )}

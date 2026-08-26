@@ -29,14 +29,14 @@ export default function LoginActivityPage() {
   return (
     <section className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Login Activity</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Your recent admin panel sessions.</p>
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Login Activity</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">Your recent admin panel sessions.</p>
       </header>
 
       {activity === null ? (
-        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>Loading…</p>
+        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-slate-500`}>Loading…</p>
       ) : activity.length === 0 ? (
-        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-zinc-500`}>No logins recorded yet.</p>
+        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-slate-500`}>No logins recorded yet.</p>
       ) : (
         <ol className="mt-5 space-y-2">
           {activity.map((entry) => (
@@ -44,8 +44,8 @@ export default function LoginActivityPage() {
               <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-emerald-600">
                 {entry.action}
               </span>
-              <span className="min-w-0 flex-1 truncate text-zinc-500">{entry.ipAddress ?? "unknown IP"}</span>
-              <span className="shrink-0 text-xs text-zinc-400">{new Date(entry.createdAt).toLocaleString()}</span>
+              <span className="min-w-0 flex-1 truncate text-slate-500">{entry.ipAddress ?? "unknown IP"}</span>
+              <span className="shrink-0 text-xs text-slate-400">{new Date(entry.createdAt).toLocaleString()}</span>
             </li>
           ))}
         </ol>

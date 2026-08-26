@@ -38,7 +38,7 @@ const EMPTY_FORM: SettingsForm = {
 };
 
 const inputClass =
-  "mt-1 w-full rounded-xl border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60";
+  "mt-1 w-full rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60";
 
 export default function GeneralSettingsPage() {
   const { user, authLoading } = useAuth();
@@ -168,7 +168,7 @@ export default function GeneralSettingsPage() {
   }
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <header>
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
@@ -184,7 +184,7 @@ export default function GeneralSettingsPage() {
 
         <div className="mt-8 space-y-6">
           {/* Website Identity */}
-          <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+          <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
             <h2 className="text-lg font-bold text-heading">Website Identity</h2>
             <p className="mt-1 text-xs text-neutral-500">Basic branding that appears across the website.</p>
 
@@ -214,7 +214,7 @@ export default function GeneralSettingsPage() {
           </section>
 
           {/* Contact */}
-          <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+          <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
             <h2 className="text-lg font-bold text-heading">Contact Information</h2>
             <p className="mt-1 text-xs text-neutral-500">Displayed in the footer and contact areas.</p>
 
@@ -243,7 +243,7 @@ export default function GeneralSettingsPage() {
           </section>
 
           {/* Social Links */}
-          <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+          <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
             <h2 className="text-lg font-bold text-heading">Social Links</h2>
             <p className="mt-1 text-xs text-neutral-500">Links shown in the footer.</p>
 

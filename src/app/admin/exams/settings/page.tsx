@@ -76,8 +76,8 @@ export default function ExamSettingsPage() {
   return (
     <section className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Exam Settings</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Defaults applied to new exams.</p>
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Exam Settings</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">Defaults applied to new exams.</p>
       </header>
 
       <div className={`${cardClass} mt-5 space-y-5 p-5`}>
@@ -103,12 +103,12 @@ export default function ExamSettingsPage() {
         </div>
 
         <div className="flex flex-wrap gap-6">
-          <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
             <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={settings.allowReview}
               onChange={(event) => update({ allowReview: event.target.checked })} />
             Allow answer review during exam
           </label>
-          <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
             <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={settings.showAnswersAfterSubmit}
               onChange={(event) => update({ showAnswersAfterSubmit: event.target.checked })} />
             Show correct answers after submit

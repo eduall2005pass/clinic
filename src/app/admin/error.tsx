@@ -40,7 +40,7 @@ export default function AdminError({
         </button>
         <Link
           href="/admin"
-          className="rounded-xl border border-ink/15 px-5 py-2.5 text-sm font-bold text-heading transition hover:border-primary-500/60"
+          className="rounded-xl border border-ink/15 px-5 py-2.5 text-sm font-bold text-heading transition hover:border-[#93c5fd]"
         >
           Back to Admin Home
         </Link>

@@ -197,8 +197,8 @@ export default function JerseyPage() {
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Jerseys</h2>
-          <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Merchandise jerseys shown on the website.</p>
+          <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Jerseys</h2>
+          <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">Merchandise jerseys shown on the website.</p>
         </div>
         {sectionActive !== null && (
           <button
@@ -209,7 +209,7 @@ export default function JerseyPage() {
             className={`rounded-xl border px-4 py-2.5 text-xs font-extrabold uppercase tracking-wide transition ${
               sectionActive
                 ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
-                : "border-zinc-400/40 bg-zinc-500/10 text-zinc-500 hover:bg-zinc-500/20"
+                : "border-zinc-400/40 bg-zinc-500/10 text-slate-500 hover:bg-zinc-500/20"
             }`}
           >
             {sectionActive ? "Section: Visible" : "Section: Hidden"}
@@ -218,7 +218,7 @@ export default function JerseyPage() {
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
           {form.id ? "Update jersey" : "Add jersey"}
         </h3>
         <form
@@ -272,8 +272,8 @@ export default function JerseyPage() {
         {(jerseys ?? []).map((jersey) => (
           <li key={jersey.id} className={`${cardClass} flex items-center gap-3 px-4 py-3`}>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">{jersey.name}</span>
-              <span className="block truncate text-xs text-zinc-500">
+              <span className="block truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{jersey.name}</span>
+              <span className="block truncate text-xs text-slate-500">
                 ৳ {jersey.price.toLocaleString("en-IN")}{jersey.note ? ` · ${jersey.note}` : ""}{!jersey.isActive ? " · hidden" : ""}
               </span>
             </span>
@@ -281,7 +281,7 @@ export default function JerseyPage() {
               className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
                 jersey.isActive
                   ? "bg-emerald-500/10 text-emerald-600"
-                  : "bg-zinc-500/10 text-zinc-500"
+                  : "bg-zinc-500/10 text-slate-500"
               }`}
             >
               {jersey.isActive ? "Active" : "Disabled"}
@@ -306,7 +306,7 @@ export default function JerseyPage() {
           </li>
         ))}
         {(jerseys ?? []).length === 0 && jerseys !== null && (
-          <li className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+          <li className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
             No jerseys yet.
           </li>
         )}

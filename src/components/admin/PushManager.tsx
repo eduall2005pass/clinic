@@ -138,10 +138,10 @@ export default function PushManager() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Push Notifications
         </h2>
-        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Send a Firebase Cloud Messaging notification — broadcast to everyone,
           or target one student. Students opt in from Dashboard → Notifications.
         </p>
@@ -149,7 +149,7 @@ export default function PushManager() {
 
       <div className={`${cardClass} mt-5 p-4 text-sm`}>
         <span className="font-bold">{count === null ? "…" : count}</span>{" "}
-        <span className="text-zinc-500">device(s) currently subscribed in total.</span>
+        <span className="text-slate-500">device(s) currently subscribed in total.</span>
       </div>
 
       <div className={`${cardClass} mt-5 space-y-4 p-5`}>
@@ -170,7 +170,7 @@ export default function PushManager() {
                 className={`rounded-xl px-4 py-2 text-xs font-bold transition ${
                   audience === value
                     ? "bg-primary-600 text-white shadow"
-                    : "border border-neutral-200 text-zinc-600 hover:border-primary-500/60 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+                    : "border border-neutral-200 text-zinc-600 hover:border-[#93c5fd] admin-dark:border-zinc-700 admin-dark:text-zinc-300"
                 }`}
               >
                 {label}

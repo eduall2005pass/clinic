@@ -129,7 +129,7 @@ export default function CourseApplicationsPage({
     <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <Link
         href={`/admin/enrollment-control/${kind}`}
-        className="inline-flex items-center gap-1 text-sm font-semibold text-neutral-400 transition hover:text-primary-400"
+        className="inline-flex items-center gap-1 text-sm font-semibold text-neutral-400 transition hover:text-[#1a3a78]"
       >
         ← {kind === "free" ? "Free Course" : "Paid Course"} Enrollment
       </Link>
@@ -186,7 +186,7 @@ export default function CourseApplicationsPage({
           {applications.map((application) => (
             <li
               key={application.id}
-              className="rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20"
+              className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-5 shadow-lg shadow-black/20"
             >
               <div className="flex flex-wrap items-start gap-3">
                 <span
@@ -227,7 +227,7 @@ export default function CourseApplicationsPage({
                 (application.paymentAmount !== null &&
                   application.paymentAmount !== undefined) ||
                 application.paymentSender) && (
-                <dl className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-ink/10 bg-dark-950/60 p-3 text-xs sm:grid-cols-3">
+                <dl className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-3 text-xs sm:grid-cols-3">
                   <div className="min-w-0">
                     <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
                       Transaction ID
@@ -306,7 +306,7 @@ export default function CourseApplicationsPage({
           aria-label="Confirm rejection"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
         >
-          <div className="w-full max-w-sm rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-heading">Reject this application?</h2>
             <p className="mt-2 text-sm leading-relaxed text-neutral-400">
               <span className="font-bold text-heading">

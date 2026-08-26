@@ -90,10 +90,10 @@ export default function AdminProfilePage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Admin Profile
         </h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Your administrator account overview. Sensitive details are managed
           through the existing secure sign-in system.
         </p>
@@ -104,7 +104,7 @@ export default function AdminProfilePage() {
           Could not load your profile. Please refresh the page.
         </p>
       ) : !profile ? (
-        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>Loading…</p>
+        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-slate-500`}>Loading…</p>
       ) : (
         <>
           {/* Overview card */}
@@ -123,16 +123,16 @@ export default function AdminProfilePage() {
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-lg font-extrabold text-zinc-900 admin-dark:text-zinc-50">
+                <p className="truncate text-lg font-extrabold text-[#0b1e3a] admin-dark:text-white">
                   {profile.displayName ?? "—"}
                 </p>
-                <p className="truncate text-sm text-zinc-500">{profile.email}</p>
+                <p className="truncate text-sm text-slate-500">{profile.email}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
                       overview?.status === "active"
                         ? "bg-emerald-500/10 text-emerald-600 admin-dark:text-emerald-400"
-                        : "bg-zinc-500/10 text-zinc-500"
+                        : "bg-zinc-500/10 text-slate-500"
                     }`}
                   >
                     ● {overview?.status === "active" ? "Active" : "Unknown status"}
@@ -152,28 +152,28 @@ export default function AdminProfilePage() {
 
             <dl className="mt-6 grid grid-cols-1 gap-4 border-t border-neutral-200/60 pt-5 sm:grid-cols-2 admin-dark:border-zinc-800">
               <div>
-                <dt className="text-xs font-semibold text-zinc-500">Email</dt>
-                <dd className="mt-1 truncate text-sm font-medium text-zinc-900 admin-dark:text-zinc-100">
+                <dt className="text-xs font-semibold text-slate-500">Email</dt>
+                <dd className="mt-1 truncate text-sm font-medium text-[#0b1e3a] admin-dark:text-zinc-100">
                   {profile.email ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold text-zinc-500">Phone</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-900 admin-dark:text-zinc-100">
+                <dt className="text-xs font-semibold text-slate-500">Phone</dt>
+                <dd className="mt-1 text-sm font-medium text-[#0b1e3a] admin-dark:text-zinc-100">
                   {profile.phoneNumber || "Not provided"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold text-zinc-500">Last login</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-900 admin-dark:text-zinc-100">
+                <dt className="text-xs font-semibold text-slate-500">Last login</dt>
+                <dd className="mt-1 text-sm font-medium text-[#0b1e3a] admin-dark:text-zinc-100">
                   {overview?.lastLoginAt
                     ? new Date(overview.lastLoginAt).toLocaleString()
                     : "No login recorded yet"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold text-zinc-500">Password</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-900 admin-dark:text-zinc-100">
+                <dt className="text-xs font-semibold text-slate-500">Password</dt>
+                <dd className="mt-1 text-sm font-medium text-[#0b1e3a] admin-dark:text-zinc-100">
                   Managed by Google sign-in{" "}
                   <Link
                     href="/admin/profile/security"
@@ -192,12 +192,12 @@ export default function AdminProfilePage() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`${cardClass} group p-4 transition duration-300 hover:-translate-y-0.5 hover:border-primary-500/60`}
+                className={`${cardClass} group p-4 transition duration-300 hover:-translate-y-0.5 hover:border-[#93c5fd]`}
               >
-                <p className="text-sm font-bold text-zinc-900 transition group-hover:text-primary-600 admin-dark:text-zinc-100">
+                <p className="text-sm font-bold text-[#0b1e3a] transition group-hover:text-[#1a3a78] admin-dark:text-zinc-100">
                   {link.title}
                 </p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{link.description}</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">{link.description}</p>
               </Link>
             ))}
           </div>

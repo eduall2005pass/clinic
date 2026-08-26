@@ -147,7 +147,7 @@ export default function StudentControlPage() {
           {visible.map((student) => (
             <li
               key={student.uid}
-              className="flex flex-wrap items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-4 py-3"
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] px-4 py-3"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-heading">

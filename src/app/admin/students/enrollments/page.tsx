@@ -270,9 +270,9 @@ export default function StudentEnrollmentsPage() {
   }
 
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white shadow-sm transition-colors duration-300 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 shadow-sm transition-colors duration-300 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
   const inputClass =
-    "w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-primary-500/60 focus:bg-white admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100";
+    "w-full rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2.5 text-sm text-[#0b1e3a] outline-none transition placeholder:text-slate-400 focus:border-[#2f6bce]/60 focus:bg-white admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100";
   const buttonClass =
     "rounded-lg px-3 py-1.5 text-xs font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -280,10 +280,10 @@ export default function StudentEnrollmentsPage() {
     <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Page header */}
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Enrollments
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Review enrollment requests, approve or cancel them, assign courses
           manually and remove course access.
         </p>
@@ -291,7 +291,7 @@ export default function StudentEnrollmentsPage() {
 
       {/* Assign course */}
       <div className={`${cardClass} mt-6 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
           Assign a Course
         </h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
@@ -330,7 +330,7 @@ export default function StudentEnrollmentsPage() {
             {assigning ? "Assigning…" : "Assign"}
           </button>
         </div>
-        <p className="mt-2 text-xs text-zinc-400">
+        <p className="mt-2 text-xs text-slate-400">
           Assigning activates the course immediately for the selected student.
         </p>
       </div>
@@ -353,7 +353,7 @@ export default function StudentEnrollmentsPage() {
               className={`rounded-full border px-4 py-1.5 text-xs font-bold transition ${
                 statusFilter === tab.value
                   ? "border-primary-600 bg-primary-600/10 text-primary-600 admin-dark:text-primary-400"
-                  : "border-neutral-200 text-zinc-500 hover:border-primary-500/40 hover:text-zinc-700 admin-dark:border-zinc-700 admin-dark:text-zinc-400"
+                  : "border-neutral-200 text-slate-500 hover:border-primary-500/40 hover:text-slate-700 admin-dark:border-zinc-700 admin-dark:text-slate-400"
               }`}
             >
               {tab.label}
@@ -366,7 +366,7 @@ export default function StudentEnrollmentsPage() {
       <ul className="mt-6 space-y-3">
         {enrollments?.length === 0 && (
           <li className={cardClass}>
-            <p className="py-8 text-center text-sm font-semibold text-zinc-500">
+            <p className="py-8 text-center text-sm font-semibold text-slate-500">
               No enrollments found{search ? ` for “${search}”` : ""}.
             </p>
           </li>
@@ -375,29 +375,29 @@ export default function StudentEnrollmentsPage() {
           <li key={enrollment.id} className={cardClass}>
             <div className="flex flex-wrap items-center gap-3 p-4 sm:p-5">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                <p className="truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {enrollment.courseName}
                 </p>
-                <p className="truncate text-xs text-zinc-500">
+                <p className="truncate text-xs text-slate-500">
                   {enrollment.studentName} · {enrollment.studentId}
                   {enrollment.studentEmail ? ` · ${enrollment.studentEmail}` : ""}
                 </p>
               </div>
 
-              <span className="hidden rounded-full bg-white px-2 py-0.5 text-[11px] font-bold uppercase text-zinc-500 sm:inline admin-dark:bg-zinc-900 admin-dark:text-zinc-300">
+              <span className="hidden rounded-full bg-white px-2 py-0.5 text-[11px] font-bold uppercase text-slate-500 sm:inline admin-dark:bg-zinc-900 admin-dark:text-zinc-300">
                 {enrollment.courseType}
               </span>
-              <span className="hidden text-xs font-semibold text-zinc-500 md:inline">
+              <span className="hidden text-xs font-semibold text-slate-500 md:inline">
                 {enrollment.fee > 0 ? formatFee(enrollment.fee) : "Free"}
               </span>
-              <span className="hidden text-xs text-zinc-400 lg:inline">
+              <span className="hidden text-xs text-slate-400 lg:inline">
                 {formatDate(enrollment.enrolledAt)}
               </span>
 
               <span
                 className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold capitalize ${
                   STATUS_BADGE[enrollment.status] ??
-                  "bg-zinc-200 text-zinc-500 admin-dark:bg-zinc-700 admin-dark:text-zinc-300"
+                  "bg-zinc-200 text-slate-500 admin-dark:bg-zinc-700 admin-dark:text-zinc-300"
                 }`}
               >
                 {enrollment.status}

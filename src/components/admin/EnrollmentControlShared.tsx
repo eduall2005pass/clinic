@@ -66,7 +66,7 @@ export function ControlCourseCard({
   return (
     <Link
       href={`/admin/enrollment-control/course/${encodeURIComponent(course.slug)}?kind=${kind}`}
-      className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-4 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:p-5"
+      className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-4 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:p-5"
     >
       <span
         aria-hidden
@@ -75,7 +75,7 @@ export function ControlCourseCard({
         {kind === "paid" ? "💳" : "🆓"}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-extrabold text-heading transition group-hover:text-primary-400 sm:text-base">
+        <p className="truncate text-sm font-extrabold text-heading transition group-hover:text-[#1a3a78] sm:text-base">
           {course.name}
         </p>
         <p className="truncate text-[11px] text-neutral-500">

@@ -125,19 +125,19 @@ export default function RolesPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Roles &amp; Permissions</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Roles &amp; Permissions</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Assign a role to each admin by email and configure what each role may manage. Permission changes are enforced on the server immediately.
         </p>
       </header>
 
       {/* Role permission matrix */}
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">Role permissions</h3>
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">Role permissions</h3>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wide text-zinc-400">
+              <tr className="text-[10px] uppercase tracking-wide text-slate-400">
                 <th className="pb-2 pr-4">Role</th>
                 {PERMISSIONS.map((permission) => (
                   <th key={permission.value} className="px-2 pb-2 text-center">{permission.value.replace("manage", "")}</th>
@@ -148,7 +148,7 @@ export default function RolesPage() {
               {ROLES.map((role) => (
                 <tr key={role.value} className="border-t border-neutral-100 admin-dark:border-zinc-800">
                   <td className="py-2 pr-4">
-                    <span className="text-xs font-bold text-zinc-900 admin-dark:text-zinc-100">{role.label}</span>
+                    <span className="text-xs font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{role.label}</span>
                   </td>
                   {PERMISSIONS.map((permission) => {
                     const checked =
@@ -171,7 +171,7 @@ export default function RolesPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-zinc-500 admin-dark:text-zinc-400">Super Admin always has every permission.</p>
+        <p className="mt-2 text-xs text-slate-500 admin-dark:text-slate-400">Super Admin always has every permission.</p>
       </div>
 
       {/* Email → role assignments */}
@@ -197,14 +197,14 @@ export default function RolesPage() {
       <div className="mt-4 space-y-3">
         {(assignments ?? []).map((assignment, index) => (
           <div key={assignment.email} className={`${cardClass} flex flex-wrap items-center gap-3 p-4`}>
-            <span className="min-w-0 flex-1 truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+            <span className="min-w-0 flex-1 truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
               {assignment.email}
             </span>
             <select
               value={assignment.role}
               onChange={(event) => update(index, { role: event.target.value })}
               aria-label={`Role for ${assignment.email}`}
-              className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs font-bold admin-dark:border-zinc-700 admin-dark:bg-zinc-800"
+              className="rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-3 py-1.5 text-xs font-bold admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]"
             >
               {ROLES.map((role) => (
                 <option key={role.value} value={role.value}>{role.label}</option>
@@ -216,7 +216,7 @@ export default function RolesPage() {
           </div>
         ))}
         {(assignments ?? []).length === 0 && assignments !== null && (
-          <p className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+          <p className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
             No role assignments yet — admins without an assignment default to the Admin role.
           </p>
         )}

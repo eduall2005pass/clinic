@@ -72,15 +72,15 @@ export default function ResultsPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Results</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Submitted exam results by students.</p>
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Results</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">Submitted exam results by students.</p>
       </header>
 
       <div className={`${cardClass} mt-5 p-4`}>
         <label htmlFor="res-exam" className="sr-only">Filter by exam</label>
         <select id="res-exam" value={examId}
           onChange={(event) => setExamId(event.target.value)}
-          className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm admin-dark:border-zinc-700 admin-dark:bg-zinc-800">
+          className="w-full rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-3 py-2 text-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]">
           <option value="">All exams</option>
           {exams.map((exam) => (
             <option key={exam.id} value={exam.id}>{exam.title}</option>
@@ -89,9 +89,9 @@ export default function ResultsPage() {
       </div>
 
       {results === null ? (
-        <p className={`${cardClass} mt-4 p-6 text-center text-sm text-zinc-500`}>Loading…</p>
+        <p className={`${cardClass} mt-4 p-6 text-center text-sm text-slate-500`}>Loading…</p>
       ) : results.length === 0 ? (
-        <p className={`${cardClass} mt-4 p-8 text-center text-sm text-zinc-500`}>No results yet.</p>
+        <p className={`${cardClass} mt-4 p-8 text-center text-sm text-slate-500`}>No results yet.</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {results.map((result) => (
@@ -105,7 +105,7 @@ export default function ResultsPage() {
                         ? "bg-zinc-500/15 text-zinc-600"
                         : result.meritPosition === 3
                           ? "bg-orange-500/15 text-orange-600"
-                          : "bg-zinc-500/10 text-zinc-500"
+                          : "bg-zinc-500/10 text-slate-500"
                   }`}
                   title="Merit position"
                 >
@@ -113,10 +113,10 @@ export default function ResultsPage() {
                 </span>
               )}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                <span className="block truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {result.studentName || result.studentUid}
                 </span>
-                <span className="block text-xs text-zinc-500">
+                <span className="block text-xs text-slate-500">
                   {exams.find((exam) => exam.id === result.examId)?.title ?? result.examId} ·{" "}
                   {new Date(result.submittedAt).toLocaleString()}
                   {result.timeTakenSeconds != null && ` · ⏱ ${formatTime(result.timeTakenSeconds)}`}

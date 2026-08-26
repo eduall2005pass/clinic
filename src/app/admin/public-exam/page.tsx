@@ -39,11 +39,11 @@ export default async function AdminPublicExamHub() {
 
       {/* Category list — synced ids, exam labels, no Add/Edit/Delete here. */}
       <div className="mt-8">
-        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
           Exam Categories
         </p>
         {categories.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 admin-dark:border-zinc-700">
+          <p className="mt-3 rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm text-slate-500 admin-dark:border-zinc-700">
             No active categories found in Course Control.
           </p>
         ) : (
@@ -52,15 +52,15 @@ export default async function AdminPublicExamHub() {
               <Link
                 key={category.id}
                 href={`/admin/public-exam/category/${encodeURIComponent(category.id)}`}
-                className="group rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-500/60 hover:shadow-md admin-dark:border-zinc-800 admin-dark:bg-zinc-900"
+                className="group rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#93c5fd] hover:shadow-md admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]"
               >
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-600/10 text-xl">
                   {iconForSlug(category.slug)}
                 </span>
-                <h2 className="mt-3 font-bold text-zinc-900 transition group-hover:text-primary-600 admin-dark:text-zinc-100">
+                <h2 className="mt-3 font-bold text-[#0b1e3a] transition group-hover:text-[#1a3a78] admin-dark:text-zinc-100">
                   {examCategoryLabel(category)}
                 </h2>
-                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500">
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">
                   View and manage this category&apos;s public exams →
                 </p>
               </Link>
@@ -71,7 +71,7 @@ export default async function AdminPublicExamHub() {
 
       {/* General (non-category) management utilities. */}
       <div className="mt-10">
-        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
           General Management
         </p>
         <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

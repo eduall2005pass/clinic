@@ -16,7 +16,7 @@ type SeoSettings = {
 };
 
 const inputClass =
-  "mt-1 w-full rounded-xl border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60";
+  "mt-1 w-full rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60";
 
 export default function SeoSettingsPage() {
   const { user, authLoading } = useAuth();
@@ -187,7 +187,7 @@ export default function SeoSettingsPage() {
   const previewTitle = settings?.ogTitle || settings?.siteTitle || "MediSpark — HSC Academic & Medical Admission Preparation";
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <header>
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
@@ -210,7 +210,7 @@ export default function SeoSettingsPage() {
         ) : (
           <>
             {/* Search engine basics */}
-            <section className="mt-8 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+            <section className="mt-8 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">Search Engine</h2>
               <p className="mt-1 text-xs text-neutral-500">
                 The website title and description shown in Google/Bing search
@@ -270,7 +270,7 @@ export default function SeoSettingsPage() {
             </section>
 
             {/* Open Graph */}
-            <section className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+            <section className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">Social Sharing (Open Graph)</h2>
               <p className="mt-1 text-xs text-neutral-500">
                 How the website looks when shared on Facebook, WhatsApp,
@@ -335,7 +335,7 @@ export default function SeoSettingsPage() {
                         accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif"
                         onChange={(e) => setOgImageFile(e.target.files?.[0] ?? null)}
                         aria-label="Upload social sharing image"
-                        className="block w-full max-w-xs cursor-pointer rounded-xl border border-ink/10 bg-dark-850 px-3 py-2 text-xs text-neutral-400 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-primary-700"
+                        className="block w-full max-w-xs cursor-pointer rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2 text-xs text-neutral-400 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-primary-700"
                       />
                       {(settings.ogImageUrl || ogImageFile) && (
                         <button
@@ -354,9 +354,9 @@ export default function SeoSettingsPage() {
             </section>
 
             {/* Share preview */}
-            <section className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+            <section className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">Share Preview</h2>
-              <div className="mt-4 overflow-hidden rounded-xl border border-ink/10 bg-dark-850">
+              <div className="mt-4 overflow-hidden rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547]">
                 {previewImageUrl && (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img

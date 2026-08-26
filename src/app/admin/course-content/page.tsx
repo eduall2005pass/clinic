@@ -38,7 +38,7 @@ export default function AdminMyEnrolledCourseHub() {
             Browse enrolled courses exactly like students do — Course → Subject → Paper → Chapter → Content.
           </span>
         </span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-[#1a3a78]">
           <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
         </svg>
       </Link>

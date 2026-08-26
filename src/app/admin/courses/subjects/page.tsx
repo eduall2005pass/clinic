@@ -172,13 +172,13 @@ export default function SubjectsPage() {
   }
 
   const iconButton =
-    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-30";
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-30";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Subjects</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Subjects</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Create, edit, reorder and enable/disable subjects — and assign them to
           courses. Changes go live immediately.
         </p>
@@ -203,7 +203,7 @@ export default function SubjectsPage() {
             return (
               <li key={subject.id} className={`rounded-xl border px-4 py-3 ${
                 subject.isActive
-                  ? "border-transparent bg-neutral-50 admin-dark:bg-zinc-800/60"
+                  ? "border-transparent bg-[#f8fbff] admin-dark:bg-[#132a4f]/60"
                   : "border-dashed border-neutral-300 opacity-60 admin-dark:border-zinc-700"
               }`}>
                 <div className="flex items-center gap-3">
@@ -226,10 +226,10 @@ export default function SubjectsPage() {
                     </span>
                   ) : (
                     <span className="min-w-0 flex-1">
-                      <span className={`block truncate text-sm font-semibold ${subject.isActive ? "text-zinc-900 admin-dark:text-zinc-100" : "text-zinc-400 line-through"}`}>
+                      <span className={`block truncate text-sm font-semibold ${subject.isActive ? "text-[#0b1e3a] admin-dark:text-zinc-100" : "text-slate-400 line-through"}`}>
                         {index + 1}. {subject.name}
                       </span>
-                      <span className="block text-xs text-zinc-500 admin-dark:text-zinc-400">
+                      <span className="block text-xs text-slate-500 admin-dark:text-slate-400">
                         {assignedCount === 0
                           ? "Not assigned to any course"
                           : `Assigned to ${assignedCount} course${assignedCount > 1 ? "s" : ""}`}
@@ -258,13 +258,13 @@ export default function SubjectsPage() {
                   <div className="mt-3 rounded-lg border border-neutral-200 p-3 admin-dark:border-zinc-700">
                     <p className={labelClass}>Assign &quot;{subject.name}&quot; to courses</p>
                     {courses.length === 0 ? (
-                      <p className="text-xs text-zinc-500 admin-dark:text-zinc-400">
+                      <p className="text-xs text-slate-500 admin-dark:text-slate-400">
                         No courses available yet.
                       </p>
                     ) : (
                       <div className="mt-1 grid max-h-48 gap-1 overflow-y-auto sm:grid-cols-2">
                         {courses.map((course) => (
-                          <label key={course.slug} className="flex items-center gap-2 text-xs font-medium text-zinc-700 admin-dark:text-zinc-300">
+                          <label key={course.slug} className="flex items-center gap-2 text-xs font-medium text-slate-700 admin-dark:text-zinc-300">
                             <input
                               type="checkbox"
                               className="h-3.5 w-3.5 accent-primary-600"
@@ -278,7 +278,7 @@ export default function SubjectsPage() {
                               }
                             />
                             <span className="truncate">{course.name}</span>
-                            <span className="truncate text-[10px] text-zinc-400">/{course.slug}</span>
+                            <span className="truncate text-[10px] text-slate-400">/{course.slug}</span>
                           </label>
                         ))}
                       </div>
@@ -295,7 +295,7 @@ export default function SubjectsPage() {
             );
           })}
           {(subjects ?? []).length === 0 && (
-            <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+            <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
               No subjects yet.
             </li>
           )}

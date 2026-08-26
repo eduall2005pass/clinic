@@ -20,10 +20,10 @@ export default function AdminAccessDeniedPage() {
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
       </span>
-      <h1 className="mt-6 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50">
+      <h1 className="mt-6 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-white">
         Access Denied
       </h1>
-      <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+      <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
         You do not have permission to view this page. This area is restricted
         to authorized MediSpark administrators.
       </p>

@@ -70,8 +70,8 @@ export default function PricingPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Pricing</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Pricing</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Bulk-update fees and discount prices. Leave discount empty for no discount.
         </p>
       </header>
@@ -79,10 +79,10 @@ export default function PricingPage() {
       <div className={`${cardClass} mt-5 divide-y divide-neutral-100 admin-dark:divide-zinc-800`}>
         {(rows ?? []).map((row) => (
           <div key={row.slug} className="flex flex-wrap items-center gap-3 p-4">
-            <span className="min-w-0 flex-1 truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+            <span className="min-w-0 flex-1 truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
               {row.name}
             </span>
-            <label className="text-xs font-bold text-zinc-500">
+            <label className="text-xs font-bold text-slate-500">
               Fee
               <input
                 type="number"
@@ -93,7 +93,7 @@ export default function PricingPage() {
                 className={`${inputClass} mt-1 w-28`}
               />
             </label>
-            <label className="text-xs font-bold text-zinc-500">
+            <label className="text-xs font-bold text-slate-500">
               Discount
               <input
                 type="number"
@@ -113,7 +113,7 @@ export default function PricingPage() {
           </div>
         ))}
         {rows !== null && rows.length === 0 && (
-          <p className="p-8 text-center text-sm text-zinc-500">No courses yet.</p>
+          <p className="p-8 text-center text-sm text-slate-500">No courses yet.</p>
         )}
       </div>
 

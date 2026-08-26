@@ -357,20 +357,20 @@ export default function PopupAnnouncementManagementPage() {
   }
 
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
   const inputClass =
-    "mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-primary-500/60 focus:bg-white admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100";
+    "mt-1 w-full rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2 text-sm text-[#0b1e3a] outline-none transition placeholder:text-slate-400 focus:border-[#2f6bce]/60 focus:bg-white admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100";
   const labelClass =
-    "text-[11px] font-bold uppercase tracking-wider text-zinc-400";
+    "text-[11px] font-bold uppercase tracking-wider text-slate-400";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Page header */}
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Popup / Announcement
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Create announcements shown at the top of the live website. Only
           enabled announcements within their date window are displayed.
         </p>
@@ -378,7 +378,7 @@ export default function PopupAnnouncementManagementPage() {
 
       {/* Add announcement */}
       <div className={`${cardClass} mt-6`}>
-        <h3 className="text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
           New Announcement
         </h3>
         <div className="mt-4 grid gap-3">
@@ -469,14 +469,14 @@ export default function PopupAnnouncementManagementPage() {
 
       {/* Existing announcements */}
       <div className="mt-8 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
           All Announcements ({announcements.length})
         </h3>
         <button
           type="button"
           onClick={handleSaveOrder}
           disabled={saving}
-          className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:opacity-60 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+          className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:opacity-60 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
         >
           {saving ? "Saving…" : "Save Order"}
         </button>
@@ -485,7 +485,7 @@ export default function PopupAnnouncementManagementPage() {
       <ul className="mt-3 space-y-3">
         {announcements.length === 0 && (
           <li className={cardClass}>
-            <p className="py-4 text-center text-sm font-semibold text-zinc-500">
+            <p className="py-4 text-center text-sm font-semibold text-slate-500">
               No announcements yet. Create the first one above.
             </p>
           </li>
@@ -495,10 +495,10 @@ export default function PopupAnnouncementManagementPage() {
           return (
             <li key={announcement.id} className={`${cardClass} ${announcement.isActive ? "" : "opacity-75"}`}>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg bg-neutral-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 admin-dark:bg-zinc-800">
+                <span className="rounded-lg bg-[#f1f5f9] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 admin-dark:bg-[#132a4f]">
                   {String(index + 1).padStart(2, "0")}
                 </span>
-                <p className="min-w-0 flex-1 truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                <p className="min-w-0 flex-1 truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {announcement.title}
                 </p>
                 <div className="flex shrink-0 items-center gap-1">
@@ -507,7 +507,7 @@ export default function PopupAnnouncementManagementPage() {
                     aria-label={`Move announcement ${index + 1} up`}
                     onClick={() => moveAnnouncement(index, -1)}
                     disabled={index === 0}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▲
                   </button>
@@ -516,7 +516,7 @@ export default function PopupAnnouncementManagementPage() {
                     aria-label={`Move announcement ${index + 1} down`}
                     onClick={() => moveAnnouncement(index, 1)}
                     disabled={index === announcements.length - 1}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▼
                   </button>
@@ -623,7 +623,7 @@ export default function PopupAnnouncementManagementPage() {
                   className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
                     announcement.isActive
                       ? "bg-emerald-500/10 text-emerald-600 admin-dark:text-emerald-400"
-                      : "bg-zinc-100 text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400"
+                      : "bg-zinc-100 text-slate-500 admin-dark:bg-[#132a4f] admin-dark:text-slate-400"
                   }`}
                 >
                   {announcement.isActive ? "Enabled" : "Disabled"}

@@ -145,18 +145,18 @@ export default function HomepageManagementPage() {
   }
 
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
   const inputClass =
-    "mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-primary-500/60 focus:bg-white admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100 disabled:opacity-60";
+    "mt-1 w-full rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2 text-sm text-[#0b1e3a] outline-none transition placeholder:text-slate-400 focus:border-[#2f6bce]/60 focus:bg-white admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100 disabled:opacity-60";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Page header */}
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Homepage
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Control which sections appear on the main website homepage, their
           order and their heading text. Changes go live immediately after
           saving.
@@ -173,10 +173,10 @@ export default function HomepageManagementPage() {
               className={`${cardClass} ${section.isActive ? "" : "opacity-70"}`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg bg-neutral-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 admin-dark:bg-zinc-800">
+                <span className="rounded-lg bg-[#f1f5f9] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 admin-dark:bg-[#132a4f]">
                   {String(index + 1).padStart(2, "0")}
                 </span>
-                <h3 className="min-w-0 flex-1 truncate text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+                <h3 className="min-w-0 flex-1 truncate text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {section.label}
                 </h3>
                 <div className="flex items-center gap-1">
@@ -185,7 +185,7 @@ export default function HomepageManagementPage() {
                     aria-label={`Move ${section.label} up`}
                     onClick={() => moveSection(index, -1)}
                     disabled={index === 0}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▲
                   </button>
@@ -194,7 +194,7 @@ export default function HomepageManagementPage() {
                     aria-label={`Move ${section.label} down`}
                     onClick={() => moveSection(index, 1)}
                     disabled={index === sections.length - 1}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▼
                   </button>
@@ -224,7 +224,7 @@ export default function HomepageManagementPage() {
               {config.editableText ? (
                 <div className="mt-4 grid gap-3">
                   <label className="block">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                       Section Title
                     </span>
                     <input
@@ -239,7 +239,7 @@ export default function HomepageManagementPage() {
                     />
                   </label>
                   <label className="block">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                       Section Description
                     </span>
                     <textarea
@@ -255,7 +255,7 @@ export default function HomepageManagementPage() {
                   </label>
                 </div>
               ) : (
-                <p className="mt-3 text-[11px] font-semibold text-zinc-500">
+                <p className="mt-3 text-[11px] font-semibold text-slate-500">
                   Visibility and order only — content is managed separately.
                 </p>
               )}
@@ -292,7 +292,7 @@ export default function HomepageManagementPage() {
           type="button"
           onClick={() => setConfirmReset(true)}
           disabled={saving}
-          className="rounded-xl border border-neutral-200 px-5 py-3 text-sm font-bold text-zinc-600 transition hover:bg-neutral-50 disabled:opacity-60 admin-dark:border-zinc-700 admin-dark:text-zinc-300 admin-dark:hover:bg-zinc-800"
+          className="rounded-xl border border-neutral-200 px-5 py-3 text-sm font-bold text-zinc-600 transition hover:bg-[#f8fbff] disabled:opacity-60 admin-dark:border-zinc-700 admin-dark:text-zinc-300 admin-dark:hover:bg-zinc-800"
         >
           Reset to Defaults
         </button>

@@ -9,10 +9,10 @@ export default function AdminNotFound() {
       <p className="bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-7xl font-extrabold tracking-tight text-transparent">
         404
       </p>
-      <h1 className="mt-4 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50">
+      <h1 className="mt-4 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-white">
         Page Not Found
       </h1>
-      <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+      <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
         The Admin Panel page you are looking for does not exist or has been
         moved.
       </p>

@@ -38,7 +38,7 @@ export default async function AdminCourseControlPage() {
       />
 
       {categories.length === 0 ? (
-        <p className="mt-8 rounded-2xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 admin-dark:border-zinc-700">
+        <p className="mt-8 rounded-2xl border border-dashed border-zinc-300 p-8 text-center text-sm text-slate-500 admin-dark:border-zinc-700">
           No active categories found. Create one first.
         </p>
       ) : (
@@ -46,15 +46,15 @@ export default async function AdminCourseControlPage() {
           {categories.map((category) => (
             <div
               key={category.id}
-              className="group flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-500/60 hover:shadow-md admin-dark:border-zinc-800 admin-dark:bg-zinc-900"
+              className="group flex flex-col rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#93c5fd] hover:shadow-md admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]"
             >
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-600/10 text-xl">
                 {iconForSlug(category.slug)}
               </span>
-              <h2 className="mt-3 font-bold leading-snug text-zinc-900 admin-dark:text-zinc-100">
+              <h2 className="mt-3 font-bold leading-snug text-[#0b1e3a] admin-dark:text-zinc-100">
                 {category.name}
               </h2>
-              <p className="mt-1 line-clamp-3 flex-1 text-xs leading-relaxed text-zinc-500">
+              <p className="mt-1 line-clamp-3 flex-1 text-xs leading-relaxed text-slate-500">
                 {category.description ?? "Courses under this category."}
               </p>
               <Link
@@ -73,13 +73,13 @@ export default async function AdminCourseControlPage() {
       <div className="mt-10 flex flex-wrap gap-3">
         <Link
           href="/admin/courses/categories"
-          className="rounded-xl border border-neutral-300 px-5 py-2.5 text-sm font-bold text-zinc-700 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-200"
+          className="rounded-xl border border-[#bfdbfe] px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-200"
         >
           Edit Categories
         </Link>
         <Link
           href="/admin/courses/categories?add=1"
-          className="rounded-xl border border-neutral-300 px-5 py-2.5 text-sm font-bold text-zinc-700 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-200"
+          className="rounded-xl border border-[#bfdbfe] px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-200"
         >
           + Add Category
         </Link>

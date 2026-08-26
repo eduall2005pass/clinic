@@ -168,10 +168,10 @@ export default function ExamQuestions({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+            <h3 className="text-lg font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
               Questions · {exam.title}
             </h3>
-            <p className="mt-1 text-xs font-semibold text-zinc-500">
+            <p className="mt-1 text-xs font-semibold text-slate-500">
               {(questions ?? []).length} question{(questions ?? []).length === 1 ? "" : "s"} on this exam
             </p>
           </div>
@@ -181,7 +181,7 @@ export default function ExamQuestions({
         </div>
 
         {/* Add-question (MCQ maker) form */}
-        <h4 className="mt-5 text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+        <h4 className="mt-5 text-sm font-extrabold uppercase tracking-wider text-slate-400">
           Add MCQ
         </h4>
         <form
@@ -233,7 +233,7 @@ export default function ExamQuestions({
                   className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
                     form.correctIndex === index
                       ? "bg-emerald-500/10 text-emerald-600"
-                      : "bg-zinc-500/10 text-zinc-400"
+                      : "bg-zinc-500/10 text-slate-400"
                   }`}
                 >
                   {form.correctIndex === index ? "correct ✓" : "mark correct"}
@@ -283,7 +283,7 @@ export default function ExamQuestions({
         </form>
 
         {/* Assign questions from the reusable bank */}
-        <h4 className="mt-6 text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+        <h4 className="mt-6 text-sm font-extrabold uppercase tracking-wider text-slate-400">
           Assign from question bank
           {exam.subject ? ` · ${exam.subject}` : ""}
         </h4>
@@ -291,10 +291,10 @@ export default function ExamQuestions({
           {(bankQuestions ?? []).map((question) => (
             <li key={`bank-${question.id}`} className={`${cardClass} flex items-center gap-3 p-3`}>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-semibold text-zinc-900 admin-dark:text-zinc-100">
+                <span className="block truncate text-xs font-semibold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {question.question}
                 </span>
-                <span className="block text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+                <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">
                   {question.subject || "general"} · {question.marks} marks
                 </span>
               </span>
@@ -309,7 +309,7 @@ export default function ExamQuestions({
             </li>
           ))}
           {(bankQuestions ?? []).length === 0 && bankQuestions !== null && (
-            <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+            <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
               No bank questions available{exam.subject ? " for this subject" : ""}.
             </li>
           )}
@@ -320,7 +320,7 @@ export default function ExamQuestions({
           {(questions ?? []).map((question) => (
             <li key={question.id} className={`${cardClass} p-4`}>
               <div className="flex items-start justify-between gap-3">
-                <p className="min-w-0 flex-1 text-sm font-semibold text-zinc-900 admin-dark:text-zinc-100">
+                <p className="min-w-0 flex-1 text-sm font-semibold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {question.question}
                 </p>
                 <button
@@ -333,7 +333,7 @@ export default function ExamQuestions({
                   ✕
                 </button>
               </div>
-              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                 {question.options.map((option, index) => (
                   <li
                     key={index}
@@ -344,13 +344,13 @@ export default function ExamQuestions({
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-zinc-400">
+              <p className="mt-2 text-xs text-slate-400">
                 {question.subject || "general"} · {question.marks} marks
               </p>
             </li>
           ))}
           {(questions ?? []).length === 0 && questions !== null && (
-            <li className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+            <li className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
               No questions yet — add the first MCQ above.
             </li>
           )}

@@ -48,7 +48,7 @@ export default function AdminBatchCourseList({
                 className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-bold transition ${
                   active
                     ? "bg-primary-600 text-white shadow-md shadow-primary-900/40 hover:bg-primary-700"
-                    : "border border-ink/15 bg-ink/5 font-semibold text-neutral-400 hover:border-primary-500/60 hover:text-heading"
+                    : "border border-ink/15 bg-ink/5 font-semibold text-neutral-400 hover:border-[#93c5fd] hover:text-heading"
                 }`}
               >
                 {option.label}
@@ -59,7 +59,7 @@ export default function AdminBatchCourseList({
       </div>
 
       {visible.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-12 text-center">
+        <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-white admin-dark:bg-[#112544]/60 p-12 text-center">
           <p className="font-semibold text-heading">No courses found</p>
           <p className="mt-1 text-sm text-neutral-400">
             Courses for this batch are coming soon.
@@ -73,7 +73,7 @@ export default function AdminBatchCourseList({
               <Link
                 href={`${editBase}?edit=${encodeURIComponent(course.slug)}`}
                 title={`Edit ${course.name}`}
-                className="absolute left-1/2 top-3 z-30 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-lg border border-primary-500/50 bg-dark-950/85 px-2.5 py-1 text-[11px] font-bold text-primary-400 opacity-0 shadow-lg shadow-black/30 backdrop-blur transition hover:border-primary-400 hover:text-primary-300 focus:opacity-100 group-hover/card:opacity-100"
+                className="absolute left-1/2 top-3 z-30 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-lg border border-primary-500/50 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/85 px-2.5 py-1 text-[11px] font-bold text-primary-400 opacity-0 shadow-lg shadow-black/30 backdrop-blur transition hover:border-primary-400 hover:text-primary-300 focus:opacity-100 group-hover/card:opacity-100"
               >
                 <svg
                   viewBox="0 0 24 24"

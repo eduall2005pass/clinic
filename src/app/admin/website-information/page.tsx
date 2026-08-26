@@ -152,7 +152,7 @@ export default function WebsiteInformationPage() {
       </p>
 
       {/* Website Name */}
-      <div className="mt-8 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mt-8 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-heading">Website Name</h2>
           {!editingName ? (
@@ -162,7 +162,7 @@ export default function WebsiteInformationPage() {
                 setDraftName(siteName ?? "");
                 setEditingName(true);
               }}
-              className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
+              className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold text-heading transition hover:border-[#93c5fd] hover:bg-ink/10"
             >
               ✎ Edit
             </button>
@@ -170,7 +170,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         {!editingName ? (
-          <p className="mt-3 rounded-xl border border-ink/10 bg-dark-950/60 px-4 py-3 text-sm font-bold text-heading">
+          <p className="mt-3 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-4 py-3 text-sm font-bold text-heading">
             {siteName ?? "…"}
           </p>
         ) : (
@@ -185,7 +185,7 @@ export default function WebsiteInformationPage() {
                 if (event.key === "Enter") void saveName(draftName);
                 if (event.key === "Escape") setEditingName(false);
               }}
-              className="min-w-0 flex-1 rounded-xl border border-primary-500/40 bg-dark-850 px-3.5 py-2.5 text-sm font-semibold text-heading outline-none focus:border-primary-500"
+              className="min-w-0 flex-1 rounded-xl border border-primary-500/40 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm font-semibold text-heading outline-none focus:border-[#2f6bce]"
               placeholder="New website name…"
             />
             <button
@@ -215,7 +215,7 @@ export default function WebsiteInformationPage() {
       {(["light", "dark"] as const).map((mode) => (
         <div
           key={mode}
-          className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20"
+          className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-heading">
@@ -274,7 +274,7 @@ export default function WebsiteInformationPage() {
                   if (file) void uploadLogo(file, mode);
                 }}
                 disabled={uploadingMode !== null}
-                className="mt-3 w-full cursor-pointer rounded-xl border border-ink/15 bg-dark-850 px-3 py-2.5 text-xs text-neutral-300 outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-primary-700 disabled:opacity-60"
+                className="mt-3 w-full cursor-pointer rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2.5 text-xs text-neutral-300 outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-primary-700 disabled:opacity-60"
               />
               {uploadingMode === mode && (
                 <p className="mt-2 text-xs font-semibold text-primary-400">

@@ -31,9 +31,9 @@ export default async function AdminEnrolledCoursesPage() {
       </div>
 
       {courses.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-neutral-300 bg-white p-12 text-center admin-dark:border-zinc-700 admin-dark:bg-zinc-900">
-          <p className="font-semibold text-zinc-900 admin-dark:text-zinc-50">No courses yet</p>
-          <p className="mt-1 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <div className="mt-8 rounded-2xl border border-dashed border-neutral-300 bg-white p-12 text-center admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+          <p className="font-semibold text-[#0b1e3a] admin-dark:text-white">No courses yet</p>
+          <p className="mt-1 text-sm text-slate-500 admin-dark:text-slate-400">
             Create a course first — it will appear here with its full content tree.
           </p>
           <Link
@@ -58,7 +58,7 @@ function ManageLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-zinc-600 shadow-sm transition hover:border-primary-500/50 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300 admin-dark:hover:text-primary-400"
+      className="inline-flex items-center gap-1.5 rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-4 py-2 text-xs font-bold text-zinc-600 shadow-sm transition hover:border-primary-500/50 hover:text-[#1a3a78] admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300 admin-dark:hover:text-[#1a3a78]"
     >
       {label}
     </Link>

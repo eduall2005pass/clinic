@@ -171,7 +171,7 @@ function VariantManager({
   }
 
   return (
-    <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+    <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
       <div className="flex items-center gap-2">
         <span
           className={`h-3 w-3 rounded-full ${
@@ -238,7 +238,7 @@ function VariantManager({
         </dl>
       )}
 
-      <label className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-ink/20 bg-dark-850 px-6 py-8 text-center transition hover:border-primary-500/50 hover:bg-primary-500/5">
+      <label className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-ink/20 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-6 py-8 text-center transition hover:border-primary-500/50 hover:bg-primary-500/5">
         <svg
           className="h-7 w-7 text-neutral-500"
           fill="none"
@@ -337,7 +337,7 @@ export default function LogoManager() {
         mode="dark"
         title="Dark Mode Logo"
         hint="Shown whenever a visitor is using Dark Mode."
-        previewBoxClass="bg-dark-850 border border-ink/10"
+        previewBoxClass="bg-[#f8fbff] admin-dark:bg-[#0f2547] border border-ink/10"
       />
 
       <SharedLogoInfo />
@@ -349,13 +349,13 @@ export default function LogoManager() {
 function SharedLogoInfo() {
   const { logo, isCustom } = useLogo();
   return (
-    <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+    <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
       <h2 className="text-lg font-bold text-heading">Shared Logo (Fallback)</h2>
       <p className="mt-1 text-xs text-neutral-500">
         Used for any theme whose specific logo is not uploaded yet. Manage this
         logo from Admin Panel → Website Settings → Branding.
       </p>
-      <div className="mt-4 flex min-h-28 items-center justify-center rounded-xl bg-dark-850 p-6">
+      <div className="mt-4 flex min-h-28 items-center justify-center rounded-xl bg-[#f8fbff] admin-dark:bg-[#0f2547] p-6">
         <Image
           key={logo.url}
           src={logo.url}

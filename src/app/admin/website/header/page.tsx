@@ -26,9 +26,9 @@ function Toggle({
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div className="min-w-0">
-        <p className="text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">{label}</p>
+        <p className="text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{label}</p>
         {description && (
-          <p className="mt-0.5 text-xs text-zinc-500 admin-dark:text-zinc-400">{description}</p>
+          <p className="mt-0.5 text-xs text-slate-500 admin-dark:text-slate-400">{description}</p>
         )}
       </div>
       <button
@@ -193,18 +193,18 @@ export default function HeaderNavbarManagementPage() {
   }
 
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
   const inputClass =
-    "mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-primary-500/60 focus:bg-white admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100";
+    "mt-1 w-full rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2 text-sm text-[#0b1e3a] outline-none transition placeholder:text-slate-400 focus:border-[#2f6bce]/60 focus:bg-white admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Page header */}
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Header &amp; Navbar
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Control the main website header — visibility, navigation items and
           actions. Changes go live immediately after saving.
         </p>
@@ -242,10 +242,10 @@ export default function HeaderNavbarManagementPage() {
       <div className={`${cardClass} mt-6`}>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+            <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
               Navigation Items
             </h3>
-            <p className="mt-0.5 text-xs text-zinc-500 admin-dark:text-zinc-400">
+            <p className="mt-0.5 text-xs text-slate-500 admin-dark:text-slate-400">
               Rename, re-link, reorder or hide individual items.
             </p>
           </div>
@@ -255,12 +255,12 @@ export default function HeaderNavbarManagementPage() {
           {config.items.map((item, index) => (
             <li
               key={item.key}
-              className={`rounded-xl border border-neutral-200 bg-neutral-50 p-3 transition-colors duration-300 admin-dark:border-zinc-700 admin-dark:bg-zinc-800/60 ${
+              className={`rounded-xl border border-neutral-200 bg-[#f8fbff] p-3 transition-colors duration-300 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60 ${
                 item.isActive ? "" : "opacity-70"
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 admin-dark:bg-zinc-900">
+                <span className="rounded-lg bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 admin-dark:bg-zinc-900">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <div className="ml-auto flex items-center gap-1">
@@ -269,7 +269,7 @@ export default function HeaderNavbarManagementPage() {
                     aria-label={`Move ${item.label} up`}
                     onClick={() => moveItem(index, -1)}
                     disabled={index === 0}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▲
                   </button>
@@ -278,7 +278,7 @@ export default function HeaderNavbarManagementPage() {
                     aria-label={`Move ${item.label} down`}
                     onClick={() => moveItem(index, 1)}
                     disabled={index === config.items.length - 1}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▼
                   </button>
@@ -303,7 +303,7 @@ export default function HeaderNavbarManagementPage() {
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Name</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Name</span>
                   <input
                     type="text"
                     value={item.label}
@@ -313,7 +313,7 @@ export default function HeaderNavbarManagementPage() {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">URL / Route</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">URL / Route</span>
                   <input
                     type="text"
                     value={item.href ?? ""}
@@ -362,7 +362,7 @@ export default function HeaderNavbarManagementPage() {
           type="button"
           onClick={() => setConfirmReset(true)}
           disabled={saving}
-          className="rounded-xl border border-neutral-200 px-5 py-3 text-sm font-bold text-zinc-600 transition hover:bg-neutral-50 disabled:opacity-60 admin-dark:border-zinc-700 admin-dark:text-zinc-300 admin-dark:hover:bg-zinc-800"
+          className="rounded-xl border border-neutral-200 px-5 py-3 text-sm font-bold text-zinc-600 transition hover:bg-[#f8fbff] disabled:opacity-60 admin-dark:border-zinc-700 admin-dark:text-zinc-300 admin-dark:hover:bg-zinc-800"
         >
           Reset to Defaults
         </button>

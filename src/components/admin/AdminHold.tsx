@@ -162,7 +162,7 @@ export default function AdminHold({
       {menu && (
         <div
           role="menu"
-          className="absolute z-50 w-40 overflow-hidden rounded-xl border border-primary-500/40 bg-dark-950 shadow-2xl shadow-black/60"
+          className="absolute z-50 w-40 overflow-hidden rounded-xl border border-primary-500/40 bg-[#f1f5f9] admin-dark:bg-[#0a162e] shadow-2xl shadow-black/60"
           style={{ left: Math.max(menu.x, 4), top: menu.y }}
           onClick={(event) => event.stopPropagation()}
         >
@@ -212,7 +212,7 @@ export default function AdminHold({
 
       {confirming && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
-          <div className="max-w-sm rounded-2xl border border-red-500/30 bg-dark-900 p-6 text-center shadow-2xl">
+          <div className="max-w-sm rounded-2xl border border-red-500/30 bg-white admin-dark:bg-[#112544] p-6 text-center shadow-2xl">
             <p className="font-bold text-heading">Remove “{label}”?</p>
             <p className="mt-2 text-sm leading-relaxed text-neutral-400">
               This will be removed from MySQL and disappear from the Main

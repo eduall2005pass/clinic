@@ -191,10 +191,10 @@ export default function MentorSectionPage() {
   }
 
   const inputClass =
-    "mt-1 w-full rounded-xl border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60";
+    "mt-1 w-full rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60";
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <header>
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
@@ -218,9 +218,9 @@ export default function MentorSectionPage() {
           <>
             <div className="mt-8 space-y-6">
               {/* Visibility */}
-              <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+              <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
                 <h2 className="text-lg font-bold text-heading">Visibility</h2>
-                <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-ink/10 bg-dark-850 px-4 py-3.5">
+                <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-4 py-3.5">
                   <span>
                     <span className="block text-sm font-semibold text-heading">
                       Show mentors section on the homepage
@@ -253,7 +253,7 @@ export default function MentorSectionPage() {
               </section>
 
               {/* Section text */}
-              <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+              <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
                 <h2 className="text-lg font-bold text-heading">Section Text</h2>
 
                 <div className="mt-6 grid gap-5">
@@ -287,7 +287,7 @@ export default function MentorSectionPage() {
               </section>
 
               {/* Mentors */}
-              <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+              <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
                 <h2 className="text-lg font-bold text-heading">Mentors</h2>
                 <p className="mt-1 text-xs text-neutral-500">
                   Tick the mentors that appear on the homepage and use the
@@ -300,8 +300,8 @@ export default function MentorSectionPage() {
                       key={mentor.id}
                       className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 transition ${
                         mentor.isActive
-                          ? "border-ink/10 bg-dark-850"
-                          : "border-dashed border-ink/15 bg-dark-900 opacity-60"
+                          ? "border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547]"
+                          : "border-dashed border-ink/15 bg-white admin-dark:bg-[#112544] opacity-60"
                       }`}
                     >
                       <input
@@ -336,7 +336,7 @@ export default function MentorSectionPage() {
                           onClick={() => moveMentor(index, -1)}
                           disabled={index === 0}
                           aria-label={`Move ${mentor.name} up`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-primary-500/60 hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-[#93c5fd] hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           ↑
                         </button>
@@ -345,7 +345,7 @@ export default function MentorSectionPage() {
                           onClick={() => moveMentor(index, 1)}
                           disabled={index === mentors.length - 1}
                           aria-label={`Move ${mentor.name} down`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-primary-500/60 hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-[#93c5fd] hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           ↓
                         </button>

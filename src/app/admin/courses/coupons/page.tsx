@@ -159,14 +159,14 @@ export default function CouponsPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Coupons</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Coupons</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Discount codes validated at checkout.
         </p>
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
           {editingCode ? `Edit coupon — ${editingCode}` : "New / update coupon"}
         </h3>
         {editingCode && (
@@ -234,8 +234,8 @@ export default function CouponsPage() {
         {(coupons ?? []).map((coupon) => (
           <li key={coupon.code} className={`${cardClass} flex flex-wrap items-center gap-3 px-4 py-3`}>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">{coupon.code}</span>
-              <span className="block text-xs text-zinc-500">
+              <span className="block truncate text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">{coupon.code}</span>
+              <span className="block text-xs text-slate-500">
                 {coupon.discountType === "percent" ? `${coupon.value}% off` : `৳ ${coupon.value} off`}
                 {" · used "}{coupon.usedCount}{coupon.maxUses > 0 ? `/${coupon.maxUses}` : ""}
                 {coupon.expiresAt && ` · expires ${new Date(coupon.expiresAt).toLocaleDateString()}`}
@@ -245,12 +245,12 @@ export default function CouponsPage() {
               className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
                 coupon.isActive
                   ? "bg-emerald-500/10 text-emerald-600"
-                  : "bg-zinc-500/10 text-zinc-500"
+                  : "bg-zinc-500/10 text-slate-500"
               }`}
             >
               {coupon.isActive ? "Active" : "Disabled"}
             </span>
-            <button type="button" disabled={busy} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+            <button type="button" disabled={busy} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300"
               onClick={() => startEdit(coupon)}>
               Edit
             </button>
@@ -274,7 +274,7 @@ export default function CouponsPage() {
           </li>
         ))}
         {(coupons ?? []).length === 0 && coupons !== null && (
-          <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+          <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
             No coupons yet.
           </li>
         )}

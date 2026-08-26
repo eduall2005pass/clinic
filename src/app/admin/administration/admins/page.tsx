@@ -137,14 +137,14 @@ export default function AdminsPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Admin Management</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Admin Management</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           The Firebase account must already exist (signed in once). At least one authorized administrator must always remain.
         </p>
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">Add admin</h3>
+        <h3 className="text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">Add admin</h3>
         <form
           className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1fr_auto_auto]"
           onSubmit={(event) => {
@@ -177,7 +177,7 @@ export default function AdminsPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                    <span className="truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                       {admin.displayName ?? "—"}{isSelf && " (you)"}
                     </span>
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${roleBadgeClass[role]}`}>{ROLE_LABELS[role] ?? role}</span>
@@ -187,7 +187,7 @@ export default function AdminsPage() {
                       </span>
                     )}
                   </span>
-                  <span className="block truncate text-xs text-zinc-500">{admin.email}</span>
+                  <span className="block truncate text-xs text-slate-500">{admin.email}</span>
                 </span>
                 <label className="sr-only" htmlFor={`role-${admin.uid}`}>Role for {admin.email}</label>
                 <select

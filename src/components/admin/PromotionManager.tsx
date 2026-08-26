@@ -317,28 +317,28 @@ export default function PromotionManager({
   }
 
   const inputClass =
-    "mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-primary-500/60 focus:bg-white admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100";
+    "mt-1 w-full rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2 text-sm text-[#0b1e3a] outline-none transition placeholder:text-slate-400 focus:border-[#2f6bce]/60 focus:bg-white admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100";
   const labelClass =
-    "block text-xs font-semibold uppercase tracking-wider text-zinc-400";
+    "block text-xs font-semibold uppercase tracking-wider text-slate-400";
   const iconButtonClass =
-    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-30 admin-dark:border-zinc-700 admin-dark:text-zinc-400";
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-30 admin-dark:border-zinc-700 admin-dark:text-slate-400";
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white shadow-sm transition-colors duration-300 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 shadow-sm transition-colors duration-300 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           {heading}
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           {description}
         </p>
       </header>
 
       {/* Add new */}
       <div className={`${cardClass} mt-6 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
           Add New
         </h3>
         <div className="mt-3 grid gap-3">
@@ -388,7 +388,7 @@ export default function PromotionManager({
                 }
                 className="h-4 w-4 accent-primary-600"
               />
-              <span className="text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+              <span className="text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                 Active
               </span>
             </label>
@@ -430,15 +430,15 @@ export default function PromotionManager({
 
       {/* List */}
       <div className={`${cardClass} mt-6 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
           All ({items?.length ?? 0})
         </h3>
 
         {!items && (
-          <p className="py-6 text-center text-sm font-semibold text-zinc-500">Loading…</p>
+          <p className="py-6 text-center text-sm font-semibold text-slate-500">Loading…</p>
         )}
         {items?.length === 0 && (
-          <p className="py-8 text-center text-sm font-semibold text-zinc-500">
+          <p className="py-8 text-center text-sm font-semibold text-slate-500">
             Nothing here yet. Add one above.
           </p>
         )}
@@ -449,7 +449,7 @@ export default function PromotionManager({
               key={item.id}
               className={`rounded-xl border p-4 ${
                 item.isActive
-                  ? "border-neutral-200 bg-neutral-50 admin-dark:border-zinc-700 admin-dark:bg-zinc-800/60"
+                  ? "border-neutral-200 bg-[#f8fbff] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60"
                   : "border-dashed border-neutral-300 bg-transparent opacity-70 admin-dark:border-zinc-700"
               }`}
             >
@@ -458,7 +458,7 @@ export default function PromotionManager({
                   className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
                     item.isActive
                       ? "bg-emerald-500/10 text-emerald-600 admin-dark:text-emerald-400"
-                      : "bg-zinc-200 text-zinc-500 admin-dark:bg-zinc-700 admin-dark:text-zinc-300"
+                      : "bg-zinc-200 text-slate-500 admin-dark:bg-zinc-700 admin-dark:text-zinc-300"
                   }`}
                 >
                   {item.isActive ? "Active" : "Inactive"}
@@ -551,7 +551,7 @@ export default function PromotionManager({
                       }
                       className="h-4 w-4 accent-primary-600"
                     />
-                    <span className="text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+                    <span className="text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                       Active
                     </span>
                   </label>
@@ -586,7 +586,7 @@ export default function PromotionManager({
                   disabled={
                     savingIds.has(item.id) || busyIds.has(`toggle-${item.id}`)
                   }
-                  className="self-start rounded-xl border border-neutral-200 px-4 py-2 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 disabled:opacity-50 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+                  className="self-start rounded-xl border border-neutral-200 px-4 py-2 text-xs font-bold text-zinc-600 transition hover:border-[#93c5fd] hover:text-[#1a3a78] disabled:opacity-50 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
                 >
                   {savingIds.has(item.id) ? "Saving…" : "Save Changes"}
                 </button>

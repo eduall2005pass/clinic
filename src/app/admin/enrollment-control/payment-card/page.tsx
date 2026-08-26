@@ -33,7 +33,7 @@ const EMPTY: PaymentCardConfig = {
 };
 
 const inputClass =
-  "w-full rounded-xl border border-ink/10 bg-dark-950/60 px-3 py-2 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20";
+  "w-full rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-3 py-2 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce] focus:ring-2 focus:ring-primary-500/20";
 const labelClass =
   "mb-1 block text-xs font-bold uppercase tracking-wider text-neutral-400";
 
@@ -112,7 +112,7 @@ export default function PaymentCardPage() {
         {/* Editor */}
         <div className="space-y-5">
           {/* bKash */}
-          <div className="rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-lg font-bold text-heading">bKash</h2>
               <Toggle on={config.bkashEnabled} onChange={() => toggle("bkashEnabled")} label="bKash" />
@@ -132,7 +132,7 @@ export default function PaymentCardPage() {
           </div>
 
           {/* Nagad */}
-          <div className="rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-lg font-bold text-heading">Nagad</h2>
               <Toggle on={config.nagadEnabled} onChange={() => toggle("nagadEnabled")} label="Nagad" />
@@ -152,7 +152,7 @@ export default function PaymentCardPage() {
           </div>
 
           {/* Coupon availability */}
-          <div className="rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-lg font-bold text-heading">Coupon</h2>
               <Toggle
@@ -170,7 +170,7 @@ export default function PaymentCardPage() {
           </div>
 
           {/* Instructions & note */}
-          <div className="rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
             <h2 className="text-lg font-bold text-heading">Instructions</h2>
             <div className="mt-4 space-y-4">
               <div>
@@ -238,7 +238,7 @@ export default function PaymentCardPage() {
               <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5">
                 <span className="text-sm font-extrabold text-emerald-300">Have a coupon?</span>
                 <span className="flex items-center gap-2">
-                  <span className="rounded-lg border border-ink/15 bg-dark-950/60 px-3 py-1 text-[11px] uppercase text-neutral-500">
+                  <span className="rounded-lg border border-ink/15 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-3 py-1 text-[11px] uppercase text-neutral-500">
                     Enter coupon
                   </span>
                   <span className="rounded-lg border border-primary-500/40 bg-primary-600/10 px-2.5 py-1 text-[11px] font-bold text-primary-300">
@@ -247,7 +247,7 @@ export default function PaymentCardPage() {
                 </span>
               </div>
             ) : (
-              <p className="mt-3 rounded-xl border border-ink/10 bg-dark-950/60 px-4 py-2.5 text-[11px] text-neutral-500">
+              <p className="mt-3 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-4 py-2.5 text-[11px] text-neutral-500">
                 Coupon availability is OFF — students will not see the coupon option.
               </p>
             )}
@@ -257,7 +257,7 @@ export default function PaymentCardPage() {
               </p>
             )}
             {config.note && (
-              <p className="mt-3 whitespace-pre-line rounded-lg border border-ink/10 bg-dark-950/60 px-3 py-2 text-[11px] text-neutral-400">
+              <p className="mt-3 whitespace-pre-line rounded-lg border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-3 py-2 text-[11px] text-neutral-400">
                 {config.note}
               </p>
             )}

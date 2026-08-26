@@ -167,13 +167,13 @@ export default function ChaptersPage() {
   }
 
   const iconButton =
-    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-30";
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-30";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Chapters</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Chapters</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Create, edit, reorder and enable/disable chapters — and assign them
           to subjects. Changes go live immediately.
         </p>
@@ -181,7 +181,7 @@ export default function ChaptersPage() {
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
         {subjects.length === 0 ? (
-          <p className="text-sm text-zinc-500">Add subjects first from Courses → Subjects.</p>
+          <p className="text-sm text-slate-500">Add subjects first from Courses → Subjects.</p>
         ) : (
           <form
             className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]"
@@ -213,7 +213,7 @@ export default function ChaptersPage() {
           {(chapters ?? []).map((chapter, index) => (
             <li key={chapter.id} className={`rounded-xl border px-4 py-2.5 ${
               chapter.isActive
-                ? "border-transparent bg-neutral-50 admin-dark:bg-zinc-800/60"
+                ? "border-transparent bg-[#f8fbff] admin-dark:bg-[#132a4f]/60"
                 : "border-dashed border-neutral-300 opacity-60 admin-dark:border-zinc-700"
             }`}>
               <div className="flex items-center gap-3">
@@ -229,19 +229,19 @@ export default function ChaptersPage() {
                         if (event.key === "Enter") void saveEdit(chapter);
                         if (event.key === "Escape") setEditingId(null);
                       }} aria-label="Chapter name" />
-                    <button type="button" className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+                    <button type="button" className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300"
                       disabled={busy}
                       onClick={() => void saveEdit(chapter)}>Save</button>
-                    <button type="button" className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+                    <button type="button" className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300"
                       disabled={busy}
                       onClick={() => setEditingId(null)}>Cancel</button>
                   </span>
                 ) : (
                   <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-sm font-semibold ${chapter.isActive ? "text-zinc-900 admin-dark:text-zinc-100" : "text-zinc-400 line-through"}`}>
+                    <span className={`block truncate text-sm font-semibold ${chapter.isActive ? "text-[#0b1e3a] admin-dark:text-zinc-100" : "text-slate-400 line-through"}`}>
                       {index + 1}. {chapter.name}
                     </span>
-                    <span className="block truncate text-xs text-zinc-500">
+                    <span className="block truncate text-xs text-slate-500">
                       Subject: {subjectName(chapter.subjectId)}
                     </span>
                   </span>
@@ -282,10 +282,10 @@ export default function ChaptersPage() {
                       ))}
                     </select>
                   </div>
-                  <button type="button" className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+                  <button type="button" className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300"
                     disabled={busy}
                     onClick={() => void saveAssignment(chapter)}>Save assignment</button>
-                  <button type="button" className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+                  <button type="button" className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300"
                     disabled={busy}
                     onClick={() => setAssignId(null)}>Cancel</button>
                 </div>
@@ -293,7 +293,7 @@ export default function ChaptersPage() {
             </li>
           ))}
           {(chapters ?? []).length === 0 && (
-            <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+            <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
               No chapters yet.
             </li>
           )}

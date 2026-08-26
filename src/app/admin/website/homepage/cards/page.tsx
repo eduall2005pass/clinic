@@ -202,7 +202,7 @@ export default function HomePageCardsManager() {
             className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
               section === item
                 ? "border-primary-500/60 bg-primary-600/10 text-primary-300"
-                : "border-ink/10 bg-dark-900 text-heading hover:border-primary-500/40"
+                : "border-ink/10 bg-white admin-dark:bg-[#112544] text-heading hover:border-primary-500/40"
             }`}
           >
             {item === "why" ? "Why MediSpark" : "Our Success"}
@@ -211,7 +211,7 @@ export default function HomePageCardsManager() {
       </div>
 
       {/* + Add Card */}
-      <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
         <h2 className="text-lg font-bold text-heading">+ Add Card</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block">
@@ -222,7 +222,7 @@ export default function HomePageCardsManager() {
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder={section === "why" ? "e.g. Live Classes" : "e.g. Students Guided"}
-              className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+              className="mt-1 w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
             />
           </label>
           {section === "success" && (
@@ -234,7 +234,7 @@ export default function HomePageCardsManager() {
                 value={value}
                 onChange={(event) => setValue(event.target.value)}
                 placeholder="e.g. 500+"
-                className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+                className="mt-1 w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
               />
             </label>
           )}
@@ -246,7 +246,7 @@ export default function HomePageCardsManager() {
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Short helper text shown on the card"
-              className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+              className="mt-1 w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
             />
           </label>
           <label className="block">
@@ -256,7 +256,7 @@ export default function HomePageCardsManager() {
             <select
               value={iconOptions.includes(icon as never) ? icon : iconOptions[0]}
               onChange={(event) => setIcon(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm capitalize text-heading outline-none focus:border-primary-500/60"
+              className="mt-1 w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm capitalize text-heading outline-none focus:border-[#2f6bce]/60"
             >
               {iconOptions.map((option) => (
                 <option key={option} value={option}>
@@ -279,7 +279,7 @@ export default function HomePageCardsManager() {
       </div>
 
       {/* Card list */}
-      <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
         <h2 className="text-lg font-bold text-heading">
           Cards ({sectionCards.length})
         </h2>
@@ -290,7 +290,7 @@ export default function HomePageCardsManager() {
             <button
               type="button"
               onClick={() => void load()}
-              className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-primary-500/60"
+              className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-[#93c5fd]"
             >
               Retry
             </button>
@@ -307,7 +307,7 @@ export default function HomePageCardsManager() {
               return (
                 <li
                   key={card.key}
-                  className="rounded-xl border border-ink/10 bg-dark-950/60 p-4"
+                  className="rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-4"
                 >
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="min-w-0 flex-1">
@@ -348,7 +348,7 @@ export default function HomePageCardsManager() {
                       type="button"
                       onClick={() => (isEditing ? setEditKey(null) : startEdit(card))}
                       disabled={busy}
-                      className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-primary-500/60 disabled:opacity-50"
+                      className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-[#93c5fd] disabled:opacity-50"
                     >
                       {isEditing ? "Cancel" : "Edit"}
                     </button>
@@ -370,7 +370,7 @@ export default function HomePageCardsManager() {
                           setEdit({ ...edit, title: event.target.value })
                         }
                         placeholder="Title"
-                        className="rounded-xl border border-ink/15 bg-dark-850 px-3 py-2 text-sm text-heading outline-none focus:border-primary-500/60"
+                        className="rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
                       />
                       {section === "success" && (
                         <input
@@ -379,7 +379,7 @@ export default function HomePageCardsManager() {
                             setEdit({ ...edit, value: event.target.value })
                           }
                           placeholder="Stat value (e.g. 90%)"
-                          className="rounded-xl border border-ink/15 bg-dark-850 px-3 py-2 text-sm text-heading outline-none focus:border-primary-500/60"
+                          className="rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
                         />
                       )}
                       <input
@@ -388,7 +388,7 @@ export default function HomePageCardsManager() {
                           setEdit({ ...edit, description: event.target.value })
                         }
                         placeholder="Description"
-                        className="rounded-xl border border-ink/15 bg-dark-850 px-3 py-2 text-sm text-heading outline-none focus:border-primary-500/60"
+                        className="rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
                       />
                       <div className="flex gap-2">
                         <select
@@ -400,7 +400,7 @@ export default function HomePageCardsManager() {
                           onChange={(event) =>
                             setEdit({ ...edit, icon: event.target.value })
                           }
-                          className="w-full rounded-xl border border-ink/15 bg-dark-850 px-3 py-2 text-sm capitalize text-heading outline-none focus:border-primary-500/60"
+                          className="w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2 text-sm capitalize text-heading outline-none focus:border-[#2f6bce]/60"
                         >
                           {iconOptions.map((option) => (
                             <option key={option} value={option}>

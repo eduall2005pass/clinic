@@ -150,7 +150,7 @@ export default async function HomeControlPage() {
   const ourSuccessActive = activeSections.some((section) => section.key === "our-success");
 
   const socialLinksNode: ReactNode = (
-    <div className="border-t border-white/10 bg-dark-950 px-4 py-12 text-center sm:px-6">
+    <div className="border-t border-white/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e] px-4 py-12 text-center sm:px-6">
       <p className="text-lg font-extrabold tracking-tight text-heading">Social Links</p>
       <p className="mt-1 text-xs text-neutral-500">Follow MediSpark</p>
       <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
@@ -161,7 +161,7 @@ export default async function HomeControlPage() {
               href={link.url ?? "#"}
               target="_blank"
               rel="noreferrer noopener"
-              className="rounded-full border border-white/15 bg-dark-900 px-4 py-2 text-xs font-bold text-neutral-200 transition hover:border-primary-500/60 hover:text-primary-300"
+              className="rounded-full border border-white/15 bg-white admin-dark:bg-[#112544] px-4 py-2 text-xs font-bold text-neutral-200 transition hover:border-[#93c5fd] hover:text-primary-300"
             >
               {link.label}
             </a>

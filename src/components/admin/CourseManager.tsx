@@ -294,10 +294,10 @@ export default function CourseManager({
     <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+          <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
             {title}
           </h2>
-          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
             {description}
           </p>
         </div>
@@ -316,7 +316,7 @@ export default function CourseManager({
 
       {loadError ? (
         <div className={`${cardClass} mt-5 p-8 text-center`}>
-          <p className="text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+          <p className="text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
             Could not load courses.
           </p>
           <button
@@ -328,9 +328,9 @@ export default function CourseManager({
           </button>
         </div>
       ) : courses === null ? (
-        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>Loading…</p>
+        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-slate-500`}>Loading…</p>
       ) : filtered.length === 0 ? (
-        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-zinc-500`}>
+        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-slate-500`}>
           No courses yet. Create the first one.
         </p>
       ) : (
@@ -340,14 +340,14 @@ export default function CourseManager({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate text-base font-bold text-zinc-900 admin-dark:text-zinc-100">
+                    <h3 className="truncate text-base font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                       {course.name}
                     </h3>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
                         course.status === "published"
                           ? "bg-emerald-500/10 text-emerald-600"
-                          : "bg-zinc-500/10 text-zinc-500"
+                          : "bg-zinc-500/10 text-slate-500"
                       }`}
                     >
                       {course.status}
@@ -358,10 +358,10 @@ export default function CourseManager({
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 admin-dark:text-slate-400">
                     {course.shortDescription ?? "—"}
                   </p>
-                  <p className="mt-2 text-xs font-semibold text-zinc-500">
+                  <p className="mt-2 text-xs font-semibold text-slate-500">
                     {course.category} · {course.batchId.toUpperCase()} · ৳{" "}
                     {(course.discountFee ?? course.fee).toLocaleString("en-IN")}
                   </p>
@@ -422,7 +422,7 @@ export default function CourseManager({
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true">
           <div className={`${cardClass} max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-b-none p-5 sm:rounded-2xl sm:p-6`}>
-            <h3 className="text-lg font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+            <h3 className="text-lg font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
               {editingSlug ? "Edit Course" : "New Course"}
             </h3>
 
@@ -517,17 +517,17 @@ export default function CourseManager({
                   onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
               <div className="sm:col-span-2 flex flex-wrap items-center gap-6">
-                <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                   <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.status === "published"}
                     onChange={(e) => setForm({ ...form, status: e.target.checked ? "published" : "unpublished" })} />
                   Published
                 </label>
-                <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                   <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.couponEnabled}
                     onChange={(e) => setForm({ ...form, couponEnabled: e.target.checked })} />
                   Coupon enabled
                 </label>
-                <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                   <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.featured}
                     onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
                   ★ Featured

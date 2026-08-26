@@ -24,9 +24,9 @@ export default async function BannerControlPage() {
   ).filter((course) => course !== undefined);
 
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm sm:p-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
   const chipClass =
-    "flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm admin-dark:border-zinc-700 admin-dark:bg-zinc-800";
+    "flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2 text-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
@@ -37,10 +37,10 @@ export default async function BannerControlPage() {
         >
           ← Back to Home Control
         </Link>
-        <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Sliding Banner
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Fully dynamic — no manual banner upload exists. Slides are generated
           automatically from the sources below. Edit a source there and the
           slider updates instantly on the Main Website.
@@ -50,7 +50,7 @@ export default async function BannerControlPage() {
       {/* Source 1 — Featured Courses */}
       <div className={`${cardClass} mt-6`}>
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+          <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
             1. Featured Courses ({courses.length})
           </h3>
           <Link
@@ -67,13 +67,13 @@ export default async function BannerControlPage() {
                 <span className="min-w-0 truncate font-bold text-zinc-800 admin-dark:text-zinc-200">
                   {course.name}
                 </span>
-                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   ★ Featured
                 </span>
               </li>
             ))
           ) : (
-            <li className="text-xs text-zinc-500">No featured courses yet.</li>
+            <li className="text-xs text-slate-500">No featured courses yet.</li>
           )}
         </ul>
       </div>
@@ -81,7 +81,7 @@ export default async function BannerControlPage() {
       {/* Source 2 — Featured Public Exams */}
       <div className={`${cardClass} mt-4`}>
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+          <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
             2. Featured Public Exams ({exams.length})
           </h3>
           <Link
@@ -98,13 +98,13 @@ export default async function BannerControlPage() {
                 <span className="min-w-0 truncate font-bold text-zinc-800 admin-dark:text-zinc-200">
                   {exam.title}
                 </span>
-                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   ★ Featured
                 </span>
               </li>
             ))
           ) : (
-            <li className="text-xs text-zinc-500">No featured public exams yet.</li>
+            <li className="text-xs text-slate-500">No featured public exams yet.</li>
           )}
         </ul>
       </div>
@@ -112,7 +112,7 @@ export default async function BannerControlPage() {
       {/* Source 3 — Active Jerseys */}
       <div className={`${cardClass} mt-4`}>
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+          <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
             3. Jerseys ({jerseys.length})
           </h3>
           <Link
@@ -129,13 +129,13 @@ export default async function BannerControlPage() {
                 <span className="min-w-0 truncate font-bold text-zinc-800 admin-dark:text-zinc-200">
                   {jersey.name}
                 </span>
-                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   Active
                 </span>
               </li>
             ))
           ) : (
-            <li className="text-xs text-zinc-500">No active jerseys yet.</li>
+            <li className="text-xs text-slate-500">No active jerseys yet.</li>
           )}
         </ul>
       </div>

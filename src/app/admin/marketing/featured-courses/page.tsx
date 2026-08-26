@@ -209,9 +209,9 @@ export default function FeaturedCoursesPage() {
   }
 
   const iconButtonClass =
-    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-30 admin-dark:border-zinc-700 admin-dark:text-zinc-400";
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-30 admin-dark:border-zinc-700 admin-dark:text-slate-400";
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white shadow-sm transition-colors duration-300 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 shadow-sm transition-colors duration-300 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
 
   const featuredSlugs = new Set((featured ?? []).map((r) => r.courseSlug));
   const available = catalog.filter((course) => !featuredSlugs.has(course.slug));
@@ -220,10 +220,10 @@ export default function FeaturedCoursesPage() {
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Page header */}
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Featured Courses
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Choose which courses appear in the homepage featured section,
           change their display order and enable or disable them.
         </p>
@@ -237,12 +237,12 @@ export default function FeaturedCoursesPage() {
         <>
           {/* Featured list */}
           <div className={`${cardClass} mt-6 p-4 sm:p-5`}>
-            <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
               Featured ({featured.length})
             </h3>
 
             {featured.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+              <p className="mt-3 rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
                 No courses featured yet. Add one from the catalog below.
               </p>
             ) : (
@@ -256,7 +256,7 @@ export default function FeaturedCoursesPage() {
                       key={record.courseSlug}
                       className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 transition ${
                         record.isActive
-                          ? "border-neutral-200 bg-neutral-50 admin-dark:border-zinc-700 admin-dark:bg-zinc-800/60"
+                          ? "border-neutral-200 bg-[#f8fbff] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60"
                           : "border-dashed border-neutral-300 bg-transparent opacity-60 admin-dark:border-zinc-700"
                       }`}
                     >
@@ -268,10 +268,10 @@ export default function FeaturedCoursesPage() {
                         aria-label={`Enable ${course?.name ?? record.courseSlug}`}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                        <span className="block truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                           {index + 1}. {course?.name ?? record.courseSlug}
                         </span>
-                        <span className="block truncate text-xs text-zinc-500">
+                        <span className="block truncate text-xs text-slate-500">
                           {course
                             ? `${course.category} · ${
                                 course.fee > 0
@@ -318,11 +318,11 @@ export default function FeaturedCoursesPage() {
 
           {/* Catalog */}
           <div className={`${cardClass} mt-6 p-4 sm:p-5`}>
-            <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
               Course Catalog
             </h3>
             {available.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+              <p className="mt-3 rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
                 All published courses are already featured.
               </p>
             ) : (
@@ -330,13 +330,13 @@ export default function FeaturedCoursesPage() {
                 {available.map((course) => (
                   <li
                     key={course.slug}
-                    className="flex flex-wrap items-center gap-3 rounded-xl bg-neutral-50 px-4 py-2.5 admin-dark:bg-zinc-800/60"
+                    className="flex flex-wrap items-center gap-3 rounded-xl bg-[#f8fbff] px-4 py-2.5 admin-dark:bg-[#132a4f]/60"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-zinc-900 admin-dark:text-zinc-100">
+                      <span className="block truncate text-sm font-semibold text-[#0b1e3a] admin-dark:text-zinc-100">
                         {course.name}
                       </span>
-                      <span className="block truncate text-xs text-zinc-500">
+                      <span className="block truncate text-xs text-slate-500">
                         {course.category} ·{" "}
                         {course.fee > 0
                           ? formatFee(payableFee(course))
@@ -346,7 +346,7 @@ export default function FeaturedCoursesPage() {
                     <button
                       type="button"
                       onClick={() => featureCourse(course.slug)}
-                      className="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+                      className="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300"
                     >
                       + Feature
                     </button>

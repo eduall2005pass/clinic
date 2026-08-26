@@ -102,8 +102,8 @@ export default function AccountPage() {
   return (
     <section className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">My Account</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">My Account</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Your profile details and picture. Email is managed by Google sign-in.
         </p>
       </header>
@@ -119,14 +119,14 @@ export default function AccountPage() {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold text-zinc-900 admin-dark:text-zinc-100">{profile?.displayName ?? "—"}</p>
-            <p className="truncate text-xs text-zinc-500">{profile?.email}</p>
+            <p className="truncate text-base font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{profile?.displayName ?? "—"}</p>
+            <p className="truncate text-xs text-slate-500">{profile?.email}</p>
           </div>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={busy}
-            className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+            className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300"
           >
             Change Photo
           </button>

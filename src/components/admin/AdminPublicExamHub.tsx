@@ -25,10 +25,10 @@ export default function AdminPublicExamHub() {
   }
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       {/* Admin-only toolbar — the website does not have this. */}
       <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary-600/30 bg-dark-900 p-4 shadow-lg shadow-black/20 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary-600/30 bg-white admin-dark:bg-[#112544] p-4 shadow-lg shadow-black/20 sm:p-5">
           <div>
             <h1 className="text-lg font-extrabold text-heading">Public Exams — Admin</h1>
             <p className="mt-0.5 text-sm text-neutral-400">

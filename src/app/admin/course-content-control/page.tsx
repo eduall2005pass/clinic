@@ -63,10 +63,10 @@ export default function ContentControlPage() {
           <Link
             key={category.id}
             href={`/admin/course-content-control/category/${encodeURIComponent(category.id)}`}
-            className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:border-primary-600/60"
+            className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-5 shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:border-primary-600/60"
           >
             <span aria-hidden className="text-xl">📚</span>
-            <span className="flex-1 break-words font-extrabold text-heading group-hover:text-primary-400">
+            <span className="flex-1 break-words font-extrabold text-heading group-hover:text-[#1a3a78]">
               {category.name}
             </span>
           </Link>

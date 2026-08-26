@@ -144,20 +144,20 @@ export default function ClassesPage() {
   const chapterLabel = (id: string) => chapters.find((chapter) => chapter.id === id)?.name ?? id;
 
   const iconButton =
-    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-30";
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-30";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Classes</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Classes</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Video classes under each chapter. Add, edit, reorder and delete.
         </p>
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
         {chapters.length === 0 ? (
-          <p className="text-sm text-zinc-500">Add chapters first from Courses → Chapters.</p>
+          <p className="text-sm text-slate-500">Add chapters first from Courses → Chapters.</p>
         ) : (
           <form
             className="grid grid-cols-1 gap-3 sm:grid-cols-2"
@@ -202,7 +202,7 @@ export default function ClassesPage() {
                 onChange={(event) => setForm({ ...form, durationMinutes: event.target.value })} />
             </div>
             <div className="flex items-end justify-between gap-3">
-              <label className="flex items-center gap-2 pb-1 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+              <label className="flex items-center gap-2 pb-1 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                 <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.isFree}
                   onChange={(event) => setForm({ ...form, isFree: event.target.checked })} />
                 Free preview
@@ -214,7 +214,7 @@ export default function ClassesPage() {
                       setEditingId(null);
                       setForm({ chapterId: "", title: "", videoUrl: "", noteUrl: "", durationMinutes: "0", isFree: false });
                     }}
-                    className="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-semibold text-zinc-600 transition hover:border-primary-500/60 admin-dark:border-zinc-700 admin-dark:text-zinc-300">
+                    className="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-semibold text-zinc-600 transition hover:border-[#93c5fd] admin-dark:border-zinc-700 admin-dark:text-zinc-300">
                     Cancel
                   </button>
                 )}
@@ -228,12 +228,12 @@ export default function ClassesPage() {
 
         <ul className="mt-5 space-y-2">
           {(classes ?? []).map((item, index) => (
-            <li key={item.id} className="flex items-center gap-3 rounded-xl bg-neutral-50 px-4 py-2.5 admin-dark:bg-zinc-800/60">
+            <li key={item.id} className="flex items-center gap-3 rounded-xl bg-[#f8fbff] px-4 py-2.5 admin-dark:bg-[#132a4f]/60">
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-zinc-900 admin-dark:text-zinc-100">
+                <span className="block truncate text-sm font-semibold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {index + 1}. {item.title}{item.isFree ? " · Free" : ""}
                 </span>
-                <span className="block truncate text-xs text-zinc-500">
+                <span className="block truncate text-xs text-slate-500">
                   {chapterLabel(item.chapterId)} · {item.videoUrl ? "video ✓" : "no video"}
                 </span>
               </span>
@@ -252,7 +252,7 @@ export default function ClassesPage() {
             </li>
           ))}
           {(classes ?? []).length === 0 && (
-            <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+            <li className="rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
               No classes yet.
             </li>
           )}

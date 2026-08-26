@@ -188,18 +188,18 @@ export default function AllStudentsPage() {
   }
 
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white shadow-sm transition-colors duration-300 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 shadow-sm transition-colors duration-300 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
   const inputClass =
-    "w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-primary-500/60 focus:bg-white admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100";
+    "w-full rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2.5 text-sm text-[#0b1e3a] outline-none transition placeholder:text-slate-400 focus:border-[#2f6bce]/60 focus:bg-white admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100";
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Page header */}
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           All Students
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           View registered students, inspect details and enrollments, and
           manage account activation.
         </p>
@@ -223,7 +223,7 @@ export default function AllStudentsPage() {
               className={`rounded-full border px-4 py-1.5 text-xs font-bold transition ${
                 statusFilter === tab.value
                   ? "border-primary-600 bg-primary-600/10 text-primary-600 admin-dark:text-primary-400"
-                  : "border-neutral-200 text-zinc-500 hover:border-primary-500/40 hover:text-zinc-700 admin-dark:border-zinc-700 admin-dark:text-zinc-400"
+                  : "border-neutral-200 text-slate-500 hover:border-primary-500/40 hover:text-slate-700 admin-dark:border-zinc-700 admin-dark:text-slate-400"
               }`}
             >
               {tab.label}
@@ -236,12 +236,12 @@ export default function AllStudentsPage() {
       <ul className="mt-6 space-y-3">
         {students === null && (
           <li className={cardClass}>
-            <p className="py-6 text-center text-sm font-semibold text-zinc-500">Loading…</p>
+            <p className="py-6 text-center text-sm font-semibold text-slate-500">Loading…</p>
           </li>
         )}
         {students?.length === 0 && (
           <li className={cardClass}>
-            <p className="py-8 text-center text-sm font-semibold text-zinc-500">
+            <p className="py-8 text-center text-sm font-semibold text-slate-500">
               No students found{search ? ` for “${search}”` : ""}.
             </p>
           </li>
@@ -249,7 +249,7 @@ export default function AllStudentsPage() {
         {students?.map((student) => (
           <li key={student.uid} className={cardClass}>
             <div className="flex flex-wrap items-center gap-3 p-4 sm:p-5">
-              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-neutral-200 bg-neutral-100 admin-dark:border-zinc-700 admin-dark:bg-zinc-800">
+              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-neutral-200 bg-[#f1f5f9] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]">
                 {student.profilePictureUrl ? (
                   <Image
                     src={student.profilePictureUrl}
@@ -259,7 +259,7 @@ export default function AllStudentsPage() {
                     className="object-cover"
                   />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center text-sm font-extrabold text-zinc-400">
+                  <span className="flex h-full w-full items-center justify-center text-sm font-extrabold text-slate-400">
                     {student.fullName.charAt(0).toUpperCase()}
                   </span>
                 )}
@@ -270,18 +270,18 @@ export default function AllStudentsPage() {
                 onClick={() => openDetail(student)}
                 className="min-w-0 flex-1 text-left"
               >
-                <p className="truncate text-sm font-bold text-zinc-900 transition hover:text-primary-600 admin-dark:text-zinc-100">
+                <p className="truncate text-sm font-bold text-[#0b1e3a] transition hover:text-[#1a3a78] admin-dark:text-zinc-100">
                   {student.fullName}
                 </p>
-                <p className="truncate text-xs text-zinc-500">
+                <p className="truncate text-xs text-slate-500">
                   {student.studentId}
                   {student.email ? ` · ${student.email}` : ""}
                 </p>
               </button>
 
               <div className="hidden text-right sm:block">
-                <p className="text-xs font-semibold text-zinc-500">{student.hscBatch}</p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs font-semibold text-slate-500">{student.hscBatch}</p>
+                <p className="text-xs text-slate-400">
                   {student.enrollmentCount} enrollment{student.enrollmentCount === 1 ? "" : "s"}
                 </p>
               </div>
@@ -299,7 +299,7 @@ export default function AllStudentsPage() {
               <button
                 type="button"
                 onClick={() => openDetail(student)}
-                className="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+                className="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300"
               >
                 Details
               </button>
@@ -309,7 +309,7 @@ export default function AllStudentsPage() {
             {detailUid === student.uid && (
               <div className="border-t border-neutral-100 p-4 sm:p-5 admin-dark:border-zinc-800">
                 {detailLoading && (
-                  <p className="py-3 text-center text-sm font-semibold text-zinc-500">
+                  <p className="py-3 text-center text-sm font-semibold text-slate-500">
                     Loading details…
                   </p>
                 )}
@@ -317,45 +317,45 @@ export default function AllStudentsPage() {
                   <>
                     <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                       <div className="flex justify-between gap-3 sm:block">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-zinc-400">Student ID</dt>
-                        <dd className="font-mono text-zinc-700 admin-dark:text-zinc-200">{detail.student.studentId}</dd>
+                        <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">Student ID</dt>
+                        <dd className="font-mono text-slate-700 admin-dark:text-zinc-200">{detail.student.studentId}</dd>
                       </div>
                       <div className="flex justify-between gap-3 sm:block">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-zinc-400">Email</dt>
-                        <dd className="truncate text-zinc-700 admin-dark:text-zinc-200">{detail.student.email || "—"}</dd>
+                        <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">Email</dt>
+                        <dd className="truncate text-slate-700 admin-dark:text-zinc-200">{detail.student.email || "—"}</dd>
                       </div>
                       <div className="flex justify-between gap-3 sm:block">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-zinc-400">Phone</dt>
-                        <dd className="text-zinc-700 admin-dark:text-zinc-200">{detail.student.contactNumber || "—"}</dd>
+                        <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">Phone</dt>
+                        <dd className="text-slate-700 admin-dark:text-zinc-200">{detail.student.contactNumber || "—"}</dd>
                       </div>
                       <div className="flex justify-between gap-3 sm:block">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-zinc-400">Gender</dt>
-                        <dd className="text-zinc-700 admin-dark:text-zinc-200">{detail.student.gender || "—"}</dd>
+                        <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">Gender</dt>
+                        <dd className="text-slate-700 admin-dark:text-zinc-200">{detail.student.gender || "—"}</dd>
                       </div>
                       <div className="flex justify-between gap-3 sm:block">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-zinc-400">Institution</dt>
-                        <dd className="truncate text-zinc-700 admin-dark:text-zinc-200">{detail.student.institution || "—"}</dd>
+                        <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">Institution</dt>
+                        <dd className="truncate text-slate-700 admin-dark:text-zinc-200">{detail.student.institution || "—"}</dd>
                       </div>
                       <div className="flex justify-between gap-3 sm:block">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-zinc-400">HSC Batch</dt>
-                        <dd className="text-zinc-700 admin-dark:text-zinc-200">{detail.student.hscBatch || "—"}</dd>
+                        <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">HSC Batch</dt>
+                        <dd className="text-slate-700 admin-dark:text-zinc-200">{detail.student.hscBatch || "—"}</dd>
                       </div>
                       <div className="flex justify-between gap-3 sm:block">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-zinc-400">Joined</dt>
-                        <dd className="text-zinc-700 admin-dark:text-zinc-200">{formatDate(detail.student.createdAt)}</dd>
+                        <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">Joined</dt>
+                        <dd className="text-slate-700 admin-dark:text-zinc-200">{formatDate(detail.student.createdAt)}</dd>
                       </div>
                       <div className="flex justify-between gap-3 sm:block">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-zinc-400">Sign-in Method</dt>
-                        <dd className="text-zinc-700 admin-dark:text-zinc-200">{detail.student.provider}</dd>
+                        <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">Sign-in Method</dt>
+                        <dd className="text-slate-700 admin-dark:text-zinc-200">{detail.student.provider}</dd>
                       </div>
                     </dl>
 
                     {/* Enrollments */}
-                    <h4 className="mt-5 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    <h4 className="mt-5 text-xs font-bold uppercase tracking-wider text-slate-400">
                       Enrollments ({detail.enrollments.length})
                     </h4>
                     {detail.enrollments.length === 0 ? (
-                      <p className="mt-2 rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+                      <p className="mt-2 rounded-xl border border-dashed border-neutral-300 p-4 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
                         No enrollments yet.
                       </p>
                     ) : (
@@ -363,12 +363,12 @@ export default function AllStudentsPage() {
                         {detail.enrollments.map((enrollment) => (
                           <li
                             key={enrollment.courseId}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-neutral-50 px-3 py-2 text-sm admin-dark:bg-zinc-800/60"
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f8fbff] px-3 py-2 text-sm admin-dark:bg-[#132a4f]/60"
                           >
-                            <span className="min-w-0 truncate font-semibold text-zinc-700 admin-dark:text-zinc-200">
+                            <span className="min-w-0 truncate font-semibold text-slate-700 admin-dark:text-zinc-200">
                               {enrollment.courseName}
                             </span>
-                            <span className="flex items-center gap-2 text-xs text-zinc-500">
+                            <span className="flex items-center gap-2 text-xs text-slate-500">
                               <span className="rounded-full bg-white px-2 py-0.5 font-bold uppercase admin-dark:bg-zinc-900">
                                 {enrollment.courseKind}
                               </span>
@@ -377,7 +377,7 @@ export default function AllStudentsPage() {
                                 className={`rounded-full px-2 py-0.5 font-bold ${
                                   enrollment.status === "active"
                                     ? "bg-emerald-500/10 text-emerald-600 admin-dark:text-emerald-400"
-                                    : "bg-zinc-200 text-zinc-500 admin-dark:bg-zinc-700 admin-dark:text-zinc-300"
+                                    : "bg-zinc-200 text-slate-500 admin-dark:bg-zinc-700 admin-dark:text-zinc-300"
                                 }`}
                               >
                                 {enrollment.status}
@@ -390,7 +390,7 @@ export default function AllStudentsPage() {
 
                     {/* Activation control */}
                     <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-4 admin-dark:border-zinc-800">
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-slate-500">
                         Deactivating blocks the student&apos;s access to enrolled content. Authentication credentials are never modified.
                       </p>
                       <button

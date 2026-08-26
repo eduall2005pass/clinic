@@ -77,8 +77,8 @@ export default function SecurityPage() {
   return (
     <section className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Security</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Security</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Sign-in policy settings for the admin panel.
         </p>
       </header>
@@ -102,12 +102,12 @@ export default function SecurityPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-6">
-          <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
             <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={settings.requireStrongPassword}
               onChange={(event) => setSettings({ ...settings, requireStrongPassword: event.target.checked })} />
             Require strong passwords
           </label>
-          <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
             <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={settings.blockSuspiciousIps}
               onChange={(event) => setSettings({ ...settings, blockSuspiciousIps: event.target.checked })} />
             Block suspicious IPs

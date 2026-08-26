@@ -413,14 +413,14 @@ export default function FaqManager({
   }
 
   const inputClass =
-    "mt-1 w-full rounded-xl border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60";
+    "mt-1 w-full rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60";
   const iconButtonClass =
-    "flex h-8 items-center justify-center gap-1 rounded-lg border border-ink/15 px-2 text-[11px] font-semibold text-neutral-400 transition hover:border-primary-500/60 hover:text-heading disabled:cursor-not-allowed disabled:opacity-30";
+    "flex h-8 items-center justify-center gap-1 rounded-lg border border-ink/15 px-2 text-[11px] font-semibold text-neutral-400 transition hover:border-[#93c5fd] hover:text-heading disabled:cursor-not-allowed disabled:opacity-30";
 
   const deleteTarget = faqs?.find((faq) => faq.id === deleteTargetId) ?? null;
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
         {/* Header */}
         <header className="flex flex-wrap items-end justify-between gap-4">
@@ -479,7 +479,7 @@ export default function FaqManager({
             </div>
 
             {/* FAQ table */}
-            <section className="mt-5 overflow-hidden rounded-2xl border border-ink/10 bg-dark-900">
+            <section className="mt-5 overflow-hidden rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
               <div className="hidden grid-cols-[24px_1fr_110px_150px_70px_170px_190px] items-center gap-3 border-b border-ink/10 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wider text-neutral-500 lg:grid">
                 <span />
                 <span>Question</span>
@@ -509,7 +509,7 @@ export default function FaqManager({
                         onDragOver={(event) => event.preventDefault()}
                         onDrop={() => handleDrop(globalIndex)}
                         className={`grid grid-cols-1 items-center gap-3 border-b border-ink/5 px-4 py-4 transition last:border-b-0 lg:grid-cols-[24px_1fr_110px_150px_70px_170px_190px] ${
-                          live ? "bg-dark-900" : "bg-dark-950/60 opacity-70"
+                          live ? "bg-white admin-dark:bg-[#112544]" : "bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 opacity-70"
                         } ${dragIndex === globalIndex ? "opacity-40" : ""}`}
                       >
                         <span
@@ -661,7 +661,7 @@ export default function FaqManager({
             if (event.target === event.currentTarget) setDraft(null);
           }}
         >
-          <div className="mx-auto my-4 max-w-2xl rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-2xl">
+          <div className="mx-auto my-4 max-w-2xl rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-heading">
               {draft.id ? "Edit FAQ" : "Add FAQ"}
             </h2>
@@ -717,7 +717,7 @@ export default function FaqManager({
                 <span className="text-xs font-semibold text-neutral-500">
                   Text Answer
                 </span>
-                <div className="mt-2 flex flex-wrap gap-1 rounded-t-xl border border-ink/10 border-b-0 bg-dark-850 p-2">
+                <div className="mt-2 flex flex-wrap gap-1 rounded-t-xl border border-ink/10 border-b-0 bg-[#f8fbff] admin-dark:bg-[#0f2547] p-2">
                   {(
                     [
                       ["bold", "B", "font-bold"],
@@ -736,7 +736,7 @@ export default function FaqManager({
                         const [cmd, val] = command.split(":");
                         exec(cmd, val);
                       }}
-                      className="rounded-lg border border-ink/10 px-2.5 py-1 text-xs font-semibold text-neutral-300 transition hover:border-primary-500/60 hover:text-primary-400"
+                      className="rounded-lg border border-ink/10 px-2.5 py-1 text-xs font-semibold text-neutral-300 transition hover:border-[#93c5fd] hover:text-[#1a3a78]"
                     >
                       {label}
                     </button>
@@ -750,7 +750,7 @@ export default function FaqManager({
                         exec("createLink", href);
                       }
                     }}
-                    className="rounded-lg border border-ink/10 px-2.5 py-1 text-xs font-semibold text-neutral-300 transition hover:border-primary-500/60 hover:text-primary-400"
+                    className="rounded-lg border border-ink/10 px-2.5 py-1 text-xs font-semibold text-neutral-300 transition hover:border-[#93c5fd] hover:text-[#1a3a78]"
                   >
                     Link
                   </button>
@@ -772,7 +772,7 @@ export default function FaqManager({
                         : prev,
                     )
                   }
-                  className="prose-invert min-h-[120px] rounded-b-xl border border-ink/10 bg-dark-850 px-3.5 py-3 text-sm leading-relaxed text-neutral-200 outline-none transition focus:border-primary-500/60 [&_a]:text-primary-400 [&_a]:underline [&_h2]:text-lg [&_h2]:font-bold [&_h3]:text-base [&_h3]:font-bold [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5"
+                  className="prose-invert min-h-[120px] rounded-b-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-3 text-sm leading-relaxed text-neutral-200 outline-none transition focus:border-[#2f6bce]/60 [&_a]:text-primary-400 [&_a]:underline [&_h2]:text-lg [&_h2]:font-bold [&_h3]:text-base [&_h3]:font-bold [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5"
                 />
               </div>
             )}
@@ -873,8 +873,8 @@ export default function FaqManager({
             if (event.target === event.currentTarget) setPreviewFaq(null);
           }}
         >
-          <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl border border-ink/10 bg-dark-950 p-2 shadow-2xl">
-            <div className="rounded-2xl border border-primary-600/50 bg-dark-900 shadow-lg shadow-black/20">
+          <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e] p-2 shadow-2xl">
+            <div className="rounded-2xl border border-primary-600/50 bg-white admin-dark:bg-[#112544] shadow-lg shadow-black/20">
               <div className="flex items-center justify-between gap-4 px-5 py-4 text-left">
                 <span className="font-semibold text-heading">
                   {previewFaq.question}
@@ -906,7 +906,7 @@ export default function FaqManager({
             <button
               type="button"
               onClick={() => setPreviewFaq(null)}
-              className="mx-auto mt-3 block rounded-xl border border-ink/15 px-5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-primary-500/60 hover:text-heading"
+              className="mx-auto mt-3 block rounded-xl border border-ink/15 px-5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-[#93c5fd] hover:text-heading"
             >
               Close Preview
             </button>

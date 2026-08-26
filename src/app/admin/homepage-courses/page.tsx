@@ -277,7 +277,7 @@ export default function HomepageCoursesAdminPage() {
   }
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
         <header className="animate-fade-up">
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">Admin Panel — Homepage</p>
@@ -288,7 +288,7 @@ export default function HomepageCoursesAdminPage() {
             Academic Panel.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full border border-ink/10 bg-dark-900 px-3 py-1 text-xs font-semibold text-neutral-500">
+            <span className="rounded-full border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] px-3 py-1 text-xs font-semibold text-neutral-500">
               3 fixed categories: SSC · HSC · Medical
             </span>
             <span className="rounded-full border border-primary-500/20 bg-primary-500/10 px-3 py-1 text-xs font-semibold text-primary-400">
@@ -318,8 +318,8 @@ export default function HomepageCoursesAdminPage() {
             const isBusy = busySlug === card.slug;
 
             return (
-              <section key={card.slug} className="overflow-hidden rounded-2xl border border-ink/10 bg-dark-900">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-dark-850 px-6 py-4">
+              <section key={card.slug} className="overflow-hidden rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-6 py-4">
                   <div className="flex items-center gap-3">
                     <span className={`rounded-full border px-3 py-1 text-xs font-bold ${slugBadgeColor(card.slug)}`}>
                       {card.slug.toUpperCase()}
@@ -353,7 +353,7 @@ export default function HomepageCoursesAdminPage() {
                   {/* Image */}
                   <div className="mb-6">
                     <p className="text-xs font-semibold text-neutral-500">Card Image</p>
-                    <div className="mt-2 flex min-h-44 items-center justify-center overflow-hidden rounded-xl border border-ink/10 bg-dark-950">
+                    <div className="mt-2 flex min-h-44 items-center justify-center overflow-hidden rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
                       {displayImage ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -377,7 +377,7 @@ export default function HomepageCoursesAdminPage() {
                     )}
 
                     <div className="mt-4 flex flex-wrap items-center gap-3">
-                      <label className="cursor-pointer rounded-xl border border-dashed border-ink/20 bg-dark-850 px-4 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-primary-500/50 hover:text-heading">
+                      <label className="cursor-pointer rounded-xl border border-dashed border-ink/20 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-4 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-primary-500/50 hover:text-heading">
                         {fileBySlug[card.slug] ? fileBySlug[card.slug]?.name : "Choose image"}
                         <input
                           ref={(el) => {
@@ -421,7 +421,7 @@ export default function HomepageCoursesAdminPage() {
                         onChange={(e) => updateCard(card.slug, { title: e.target.value })}
                         placeholder={slugLabel(card.slug)}
                         maxLength={255}
-                        className="mt-1 w-full rounded-xl border border-ink/10 bg-dark-950 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60"
+                        className="mt-1 w-full rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60"
                       />
                     </label>
 
@@ -433,7 +433,7 @@ export default function HomepageCoursesAdminPage() {
                         placeholder="Short description shown on the Homepage card..."
                         rows={3}
                         maxLength={1000}
-                        className="mt-1 w-full resize-none rounded-xl border border-ink/10 bg-dark-950 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60"
+                        className="mt-1 w-full resize-none rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60"
                       />
                       <span className="mt-1 block text-right text-xs text-neutral-600">{card.description.length}/1000</span>
                     </label>
@@ -447,7 +447,7 @@ export default function HomepageCoursesAdminPage() {
                           onChange={(e) => updateCard(card.slug, { buttonText: e.target.value })}
                           placeholder="Explore Courses"
                           maxLength={100}
-                          className="mt-1 w-full rounded-xl border border-ink/10 bg-dark-950 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60"
+                          className="mt-1 w-full rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60"
                         />
                       </label>
                       <label className="block">
@@ -457,7 +457,7 @@ export default function HomepageCoursesAdminPage() {
                           value={card.buttonHref}
                           onChange={(e) => updateCard(card.slug, { buttonHref: e.target.value })}
                           placeholder="/courses?category=ssc"
-                          className="mt-1 w-full rounded-xl border border-ink/10 bg-dark-950 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60"
+                          className="mt-1 w-full rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60"
                         />
                         <span className="mt-1 block text-xs text-neutral-600">Use /courses or https:// link</span>
                       </label>

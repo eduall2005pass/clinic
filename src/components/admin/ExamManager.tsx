@@ -382,15 +382,15 @@ export default function ExamManager({
     <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">{title}</h2>
-          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">{description}</p>
+          <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">{title}</h2>
+          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">{description}</p>
         </div>
         <button type="button" onClick={startCreate} className={buttonPrimaryClass}>+ New Exam</button>
       </header>
 
       {loadError ? (
         <div className={`${cardClass} mt-5 p-8 text-center`}>
-          <p className="text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+          <p className="text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
             Could not load exams.
           </p>
           <button
@@ -402,9 +402,9 @@ export default function ExamManager({
           </button>
         </div>
       ) : exams === null ? (
-        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>Loading…</p>
+        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-slate-500`}>Loading…</p>
       ) : exams.length === 0 ? (
-        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-zinc-500`}>No exams yet.</p>
+        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-slate-500`}>No exams yet.</p>
       ) : (
         <ul className="mt-5 space-y-3">
           {exams.map((exam, examIndex) => (
@@ -412,14 +412,14 @@ export default function ExamManager({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate text-base font-bold text-zinc-900 admin-dark:text-zinc-100">{exam.title}</h3>
+                    <h3 className="truncate text-base font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{exam.title}</h3>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
                         exam.status === "published"
                           ? "bg-emerald-500/10 text-emerald-600"
                           : exam.status === "closed"
                             ? "bg-red-500/10 text-red-500"
-                            : "bg-zinc-500/10 text-zinc-500"
+                            : "bg-zinc-500/10 text-slate-500"
                       }`}
                     >
                       {exam.status}
@@ -433,7 +433,7 @@ export default function ExamManager({
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-xs font-semibold text-zinc-500">
+                  <p className="mt-2 text-xs font-semibold text-slate-500">
                     {exam.kind} · {exam.subject || "general"}
                     {exam.chapterId &&
                       ` · ${chapterOptions.find((chapter) => chapter.id === exam.chapterId)?.name ?? exam.chapterId}`}{" "}
@@ -443,7 +443,7 @@ export default function ExamManager({
                     {exam.secondTimerEnabled && ` · 2nd timer −${exam.secondTimerDeduction ?? 5}`}
                   </p>
                   {exam.kind === "enrolled" && (
-                    <p className="mt-1 text-xs font-semibold text-zinc-500">
+                    <p className="mt-1 text-xs font-semibold text-slate-500">
                       Courses:{" "}
                       {exam.courseIds && exam.courseIds.length > 0
                         ? exam.courseIds
@@ -460,14 +460,14 @@ export default function ExamManager({
                       disabled={busy || examIndex === 0}
                       aria-label={`Move ${exam.title} up`}
                       onClick={() => void move(examIndex, -1)}
-                      className="rounded-lg border border-neutral-200 px-2 text-xs text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 disabled:opacity-30"
+                      className="rounded-lg border border-neutral-200 px-2 text-xs text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 disabled:opacity-30"
                     >↑</button>
                     <button
                       type="button"
                       disabled={busy || examIndex === (exams?.length ?? 0) - 1}
                       aria-label={`Move ${exam.title} down`}
                       onClick={() => void move(examIndex, 1)}
-                      className="rounded-lg border border-neutral-200 px-2 text-xs text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 disabled:opacity-30"
+                      className="rounded-lg border border-neutral-200 px-2 text-xs text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 disabled:opacity-30"
                     >↓</button>
                   </span>
                   <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonSecondaryClass}>
@@ -514,7 +514,7 @@ export default function ExamManager({
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true">
           <div className={`${cardClass} max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-b-none p-5 sm:rounded-2xl sm:p-6`}>
-            <h3 className="text-lg font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+            <h3 className="text-lg font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
               {editingId ? "Edit Exam" : "New Exam"}
             </h3>
             <form
@@ -539,7 +539,7 @@ export default function ExamManager({
                 {fixedCategory ? (
                   <>
                     <input id="ex-kind" className={inputClass} value="Public" disabled />
-                    <p className="mt-1 text-[11px] text-zinc-500">
+                    <p className="mt-1 text-[11px] text-slate-500">
                       Category: <span className="font-bold">{examCategoryLabel(fixedCategory)}</span> (fixed — auto-assigned)
                     </p>
                   </>
@@ -574,11 +574,11 @@ export default function ExamManager({
                 <div className="sm:col-span-2">
                   <span className={labelClass}>Assign courses (students enrolled in any of these)</span>
                   {courseOptions.length === 0 ? (
-                    <p className="mt-1 text-xs text-zinc-500">Loading courses…</p>
+                    <p className="mt-1 text-xs text-slate-500">Loading courses…</p>
                   ) : (
                     <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
                       {courseOptions.map((course) => (
-                        <label key={course.slug} className="flex items-center gap-2 text-sm text-zinc-700 admin-dark:text-zinc-200">
+                        <label key={course.slug} className="flex items-center gap-2 text-sm text-slate-700 admin-dark:text-zinc-200">
                           <input
                             type="checkbox"
                             checked={courseIds.includes(course.slug)}
@@ -591,7 +591,7 @@ export default function ExamManager({
                             }
                           />
                           <span className="truncate">{course.name}</span>
-                          <span className="ml-auto shrink-0 text-[10px] font-bold uppercase tracking-wide text-zinc-400">{course.slug}</span>
+                          <span className="ml-auto shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400">{course.slug}</span>
                         </label>
                       ))}
                     </div>
@@ -662,7 +662,7 @@ export default function ExamManager({
               </div>
               <div className="sm:col-span-2 rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-zinc-700 admin-dark:text-zinc-200">
+                  <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700 admin-dark:text-zinc-200">
                     Negative Marking
                   </span>
                   <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600 admin-dark:text-zinc-300">
@@ -674,14 +674,14 @@ export default function ExamManager({
                     {form.negativeEnabled ? "ON" : "OFF"}
                   </label>
                 </div>
-                <p className="mt-1 text-[11px] text-zinc-500">
+                <p className="mt-1 text-[11px] text-slate-500">
                   Wrong Answer Penalty: <span className="font-bold">0.25</span> per wrong answer
                   {form.negativeEnabled ? "" : " (no deduction while OFF)"}.
                 </p>
               </div>
               <div className="sm:col-span-2 rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-zinc-700 admin-dark:text-zinc-200">
+                  <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700 admin-dark:text-zinc-200">
                     Second Timer Penalty
                   </span>
                   <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600 admin-dark:text-zinc-300">
@@ -694,7 +694,7 @@ export default function ExamManager({
                   </label>
                 </div>
                 <div className="mt-2 flex items-center gap-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                     Second Timer Deduction
                   </span>
                   <input
@@ -707,7 +707,7 @@ export default function ExamManager({
                     value={form.secondTimerDeduction}
                     onChange={(event) => setForm({ ...form, secondTimerDeduction: event.target.value })}
                   />
-                  <span className="text-[11px] text-zinc-500">marks (repeat attempt of THIS exam only)</span>
+                  <span className="text-[11px] text-slate-500">marks (repeat attempt of THIS exam only)</span>
                 </div>
               </div>
               <div>

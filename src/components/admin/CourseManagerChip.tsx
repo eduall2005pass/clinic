@@ -15,7 +15,7 @@ export default function CourseManagerChip({
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-primary-500/50 bg-dark-950/85 px-3 py-1.5 text-xs font-bold text-primary-400 shadow-md shadow-black/20 backdrop-blur transition hover:border-primary-400 hover:text-primary-300"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-primary-500/50 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/85 px-3 py-1.5 text-xs font-bold text-primary-400 shadow-md shadow-black/20 backdrop-blur transition hover:border-primary-400 hover:text-primary-300"
     >
       <svg
         viewBox="0 0 24 24"

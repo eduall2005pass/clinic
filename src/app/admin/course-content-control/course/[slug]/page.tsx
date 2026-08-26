@@ -82,7 +82,7 @@ export default function CourseContentPage({
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <Link href="/admin/course-content-control" className="text-sm font-semibold text-neutral-400 hover:text-primary-400">
+      <Link href="/admin/course-content-control" className="text-sm font-semibold text-neutral-400 hover:text-[#1a3a78]">
         ← Course Content Control
       </Link>
       <h1 className="mt-3 break-words text-2xl font-extrabold capitalize text-heading">
@@ -97,7 +97,7 @@ export default function CourseContentPage({
             {(structure.subjects ?? []).map((subject) => (
               <button key={subject.id} type="button"
                 onClick={() => setScope({ subjectId: subject.id, label: subject.name })}
-                className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-5 text-left transition hover:border-primary-600/60">
+                className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-5 text-left transition hover:border-primary-600/60">
                 <span aria-hidden>📗</span>
                 <span className="break-words font-extrabold text-heading">{subject.name}</span>
               </button>
@@ -113,7 +113,7 @@ export default function CourseContentPage({
             {(structure.papers ?? []).map((paper) => (
               <button key={paper.id} type="button"
                 onClick={() => setScope({ paperId: paper.id, subjectId: paper.subjectId, label: paper.name })}
-                className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-5 text-left transition hover:border-primary-600/60">
+                className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-5 text-left transition hover:border-primary-600/60">
                 <span aria-hidden>📄</span>
                 <span className="break-words font-extrabold text-heading">{paper.name}</span>
               </button>
@@ -142,9 +142,9 @@ export default function CourseContentPage({
             {(structure.types ?? []).map((type) => (
               <Link key={type.typeKey}
                 href={`/admin/course-content-control/course/${encodeURIComponent(slug)}/${type.typeKey}?${baseQuery.toString()}`}
-                className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:border-primary-600/60">
+                className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-5 shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:border-primary-600/60">
                 <span aria-hidden className="text-xl">{TYPE_ICONS[type.typeKey] ?? "📁"}</span>
-                <span className="flex-1 break-words font-extrabold text-heading group-hover:text-primary-400">{type.name}</span>
+                <span className="flex-1 break-words font-extrabold text-heading group-hover:text-[#1a3a78]">{type.name}</span>
               </Link>
             ))}
           </div>
@@ -157,7 +157,7 @@ export default function CourseContentPage({
                   ? setEditingKey("__list__")
                   : setEditingKey(null)
               }
-              className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold text-heading hover:border-primary-500/60">
+              className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2 text-xs font-bold text-heading hover:border-[#93c5fd]">
               [ Edit ]
             </button>
             <button type="button" onClick={() => setAddingType((v) => !v)}
@@ -169,7 +169,7 @@ export default function CourseContentPage({
             <div className="mt-3 flex flex-wrap gap-2">
               <input value={newTypeName} onChange={(e) => setNewTypeName(e.target.value)}
                 placeholder="New content type name (e.g. Quiz)"
-                className="min-w-0 flex-1 rounded-xl border border-primary-500/40 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none" />
+                className="min-w-0 flex-1 rounded-xl border border-primary-500/40 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none" />
               <button type="button"
                 onClick={async () => {
                   if (await post({ action: "add-type", name: newTypeName }, "Content type added.")) {
@@ -184,11 +184,11 @@ export default function CourseContentPage({
           {editingKey === "__list__" && (
             <ul className="mt-3 space-y-2">
               {(structure.types ?? []).map((type) => (
-                <li key={type.typeKey} className="flex flex-wrap items-center gap-2 rounded-xl border border-ink/10 bg-dark-950/60 p-3">
+                <li key={type.typeKey} className="flex flex-wrap items-center gap-2 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-3">
                   {editingKey === type.typeKey ? (
                     <>
                       <input value={editName} onChange={(e) => setEditName(e.target.value)}
-                        className="min-w-0 flex-1 rounded-lg border border-primary-500/40 bg-dark-850 px-3 py-2 text-sm text-heading outline-none" />
+                        className="min-w-0 flex-1 rounded-lg border border-primary-500/40 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2 text-sm text-heading outline-none" />
                       <button type="button"
                         onClick={async () => {
                           if (await post({ action: "rename-type", typeKey: type.typeKey, name: editName }, "Renamed.")) setEditingKey(null);
