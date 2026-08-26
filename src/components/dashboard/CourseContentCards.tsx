@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BackLink, LevelStates, useCourseLearning } from "@/components/dashboard/CourseLevels";
 import type { ChapterItem } from "@/lib/my-learning";
 
-export type ContentKind = "classes" | "exams" | "materials";
+export type ContentKind = "classes" | "exams" | "materials" | "archive";
 
 /** All chapters of the course, in curriculum order (subject → chapter). */
 export function flatChapters(course: {
@@ -25,7 +25,7 @@ export function chapterHref(
   return `${contentBase(slug)}/chapters/${encodeURIComponent(chapterId)}/${kind}`;
 }
 
-/* ── Course Content page: exactly 3 cards — Class / Exam / Materials ────── */
+/* ── Course Content page: exactly 4 cards — Class / Exam / Materials / Archive (order MUST be Class, Exam, Materials, Archive) ────── */
 
 type CardDef = {
   key: ContentKind;
@@ -33,6 +33,13 @@ type CardDef = {
   accent: string;
   icon: React.ReactNode;
   countLabel: (n: number) => string;
+};
+
+const TYPE_KEY_MAP: Record<ContentKind, string> = {
+  classes: "class",
+  exams: "exam",
+  materials: "materials",
+  archive: "archive",
 };
 
 const CARDS: CardDef[] = [
@@ -71,6 +78,18 @@ const CARDS: CardDef[] = [
       </svg>
     ),
     countLabel: (n) => `${n} material${n === 1 ? "" : "s"}`,
+  },
+  {
+    key: "archive",
+    title: "Archive",
+    accent:
+      "bg-amber-500/15 text-amber-400 group-hover/card:bg-amber-500 group-hover/card:text-white",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M9 11h6" />
+      </svg>
+    ),
+    countLabel: (n) => `${n} item${n === 1 ? "" : "s"}`,
   },
 ];
 
@@ -161,15 +180,38 @@ export default function DirectContentView({
 
       {chapters.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
-          <p className="font-semibold text-heading">Content coming soon</p>
+          <p className="font-semibold text-heading">No course content available yet.</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
-            No chapters have been published for this course yet. Please check
-            back later.
+            No chapters have been published for this course yet. The admin has
+            not configured any content for this course.
           </p>
         </div>
       ) : (
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {CARDS.map((card) => (
+        <div className="mt-10 grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
+          {CARDS.map((card) => {
+            // Structural nodes must NOT disappear: show chapter if it belongs to
+            // this content type (via contentType) OR has content for this kind
+            // (legacy mixed chapters). Archive only via contentType.
+            const typeKey = TYPE_KEY_MAP[card.key];
+            const filtered = chapters.filter((chapter) => {
+              const ct = (chapter.contentType ?? "class").toLowerCase();
+              if (ct === typeKey) return true;
+              if (card.key === "archive") return false;
+              if (card.key === "classes" && chapter.classes.length > 0) return true;
+              if (card.key === "exams" && chapter.exams.length > 0) return true;
+              if (card.key === "materials" && chapter.materials.length > 0) return true;
+              // Fallback for legacy 'class' chapters that hold mixed content
+              // but were not split per type — show under any card where they have items.
+              return false;
+            });
+            // For direct content, still show all chapters per type if filtered empty?
+            // Spec 11: chapter structural node must never disappear even when empty.
+            // So for Class/Exam/Materials/Archive we show at least the type-matched
+            // chapters even with 0 items. If a type has zero chapters at all, show
+            // empty message inside card instead of hiding the card.
+            const displayChapters = filtered.length > 0 ? filtered : chapters.filter((c) => (c.contentType ?? "class").toLowerCase() === typeKey);
+            const showEmptyCard = displayChapters.length === 0 && filtered.length === 0;
+            return (
             <article
               key={card.key}
               className="group/card flex flex-col rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
@@ -185,15 +227,21 @@ export default function DirectContentView({
                 </h2>
               </header>
 
-              {/* One clickable button per chapter */}
+              {showEmptyCard ? (
+                <p className="mt-4 rounded-xl border border-dashed border-ink/15 bg-dark-950/60 px-3 py-6 text-center text-xs text-neutral-500">
+                  No {card.title.toLowerCase()} chapters yet.
+                </p>
+              ) : (
               <ul className="mt-4 flex flex-col gap-2">
-                {chapters.map((chapter) => {
+                {(displayChapters.length > 0 ? displayChapters : filtered).map((chapter) => {
                   const count =
                     card.key === "classes"
                       ? chapter.classes.length
                       : card.key === "exams"
                         ? chapter.exams.length
-                        : chapter.materials.length;
+                        : card.key === "materials"
+                          ? chapter.materials.length
+                          : 0;
                   return (
                     <li key={`${card.key}-${chapter.id}`}>
                       <Link
@@ -205,7 +253,7 @@ export default function DirectContentView({
                             {chapter.name}
                           </span>
                           <span className="text-[11px] text-neutral-500">
-                            {card.countLabel(count)}
+                            {card.key === "archive" ? chapter.name : card.countLabel(count)}
                           </span>
                         </span>
                         <svg
@@ -222,8 +270,10 @@ export default function DirectContentView({
                   );
                 })}
               </ul>
+              )}
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

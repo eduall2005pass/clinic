@@ -55,6 +55,8 @@ export type ChapterItem = {
   id: string;
   name: string;
   paperId: string | null;
+  contentType: string;
+  courseSlug: string | null;
   classes: ClassItem[];
   materials: MaterialItem[];
   exams: {
@@ -346,6 +348,8 @@ type ChapterRow = {
   subject_id: string;
   paper_id: string | null;
   name: string;
+  content_type?: string | null;
+  course_slug?: string | null;
 };
 type ClassRow = {
   id: string;
@@ -420,7 +424,7 @@ export async function getCourseLearningData(
     content_layout: null,
   };
 
-  const [subjects, progress, favourites] = await Promise.all([
+  const [subjectsRaw, progress, favourites] = await Promise.all([
     safe<SubjectRow[]>(
       "subjects query",
       () =>
@@ -437,38 +441,66 @@ export async function getCourseLearningData(
     safe("progress query", () => loadProgress(uid), new Map()),
     safe("favourites query", () => loadFavourites(uid), new Set<string>()),
   ]);
+  let subjects = subjectsRaw;
+
+  // --- Unified chapter fetch with course_slug isolation (single source of truth) ---
+  let papers: PaperRow[] = [];
+  let chapters: ChapterRow[] = [];
 
   if (subjects.length === 0) {
-    return buildCourseData(catalog, enrollment, [], progress, favourites);
-  }
-
-  const subjectIds = subjects.map((subject) => subject.id);
-  const subjectPlaceholders = subjectIds.map(() => "?").join(",");
-
-  const [papers, chapters] = await Promise.all([
-    safe<PaperRow[]>(
-      "papers query",
-      () =>
-        query<PaperRow[]>(
-          `SELECT id, subject_id, name, kind FROM course_papers
-            WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
-            ORDER BY sort_order, name`,
-          subjectIds,
-        ),
-      [],
-    ),
-    safe<ChapterRow[]>(
-      "chapters query",
+    // Direct course (e.g. SSC Biology): load course_slug-scoped chapters that
+    // have no subject (content-control direct mode). Create synthetic subject so
+    // existing DirectContentView can render them via flatChapters.
+    const directChapters = await safe<ChapterRow[]>(
+      "direct chapters query",
       () =>
         query<ChapterRow[]>(
-          `SELECT id, subject_id, paper_id, name FROM course_chapters
-            WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+          `SELECT id, subject_id, paper_id, name, content_type, course_slug FROM course_chapters
+            WHERE is_active = 1 AND COALESCE(course_slug,'') = ? AND COALESCE(subject_id,'') = ''
             ORDER BY sort_order, name`,
-          subjectIds,
+          [slug],
         ),
       [],
-    ),
-  ]);
+    );
+    if (directChapters.length === 0) {
+      return buildCourseData(catalog, enrollment, [], progress, favourites);
+    }
+    subjects = [{ id: "__direct__", name: catalog.name }];
+    chapters = directChapters.map((ch) => ({ ...ch, subject_id: "__direct__" }));
+  } else {
+    const subjectIds = subjects.map((subject) => subject.id);
+    const subjectPlaceholders = subjectIds.map(() => "?").join(",");
+
+    const [fetchedPapers, fetchedChapters] = await Promise.all([
+      safe<PaperRow[]>(
+        "papers query",
+        () =>
+          query<PaperRow[]>(
+            `SELECT id, subject_id, name, kind FROM course_papers
+              WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+              ORDER BY sort_order, name`,
+            subjectIds,
+          ),
+        [],
+      ),
+      safe<ChapterRow[]>(
+        "chapters query",
+        () =>
+          query<ChapterRow[]>(
+            `SELECT id, subject_id, paper_id, name, content_type, course_slug FROM course_chapters
+              WHERE is_active = 1 AND (
+                COALESCE(course_slug,'') = ?
+                OR (COALESCE(course_slug,'') = '' AND subject_id IN (${subjectPlaceholders}))
+              )
+              ORDER BY sort_order, name`,
+            [slug, ...subjectIds],
+          ),
+        [],
+      ),
+    ]);
+    papers = fetchedPapers;
+    chapters = fetchedChapters;
+  }
 
   const chapterIds = chapters.map((chapter) => chapter.id);
 
@@ -563,6 +595,8 @@ function buildCourseData(
       id: chapter.id,
       name: chapter.name,
       paperId: chapter.paper_id,
+      contentType: (chapter.content_type ?? "class") as string,
+      courseSlug: (chapter.course_slug ?? null) as string | null,
       classes: [],
       materials: [],
       exams: [],
@@ -818,7 +852,7 @@ export async function getAdminCourseLearningData(
     enrollment_date: "",
   };
 
-  const subjects = await safe<SubjectRow[]>(
+  let subjects = await safe<SubjectRow[]>(
     "subjects query",
     () =>
       query<SubjectRow[]>(
@@ -832,37 +866,58 @@ export async function getAdminCourseLearningData(
     [],
   );
 
+  let papers: PaperRow[] = [];
+  let chapters: ChapterRow[] = [];
   if (subjects.length === 0) {
-    return buildCourseData(catalog, syntheticEnrollment, [], new Map(), new Set());
-  }
-
-  const subjectIds = subjects.map((subject) => subject.id);
-  const subjectPlaceholders = subjectIds.map(() => "?").join(",");
-
-  const [papers, chapters] = await Promise.all([
-    safe<PaperRow[]>(
-      "papers query",
-      () =>
-        query<PaperRow[]>(
-          `SELECT id, subject_id, name, kind FROM course_papers
-            WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
-            ORDER BY sort_order, name`,
-          subjectIds,
-        ),
-      [],
-    ),
-    safe<ChapterRow[]>(
-      "chapters query",
+    const directChapters = await safe<ChapterRow[]>(
+      "direct chapters query",
       () =>
         query<ChapterRow[]>(
-          `SELECT id, subject_id, paper_id, name FROM course_chapters
-            WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+          `SELECT id, subject_id, paper_id, name, content_type, course_slug FROM course_chapters
+            WHERE is_active = 1 AND COALESCE(course_slug,'') = ? AND COALESCE(subject_id,'') = ''
             ORDER BY sort_order, name`,
-          subjectIds,
+          [slug],
         ),
       [],
-    ),
-  ]);
+    );
+    if (directChapters.length === 0) {
+      return buildCourseData(catalog, syntheticEnrollment, [], new Map(), new Set());
+    }
+    subjects = [{ id: "__direct__", name: catalog.name }];
+    chapters = directChapters.map((ch) => ({ ...ch, subject_id: "__direct__" }));
+  } else {
+    const subjectIds = subjects.map((subject) => subject.id);
+    const subjectPlaceholders = subjectIds.map(() => "?").join(",");
+    const [fetchedPapers, fetchedChapters] = await Promise.all([
+      safe<PaperRow[]>(
+        "papers query",
+        () =>
+          query<PaperRow[]>(
+            `SELECT id, subject_id, name, kind FROM course_papers
+              WHERE subject_id IN (${subjectPlaceholders}) AND is_active = 1
+              ORDER BY sort_order, name`,
+            subjectIds,
+          ),
+        [],
+      ),
+      safe<ChapterRow[]>(
+        "chapters query",
+        () =>
+          query<ChapterRow[]>(
+            `SELECT id, subject_id, paper_id, name, content_type, course_slug FROM course_chapters
+              WHERE is_active = 1 AND (
+                COALESCE(course_slug,'') = ?
+                OR (COALESCE(course_slug,'') = '' AND subject_id IN (${subjectPlaceholders}))
+              )
+              ORDER BY sort_order, name`,
+            [slug, ...subjectIds],
+          ),
+        [],
+      ),
+    ]);
+    papers = fetchedPapers;
+    chapters = fetchedChapters;
+  }
 
   const chapterIds = chapters.map((chapter) => chapter.id);
 
