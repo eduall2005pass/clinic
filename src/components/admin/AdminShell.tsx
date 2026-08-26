@@ -296,14 +296,14 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
         {sidebarContent}
       </aside>
 
-      {/* Mobile/tablet/laptop drawer — Deep Navy with overlay */}
+      {/* Mobile/tablet/laptop drawer — Deep Navy with subtle overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-[70] xl:hidden">
           <button
             type="button"
             aria-label="Close menu"
             onClick={() => setMobileOpen(false)}
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
           />
           <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col bg-[#0b1e3a] shadow-2xl shadow-black/60">
             <button
