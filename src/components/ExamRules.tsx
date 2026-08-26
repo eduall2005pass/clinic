@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type ExamRulesData = {
   name: string;
@@ -145,7 +146,15 @@ export function ExamRulesModal({
 
   if (!open) return null;
 
-  return (
+    // Portal to <body>: ancestor transforms break position:fixed on desktop.
+  const [portalMounted, setPortalMounted] = useState(false);
+  useEffect(() => {
+    setPortalMounted(true);
+    return () => setPortalMounted(false);
+  }, []);
+  if (!portalMounted) return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -218,6 +227,6 @@ export function ExamRulesModal({
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>,
+  document.body);
 }

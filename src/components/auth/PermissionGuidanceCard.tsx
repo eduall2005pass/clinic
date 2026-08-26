@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 
 export type PermissionGuidance = {
@@ -43,7 +45,14 @@ export default function PermissionGuidanceCard({
 }) {
   const { onClose } = guidance;
 
-  return (
+  const [portalMounted, setPortalMounted] = useState(false);
+  useEffect(() => {
+    setPortalMounted(true);
+    return () => setPortalMounted(false);
+  }, []);
+  if (!portalMounted) return null;
+
+  return createPortal(
     <div
       role="alertdialog"
       aria-modal="true"
@@ -112,6 +121,7 @@ export default function PermissionGuidanceCard({
           </Link>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
