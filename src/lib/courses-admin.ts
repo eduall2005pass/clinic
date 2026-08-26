@@ -403,7 +403,7 @@ export async function saveCatalogCourse(
   }
   if (name.length < 2) throw new Error("Course name is required.");
 
-  const category = normalizeCatalogCategory(input.category);
+  let category = normalizeCatalogCategory(input.category);
 
   // Link the course to its Course Control category. Prefer an explicit
   // categoryId from the payload; otherwise resolve it from the category name.
@@ -415,6 +415,34 @@ export async function saveCatalogCourse(
       `SELECT id, name, slug FROM course_categories`,
     );
     categoryId = await resolveCategoryId(category, categories);
+  }
+
+  // Keep the legacy ENUM column consistent with the Course Control category —
+  // syncCatalogCategoryIds() re-links category_id FROM this column on every
+  // category-filtered read, so a mismatch silently moves the course out of
+  // its category right after save (the form has no category field at all).
+  if (categoryId) {
+    try {
+      const catRows = await query<Array<{ name: string; slug: string }>>(
+        "SELECT name, slug FROM course_categories WHERE id = ? LIMIT 1",
+        [categoryId],
+      );
+      const cat = catRows[0];
+      if (cat) {
+        const token = normalizeCategoryToken(cat.name);
+        const slugToken = normalizeCategoryToken(cat.slug);
+        const match = CATALOG_COURSE_CATEGORIES.find(
+          (value) =>
+            normalizeCategoryToken(value) === token ||
+            normalizeCategoryToken(value).startsWith(token) ||
+            (slugToken.length > 0 &&
+              normalizeCategoryToken(value).startsWith(slugToken)),
+        );
+        if (match) category = match;
+      }
+    } catch {
+      // Keep the payload/default-derived ENUM on lookup failure.
+    }
   }
 
   const batchId = asString(input.batchId, "hsc-28") || "hsc-28";
