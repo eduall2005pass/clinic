@@ -31,15 +31,16 @@ export default function AccessPermissionModal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
-
-    // Portal to <body>: ancestor transforms break position:fixed on desktop.
   const [portalMounted, setPortalMounted] = useState(false);
   useEffect(() => {
     setPortalMounted(true);
     return () => setPortalMounted(false);
   }, []);
   if (!portalMounted) return null;
+
+  if (!open) return null;
+
+    // Portal to <body>: ancestor transforms break position:fixed on desktop.
 
   return createPortal(
     <div
