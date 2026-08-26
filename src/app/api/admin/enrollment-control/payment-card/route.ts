@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * PUT — save payment card configuration.
- * { bkashNumber, bkashEnabled, nagadNumber, nagadEnabled, instructions, note }
+ * { bkashNumber, bkashEnabled, nagadNumber, nagadEnabled, couponEnabled, instructions, note }
  * At least one payment method must remain enabled with a number.
  */
 export async function PUT(request: NextRequest) {
@@ -43,6 +43,9 @@ export async function PUT(request: NextRequest) {
     nagadNumber: str(body.nagadNumber, 40),
     bkashEnabled: body.bkashEnabled === true,
     nagadEnabled: body.nagadEnabled === true,
+    // Coupon availability defaults ON; OFF only hides it from students —
+    // existing coupon data/configuration is never deleted.
+    couponEnabled: body.couponEnabled !== false,
     instructions: str(body.instructions, 2000),
     note: str(body.note, 1000),
   };
@@ -71,7 +74,7 @@ export async function PUT(request: NextRequest) {
     await logAdminAction(
       admin,
       "payment-card.save",
-      `bkash=${config.bkashEnabled ? "on" : "off"} nagad=${config.nagadEnabled ? "on" : "off"}`,
+      `bkash=${config.bkashEnabled ? "on" : "off"} nagad=${config.nagadEnabled ? "on" : "off"} coupon=${config.couponEnabled ? "on" : "off"}`,
       request,
     );
     return NextResponse.json({ message: "Payment card saved." });

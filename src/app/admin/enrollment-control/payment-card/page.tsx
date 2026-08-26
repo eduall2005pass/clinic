@@ -17,6 +17,7 @@ type PaymentCardConfig = {
   nagadNumber: string;
   bkashEnabled: boolean;
   nagadEnabled: boolean;
+  couponEnabled: boolean;
   instructions: string;
   note: string;
 };
@@ -26,6 +27,7 @@ const EMPTY: PaymentCardConfig = {
   nagadNumber: "",
   bkashEnabled: true,
   nagadEnabled: false,
+  couponEnabled: true,
   instructions: "",
   note: "",
 };
@@ -102,7 +104,8 @@ export default function PaymentCardPage() {
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-extrabold text-heading">Payment Card</h1>
       <p className="mt-1 text-sm text-neutral-400">
-        Manage the bKash/Nagad numbers and payment instructions shown to students.
+        Manage the bKash/Nagad numbers, coupon availability and payment
+        instructions shown to students.
       </p>
 
       <div className="mt-8 grid gap-5 lg:grid-cols-2">
@@ -146,6 +149,24 @@ export default function PaymentCardPage() {
                 onChange={(event) => patch({ nagadNumber: event.target.value })}
               />
             </div>
+          </div>
+
+          {/* Coupon availability */}
+          <div className="rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-bold text-heading">Coupon</h2>
+              <Toggle
+                on={config.couponEnabled}
+                onChange={() => patch({ couponEnabled: !config.couponEnabled })}
+                label="Coupon Availability"
+              />
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-neutral-400">
+              <span className="font-bold uppercase tracking-wider text-neutral-300">
+                Coupon Availability:
+              </span>{" "}
+              {config.couponEnabled ? "ON — students see the coupon option." : "OFF — the coupon option is hidden from students. Existing coupons and their configuration are kept; turning it back ON restores them."}
+            </p>
           </div>
 
           {/* Instructions & note */}
@@ -212,6 +233,24 @@ export default function PaymentCardPage() {
                 <p className="text-xs text-red-400">No payment method enabled.</p>
               )}
             </div>
+            {/* Coupon option — mirrors the student card (hidden when OFF) */}
+            {config.couponEnabled ? (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5">
+                <span className="text-sm font-extrabold text-emerald-300">Have a coupon?</span>
+                <span className="flex items-center gap-2">
+                  <span className="rounded-lg border border-ink/15 bg-dark-950/60 px-3 py-1 text-[11px] uppercase text-neutral-500">
+                    Enter coupon
+                  </span>
+                  <span className="rounded-lg border border-primary-500/40 bg-primary-600/10 px-2.5 py-1 text-[11px] font-bold text-primary-300">
+                    Apply
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <p className="mt-3 rounded-xl border border-ink/10 bg-dark-950/60 px-4 py-2.5 text-[11px] text-neutral-500">
+                Coupon availability is OFF — students will not see the coupon option.
+              </p>
+            )}
             {config.instructions && (
               <p className="mt-4 whitespace-pre-line text-xs leading-relaxed text-neutral-300">
                 {config.instructions}
