@@ -58,8 +58,10 @@ const SEED_BANNERS: Array<{ id: string; url: string; href: string; title: string
   },
 ];
 
+let bannersEnsured = false;
+
 async function ensureBannersTable(): Promise<void> {
-  if (ensureBannersTableReady) return;
+  if (ensureBannersTableReady || bannersEnsured) return;
   await exec(
     `CREATE TABLE IF NOT EXISTS banners (
       id VARCHAR(191) NOT NULL PRIMARY KEY,
@@ -83,6 +85,7 @@ async function ensureBannersTable(): Promise<void> {
     // Best effort — column may already exist.
   }
   ensureBannersTableReady = true;
+  bannersEnsured = true;
 }
 
 async function seedDefaultBanners(): Promise<void> {

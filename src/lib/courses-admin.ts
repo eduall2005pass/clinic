@@ -147,9 +147,10 @@ export function rowToCourse(row: CatalogCourseRow): CatalogCourse {
   };
 }
 
-async function ensureTables(): Promise<void> {
-  if (tablesReady) return;
+let tablesEnsured = false;
 
+async function ensureTables(): Promise<void> {
+  if (tablesReady || tablesEnsured) return;
   await exec(`CREATE TABLE IF NOT EXISTS catalog_courses (
     slug VARCHAR(191) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -220,6 +221,7 @@ async function ensureTables(): Promise<void> {
     // Best effort — already migrated or no permission.
   }
   tablesReady = true;
+  tablesEnsured = true;
 }
 
 function normalizeCategoryToken(value: string): string {
@@ -557,8 +559,10 @@ export async function saveCatalogCourse(
 
 // ── Course ↔ Mentors association ─────────────────────────────────────────
 
+let courseMentorsEnsured = false;
+
 async function ensureCourseMentorsTable(): Promise<void> {
-  if (courseMentorsReady) return;
+  if (courseMentorsReady || courseMentorsEnsured) return;
   await exec(`CREATE TABLE IF NOT EXISTS course_mentors (
     course_slug VARCHAR(191) NOT NULL,
     mentor_id VARCHAR(191) NOT NULL,
@@ -566,6 +570,7 @@ async function ensureCourseMentorsTable(): Promise<void> {
     PRIMARY KEY (course_slug, mentor_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   courseMentorsReady = true;
+  courseMentorsEnsured = true;
 }
 
 /** Mentor ids assigned to a course (ordered). */

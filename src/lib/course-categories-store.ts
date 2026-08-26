@@ -78,8 +78,10 @@ const ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".sv
 export { ALLOWED_IMAGE_EXTENSIONS as ALLOWED_CATEGORY_IMAGE_EXTENSIONS };
 export const MAX_CATEGORY_IMAGE_SIZE = 5 * 1024 * 1024;
 
+let schemaEnsured = false;
+
 export async function ensureSchema(): Promise<void> {
-  if (courseCategoriesReady) return;
+  if (courseCategoriesReady || schemaEnsured) return;
   await exec(
     `CREATE TABLE IF NOT EXISTS course_categories (
       id VARCHAR(191) NOT NULL PRIMARY KEY,
@@ -96,7 +98,8 @@ export async function ensureSchema(): Promise<void> {
       UNIQUE KEY uq_course_categories_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   );
-  courseCategoriesReady = true;
+<  courseCategoriesReady = true;
+  schemaEnsured = true;
 }
 
 function rowToCategory(row: CourseCategoryRow): CourseCategory {

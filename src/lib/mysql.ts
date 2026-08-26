@@ -30,7 +30,7 @@ export function getMysqlPool(): mysql.Pool | null {
       // warm Vercel instance holds its own pool, so keep per-instance usage
       // small and release idle connections quickly or bursts exhaust the
       // server ("Too many connections" breaks saves mid-request).
-      connectionLimit: 3,
+      connectionLimit: 2,
       maxIdle: 1,
       idleTimeout: 10_000,
       connectTimeout: 10000,
@@ -56,11 +56,21 @@ export async function query<T>(
   params?: unknown[],
 ): Promise<T> {
   const client = getMysqlPool();
-  if (!client) {
-    throw new Error("Database is not configured.");
+  if (!client) throw new Error("Database is not configured.");
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const [rows] = await client.execute(sql, params as never);
+      return rows as T;
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      if (code === "ER_CON_COUNT_ERROR" && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 300 + Math.random() * 400));
+        continue;
+      }
+      throw err;
+    }
   }
-  const [rows] = await client.execute(sql, params as never);
-  return rows as T;
+  throw new Error("Unreachable");
 }
 
 export async function exec(
@@ -68,14 +78,21 @@ export async function exec(
   params?: unknown[],
 ): Promise<mysql.ResultSetHeader> {
   const client = getMysqlPool();
-  if (!client) {
-    throw new Error("Database is not configured.");
+  if (!client) throw new Error("Database is not configured.");
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const [result] = await client.execute<mysql.ResultSetHeader>(sql, params as never);
+      return result;
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      if (code === "ER_CON_COUNT_ERROR" && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 300 + Math.random() * 400));
+        continue;
+      }
+      throw err;
+    }
   }
-  const [result] = await client.execute<mysql.ResultSetHeader>(
-    sql,
-    params as never,
-  );
-  return result;
+  throw new Error("Unreachable");
 }
 
 /**
