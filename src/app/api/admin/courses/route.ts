@@ -6,10 +6,10 @@ import {
   fetchCatalogCourses,
   fetchCatalogCourse,
   rowToCourse,
-
   saveCatalogCourse,
   deleteCatalogCourse,
   setCatalogCourseFlags,
+  syncCatalogCategoryIds,
 } from "@/lib/courses-admin";
 
 export const dynamic = "force-dynamic";
@@ -31,22 +31,32 @@ export async function GET(request: NextRequest) {
   const categoryName = request.nextUrl.searchParams.get("category");
   const categoryId = request.nextUrl.searchParams.get("categoryId");
   if ((categoryName && categoryName.trim()) || (categoryId && categoryId.trim())) {
-    const rows = await query(
-      `SELECT c.* FROM catalog_courses c
-         LEFT JOIN course_categories cc ON cc.id = c.category_id
-        WHERE COALESCE(c.category_id, cc.id) = ?
-           OR (? <> '' AND c.category = ?)
-        ORDER BY c.sort_order ASC`,
-      [
-        (categoryId ?? "").trim(),
-        (categoryName ?? "").trim(),
-        (categoryName ?? "").trim(),
-      ],
-    );
-        return NextResponse.json(
-      { courses: (rows as never[]).map((r) => rowToCourse(r as never)) },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    try {
+      // Make sure the table/columns exist and every course is linked to its
+      // Course Control category before filtering (keeps reads in sync with
+      // any add/rename/move made in Course Control).
+      await syncCatalogCategoryIds();
+      const rows = await query(
+        `SELECT c.* FROM catalog_courses c
+           LEFT JOIN course_categories cc ON cc.id = c.category_id
+          WHERE COALESCE(c.category_id, cc.id) = ?
+             OR (? <> '' AND c.category = ?)
+          ORDER BY c.sort_order ASC, c.name ASC`,
+        [
+          (categoryId ?? "").trim(),
+          (categoryName ?? "").trim(),
+          (categoryName ?? "").trim(),
+        ],
+      );
+      return NextResponse.json(
+        { courses: (rows as never[]).map((r) => rowToCourse(r as never)) },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to load courses.";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
   }
   const courses = await fetchCatalogCourses();
   return NextResponse.json(

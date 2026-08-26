@@ -168,6 +168,14 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — column may already exist.
   }
+  // Links every course to its Course Control category (course_categories.id).
+  try {
+    await exec(
+      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS category_id VARCHAR(191) NULL`,
+    );
+  } catch {
+    // Best effort — column may already exist.
+  }
   // Course-wise content structure (direct / paper / subject selection).
   try {
     await exec(
@@ -196,6 +204,63 @@ async function ensureTables(): Promise<void> {
     );
   } catch {
     // Best effort — already migrated or no permission.
+  }
+}
+
+function normalizeCategoryToken(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+/**
+ * Resolve the Course Control category (`course_categories.id`) that owns a
+ * catalog category name. Matches on exact normalized name first ("SSC
+ * Academic" = "SSC Academic Courses"), then on slug prefix ("ssc academic"
+ * starts with "ssc"). Returns null when Course Control has no match yet.
+ */
+async function resolveCategoryId(
+  categoryName: string,
+  categories: Array<{ id: string; name: string; slug: string }>,
+): Promise<string | null> {
+  const token = normalizeCategoryToken(categoryName);
+  if (!token) return null;
+  return (
+    categories.find((c) => normalizeCategoryToken(c.name) === token)?.id ??
+    categories.find((c) => normalizeCategoryToken(c.name).startsWith(token))?.id ??
+    categories.find((c) => {
+      const slugToken = normalizeCategoryToken(c.slug);
+      return slugToken.length > 0 && token.startsWith(slugToken);
+    })?.id ??
+    null
+  );
+}
+
+/**
+ * Keep `catalog_courses.category_id` in sync with Course Control
+ * (`course_categories`). Backfills legacy rows that only carry the ENUM
+ * `category` display name. Called lazily before category-filtered reads so a
+ * course added/renamed/moved in Course Control is reflected immediately.
+ */
+export async function syncCatalogCategoryIds(): Promise<void> {
+  await ensureTables();
+  const { ensureSchema } = await import("@/lib/course-categories-store");
+  await ensureSchema();
+  const categories = await query<Array<{ id: string; name: string; slug: string }>>(
+    `SELECT id, name, slug FROM course_categories`,
+  );
+  if (categories.length === 0) return;
+  const rows = await query<
+    Array<{ slug: string; category: string; category_id: string | null }>
+  >(`SELECT slug, category, category_id FROM catalog_courses`);
+  for (const row of rows) {
+    const categoryId = await resolveCategoryId(row.category, categories);
+    // Re-link when missing or stale (e.g. course moved to another category
+    // in Course Control) so Content Control always follows Course Control.
+    if (categoryId && categoryId !== (row.category_id ?? "")) {
+      await exec(`UPDATE catalog_courses SET category_id = ? WHERE slug = ?`, [
+        categoryId,
+        row.slug,
+      ]);
+    }
   }
 }
 
@@ -253,6 +318,19 @@ export async function saveCatalogCourse(
   if (name.length < 2) throw new Error("Course name is required.");
 
   const category = normalizeCatalogCategory(input.category);
+
+  // Link the course to its Course Control category. Prefer an explicit
+  // categoryId from the payload; otherwise resolve it from the category name.
+  let categoryId = asString(input.categoryId) || null;
+  if (!categoryId) {
+    const { ensureSchema } = await import("@/lib/course-categories-store");
+    await ensureSchema();
+    const categories = await query<Array<{ id: string; name: string; slug: string }>>(
+      `SELECT id, name, slug FROM course_categories`,
+    );
+    categoryId = await resolveCategoryId(category, categories);
+  }
+
   const batchId = asString(input.batchId, "hsc-28") || "hsc-28";
   const fee = Math.max(0, Number(input.fee) || 0);
   const discountRaw = input.discountFee;
@@ -263,13 +341,14 @@ export async function saveCatalogCourse(
 
   await exec(
     `INSERT INTO catalog_courses
-       (slug, name, category, batch_id, image_url, short_description, description,
+       (slug, name, category, category_id, batch_id, image_url, short_description, description,
         teacher_name, teacher_photo_url, teacher_designation, duration,
         fee, discount_fee, features, overview_title, overview,
         status, availability, coupon_enabled, is_featured, content_layout, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
-       name = VALUES(name), category = VALUES(category), batch_id = VALUES(batch_id),
+       name = VALUES(name), category = VALUES(category), category_id = VALUES(category_id),
+       batch_id = VALUES(batch_id),
        image_url = VALUES(image_url), short_description = VALUES(short_description),
        description = VALUES(description), teacher_name = VALUES(teacher_name),
        teacher_photo_url = VALUES(teacher_photo_url),
@@ -283,6 +362,7 @@ export async function saveCatalogCourse(
       slug,
       name,
       category,
+      categoryId,
       batchId,
       asString(input.image) || null,
       asString(input.shortDescription) || null,

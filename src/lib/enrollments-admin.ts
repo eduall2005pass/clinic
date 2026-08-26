@@ -458,7 +458,12 @@ export async function getEnrollmentSettings(): Promise<PaymentSettings> {
  *  where the manager has never been used yet. Any admin edit shows up here
  *  immediately — no caching between Admin Panel and students. */
 export async function getPaymentCard(): Promise<
-  { bkashNumber: string | null; nagadNumber: string | null; instructions: string | null }
+  {
+    bkashNumber: string | null;
+    nagadNumber: string | null;
+    couponEnabled: boolean;
+    instructions: string | null;
+  }
 > {
   try {
     const card = await getManagedPaymentCard();
@@ -475,6 +480,7 @@ export async function getPaymentCard(): Promise<
       return {
         bkashNumber: card.bkashEnabled ? card.bkashNumber || null : null,
         nagadNumber: card.nagadEnabled ? card.nagadNumber || null : null,
+        couponEnabled: card.couponEnabled,
         instructions: instructions || null,
       };
     }
@@ -485,6 +491,7 @@ export async function getPaymentCard(): Promise<
   return {
     bkashNumber: settings.bkashNumber,
     nagadNumber: settings.nagadNumber,
+    couponEnabled: true,
     instructions: settings.paymentInstructions,
   };
 }

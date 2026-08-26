@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
 
 type Cat = { id: string; name: string };
@@ -17,6 +18,7 @@ export default function CategoryCoursesPage({
   params: Promise<{ category: string }>;
 }) {
   const { category } = use(params);
+  const { user, authLoading } = useAuth();
   const [state, setState] = useState<
     "loading" | "invalid" | "error" | "ready"
   >("loading");
@@ -24,6 +26,7 @@ export default function CategoryCoursesPage({
   const [courses, setCourses] = useState<Course[]>([]);
 
   const load = useCallback(async () => {
+    if (!user) return;
     setState("loading");
     try {
       // Resolve the category ID → valid category? (invalid → error state)
@@ -41,7 +44,10 @@ export default function CategoryCoursesPage({
       // Backend returns ONLY this category's courses.
       const courseRes = await fetch(
         `/api/admin/courses?categoryId=${encodeURIComponent(category)}`,
-        { cache: "no-store" },
+        {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+        },
       );
       if (!courseRes.ok) throw new Error("failed");
       const data = (await courseRes.json()) as { courses?: Course[] };
@@ -50,12 +56,13 @@ export default function CategoryCoursesPage({
     } catch {
       setState("error");
     }
-  }, [category]);
+  }, [category, user]);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
-  }, [load]);
+  }, [authLoading, user, load]);
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">

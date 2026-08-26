@@ -16,14 +16,45 @@ export type TeacherAnswer = {
 export type QaQuestion = {
   id: string;
   subjectId: string;
+  /** Course context saved with every question (Course Control ids). */
+  categoryId: string | null;
+  courseId: string | null;
+  categoryName: string | null;
+  courseName: string | null;
+  subjectName: string | null;
+  imageUrl: string | null;
   studentName: string;
   studentAvatar: string;
   text: string;
   hasPicture: boolean;
-  hasAudio: boolean;
   createdAt: string;
   status: QaQuestionStatus;
   answer?: TeacherAnswer;
+};
+
+/** Ask-a-question dropdown data — derived from real Course Control +
+ *  enrollment data, never a separate Q&A list. */
+export type QaCategoryOption = {
+  id: string;
+  name: string;
+};
+
+export type QaCourseOption = {
+  id: string;
+  name: string;
+  categoryId: string | null;
+};
+
+export type QaSubjectOption = {
+  id: string;
+  name: string;
+  courseId: string;
+};
+
+export type QaAskOptions = {
+  categories: QaCategoryOption[];
+  courses: QaCourseOption[];
+  subjects: QaSubjectOption[];
 };
 
 export type QaGuidelineSection = {
@@ -35,9 +66,8 @@ export const qaGuideline: QaGuidelineSection[] = [
   {
     title: "How to Ask a Question",
     items: [
-      "Choose the correct subject for your question so the right teachers can answer it.",
-      "Use the Ask a Question button, pick a subject and write your question clearly.",
-      "You can attach a picture or an audio recording when it helps explain your question.",
+      "Use the Ask a Question button, pick your Category, Enrolled Course and Subject, then write your question clearly.",
+      "You can attach an optional picture when it helps explain your question.",
     ],
   },
   {

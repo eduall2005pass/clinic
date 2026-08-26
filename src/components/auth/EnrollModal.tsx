@@ -111,6 +111,7 @@ export default function EnrollModal({
   const [paymentCard, setPaymentCard] = useState<{
     bkashNumber: string | null;
     nagadNumber: string | null;
+    couponEnabled: boolean;
     instructions: string | null;
   } | null>(null);
 
@@ -124,6 +125,7 @@ export default function EnrollModal({
         setPaymentCard(data as {
           bkashNumber: string | null;
           nagadNumber: string | null;
+          couponEnabled: boolean;
           instructions: string | null;
         });
       })
@@ -419,96 +421,99 @@ export default function EnrollModal({
     }
 
     if (isPaid) {
+      // Coupon visibility is admin-controlled (Enrollment Control → Payment
+      // Card → Coupon Availability). Defaults to visible while loading.
+      const couponVisible = paymentCard ? paymentCard.couponEnabled : true;
       return (
-        <div className="mt-6">
+        <div className="mt-5">
           {isCancelled && (
             <p className="mb-4 rounded-xl border border-ink/10 bg-ink/5 p-3 text-center text-xs text-neutral-400">
               Your previous enrollment was cancelled. You can request a new one.
             </p>
           )}
-          <div className="rounded-xl border border-ink/10 bg-dark-950 p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Course Fee
-              </p>
-              <div className="text-right">
-                {appliedCoupon && appliedCoupon.finalFee < payableFee ? (
-                  <>
-                    <p className="text-sm text-neutral-500 line-through">
-                      {formatFee(payableFee)}
-                    </p>
-                    <p className="text-xl font-extrabold text-primary-500">
-                      {formatFee(appliedCoupon.finalFee)}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-xl font-extrabold text-primary-500">
-                    {formatFee(payableFee)}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Coupon code */}
-            <div className="mt-4">
-              <label
-                htmlFor="enroll-coupon"
-                className="text-xs font-semibold uppercase tracking-wide text-neutral-500"
-              >
-                Have a coupon?
-              </label>
-              <div className="mt-1.5 flex gap-2">
-                <input
-                  id="enroll-coupon"
-                  type="text"
-                  value={couponInput}
-                  onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
-                  placeholder="COUPON CODE"
-                  disabled={Boolean(appliedCoupon)}
-                  className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3.5 py-2.5 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 disabled:opacity-60"
-                />
-                {appliedCoupon ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAppliedCoupon(null);
-                      setCouponInput("");
-                      setCouponError(null);
-                    }}
-                    className="shrink-0 rounded-xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-xs font-bold text-heading transition hover:border-primary-500/60"
-                  >
-                    Remove
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => void handleApplyCoupon()}
-                    disabled={checkingCoupon || !couponInput.trim()}
-                    className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-4 py-2.5 text-xs font-bold text-primary-300 transition hover:bg-primary-600/20 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {checkingCoupon ? "Checking…" : "Apply"}
-                  </button>
-                )}
-              </div>
-              {appliedCoupon && (
-                <p className="mt-2 text-xs font-semibold text-emerald-400">
-                  Coupon {appliedCoupon.code} applied — you pay{" "}
-                  {formatFee(appliedCoupon.finalFee)}.
+          <div className="rounded-xl border border-ink/10 bg-dark-950 p-4 sm:p-5">
+            {/* Fee + coupon share one compact row on wider screens */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+              <div className="shrink-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Course Fee
                 </p>
-              )}
-              {couponError && (
-                <p className="mt-2 text-xs font-semibold text-red-400">{couponError}</p>
+                <div className="mt-1 flex items-baseline gap-2">
+                  {appliedCoupon && appliedCoupon.finalFee < payableFee && (
+                    <span className="text-sm text-neutral-500 line-through">
+                      {formatFee(payableFee)}
+                    </span>
+                  )}
+                  <p className="text-xl font-extrabold leading-none text-primary-500">
+                    {formatFee(appliedCoupon?.finalFee ?? payableFee)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Coupon code — hidden entirely when admin sets availability OFF */}
+              {couponVisible && (
+                <div className="w-full sm:max-w-[15rem] lg:max-w-xs">
+                  <label
+                    htmlFor="enroll-coupon"
+                    className="text-xs font-semibold text-neutral-400"
+                  >
+                    Have a coupon?
+                  </label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      id="enroll-coupon"
+                      type="text"
+                      value={couponInput}
+                      onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                      placeholder="COUPON CODE"
+                      disabled={Boolean(appliedCoupon)}
+                      className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 disabled:opacity-60"
+                    />
+                    {appliedCoupon ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAppliedCoupon(null);
+                          setCouponInput("");
+                          setCouponError(null);
+                        }}
+                        className="shrink-0 rounded-xl border border-ink/15 bg-ink/5 px-3 py-2 text-xs font-bold text-heading transition hover:border-primary-500/60"
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleApplyCoupon()}
+                        disabled={checkingCoupon || !couponInput.trim()}
+                        className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-3 py-2 text-xs font-bold text-primary-300 transition hover:bg-primary-600/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {checkingCoupon ? "Checking…" : "Apply"}
+                      </button>
+                    )}
+                  </div>
+                  {appliedCoupon && (
+                    <p className="mt-1 text-xs font-semibold text-emerald-400">
+                      Coupon {appliedCoupon.code} applied — you pay{" "}
+                      {formatFee(appliedCoupon.finalFee)}.
+                    </p>
+                  )}
+                  {couponError && (
+                    <p className="mt-1 text-xs font-semibold text-red-400">{couponError}</p>
+                  )}
+                </div>
               )}
             </div>
 
             {/* Payment card — live from MySQL (Admin → Enrollment Control →
-                Payment Card). Students pay to THESE numbers. */}
+                Payment Card). Students pay to THESE numbers. Methods sit
+                side-by-side on wider screens. */}
             {paymentCard && (paymentCard.bkashNumber || paymentCard.nagadNumber) && (
-              <div className="mt-5 rounded-xl border border-primary-500/30 bg-primary-600/5 p-4">
+              <div className="mt-4 rounded-xl border border-primary-500/30 bg-primary-600/5 p-3 sm:p-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
                   Send payment to
                 </p>
-                <div className="mt-3 space-y-2">
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   {paymentCard.bkashNumber && (
                     <div className="flex items-center justify-between gap-3 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-2">
                       <span className="text-xs font-extrabold text-pink-300">bKash</span>
@@ -527,98 +532,100 @@ export default function EnrollModal({
                   )}
                 </div>
                 {paymentCard.instructions && (
-                  <p className="mt-3 whitespace-pre-line text-xs leading-relaxed text-neutral-300">
+                  <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-neutral-300">
                     {paymentCard.instructions}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Payment proof (Step 4) */}
-            <div className="mt-5 space-y-3">
+            {/* Payment proof (Step 4) — three-up on desktop, stacked on mobile */}
+            <div className="mt-4">
               <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
                 Payment Information
               </p>
-              <div>
-                <label
-                  htmlFor="enroll-txn"
-                  className="text-xs font-semibold text-neutral-400"
-                >
-                  Transaction ID
-                </label>
-                <input
-                  id="enroll-txn"
-                  type="text"
-                  value={transactionId}
-                  onChange={(event) => setTransactionId(event.target.value)}
-                  placeholder="e.g. 8N7DQK2XLM"
-                  autoComplete="off"
-                  className={`mt-1 w-full rounded-xl border bg-dark-900 px-3.5 py-2.5 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
-                    fieldErrors.transactionId ? "border-red-500/60" : "border-ink/15"
-                  }`}
-                />
-                {fieldErrors.transactionId && (
-                  <p className="mt-1 text-xs font-semibold text-red-400">
-                    {fieldErrors.transactionId}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  htmlFor="enroll-amount"
-                  className="text-xs font-semibold text-neutral-400"
-                >
-                  Paid Amount (BDT)
-                </label>
-                <input
-                  id="enroll-amount"
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  inputMode="decimal"
-                  value={paidAmount}
-                  onChange={(event) => setPaidAmount(event.target.value)}
-                  placeholder={
-                    appliedCoupon ? String(appliedCoupon.finalFee) : String(payableFee)
-                  }
-                  className={`mt-1 w-full rounded-xl border bg-dark-900 px-3.5 py-2.5 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
-                    fieldErrors.paidAmount ? "border-red-500/60" : "border-ink/15"
-                  }`}
-                />
-                {fieldErrors.paidAmount && (
-                  <p className="mt-1 text-xs font-semibold text-red-400">
-                    {fieldErrors.paidAmount}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  htmlFor="enroll-mobile"
-                  className="text-xs font-semibold text-neutral-400"
-                >
-                  Sender Mobile Number
-                </label>
-                <input
-                  id="enroll-mobile"
-                  type="tel"
-                  inputMode="numeric"
-                  value={senderMobile}
-                  onChange={(event) => setSenderMobile(event.target.value)}
-                  placeholder="01XXXXXXXXX"
-                  maxLength={11}
-                  className={`mt-1 w-full rounded-xl border bg-dark-900 px-3.5 py-2.5 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
-                    fieldErrors.senderMobile ? "border-red-500/60" : "border-ink/15"
-                  }`}
-                />
-                {fieldErrors.senderMobile && (
-                  <p className="mt-1 text-xs font-semibold text-red-400">
-                    {fieldErrors.senderMobile}
-                  </p>
-                )}
+              <div className="mt-2 grid gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <label
+                    htmlFor="enroll-txn"
+                    className="text-xs font-semibold text-neutral-400"
+                  >
+                    Transaction ID
+                  </label>
+                  <input
+                    id="enroll-txn"
+                    type="text"
+                    value={transactionId}
+                    onChange={(event) => setTransactionId(event.target.value)}
+                    placeholder="e.g. 8N7DQK2XLM"
+                    autoComplete="off"
+                    className={`mt-1 w-full rounded-xl border bg-dark-900 px-3 py-2 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
+                      fieldErrors.transactionId ? "border-red-500/60" : "border-ink/15"
+                    }`}
+                  />
+                  {fieldErrors.transactionId && (
+                    <p className="mt-1 text-xs font-semibold text-red-400">
+                      {fieldErrors.transactionId}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label
+                    htmlFor="enroll-amount"
+                    className="text-xs font-semibold text-neutral-400"
+                  >
+                    Paid Amount (BDT)
+                  </label>
+                  <input
+                    id="enroll-amount"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={paidAmount}
+                    onChange={(event) => setPaidAmount(event.target.value)}
+                    placeholder={
+                      appliedCoupon ? String(appliedCoupon.finalFee) : String(payableFee)
+                    }
+                    className={`mt-1 w-full rounded-xl border bg-dark-900 px-3 py-2 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
+                      fieldErrors.paidAmount ? "border-red-500/60" : "border-ink/15"
+                    }`}
+                  />
+                  {fieldErrors.paidAmount && (
+                    <p className="mt-1 text-xs font-semibold text-red-400">
+                      {fieldErrors.paidAmount}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label
+                    htmlFor="enroll-mobile"
+                    className="text-xs font-semibold text-neutral-400"
+                  >
+                    Sender Mobile Number
+                  </label>
+                  <input
+                    id="enroll-mobile"
+                    type="tel"
+                    inputMode="numeric"
+                    value={senderMobile}
+                    onChange={(event) => setSenderMobile(event.target.value)}
+                    placeholder="01XXXXXXXXX"
+                    maxLength={11}
+                    className={`mt-1 w-full rounded-xl border bg-dark-900 px-3 py-2 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
+                      fieldErrors.senderMobile ? "border-red-500/60" : "border-ink/15"
+                    }`}
+                  />
+                  {fieldErrors.senderMobile && (
+                    <p className="mt-1 text-xs font-semibold text-red-400">
+                      {fieldErrors.senderMobile}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
-            <p className="mt-4 text-sm leading-relaxed text-neutral-400">
+            <p className="mt-3 text-xs leading-relaxed text-neutral-400">
               This is a paid course. Submit your payment details above — your
               enrollment will remain{" "}
               <span className="font-semibold text-yellow-400">
@@ -633,21 +640,23 @@ export default function EnrollModal({
               {error}
             </p>
           )}
-          <button
-            type="button"
-            onClick={handleEnroll}
-            disabled={submitting}
-            className={`${primaryButtonClass} mt-5`}
-          >
-            {submitting ? "Submitting Application..." : "Submit Enrollment Application"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className={`${secondaryButtonClass} mt-3`}
-          >
-            Cancel
-          </button>
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`${secondaryButtonClass} sm:flex-1`}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleEnroll}
+              disabled={submitting}
+              className={`${primaryButtonClass} sm:flex-[2]`}
+            >
+              {submitting ? "Submitting Application..." : "Submit Enrollment Application"}
+            </button>
+          </div>
         </div>
       );
     }
@@ -706,7 +715,13 @@ export default function EnrollModal({
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-md animate-fade-in rounded-2xl border border-ink/10 bg-dark-900 p-8 shadow-2xl shadow-black/50">
+      <div
+        className={`relative w-full animate-fade-in rounded-2xl border border-ink/10 bg-dark-900 shadow-2xl shadow-black/50 ${
+          isPaid
+            ? "max-w-lg p-5 sm:max-w-2xl sm:p-6"
+            : "max-w-md p-8"
+        }`}
+      >
         <button
           type="button"
           onClick={onClose}

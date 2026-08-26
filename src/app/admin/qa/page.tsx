@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
@@ -19,7 +20,6 @@ export default function AdminQaControlPage() {
   const [loadError, setLoadError] = useState(false);
   const [subjects, setSubjects] = useState<QaSubject[]>([]);
   const [questions, setQuestions] = useState<QaQuestion[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
 
   // Add subject form
   const [newSubjectName, setNewSubjectName] = useState("");
@@ -28,10 +28,6 @@ export default function AdminQaControlPage() {
   // Rename state
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-
-  // Answer drafts per question id
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
   async function headers(): Promise<Record<string, string>> {
     if (!user) throw new Error("Not signed in");
@@ -65,6 +61,7 @@ export default function AdminQaControlPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [authLoading, user, load]);
 
@@ -144,52 +141,6 @@ export default function AdminQaControlPage() {
       return;
     }
     toast.showToast("success", `Subject "${subject.name}" deleted.`);
-    if (selectedSubjectId === subject.id) setSelectedSubjectId(null);
-    void refresh();
-  }
-
-  async function saveAnswer(question: QaQuestion) {
-    const content = (drafts[question.id] ?? question.answer?.content ?? "").trim();
-    if (content.length < 2) {
-      toast.showToast("error", "Write an answer first.");
-      return;
-    }
-    setBusyIds((prev) => new Set(prev).add(question.id));
-    const result = await call("/api/admin/qa", {
-      method: "POST",
-      headers: await headers(),
-      body: JSON.stringify({ action: "answer", questionId: question.id, content }),
-    });
-    setBusyIds((prev) => {
-      const next = new Set(prev);
-      next.delete(question.id);
-      return next;
-    });
-    if (!result.ok) {
-      toast.showToast("error", result.error ?? "Failed to save the answer.");
-      return;
-    }
-    toast.showToast("success", "Answer saved — visible on the website now.");
-    void refresh();
-  }
-
-  async function deleteQuestion(question: QaQuestion) {
-    if (!window.confirm("Delete this question permanently?")) return;
-    setBusyIds((prev) => new Set(prev).add(question.id));
-    const result = await call(
-      `/api/admin/qa?question=${encodeURIComponent(question.id)}`,
-      { method: "DELETE", headers: await headers() },
-    );
-    setBusyIds((prev) => {
-      const next = new Set(prev);
-      next.delete(question.id);
-      return next;
-    });
-    if (!result.ok) {
-      toast.showToast("error", result.error ?? "Failed to delete the question.");
-      return;
-    }
-    toast.showToast("success", "Question deleted.");
     void refresh();
   }
 
@@ -198,22 +149,16 @@ export default function AdminQaControlPage() {
     [questions],
   );
 
-  const selectedQuestions = selectedSubjectId
-    ? questions.filter((q) => q.subjectId === selectedSubjectId)
-    : [];
-
   if (authLoading || loading) {
     return <AccessLoading label="Loading Q&A Control…" />;
   }
-
-  const selectedSubject = subjects.find((s) => s.id === selectedSubjectId);
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <HubHeader
         eyebrow="Admin · Q&A"
         title="Q&A Management"
-        description="+ Add Subject · answer or delete student questions. All changes are saved to MySQL and appear on the Main Website instantly."
+        description="Answer or delete student questions — each question shows its Category → Course → Subject context. Subjects come from Course Control; legacy subjects are kept below."
       />
 
       {/* Stats */}
@@ -293,19 +238,13 @@ export default function AdminQaControlPage() {
                     </button>
                   </span>
                 ) : (
-                  <span
-                    className={`group inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
-                      selectedSubjectId === subject.id
-                        ? "border-primary-500/60 bg-primary-600/15 text-primary-300"
-                        : "border-ink/10 bg-dark-950/60 text-neutral-300 hover:border-primary-500/40"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSubjectId(selectedSubjectId === subject.id ? null : subject.id)}
+                  <span className="group inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-dark-950/60 px-3 py-1.5 text-xs font-semibold text-neutral-300 transition hover:border-primary-500/40">
+                    <Link
+                      href={`/admin/qa/${encodeURIComponent(subject.id)}`}
+                      className="hover:text-primary-300"
                     >
                       {subject.name}
-                    </button>
+                    </Link>
                     <button
                       type="button"
                       aria-label={`Rename ${subject.name}`}
@@ -332,100 +271,6 @@ export default function AdminQaControlPage() {
           </ul>
         )}
       </div>
-
-      {/* Questions for selected subject */}
-      {selectedSubject && (
-        <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
-          <h2 className="text-lg font-bold text-heading">
-            Questions — {selectedSubject.name} ({selectedQuestions.length})
-          </h2>
-
-          {selectedQuestions.length === 0 ? (
-            <p className="mt-4 rounded-xl border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-neutral-500">
-              No questions in this subject yet.
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {selectedQuestions.map((question) => {
-                const busy = busyIds.has(question.id);
-                return (
-                  <li
-                    key={question.id}
-                    className="rounded-xl border border-ink/10 bg-dark-950/60 p-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="min-w-0 flex-1 text-sm font-semibold text-heading">
-                        {question.text}
-                      </p>
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                          question.status === "answered"
-                            ? "bg-emerald-500/15 text-emerald-300"
-                            : "bg-yellow-500/15 text-yellow-300"
-                        }`}
-                      >
-                        {question.status}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-[11px] text-neutral-500">
-                      {question.studentName} · {question.createdAt}
-                    </p>
-
-                    {question.answer && (
-                      <p className="mt-2 rounded-lg bg-ink/5 px-3 py-2 text-xs leading-relaxed text-neutral-300">
-                        <span className="font-bold text-primary-400">
-                          {question.answer.teacherName}:
-                        </span>{" "}
-                        {question.answer.content}
-                      </p>
-                    )}
-
-                    <textarea
-                      rows={2}
-                      value={drafts[question.id] ?? question.answer?.content ?? ""}
-                      onChange={(event) =>
-                        setDrafts((prev) => ({
-                          ...prev,
-                          [question.id]: event.target.value,
-                        }))
-                      }
-                      placeholder={
-                        question.status === "answered"
-                          ? "Edit the answer…"
-                          : "Write a teacher answer…"
-                      }
-                      className="mt-3 w-full resize-none rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
-                    />
-
-                    <div className="mt-2 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void deleteQuestion(question)}
-                        disabled={busy}
-                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 transition hover:bg-red-500/20 disabled:opacity-50"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void saveAnswer(question)}
-                        disabled={busy}
-                        className="rounded-lg bg-primary-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-primary-700 disabled:opacity-50"
-                      >
-                        {busy
-                          ? "Saving…"
-                          : question.status === "answered"
-                            ? "Update Answer"
-                            : "Submit Answer"}
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      )}
     </section>
   );
 }

@@ -33,7 +33,14 @@ export type Exam = {
   courseIds?: string[];
   chapterId?: string | null;
   sortOrder?: number | null;
+  /** Public Exam Control category (Course Control id). */
+  categoryId?: string | null;
+  /** Featured public exams auto-appear in the homepage slider. */
+  featured?: boolean;
 };
+
+/** When set, the manager is scoped to one Course Control category. */
+export type FixedCategory = { id: string; name: string };
 
 const EMPTY = {
   id: "",
@@ -59,6 +66,7 @@ export default function ExamManager({
   description,
   kindFilter,
   allowEnrolled = false,
+  fixedCategory,
 }: {
   title: string;
   description: string;
@@ -66,6 +74,8 @@ export default function ExamManager({
   kindFilter?: "public" | "practice" | "enrolled" | ("public" | "practice" | "enrolled")[];
   /** Show the "Enrolled" kind + course assignment picker. */
   allowEnrolled?: boolean;
+  /** Public Exam Control mode — only this category's public exams. */
+  fixedCategory?: FixedCategory;
 }) {
   const gate = useAdminGate();
   const [exams, setExams] = useState<Exam[] | null>(null);
@@ -82,15 +92,23 @@ export default function ExamManager({
 
   const load = useCallback(async () => {
     try {
-      const kinds = Array.isArray(kindFilter) ? kindFilter : kindFilter ? [kindFilter] : [];
-      const query = kinds.length > 0 ? `?kind=${kinds.join(",")}` : "";
-      const response = await fetch(`/api/admin/exams${query}`, { cache: "no-store" });
+      const params = new URLSearchParams();
+      if (fixedCategory) {
+        // Database/API-level isolation — only this category's public exams.
+        params.set("kind", "public");
+        params.set("categoryId", fixedCategory.id);
+      } else {
+        const kinds = Array.isArray(kindFilter) ? kindFilter : kindFilter ? [kindFilter] : [];
+        if (kinds.length > 0) params.set("kind", kinds.join(","));
+      }
+      const query = params.toString();
+      const response = await fetch(`/api/admin/exams${query ? `?${query}` : ""}`, { cache: "no-store" });
       const data = (await response.json()) as { exams?: Exam[] };
       setExams(data.exams ?? []);
     } catch {
       setExams([]);
     }
-  }, [kindFilter]);
+  }, [kindFilter, fixedCategory]);
 
   useEffect(() => {
     if (gate.ready) void Promise.resolve().then(load);
@@ -162,6 +180,12 @@ export default function ExamManager({
     setBusy(true);
     setNotice(null);
     try {
+      // Keep the exam's category stable: fixed inside a category page,
+      // otherwise preserve whatever the flat list had.
+      const existing = exams?.find((item) => item.id === editingId);
+      const categoryId = fixedCategory
+        ? fixedCategory.id
+        : existing?.categoryId ?? "";
       const response = await fetch("/api/admin/exams", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...gate.headers },
@@ -169,6 +193,7 @@ export default function ExamManager({
           ...form,
           ...(editingSortOrder !== null ? { sortOrder: editingSortOrder } : {}),
           courseIds: form.kind === "enrolled" ? courseIds : [],
+          categoryId,
           durationMinutes: Number(form.durationMinutes) || 30,
           negativeMarks: Number(form.negativeMarks) || 0,
           totalMarks: form.totalMarks ? Number(form.totalMarks) : undefined,
@@ -220,8 +245,36 @@ export default function ExamManager({
     }
   }
 
-  async function remove(id: string, name: string) {
-    if (!window.confirm(`Delete “${name}” with its questions, enrollments and results?`)) return;
+  // Featured ON/OFF — the homepage slider picks up published featured
+  // public exams automatically from the same exam data (single source of
+  // truth). Saves through the normal exam upsert with the full payload.
+  async function toggleFeatured(exam: Exam) {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/exams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({ ...exam, featured: !exam.featured }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setNotice({ kind: "error", text: data?.error ?? "Failed to update." });
+        return;
+      }
+      await load();
+      setNotice({
+        kind: "success",
+        text: !exam.featured
+          ? `“${exam.title}” marked Featured — it will appear in the homepage slider once published.`
+          : `“${exam.title}” removed from the homepage slider.`,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id: string, name: string) {    if (!window.confirm(`Delete “${name}” with its questions, enrollments and results?`)) return;
     setBusy(true);
     try {
       const response = await fetch("/api/admin/exams", {
@@ -298,6 +351,14 @@ export default function ExamManager({
                     >
                       {exam.status}
                     </span>
+                    {exam.featured && (
+                      <span
+                        title="Featured in the homepage slider"
+                        className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-600"
+                      >
+                        ★ Featured
+                      </span>
+                    )}
                   </div>
                   <p className="mt-2 text-xs font-semibold text-zinc-500">
                     {exam.kind} · {exam.subject || "general"}
@@ -338,6 +399,17 @@ export default function ExamManager({
                   <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonSecondaryClass}>
                     Questions ({exam.questionCount})
                   </button>
+                  {exam.kind === "public" && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void toggleFeatured(exam)}
+                      className={exam.featured ? buttonPrimaryClass : buttonSecondaryClass}
+                      title="Toggle homepage slider appearance"
+                    >
+                      {exam.featured ? "★ Featured" : "☆ Feature"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={busy}
@@ -354,6 +426,15 @@ export default function ExamManager({
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Public Exam Control: [+ Add Exam] sits at the end of the list. */}
+      {fixedCategory && (
+        <div className="mt-5">
+          <button type="button" onClick={startCreate} className={`${buttonPrimaryClass} w-full py-3`}>
+            + Add Exam
+          </button>
+        </div>
       )}
 
       {showForm && (
@@ -381,12 +462,21 @@ export default function ExamManager({
               </div>
               <div>
                 <label className={labelClass} htmlFor="ex-kind">Kind</label>
-                <select id="ex-kind" className={inputClass} value={form.kind}
-                  onChange={(event) => setForm({ ...form, kind: event.target.value as Exam["kind"] })}>
-                  <option value="public">Public</option>
-                  <option value="practice">Practice</option>
-                  {allowEnrolled && <option value="enrolled">Enrolled (course students)</option>}
-                </select>
+                {fixedCategory ? (
+                  <>
+                    <input id="ex-kind" className={inputClass} value="Public" disabled />
+                    <p className="mt-1 text-[11px] text-zinc-500">
+                      Category: <span className="font-bold">{fixedCategory.name}</span> (from Course Control — fixed)
+                    </p>
+                  </>
+                ) : (
+                  <select id="ex-kind" className={inputClass} value={form.kind}
+                    onChange={(event) => setForm({ ...form, kind: event.target.value as Exam["kind"] })}>
+                    <option value="public">Public</option>
+                    <option value="practice">Practice</option>
+                    {allowEnrolled && <option value="enrolled">Enrolled (course students)</option>}
+                  </select>
+                )}
               </div>
               {allowEnrolled && form.kind === "enrolled" && (
                 <div className="sm:col-span-2">
