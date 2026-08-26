@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getAuth, onIdTokenChanged } from "firebase/auth";
 import { useAuth } from "@/lib/auth-context";
 
@@ -68,11 +68,16 @@ export function useAdminGate(): AdminGate {
     (!authLoading && !user) || (authLoading === false && isAdmin === false);
   const ready = !authLoading && isAdmin === true;
 
+  const headers = useMemo<Record<string, string>>(
+    () => (token ? { Authorization: `Bearer ${token}` } : ({} as Record<string, string>)),
+    [token],
+  );
+
   return {
     ready,
     denied,
     token,
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers,
     role,
     permissions,
   };
