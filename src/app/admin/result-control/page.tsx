@@ -113,7 +113,7 @@ export default function ResultControlPage() {
           All submitted public exam results with scores and answer sheets.
         </p>
         <Link
-          href="/admin/exams/results"
+          href="/admin/result-control/public-exam"
           className="mt-4 inline-block rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700"
         >
           Open Public Exam Results
