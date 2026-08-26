@@ -26,11 +26,13 @@ export function getMysqlPool(): mysql.Pool | null {
       database: mysqlDatabase,
       user: mysqlUser,
       password: mysqlPassword,
-      // Vercel lambdas each own a pool; keep the per-instance footprint small
-      // so total connections stay well under the server's max_connections.
+      // Azure Flexible Server caps total connections (B1ms ~171). Every
+      // warm Vercel instance holds its own pool, so keep per-instance usage
+      // small and release idle connections quickly or bursts exhaust the
+      // server ("Too many connections" breaks saves mid-request).
       connectionLimit: 3,
       maxIdle: 1,
-      idleTimeout: 60000,
+      idleTimeout: 10_000,
       connectTimeout: 10000,
       waitForConnections: true,
       enableKeepAlive: true,

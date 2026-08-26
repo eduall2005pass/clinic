@@ -220,6 +220,9 @@ export default function CategoryCourseManager({
         course?: CategoryCourse;
       } | null;
       if (!response.ok) {
+        // The row may still have been persisted (post-save step failed) —
+        // refresh so the list reflects reality either way.
+        await load();
         setNotice({ kind: "error", text: data?.error ?? "Failed to save." });
         return;
       }
@@ -674,7 +677,13 @@ export default function CategoryCourseManager({
         </div>
       )}
 
-      {notice && <p role="status" className={noticeClass(notice)}>{notice.text}</p>}
+      {notice && (
+        <div className="fixed inset-x-4 bottom-4 z-[60] sm:left-auto sm:right-6 sm:max-w-sm">
+          <p role="status" className={noticeClass(notice)}>
+            {notice.text}
+          </p>
+        </div>
+      )}
     </section>
   );
 }

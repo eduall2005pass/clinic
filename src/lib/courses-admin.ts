@@ -401,7 +401,7 @@ export async function saveCatalogCourse(
   }
   if (name.length < 2) throw new Error("Course name is required.");
 
-  const category = normalizeCatalogCategory(input.category);
+  let category = normalizeCatalogCategory(input.category);
 
   // Link the course to its Course Control category. Prefer an explicit
   // categoryId from the payload; otherwise resolve it from the category name.
@@ -413,6 +413,34 @@ export async function saveCatalogCourse(
       `SELECT id, name, slug FROM course_categories`,
     );
     categoryId = await resolveCategoryId(category, categories);
+  }
+
+  // Keep the legacy ENUM column consistent with the Course Control category —
+  // syncCatalogCategoryIds() re-links category_id FROM this column on every
+  // category-filtered read, so a mismatch silently moves the course out of
+  // its category right after save (the form has no category field at all).
+  if (categoryId) {
+    try {
+      const catRows = await query<Array<{ name: string; slug: string }>>(
+        "SELECT name, slug FROM course_categories WHERE id = ? LIMIT 1",
+        [categoryId],
+      );
+      const cat = catRows[0];
+      if (cat) {
+        const token = normalizeCategoryToken(cat.name);
+        const slugToken = normalizeCategoryToken(cat.slug);
+        const match = CATALOG_COURSE_CATEGORIES.find(
+          (value) =>
+            normalizeCategoryToken(value) === token ||
+            normalizeCategoryToken(value).startsWith(token) ||
+            (slugToken.length > 0 &&
+              normalizeCategoryToken(value).startsWith(slugToken)),
+        );
+        if (match) category = match;
+      }
+    } catch {
+      // Keep the payload/default-derived ENUM on lookup failure.
+    }
   }
 
   const batchId = asString(input.batchId, "hsc-28") || "hsc-28";
@@ -469,15 +497,50 @@ export async function saveCatalogCourse(
     ],
   );
 
-  const saved = await fetchCatalogCourse(slug);
-  if (!saved) throw new Error("Failed to save the course.");
-
-  // Mentors association (optional payload field: mentorIds: string[]).
+  // Mentor association is best-effort — a transient failure here must not
+  // fail the whole save when the course row itself is already persisted.
   if (Array.isArray(input.mentorIds)) {
-    await setCourseMentors(
+    try {
+      await setCourseMentors(
+        slug,
+        input.mentorIds.map((id: unknown) => String(id)),
+      );
+    } catch {
+      // Non-fatal — admin can re-save to retry the assignment.
+    }
+  }
+
+  const saved = await fetchCatalogCourse(slug);
+  if (!saved) {
+    // The row IS in the database (INSERT succeeded) but the re-read failed
+    // under transient DB pressure. Return the submitted payload instead of
+    // reporting an error — otherwise admins see "Saving…" stuck forever
+    // while the course actually exists (and a duplicate add would collide).
+    return {
       slug,
-      input.mentorIds.map((id: unknown) => String(id)),
-    );
+      name,
+      category,
+      categoryId,
+      batchId,
+      image: asString(input.image) || null,
+      shortDescription: asString(input.shortDescription) || null,
+      description: asString(input.description) || null,
+      teacherName: asString(input.teacherName),
+      teacherPhoto: asString(input.teacherPhoto) || null,
+      designation: asString(input.designation),
+      duration: asString(input.duration),
+      fee,
+      discountFee,
+      features: asStringArray(input.features),
+      overviewTitle: asString(input.overviewTitle),
+      overview: asStringArray(input.overview),
+      status: input.status === "published" ? "published" : "unpublished",
+      availability: input.availability === "hidden" ? "hidden" : "available",
+      couponEnabled: Boolean(input.couponEnabled),
+      featured: Boolean(input.featured),
+      contentLayout: normalizeContentLayout(input.contentLayout),
+      mentorIds: [],
+    };
   }
   saved.mentorIds = await fetchCourseMentorIds(slug);
   return saved;
