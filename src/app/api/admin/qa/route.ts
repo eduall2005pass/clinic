@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/admin";
 import { isMysqlConfigured } from "@/lib/mysql";
 import {
+  fetchQaBrowseSubjects,
   fetchQaSubjects,
   fetchQaQuestions,
   saveQaSubject,
@@ -26,10 +27,19 @@ export async function GET(request: NextRequest) {
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  const [subjects, questions] = await Promise.all([
+  const [legacySubjects, courseSubjects, questions] = await Promise.all([
     fetchQaSubjects(false),
+    fetchQaBrowseSubjects(),
     fetchQaQuestions({}),
   ]);
+  // Merge legacy Q&A subjects with the Course Control subjects so every
+  // question (old and new course-context ones) is reachable from the UI.
+  const seen = new Set<string>();
+  const subjects = [...legacySubjects, ...courseSubjects].filter((subject) => {
+    if (seen.has(subject.id)) return false;
+    seen.add(subject.id);
+    return true;
+  });
   return NextResponse.json(
     { subjects, questions },
     { headers: { "Cache-Control": "no-store" } },

@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { QaQuestion, QaSubject } from "@/lib/qa";
+import type { QaAskOptions, QaQuestion, QaSubject } from "@/lib/qa";
 import QaSubjectPicker from "@/components/QaSubjectPicker";
 import type { SubjectStats } from "@/components/QaSubjectPicker";
 import QaQuestionItem from "@/components/QaQuestionItem";
-import QaAskForm from "@/components/QaAskForm";
+import QaAskForm, { type QaAskPayload } from "@/components/QaAskForm";
 import QaGuideline from "@/components/QaGuideline";
 import { useAuth } from "@/lib/auth-context";
 
@@ -23,6 +23,8 @@ export default function QaExplorer({
     null
   );
   const [askOpen, setAskOpen] = useState(false);
+  const [askOptions, setAskOptions] = useState<QaAskOptions | null>(null);
+  const [askOptionsError, setAskOptionsError] = useState<string | null>(null);
 
   const subjectStats = useMemo(
     () =>
@@ -58,14 +60,31 @@ export default function QaExplorer({
       )
     : [];
 
+  // Load the ask-form dropdown data (categories / enrolled courses /
+  // subjects) fresh every time the form opens.
+  const openAsk = async () => {
+    setAskOpen(true);
+    setAskOptions(null);
+    setAskOptionsError(null);
+    if (!user) return;
+    try {
+      const res = await fetch("/api/qa/ask-options", {
+        headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      setAskOptions((await res.json()) as QaAskOptions);
+    } catch {
+      setAskOptionsError(
+        "Could not load your course context — please try again."
+      );
+    }
+  };
+
   // Persist the question to MySQL via /api/qa, then refresh server data.
-  const handleAskSubmit = async ({
-    subjectId,
-    text,
-  }: {
-    subjectId: string;
-    text: string;
-  }): Promise<{ ok: boolean; error?: string }> => {
+  const handleAskSubmit = async (
+    payload: QaAskPayload
+  ): Promise<{ ok: boolean; error?: string }> => {
     if (!user) {
       return { ok: false, error: "Sign in to ask a question." };
     }
@@ -76,10 +95,7 @@ export default function QaExplorer({
           "Content-Type": "application/json",
           Authorization: `Bearer ${await user.getIdToken()}`,
         },
-        body: JSON.stringify({
-          subjectId,
-          text,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = (await res.json().catch(() => null)) as {
         error?: string;
@@ -94,6 +110,26 @@ export default function QaExplorer({
         ok: false,
         error: "Network error — could not submit your question.",
       };
+    }
+  };
+
+  // Upload the optional picture before the question itself is submitted.
+  const handleUploadImage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/qa/image", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+        body: formData,
+      });
+      const data = (await res.json().catch(() => null)) as {
+        url?: string;
+      } | null;
+      return res.ok && data?.url ? data.url : null;
+    } catch {
+      return null;
     }
   };
 
@@ -127,7 +163,7 @@ export default function QaExplorer({
 
         <button
           type="button"
-          onClick={() => setAskOpen(true)}
+          onClick={() => void openAsk()}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
         >
           <svg
@@ -145,14 +181,24 @@ export default function QaExplorer({
 
       {askOpen && (
         <div className="mb-10">
-          <QaAskForm
-            subjects={subjects.filter(
-              (subject) => subject.id !== "guideline"
-            )}
-            initialSubjectId={selectedSubjectId ?? undefined}
-            onSubmit={handleAskSubmit}
-            onClose={closeAsk}
-          />
+          {askOptionsError ? (
+            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm font-semibold text-red-400">
+              {askOptionsError}
+            </div>
+          ) : askOptions ? (
+            <QaAskForm
+              options={askOptions}
+              initialSubjectId={selectedSubjectId ?? undefined}
+              onSubmit={handleAskSubmit}
+              onUploadImage={handleUploadImage}
+              onClose={closeAsk}
+            />
+          ) : (
+            <div className="flex items-center justify-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-8 text-sm text-neutral-400">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+              Loading your courses…
+            </div>
+          )}
         </div>
       )}
 

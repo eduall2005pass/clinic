@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import QaPageClient from "@/components/auth/QaPageClient";
-import { fetchQaSubjects, fetchQaQuestions } from "@/lib/qa-store";
+import { fetchQaBrowseSubjects, fetchQaQuestions } from "@/lib/qa-store";
 
 export const metadata: Metadata = {
   title: "Q&A",
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function QaPage() {
   const [dbSubjects, questions] = await Promise.all([
-    fetchQaSubjects(true),
+    fetchQaBrowseSubjects(),
     fetchQaQuestions({}),
   ]);
   // Guideline is a built-in static card, not DB-managed.

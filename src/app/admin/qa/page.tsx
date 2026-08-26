@@ -213,7 +213,7 @@ export default function AdminQaControlPage() {
       <HubHeader
         eyebrow="Admin · Q&A"
         title="Q&A Management"
-        description="+ Add Subject · answer or delete student questions. All changes are saved to MySQL and appear on the Main Website instantly."
+        description="Answer or delete student questions — each question shows its Category → Course → Subject context. Subjects come from Course Control; legacy subjects are kept below."
       />
 
       {/* Stats */}
@@ -370,6 +370,24 @@ export default function AdminQaControlPage() {
                     <p className="mt-1 text-[11px] text-neutral-500">
                       {question.studentName} · {question.createdAt}
                     </p>
+                    {(question.categoryName ||
+                      question.courseName ||
+                      question.subjectName) && (
+                      <p className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-primary-300/80">
+                        {[
+                          question.categoryName ?? question.categoryId,
+                          question.courseName ?? question.courseId,
+                          question.subjectName ?? question.subjectId,
+                        ]
+                          .filter((part) => Boolean(part))
+                          .map((part, index) => (
+                            <span key={`${part}-${index}`} className="flex items-center gap-1">
+                              {index > 0 && <span className="text-neutral-600">→</span>}
+                              <span>{part}</span>
+                            </span>
+                          ))}
+                      </p>
+                    )}
 
                     {question.answer && (
                       <p className="mt-2 rounded-lg bg-ink/5 px-3 py-2 text-xs leading-relaxed text-neutral-300">
