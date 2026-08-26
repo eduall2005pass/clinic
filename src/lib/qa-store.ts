@@ -249,16 +249,27 @@ function mapQuestion(row: QuestionRow): QaQuestion {
 
 export async function fetchQaQuestions(options: {
   subjectId?: string;
+  /** Backend-enforced tab filter on the existing `status` column. */
+  status?: "unanswered" | "answered";
 } = {}): Promise<QaQuestion[]> {
   if (!isMysqlConfigured) return [];
   try {
     await ensureTables();
     const params: unknown[] = [];
-    let where = "";
+    const clauses: string[] = [];
     if (options.subjectId && options.subjectId.trim().length > 0) {
-      where = "WHERE q.subject_id = ?";
+      clauses.push("q.subject_id = ?");
       params.push(options.subjectId.trim());
     }
+    if (
+      options.status === "unanswered" ||
+      options.status === "answered"
+    ) {
+      clauses.push("q.status = ?");
+      params.push(options.status);
+    }
+    const where =
+      clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
     const rows = await query<QuestionRow[]>(
       `SELECT q.question_id, q.subject_id, q.category_id, q.course_id,
               q.image_url, q.student_uid, q.student_name, q.text,

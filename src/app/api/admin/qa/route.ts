@@ -21,12 +21,44 @@ function slugify(value: string): string {
     .slice(0, 60);
 }
 
-/** GET → all subjects (incl. inactive) + every question. */
+/** GET → all subjects (incl. inactive) + every question. When ?subject= is
+ *  given, returns only that subject (merged legacy + Course Control list)
+ *  and its questions, optionally filtered server-side by ?status=. */
 export async function GET(request: NextRequest) {
   const admin = await requirePermission(request, "manageContent");
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  const subjectId = request.nextUrl.searchParams.get("subject")?.trim() ?? "";
+  const statusRaw = request.nextUrl.searchParams.get("status")?.trim() ?? "";
+  const status =
+    statusRaw === "unanswered" || statusRaw === "answered"
+      ? statusRaw
+      : undefined;
+
+  if (subjectId) {
+    const [legacySubjects, courseSubjects] = await Promise.all([
+      fetchQaSubjects(false),
+      fetchQaBrowseSubjects(),
+    ]);
+    const seen = new Set<string>();
+    const subjects = [...legacySubjects, ...courseSubjects].filter((subject) => {
+      if (seen.has(subject.id)) return false;
+      seen.add(subject.id);
+      return true;
+    });
+    const subject = subjects.find((s) => s.id === subjectId);
+    if (!subject) {
+      return NextResponse.json({ error: "Unknown subject." }, { status: 404 });
+    }
+    // Backend-enforced isolation: WHERE subject_id = ? [AND status = ?]
+    const questions = await fetchQaQuestions({ subjectId, status });
+    return NextResponse.json(
+      { subject, questions },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   const [legacySubjects, courseSubjects, questions] = await Promise.all([
     fetchQaSubjects(false),
     fetchQaBrowseSubjects(),
