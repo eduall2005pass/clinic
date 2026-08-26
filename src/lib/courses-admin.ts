@@ -264,6 +264,42 @@ export async function syncCatalogCategoryIds(): Promise<void> {
   }
 }
 
+/**
+ * THE single reusable "Get Courses By Category" logic. Every Admin Panel
+ * section that needs Category → Courses goes through this (directly or via
+ * GET /api/admin/courses?categoryId=). Validates that the category exists,
+ * re-syncs the course↔category linkage first, then returns ONLY the matching
+ * courses from catalog_courses.
+ */
+export async function getCoursesByCategory(
+  rawCategoryId: string,
+): Promise<
+  | { ok: true; courses: CatalogCourse[] }
+  | { ok: false; reason: "invalid-category" | "db-error" }
+> {
+  const categoryId = rawCategoryId.trim();
+  if (!categoryId) return { ok: false, reason: "invalid-category" };
+  try {
+    // Keep Course Control changes (add/rename/move) reflected immediately.
+    await syncCatalogCategoryIds();
+    const cats = await query<Array<{ id: string }>>(
+      `SELECT id FROM course_categories WHERE id = ? LIMIT 1`,
+      [categoryId],
+    );
+    if (cats.length === 0) return { ok: false, reason: "invalid-category" };
+    const rows = await query<CatalogCourseRow[]>(
+      `SELECT c.* FROM catalog_courses c
+        LEFT JOIN course_categories cc ON cc.id = c.category_id
+       WHERE COALESCE(c.category_id, cc.id) = ?
+       ORDER BY c.sort_order ASC, c.name ASC`,
+      [categoryId],
+    );
+    return { ok: true, courses: rows.map(rowToCourse) };
+  } catch {
+    return { ok: false, reason: "db-error" };
+  }
+}
+
 export async function fetchCatalogCourses(): Promise<CatalogCourse[]> {
   try {
     await ensureTables();

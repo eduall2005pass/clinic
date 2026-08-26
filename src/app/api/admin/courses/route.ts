@@ -6,6 +6,7 @@ import {
   fetchCatalogCourses,
   fetchCatalogCourse,
   rowToCourse,
+  getCoursesByCategory,
   saveCatalogCourse,
   deleteCatalogCourse,
   setCatalogCourseFlags,
@@ -15,6 +16,11 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  // Admin catalog reads are permission-gated (includes unpublished courses).
+  const admin = await requirePermission(request, "manageCourses");
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
   const slug = request.nextUrl.searchParams.get("slug");
   if (slug) {
     const course = await fetchCatalogCourse(slug);
@@ -26,27 +32,37 @@ export async function GET(request: NextRequest) {
       { headers: { "Cache-Control": "no-store" } },
     );
   }
-  // Backend-enforced category isolation: ?category=<name> (legacy ENUM) or
-  // ?categoryId=<course_categories.id>. Never returns other categories' rows.
+  // Backend-enforced category isolation via the ONE shared logic:
+  // ?category=<ENUM name> (legacy) or ?categoryId=<course_categories.id>.
   const categoryName = request.nextUrl.searchParams.get("category");
   const categoryId = request.nextUrl.searchParams.get("categoryId");
-  if ((categoryName && categoryName.trim()) || (categoryId && categoryId.trim())) {
+  if (categoryId && categoryId.trim()) {
+    const result = await getCoursesByCategory(categoryId);
+    if (!result.ok) {
+      return NextResponse.json(
+        {
+          error:
+            result.reason === "invalid-category"
+              ? "Invalid category."
+              : "Could not load courses.",
+        },
+        { status: result.reason === "invalid-category" ? 404 : 500 },
+      );
+    }
+    return NextResponse.json(
+      { courses: result.courses },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  if (categoryName && categoryName.trim()) {
     try {
-      // Make sure the table/columns exist and every course is linked to its
-      // Course Control category before filtering (keeps reads in sync with
-      // any add/rename/move made in Course Control).
       await syncCatalogCategoryIds();
       const rows = await query(
         `SELECT c.* FROM catalog_courses c
            LEFT JOIN course_categories cc ON cc.id = c.category_id
-          WHERE COALESCE(c.category_id, cc.id) = ?
-             OR (? <> '' AND c.category = ?)
+          WHERE c.category = ?
           ORDER BY c.sort_order ASC, c.name ASC`,
-        [
-          (categoryId ?? "").trim(),
-          (categoryName ?? "").trim(),
-          (categoryName ?? "").trim(),
-        ],
+        [categoryName.trim()],
       );
       return NextResponse.json(
         { courses: (rows as never[]).map((r) => rowToCourse(r as never)) },

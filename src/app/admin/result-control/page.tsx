@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
+import {
+  fetchCategoryOptions,
+  fetchCoursesByCategory,
+  type CatalogCourseLite,
+} from "@/lib/category-courses-client";
 
 type Category = { id: string; name: string };
-type Course = { slug: string; name: string; category?: string };
 type ExamSheet = {
   examId: string;
   title: string;
@@ -23,50 +27,50 @@ type ExamSheet = {
 export default function ResultControlPage() {
   const { user, authLoading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<CatalogCourseLite[]>([]);
   const [categoryId, setCategoryId] = useState("");
   const [courseSlug, setCourseSlug] = useState("");
   const [sheets, setSheets] = useState<ExamSheet[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [coursesState, setCoursesState] = useState<
+    "idle" | "loading" | "error" | "ready"
+  >("idle");
 
+  // Categories come from Course Control (single source of truth).
   useEffect(() => {
     if (authLoading || !user) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const [catRes, courseRes] = await Promise.all([
-          fetch("/api/course-categories", { cache: "no-store" }),
-          fetch("/api/admin/courses", { cache: "no-store" }),
-        ]);
-        if (cancelled) return;
-        if (catRes.ok) {
-          const data = (await catRes.json()) as { categories?: Category[] };
-          setCategories(Array.isArray(data.categories) ? data.categories : []);
-        }
-        if (courseRes.ok) {
-          const data = (await courseRes.json()) as { courses?: Course[] };
-          setCourses(Array.isArray(data.courses) ? data.courses : []);
-        }
-      } catch {
-        // lists stay empty
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void fetchCategoryOptions().then(setCategories);
   }, [authLoading, user]);
 
-  const filteredCourses = useMemo(() => {
-    if (!categoryId) return courses;
-    const cat = categories.find((c) => c.id === categoryId);
-    return courses.filter(
-      (course) =>
-        !cat ||
-        course.category === cat.name ||
-        (course.category ?? "").toLowerCase().replace(/\s+/g, "-") ===
-          cat.id.toLowerCase(),
-    );
-  }, [courses, categoryId, categories]);
+  // Backend-filtered: only the selected category's courses are returned.
+  const loadCourses = useCallback(
+    async (selectedId: string) => {
+      if (!user || !selectedId) {
+        setCourses([]);
+        setCoursesState("idle");
+        return;
+      }
+      setCoursesState("loading");
+      const result = await fetchCoursesByCategory(await user.getIdToken(), selectedId);
+      if (result.status === "ok") {
+        setCourses(result.courses);
+        setCoursesState("ready");
+      } else if (result.status === "invalid-category") {
+        setCourses([]);
+        setCoursesState("ready");
+      } else {
+        setCoursesState("error");
+      }
+    },
+    [user],
+  );
+
+  function selectCategory(nextId: string) {
+    setCategoryId(nextId);
+    setCourseSlug("");
+    setSheets(null);
+    void loadCourses(nextId);
+  }
 
   const loadSheet = useCallback(async () => {
     if (!courseSlug || !user) return;
@@ -89,6 +93,7 @@ export default function ResultControlPage() {
   }, [courseSlug, user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSheets(null);
     if (courseSlug) {
       void loadSheet();
@@ -134,13 +139,10 @@ export default function ResultControlPage() {
             </span>
             <select
               value={categoryId}
-              onChange={(event) => {
-                setCategoryId(event.target.value);
-                setCourseSlug("");
-              }}
+              onChange={(event) => selectCategory(event.target.value)}
               className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
             >
-              <option value="">All categories</option>
+              <option value="">Select a category…</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -152,18 +154,41 @@ export default function ResultControlPage() {
             <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
               2 · Course
             </span>
-            <select
-              value={courseSlug}
-              onChange={(event) => setCourseSlug(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
-            >
-              <option value="">Select a course…</option>
-              {filteredCourses.map((course) => (
-                <option key={course.slug} value={course.slug}>
-                  {course.name}
+            {coursesState === "loading" ? (
+              <p className="mt-1 text-sm text-neutral-400">Loading courses…</p>
+            ) : coursesState === "error" ? (
+              <div className="mt-1 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5">
+                <p className="text-sm text-red-400">Could not load courses.</p>
+                <button
+                  type="button"
+                  onClick={() => void loadCourses(categoryId)}
+                  className="mt-2 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-700"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : (
+              <select
+                value={courseSlug}
+                onChange={(event) => setCourseSlug(event.target.value)}
+                disabled={!categoryId || courses.length === 0}
+                className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60 disabled:opacity-50"
+              >
+                <option value="">
+                  {categoryId ? "Select a course…" : "Select a category first…"}
                 </option>
-              ))}
-            </select>
+                {courses.map((course) => (
+                  <option key={course.slug} value={course.slug}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {categoryId && coursesState === "ready" && courses.length === 0 && (
+              <p className="mt-2 text-xs text-neutral-500">
+                No courses found in this category.
+              </p>
+            )}
           </label>
         </div>
 

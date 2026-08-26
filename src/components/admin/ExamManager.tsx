@@ -93,6 +93,9 @@ export default function ExamManager({
 }) {
   const gate = useAdminGate();
   const [exams, setExams] = useState<Exam[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<FixedCategory[]>([]);
+  const [formCategoryId, setFormCategoryId] = useState("");
   const [form, setForm] = useState(EMPTY);
   const [courseIds, setCourseIds] = useState<string[]>([]);
   const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
@@ -105,6 +108,7 @@ export default function ExamManager({
   const [questionsExam, setQuestionsExam] = useState<Exam | null>(null);
 
   const load = useCallback(async () => {
+    setLoadError(false);
     try {
       const params = new URLSearchParams();
       if (fixedCategory) {
@@ -116,17 +120,38 @@ export default function ExamManager({
         if (kinds.length > 0) params.set("kind", kinds.join(","));
       }
       const query = params.toString();
-      const response = await fetch(`/api/admin/exams${query ? `?${query}` : ""}`, { cache: "no-store" });
+      const response = await fetch(`/api/admin/exams${query ? `?${query}` : ""}`, {
+        cache: "no-store",
+        headers: gate.headers,
+      });
+      if (!response.ok) throw new Error("failed");
       const data = (await response.json()) as { exams?: Exam[] };
       setExams(data.exams ?? []);
     } catch {
+      setLoadError(true);
       setExams([]);
     }
-  }, [kindFilter, fixedCategory]);
+  }, [kindFilter, fixedCategory, gate.headers]);
 
   useEffect(() => {
     if (gate.ready) void Promise.resolve().then(load);
   }, [gate.ready, load]);
+
+  // Course Control categories — required for public exams created outside a
+  // category page so they never end up invisible in Public Exam Control.
+  useEffect(() => {
+    if (!gate.ready) return;
+    let cancelled = false;
+    fetch("/api/course-categories", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : { categories: [] }))
+      .then((data: { categories?: FixedCategory[] }) => {
+        if (!cancelled) setCategoryOptions(data.categories ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [gate.ready]);
 
   // Course options for the enrolled-exam assignment picker.
   useEffect(() => {
@@ -135,7 +160,7 @@ export default function ExamManager({
       .then((response) => response.json())
       .then((data: { courses?: CourseOption[] }) => setCourseOptions(data.courses ?? []))
       .catch(() => setCourseOptions([]));
-  }, [gate.ready, allowEnrolled]);
+  }, [gate.ready, allowEnrolled]); // eslint-disable-line react-hooks/exhaustive-deps -- gate.headers is stable
 
   // Chapter options — exams attach to a chapter for the course-content Exam card.
   useEffect(() => {
@@ -157,6 +182,7 @@ export default function ExamManager({
   function startCreate() {
     setForm(EMPTY);
     setCourseIds([]);
+    setFormCategoryId("");
     setEditingId(null);
     setEditingSortOrder(null);
     setShowForm(true);
@@ -185,6 +211,7 @@ export default function ExamManager({
       endsAt: exam.endsAt ? exam.endsAt.slice(0, 16) : "",
     });
     setCourseIds(exam.courseIds ?? []);
+    setFormCategoryId(exam.categoryId ?? "");
     setEditingSortOrder(exam.sortOrder ?? null);
     setEditingId(exam.id);
     setShowForm(true);
@@ -196,15 +223,22 @@ export default function ExamManager({
       setNotice({ kind: "error", text: "Assign at least one course to an enrolled exam." });
       return;
     }
+    // Keep the exam's category stable: fixed inside a category page.
+    // In flat lists a public exam MUST have a Course Control category —
+    // otherwise it would be invisible in Public Exam Control forever.
+    const existing = exams?.find((item) => item.id === editingId);
+    const categoryId = fixedCategory
+      ? fixedCategory.id
+      : form.kind === "public"
+        ? formCategoryId || existing?.categoryId || ""
+        : existing?.categoryId ?? "";
+    if (form.kind === "public" && !fixedCategory && !categoryId) {
+      setNotice({ kind: "error", text: "Select a category for this public exam." });
+      return;
+    }
     setBusy(true);
     setNotice(null);
     try {
-      // Keep the exam's category stable: fixed inside a category page,
-      // otherwise preserve whatever the flat list had.
-      const existing = exams?.find((item) => item.id === editingId);
-      const categoryId = fixedCategory
-        ? fixedCategory.id
-        : existing?.categoryId ?? "";
       const response = await fetch("/api/admin/exams", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...gate.headers },
@@ -353,7 +387,20 @@ export default function ExamManager({
         <button type="button" onClick={startCreate} className={buttonPrimaryClass}>+ New Exam</button>
       </header>
 
-      {exams === null ? (
+      {loadError ? (
+        <div className={`${cardClass} mt-5 p-8 text-center`}>
+          <p className="text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+            Could not load exams.
+          </p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className={`${buttonPrimaryClass} mt-4`}
+          >
+            Try Again
+          </button>
+        </div>
+      ) : exams === null ? (
         <p className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>Loading…</p>
       ) : exams.length === 0 ? (
         <p className={`${cardClass} mt-5 p-8 text-center text-sm text-zinc-500`}>No exams yet.</p>
@@ -504,6 +551,24 @@ export default function ExamManager({
                   </select>
                 )}
               </div>
+              {!fixedCategory && form.kind === "public" && (
+                <div>
+                  <label className={labelClass} htmlFor="ex-category">Category (Course Control)</label>
+                  <select
+                    id="ex-category"
+                    className={inputClass}
+                    value={formCategoryId}
+                    onChange={(event) => setFormCategoryId(event.target.value)}
+                  >
+                    <option value="">Select a category…</option>
+                    {categoryOptions.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {allowEnrolled && form.kind === "enrolled" && (
                 <div className="sm:col-span-2">
                   <span className={labelClass}>Assign courses (students enrolled in any of these)</span>
