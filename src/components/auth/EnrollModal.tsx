@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useCourseAccess } from "@/lib/course-access";
@@ -686,7 +687,16 @@ export default function EnrollModal({
     );
   };
 
-  return (
+  // Portal to <body>: ancestor cards use hover transforms which would turn
+  // this fixed overlay into card-relative positioning on desktop.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
@@ -726,6 +736,7 @@ export default function EnrollModal({
 
         {renderContent()}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
