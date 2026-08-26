@@ -149,6 +149,14 @@ export default function EnrollModal({
     };
   }, [open, onClose]);
 
+  // Portal guard must live ABOVE the early return (hooks rule): ancestor
+  // cards use hover transforms that break fixed positioning on desktop.
+  const [portalMounted, setPortalMounted] = useState(false);
+  useEffect(() => {
+    setPortalMounted(true);
+    return () => setPortalMounted(false);
+  }, []);
+
   if (!open) return null;
 
   const loading = authLoading || profileLoading;
@@ -686,15 +694,6 @@ export default function EnrollModal({
       </div>
     );
   };
-
-  // Portal to <body>: ancestor cards use hover transforms which would turn
-  // this fixed overlay into card-relative positioning on desktop.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-  if (!mounted) return null;
 
   return createPortal(
     <div
