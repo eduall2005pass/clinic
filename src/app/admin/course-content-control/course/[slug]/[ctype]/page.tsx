@@ -8,6 +8,23 @@ import { useAdminToast } from "@/components/admin/AdminToastProvider";
 
 type Chapter = { id: string; name: string; classCount?: number };
 
+/** Where each content type's chapter-specific content is managed. */
+function contentLink(
+  ctype: string,
+  chapterId: string,
+): { href: string; label: string } {
+  if (ctype === "exam") {
+    return { href: "/admin/exams/enrolled", label: "Open Exams" };
+  }
+  if (ctype === "materials") {
+    return { href: "/admin/courses/papers", label: "Open Materials" };
+  }
+  return {
+    href: `/admin/courses/classes?chapter=${encodeURIComponent(chapterId)}`,
+    label: "Open Classes",
+  };
+}
+
 /** Level 4 — chapter list of one content type, with [Edit] [+ Add Chapter]. */
 export default function TypeChaptersPage({
   params,
@@ -120,12 +137,17 @@ export default function TypeChaptersPage({
                   {typeof chapter.classCount === "number" && (
                     <span className="text-[11px] text-neutral-500">{chapter.classCount} classes</span>
                   )}
-                  <Link
-                    href={`/admin/courses/classes?chapter=${encodeURIComponent(chapter.id)}`}
-                    className="rounded-lg border border-ink/15 bg-ink/5 px-3 py-1.5 text-[11px] font-bold text-heading hover:border-primary-500/60"
-                  >
-                    Open Content
-                  </Link>
+                  {(() => {
+                    const link = contentLink(ctype, chapter.id);
+                    return (
+                      <Link
+                        href={link.href}
+                        className="rounded-lg border border-ink/15 bg-ink/5 px-3 py-1.5 text-[11px] font-bold text-heading hover:border-primary-500/60"
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })()}
                   <button type="button"
                     onClick={() => { setEditId(chapter.id); setEditName(chapter.name); }}
                     className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading">Edit</button>

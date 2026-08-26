@@ -126,8 +126,16 @@ export default function CourseContentPage({
       {(structure.mode === "direct" || scope.subjectId || scope.paperId) && (
         <>
           {scope.label && (
-            <p className="mt-2 inline-block rounded-full border border-primary-500/40 bg-primary-600/10 px-3 py-1 text-xs font-bold text-primary-300">
+            <p className="mt-2 inline-flex items-center gap-2 rounded-full border border-primary-500/40 bg-primary-600/10 px-3 py-1 text-xs font-bold text-primary-300">
               {scope.label}
+              <button
+                type="button"
+                aria-label="Clear selection"
+                onClick={() => setScope({})}
+                className="rounded-full px-1 text-[11px] font-extrabold text-primary-200 hover:text-white"
+              >
+                ✕
+              </button>
             </p>
           )}
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
