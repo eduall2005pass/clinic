@@ -8,6 +8,7 @@ import {
 import { sanitizeFaqHtml } from "@/lib/faq-sanitize";
 import { toVideoEmbed } from "@/lib/video-embed";
 
+let ensureFaqsTableReady = false;
 type FaqRow = {
   id: string;
   question: string;
@@ -29,6 +30,7 @@ function normalizeAnswerType(value: unknown): FaqAnswerType {
 }
 
 async function ensureFaqsTable(): Promise<void> {
+  if (ensureFaqsTableReady) return;
   try {
     await query(
       `CREATE TABLE IF NOT EXISTS faqs (
@@ -58,6 +60,7 @@ async function ensureFaqsTable(): Promise<void> {
   } catch {
     // Table creation best-effort — may fail if DB not configured.
   }
+  ensureFaqsTableReady = true;
 }
 
 async function seedDefaultFaqs(): Promise<void> {

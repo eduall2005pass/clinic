@@ -1,6 +1,8 @@
 import { exec, query, ensureColumn } from "@/lib/mysql";
 import { saveFile } from "@/lib/storage";
 
+let bannerSchemaReady = false;
+let ensureBannersTableReady = false;
 export const BANNER_STORAGE_DIR = "website-banners";
 
 export type CustomBanner = {
@@ -57,6 +59,7 @@ const SEED_BANNERS: Array<{ id: string; url: string; href: string; title: string
 ];
 
 async function ensureBannersTable(): Promise<void> {
+  if (ensureBannersTableReady) return;
   await exec(
     `CREATE TABLE IF NOT EXISTS banners (
       id VARCHAR(191) NOT NULL PRIMARY KEY,
@@ -79,6 +82,7 @@ async function ensureBannersTable(): Promise<void> {
   } catch {
     // Best effort — column may already exist.
   }
+  ensureBannersTableReady = true;
 }
 
 async function seedDefaultBanners(): Promise<void> {
@@ -101,8 +105,10 @@ async function seedDefaultBanners(): Promise<void> {
 }
 
 async function ensureSchema(): Promise<void> {
+  if (bannerSchemaReady) return;
   await ensureBannersTable();
   await seedDefaultBanners();
+  bannerSchemaReady = true;
 }
 
 function toIso(value: Date | string | null | undefined): string | null {

@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { exec, parseJsonColumn, query } from "@/lib/mysql";
 
+let ensureSecurityTableReady = false;
+let ensureRolePermissionsTableReady = false;
+let ensureRolesTableReady = false;
+let ensureLogTableReady = false;
 // Admin Panel → Administration. Admin account management (rows in the
 // `admins` table), role assignments (`admin_roles`), activity logging
 // (`admin_activity_logs`) and security policy settings.
@@ -49,6 +53,7 @@ function toIso(value: unknown): string {
 // ── Activity logs ────────────────────────────────────────────────────────
 
 async function ensureLogTable(): Promise<void> {
+  if (ensureLogTableReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS admin_activity_logs (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     admin_uid VARCHAR(191) NOT NULL DEFAULT '',
@@ -59,6 +64,7 @@ async function ensureLogTable(): Promise<void> {
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY admin_activity_logs_created_idx (created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  ensureLogTableReady = true;
 }
 
 /** Best-effort audit log write — never throws into the caller's flow. */
@@ -222,6 +228,7 @@ const DEFAULT_PERMISSIONS_BY_ROLE: Record<AdminRole, readonly AdminPermission[]>
 };
 
 async function ensureRolesTable(): Promise<void> {
+  if (ensureRolesTableReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS admin_roles (
     email VARCHAR(191) NOT NULL PRIMARY KEY,
     role VARCHAR(64) NOT NULL DEFAULT 'admin',
@@ -229,15 +236,18 @@ async function ensureRolesTable(): Promise<void> {
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_by VARCHAR(191) NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  ensureRolesTableReady = true;
 }
 
 async function ensureRolePermissionsTable(): Promise<void> {
+  if (ensureRolePermissionsTableReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS role_permissions (
     role VARCHAR(64) NOT NULL PRIMARY KEY,
     permissions JSON NOT NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_by VARCHAR(191) NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  ensureRolePermissionsTableReady = true;
 }
 
 /** Configured permission set for a role; falls back to built-in defaults. */
@@ -395,6 +405,7 @@ export async function deleteRoleAssignment(email: string): Promise<void> {
 // ── Security settings ────────────────────────────────────────────────────
 
 async function ensureSecurityTable(): Promise<void> {
+  if (ensureSecurityTableReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS security_settings (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     allowed_email_domains JSON NULL,
@@ -406,6 +417,7 @@ async function ensureSecurityTable(): Promise<void> {
     updated_by VARCHAR(191) NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   await exec(`INSERT IGNORE INTO security_settings (id) VALUES ('active')`);
+  ensureSecurityTableReady = true;
 }
 
 const DEFAULT_SECURITY: SecuritySettings = {

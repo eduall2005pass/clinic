@@ -4,6 +4,8 @@ import { getCourse, getPayableFee } from "@/lib/courses";
 import type { EnrollmentStatus } from "@/lib/enrollments";
 import { getPaymentCard as getManagedPaymentCard } from "@/lib/payment-card";
 
+let ensureEnrollmentSettingsTableReady = false;
+let ensureApprovalColumnsReady = false;
 export type AdminEnrollment = {
   id: number;
   studentUid: string;
@@ -200,6 +202,7 @@ let approvalColumnsEnsured = false;
 
 /** Best-effort self-heal so the action never fails on a missing column. */
 async function ensureApprovalColumns(): Promise<void> {
+  if (ensureApprovalColumnsReady) return;
   if (approvalColumnsEnsured) return;
   try {
     const columns = await query<{ COLUMN_NAME: string }[]>(
@@ -224,6 +227,7 @@ async function ensureApprovalColumns(): Promise<void> {
   } catch {
     // Migration may be applied out-of-band; the UPDATE below will surface real errors.
   }
+  ensureApprovalColumnsReady = true;
 }
 
 /**
@@ -405,6 +409,7 @@ export async function deleteEnrollment(id: number): Promise<boolean> {
 // ── Enrollment settings (Free Course auto-enrollment switch) ──────────────
 
 export async function ensureEnrollmentSettingsTable(): Promise<void> {
+  if (ensureEnrollmentSettingsTableReady) return;
   await exec(
     `CREATE TABLE IF NOT EXISTS enrollment_settings (
       id VARCHAR(32) NOT NULL PRIMARY KEY,
@@ -416,6 +421,7 @@ export async function ensureEnrollmentSettingsTable(): Promise<void> {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   );
+  ensureEnrollmentSettingsTableReady = true;
 }
 
 export type PaymentSettings = {

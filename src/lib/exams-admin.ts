@@ -1,6 +1,8 @@
 import { exec, parseJsonColumn, query, ensureColumn } from "@/lib/mysql";
 import { seedDefaultExamRules } from "@/lib/exam-rules";
 
+let ensureSettingsTableReady = false;
+let ensureResultTablesReady = false;
 // Admin Panel → Exams. Exams, question bank, enrollments, results and
 // settings all live in MySQL. `exam_questions.exam_id = NULL` marks a
 // bank-only question; the `answer_key` JSON column on `exams` stores
@@ -685,6 +687,7 @@ async function recomputeExamTotals(examId: string | null): Promise<void> {
 // ── Enrollments & Results ────────────────────────────────────────────────
 
 async function ensureResultTables(): Promise<void> {
+  if (ensureResultTablesReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS exam_enrollments (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     exam_id VARCHAR(64) NOT NULL,
@@ -715,6 +718,7 @@ async function ensureResultTables(): Promise<void> {
   } catch {
     // Best effort — columns may already exist.
   }
+  ensureResultTablesReady = true;
 }
 
 type EnrollmentRow = {
@@ -799,6 +803,7 @@ type SettingsRow = {
 };
 
 async function ensureSettingsTable(): Promise<void> {
+  if (ensureSettingsTableReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS exam_settings (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     default_duration_minutes INT NOT NULL DEFAULT 30,
@@ -810,6 +815,7 @@ async function ensureSettingsTable(): Promise<void> {
     updated_by VARCHAR(191) NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   await exec(`INSERT IGNORE INTO exam_settings (id) VALUES ('active')`);
+  ensureSettingsTableReady = true;
 }
 
 const DEFAULT_SETTINGS: ExamSettings = {

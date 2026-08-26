@@ -1,5 +1,11 @@
 import { exec, query, ensureColumn } from "@/lib/mysql";
 import { removeFile, isLocalUpload } from "@/lib/storage";
+let tablesReady = false;
+let taxonomyTablesReady = false;
+let assignmentTableReady = false;
+let chapterTablesReady = false;
+let courseMentorsReady = false;
+
 
 // Admin Panel → Courses. The full catalog lives in MySQL (`catalog_courses`).
 // When the table is missing/empty the static catalog in `@/lib/courses`
@@ -142,6 +148,8 @@ export function rowToCourse(row: CatalogCourseRow): CatalogCourse {
 }
 
 async function ensureTables(): Promise<void> {
+  if (tablesReady) return;
+
   await exec(`CREATE TABLE IF NOT EXISTS catalog_courses (
     slug VARCHAR(191) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -211,6 +219,7 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — already migrated or no permission.
   }
+  tablesReady = true;
 }
 
 function normalizeCategoryToken(value: string): string {
@@ -549,12 +558,14 @@ export async function saveCatalogCourse(
 // ── Course ↔ Mentors association ─────────────────────────────────────────
 
 async function ensureCourseMentorsTable(): Promise<void> {
+  if (courseMentorsReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS course_mentors (
     course_slug VARCHAR(191) NOT NULL,
     mentor_id VARCHAR(191) NOT NULL,
     sort_order INT NOT NULL DEFAULT 0,
     PRIMARY KEY (course_slug, mentor_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  courseMentorsReady = true;
 }
 
 /** Mentor ids assigned to a course (ordered). */
@@ -695,6 +706,7 @@ type TaxonomyRow = {
 };
 
 async function ensureTaxonomyTables(): Promise<void> {
+  if (taxonomyTablesReady) return;
   // course_categories is owned by @/lib/course-categories-store — reuse its
   // schema so both modules never create conflicting table definitions.
   const { ensureSchema } = await import("@/lib/course-categories-store");
@@ -706,6 +718,7 @@ async function ensureTaxonomyTables(): Promise<void> {
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     sort_order INT NOT NULL DEFAULT 0
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  taxonomyTablesReady = true;
 }
 
 async function fetchTaxonomy(
@@ -766,11 +779,13 @@ export type CourseSubjectDetail = CourseTaxonomyItem & {
 };
 
 async function ensureAssignmentTable(): Promise<void> {
+  if (assignmentTableReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS course_subject_assignments (
     subject_id VARCHAR(64) NOT NULL,
     course_slug VARCHAR(191) NOT NULL,
     PRIMARY KEY (subject_id, course_slug)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  assignmentTableReady = true;
 }
 
 async function fetchAssignmentMap(): Promise<Map<string, string[]>> {
@@ -908,6 +923,7 @@ type ClassRow = ChapterRow & {
 };
 
 async function ensureChapterTables(): Promise<void> {
+  if (chapterTablesReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS course_chapters (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     subject_id VARCHAR(64) NOT NULL,
@@ -928,6 +944,7 @@ async function ensureChapterTables(): Promise<void> {
     sort_order INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  chapterTablesReady = true;
 }
 
 export async function fetchChapters(subjectId?: string): Promise<Chapter[]> {
