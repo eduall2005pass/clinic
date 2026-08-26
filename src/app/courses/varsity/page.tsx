@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BatchCourseList from "@/components/BatchCourseList";
-import { batchFilterOptions } from "@/lib/courses";
+import { fetchBatchFilterOptions } from "@/lib/course-filters";
 import { getLivePublicCourses } from "@/lib/course-catalog";
 
 // Cached at the edge; admin changes appear within 60s.
@@ -14,7 +14,11 @@ export const metadata: Metadata = {
 };
 
 export default async function VarsityCoursesPage() {
-  const varsityCourses = (await getLivePublicCourses()).filter(
+  const [filterOptions, allCourses] = await Promise.all([
+    fetchBatchFilterOptions("hsc"),
+    getLivePublicCourses(),
+  ]);
+  const varsityCourses = allCourses.filter(
     (course) => course.category === "Varsity Admission",
   );
 
@@ -53,7 +57,7 @@ export default async function VarsityCoursesPage() {
           </p>
         </header>
 
-        <BatchCourseList options={batchFilterOptions.hsc} courses={varsityCourses} />
+        <BatchCourseList options={filterOptions} courses={varsityCourses} />
       </section>
     </main>
   );

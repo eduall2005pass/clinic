@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 /**
- * Enrollment Control — main page. Exactly 2 cards:
- * Free Course Enrollment and Paid Course Enrollment.
+ * Enrollment Control — main page. 3 cards:
+ * Free Course, Paid Course and Payment Card.
  */
 export const metadata = { title: "Enrollment Control — MediSpark Admin" };
 
@@ -19,6 +19,12 @@ const CARDS = [
     title: "Paid Course Enrollment",
     description: "Course-wise enrollment applications for paid courses.",
   },
+  {
+    href: "/admin/enrollment-control/payment-card",
+    icon: "📱",
+    title: "Payment Card",
+    description: "bKash/Nagad numbers + payment instructions with live preview.",
+  },
 ];
 
 export default function EnrollmentControlPage() {
@@ -29,7 +35,7 @@ export default function EnrollmentControlPage() {
         Manage Free and Paid Course enrollments course-by-course.
       </p>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4">
+      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         {CARDS.map((card) => (
           <Link
             key={card.href}

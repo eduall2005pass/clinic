@@ -3,6 +3,7 @@ import Logo from "@/components/Logo";
 import { mainNavLinks } from "@/lib/nav-links";
 import { getWebsiteSettingsWithFallback } from "@/lib/website-settings";
 import { fetchActiveSocialLinks } from "@/lib/social-links";
+import { getSocialPlatformIcon } from "@/components/social-icons";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
 
 export default async function Footer() {
@@ -107,18 +108,28 @@ export default async function Footer() {
               {settings.address && <li>{settings.address}</li>}
               {/* Social platforms come from Admin → Social Links
                   (social_links table; falls back to website_settings). */}
-              {socialLinks.map((link) => (
-                <li key={link.key}>
-                  <a
-                    href={link.url ?? "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="transition hover:text-primary-400"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
+              {socialLinks.map((link) => {
+                const icon = getSocialPlatformIcon(link.key);
+                return (
+                  <li key={link.key}>
+                    <a
+                      href={link.url ?? "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={link.label}
+                      title={link.label}
+                      className="inline-flex items-center gap-2 transition hover:text-primary-400"
+                    >
+                      {icon ? (
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-4.5 w-4.5 h-[18px] w-[18px]">
+                          <path d={icon} />
+                        </svg>
+                      ) : null}
+                      <span className="sr-only sm:not-sr-only">{link.label}</span>
+                    </a>
+                  </li>
+                );
+              })}
               {(settings.otherContactLinks ?? []).map((link) => (
                 <li key={link.href + link.label}>
                   {link.href.startsWith("/") ? (

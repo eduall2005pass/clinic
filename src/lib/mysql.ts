@@ -95,6 +95,36 @@ export async function ensureColumn(
   await exec(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
 }
 
+/**
+ * Run a set of statements in a single MySQL transaction — all succeed or
+ * all roll back. The connection is row-locked work's own (use
+ * `SELECT ... FOR UPDATE` inside for concurrent-safety).
+ */
+export async function withTransaction<T>(
+  work: (connection: mysql.PoolConnection) => Promise<T>,
+): Promise<T> {
+  const client = getMysqlPool();
+  if (!client) {
+    throw new Error("Database is not configured.");
+  }
+  const connection = await client.getConnection();
+  try {
+    await connection.beginTransaction();
+    const result = await work(connection);
+    await connection.commit();
+    return result;
+  } catch (error) {
+    try {
+      await connection.rollback();
+    } catch {
+      /* connection already broken */
+    }
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 export function parseDate(raw: unknown): string {
   if (raw instanceof Date) return raw.toISOString();
   if (typeof raw === "string") {

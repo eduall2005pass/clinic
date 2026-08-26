@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 import { useAdminToast } from "@/components/admin/AdminToastProvider";
+import { getSocialPlatformIcon } from "@/components/social-icons";
 import type { SocialLink } from "@/lib/social-links-constants";
 
 export default function SocialLinksManagementPage() {
@@ -165,8 +166,14 @@ export default function SocialLinksManagementPage() {
         {links.map((link, index) => (
           <li key={link.key} className={`${cardClass} ${link.isActive ? "" : "opacity-70"}`}>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-600/10 text-sm font-extrabold text-primary-600">
-                {link.label.charAt(0)}
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-600/10 text-primary-600 admin-dark:text-primary-400">
+                {getSocialPlatformIcon(link.key) ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-5 w-5">
+                    <path d={getSocialPlatformIcon(link.key)!} />
+                  </svg>
+                ) : (
+                  link.label.charAt(0)
+                )}
               </span>
               <h3 className="min-w-0 flex-1 truncate text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
                 {link.label}

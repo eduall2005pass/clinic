@@ -1,6 +1,8 @@
-import { query, exec } from "@/lib/mysql";
+import { query, exec, withTransaction } from "@/lib/mysql";
+import type { PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import { getCourse, getPayableFee } from "@/lib/courses";
 import type { EnrollmentStatus } from "@/lib/enrollments";
+import { getPaymentCard as getManagedPaymentCard } from "@/lib/payment-card";
 
 export type AdminEnrollment = {
   id: number;
@@ -16,6 +18,10 @@ export type AdminEnrollment = {
   status: EnrollmentStatus;
   enrolledAt: number | null;
   updatedAt: number | null;
+  /** Payment details submitted by the student (paid enrollment) — verified MANUALLY by admin. */
+  paymentTransactionId: string | null;
+  paymentAmount: number | null;
+  paymentSender: string | null;
 };
 
 export type EnrollmentListOptions = {
@@ -38,6 +44,9 @@ type EnrollmentRow = {
   enrollment_status: string;
   enrollment_date: Date | string | null;
   updated_at: Date | string | null;
+  payment_transaction_id?: string | null;
+  payment_amount?: string | number | null;
+  payment_sender?: string | null;
 };
 
 function toNumber(value: unknown): number {
@@ -75,6 +84,12 @@ function mapEnrollment(row: EnrollmentRow): AdminEnrollment {
     status: normalizeStatus(row.enrollment_status),
     enrolledAt: parseTime(row.enrollment_date),
     updatedAt: parseTime(row.updated_at),
+    paymentTransactionId: row.payment_transaction_id ?? null,
+    paymentAmount:
+      row.payment_amount === null || row.payment_amount === undefined
+        ? null
+        : toNumber(row.payment_amount) || null,
+    paymentSender: row.payment_sender ?? null,
   };
 }
 
@@ -84,6 +99,10 @@ const SELECT_ENROLLMENTS = `
          e.fee, e.enrollment_status, e.enrollment_date, e.updated_at
   FROM enrollments e
   LEFT JOIN students s ON s.uid = e.student_uid`;
+
+/** Payment columns (Step 3 migration) — absent on databases not yet migrated. */
+const PAYMENT_COLUMNS = `,
+         e.payment_transaction_id, e.payment_amount, e.payment_sender`;
 
 /** All enrollments with student info — supports search + status filter. */
 export async function fetchEnrollmentsAdmin(
@@ -112,13 +131,38 @@ export async function fetchEnrollmentsAdmin(
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   try {
-    const rows = await query<EnrollmentRow[]>(
-      `${SELECT_ENROLLMENTS} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
-      params,
-    );
+    let rows: EnrollmentRow[];
+    try {
+      // Preferred — includes the payment details (Step 3 migration applied).
+      rows = await query<EnrollmentRow[]>(
+        `${SELECT_ENROLLMENTS}${PAYMENT_COLUMNS} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
+        params,
+      );
+    } catch {
+      // Payment columns not migrated yet — fall back to the base columns.
+      rows = await query<EnrollmentRow[]>(
+        `${SELECT_ENROLLMENTS} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
+        params,
+      );
+    }
     return rows.map(mapEnrollment);
   } catch {
     return [];
+  }
+}
+
+/** Current status of one enrollment row (null when missing). */
+export async function getEnrollmentStatusById(
+  id: number,
+): Promise<EnrollmentStatus | null> {
+  try {
+    const rows = await query<{ enrollment_status: string }[]>(
+      "SELECT enrollment_status FROM enrollments WHERE id = ? LIMIT 1",
+      [id],
+    );
+    return rows.length > 0 ? normalizeStatus(rows[0].enrollment_status) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -135,6 +179,168 @@ export async function setEnrollmentStatus(
     return result.affectedRows > 0;
   } catch {
     return false;
+  }
+}
+
+// ── Pending application Accept / Reject (transactional, audited) ──────────
+
+export type ApplicationActionResult =
+  | { ok: true; message: string }
+  | { ok: false; error: string };
+
+type ApplicationRow = RowDataPacket & {
+  id: number;
+  enrollment_status: string;
+  student_uid: string;
+  course_id: string;
+  course_kind: "free" | "paid";
+};
+
+let approvalColumnsEnsured = false;
+
+/** Best-effort self-heal so the action never fails on a missing column. */
+async function ensureApprovalColumns(): Promise<void> {
+  if (approvalColumnsEnsured) return;
+  try {
+    const columns = await query<{ COLUMN_NAME: string }[]>(
+      `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'enrollments'
+         AND COLUMN_NAME IN ('approved_at', 'approved_by', 'rejected_at', 'rejected_by')`,
+    );
+    const present = new Set(columns.map((column) => column.COLUMN_NAME));
+    if (!present.has("approved_at")) {
+      await exec("ALTER TABLE enrollments ADD COLUMN approved_at TIMESTAMP NULL DEFAULT NULL");
+    }
+    if (!present.has("approved_by")) {
+      await exec("ALTER TABLE enrollments ADD COLUMN approved_by VARCHAR(191) NULL");
+    }
+    if (!present.has("rejected_at")) {
+      await exec("ALTER TABLE enrollments ADD COLUMN rejected_at TIMESTAMP NULL DEFAULT NULL");
+    }
+    if (!present.has("rejected_by")) {
+      await exec("ALTER TABLE enrollments ADD COLUMN rejected_by VARCHAR(191) NULL");
+    }
+    approvalColumnsEnsured = true;
+  } catch {
+    // Migration may be applied out-of-band; the UPDATE below will surface real errors.
+  }
+}
+
+/**
+ * Accept a pending application after manual payment verification:
+ * pending → active (grants access to THAT course only), records approval
+ * date/time and the admin who performed it. Transactional with row lock:
+ *   - rejects already-accepted / rejected applications
+ *   - cannot create duplicate active enrollments
+ *     (UNIQUE(student_uid, course_id) + single-row activation)
+ */
+export async function acceptEnrollmentApplication(
+  id: number,
+  adminUid: string,
+): Promise<ApplicationActionResult> {
+  await ensureApprovalColumns();
+  try {
+    return await withTransaction(async (connection: PoolConnection) => {
+      const [rows] = await connection.execute<ApplicationRow[]>(
+        `SELECT id, enrollment_status, student_uid, course_id, course_kind
+         FROM enrollments WHERE id = ? FOR UPDATE`,
+        [id],
+      );
+      const application = rows[0];
+      if (!application) {
+        return { ok: false as const, error: "Application not found." };
+      }
+      if (application.enrollment_status === "active") {
+        return { ok: false as const, error: "This application is already accepted." };
+      }
+      if (application.enrollment_status !== "pending") {
+        return {
+          ok: false as const,
+          error: `Already processed — current status: ${application.enrollment_status}.`,
+        };
+      }
+
+      // Atomic accept — guarded on still-pending so concurrent accepts lose.
+      const [result] = await connection.execute<ResultSetHeader>(
+        `UPDATE enrollments
+         SET enrollment_status = 'active', approved_at = NOW(), approved_by = ?
+         WHERE id = ? AND enrollment_status = 'pending'`,
+        [adminUid, id],
+      );
+      if (result.affectedRows !== 1) {
+        return {
+          ok: false as const,
+          error: "Another admin just processed this application.",
+        };
+      }
+
+      // Keep the courses registry consistent for this specific course.
+      await connection.execute(
+        "INSERT IGNORE INTO courses (course_id, kind) VALUES (?, ?)",
+        [application.course_id, application.course_kind],
+      );
+
+      return {
+        ok: true as const,
+        message: "Enrollment accepted — student is now an active enrolled student.",
+      };
+    });
+  } catch (error) {
+    console.error("acceptEnrollmentApplication failed:", error);
+    return { ok: false, error: "Failed to accept the application." };
+  }
+}
+
+/**
+ * Reject a pending application: pending → cancelled, records rejection
+ * date/time and the admin. No course access is granted. Same transactional
+ * guards as accept.
+ */
+export async function rejectEnrollmentApplication(
+  id: number,
+  adminUid: string,
+): Promise<ApplicationActionResult> {
+  await ensureApprovalColumns();
+  try {
+    return await withTransaction(async (connection: PoolConnection) => {
+      const [rows] = await connection.execute<ApplicationRow[]>(
+        `SELECT id, enrollment_status FROM enrollments WHERE id = ? FOR UPDATE`,
+        [id],
+      );
+      const application = rows[0];
+      if (!application) {
+        return { ok: false as const, error: "Application not found." };
+      }
+      if (application.enrollment_status === "active") {
+        return {
+          ok: false as const,
+          error: "Cannot reject — this enrollment is already accepted. Revoke access instead.",
+        };
+      }
+      if (application.enrollment_status !== "pending") {
+        return {
+          ok: false as const,
+          error: `Already processed — current status: ${application.enrollment_status}.`,
+        };
+      }
+
+      const [result] = await connection.execute<ResultSetHeader>(
+        `UPDATE enrollments
+         SET enrollment_status = 'cancelled', rejected_at = NOW(), rejected_by = ?
+         WHERE id = ? AND enrollment_status = 'pending'`,
+        [adminUid, id],
+      );
+      if (result.affectedRows !== 1) {
+        return {
+          ok: false as const,
+          error: "Another admin just processed this application.",
+        };
+      }
+      return { ok: true as const, message: "Application rejected." };
+    });
+  } catch (error) {
+    console.error("rejectEnrollmentApplication failed:", error);
+    return { ok: false, error: "Failed to reject the application." };
   }
 }
 
@@ -203,23 +409,84 @@ export async function ensureEnrollmentSettingsTable(): Promise<void> {
     `CREATE TABLE IF NOT EXISTS enrollment_settings (
       id VARCHAR(32) NOT NULL PRIMARY KEY,
       free_auto_enroll TINYINT(1) NOT NULL DEFAULT 1,
+      bkash_number VARCHAR(40) NULL,
+      nagad_number VARCHAR(40) NULL,
+      payment_instructions TEXT NULL,
       updated_by VARCHAR(191) NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   );
 }
 
-export async function getEnrollmentSettings(): Promise<{ freeAutoEnroll: boolean }> {
+export type PaymentSettings = {
+  freeAutoEnroll: boolean;
+  bkashNumber: string | null;
+  nagadNumber: string | null;
+  paymentInstructions: string | null;
+};
+
+export async function getEnrollmentSettings(): Promise<PaymentSettings> {
   try {
     await ensureEnrollmentSettingsTable();
-    const rows = await query<{ free_auto_enroll: number }[]>(
-      "SELECT free_auto_enroll FROM enrollment_settings WHERE id = 'default' LIMIT 1",
+    const rows = await query<{
+      free_auto_enroll: number;
+      bkash_number: string | null;
+      nagad_number: string | null;
+      payment_instructions: string | null;
+    }[]>(
+      "SELECT free_auto_enroll, bkash_number, nagad_number, payment_instructions FROM enrollment_settings WHERE id = 'default' LIMIT 1",
     );
-    // Default: auto-enrollment for free courses is ON.
-    return { freeAutoEnroll: rows.length === 0 || rows[0].free_auto_enroll === 1 };
+    // Defaults: auto-enrollment ON, empty payment card.
+    if (rows.length === 0) {
+      return { freeAutoEnroll: true, bkashNumber: null, nagadNumber: null, paymentInstructions: null };
+    }
+    const row = rows[0];
+    return {
+      freeAutoEnroll: row.free_auto_enroll === 1,
+      bkashNumber: row.bkash_number,
+      nagadNumber: row.nagad_number,
+      paymentInstructions: row.payment_instructions,
+    };
   } catch {
-    return { freeAutoEnroll: true };
+    return { freeAutoEnroll: true, bkashNumber: null, nagadNumber: null, paymentInstructions: null };
   }
+}
+
+/** Public view of the payment card shown to students during paid enrollment.
+ *  Single source of truth: the Admin Payment Card manager (`payment_card`
+ *  table). Falls back to legacy `enrollment_settings` columns for databases
+ *  where the manager has never been used yet. Any admin edit shows up here
+ *  immediately — no caching between Admin Panel and students. */
+export async function getPaymentCard(): Promise<
+  { bkashNumber: string | null; nagadNumber: string | null; instructions: string | null }
+> {
+  try {
+    const card = await getManagedPaymentCard();
+    if (
+      card.bkashNumber ||
+      card.nagadNumber ||
+      card.instructions ||
+      card.note
+    ) {
+      const instructions = [card.instructions, card.note]
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join("\n\n");
+      return {
+        bkashNumber: card.bkashEnabled ? card.bkashNumber || null : null,
+        nagadNumber: card.nagadEnabled ? card.nagadNumber || null : null,
+        instructions: instructions || null,
+      };
+    }
+  } catch {
+    // Manager table missing/unreachable — use the legacy columns below.
+  }
+  const settings = await getEnrollmentSettings();
+  return {
+    bkashNumber: settings.bkashNumber,
+    nagadNumber: settings.nagadNumber,
+    instructions: settings.paymentInstructions,
+  };
 }
 
 export async function setFreeAutoEnroll(

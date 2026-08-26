@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import CategoryCard from "@/components/CategoryCard";
 import BatchCourseList from "@/components/BatchCourseList";
-import { batchFilterOptions, getPayableFee, type Course } from "@/lib/courses";
+import {
+  batchFilterOptions,
+  getPayableFee,
+  type BatchFilterOption,
+  type Course,
+} from "@/lib/courses";
 
 type CategoryRecord = {
   id: string;
@@ -106,10 +111,21 @@ function BackToAllCourses() {
 function CoursesViewInner({
   courses,
   categories,
+  sscFilterOptions,
+  hscFilterOptions,
 }: {
   courses: Course[];
   categories: CategoryRecord[];
+  sscFilterOptions?: BatchFilterOption[];
+  hscFilterOptions?: BatchFilterOption[];
 }) {
+  // DB-managed filters (Admin -> Course Control -> Filter) with built-in fallback.
+  const optionsFor = (scope: "ssc" | "hsc") =>
+    (scope === "ssc" ? sscFilterOptions : hscFilterOptions)?.length
+      ? scope === "ssc"
+        ? sscFilterOptions!
+        : hscFilterOptions!
+      : batchFilterOptions[scope];
   const searchParams = useSearchParams();
   const category = searchParams.get("category")?.toLowerCase();
   const kind = searchParams.get("kind")?.toLowerCase();
@@ -120,13 +136,11 @@ function CoursesViewInner({
 
   if (!courseType && kind === "paid") {
     const paidCourses = courses.filter((course) => getPayableFee(course) > 0);
-    const batchOptions = [
-      ...new Map(
-        [...batchFilterOptions.ssc, ...batchFilterOptions.hsc].map(
-          (option) => [option.id, option],
-        ),
-      ).values(),
-    ];
+    const seen = new Map<string, BatchFilterOption>();
+    for (const option of [...optionsFor("ssc"), ...optionsFor("hsc")]) {
+      if (!seen.has(option.id)) seen.set(option.id, option);
+    }
+    const batchOptions = [...seen.values()];
     return (
       <main className="flex-1 bg-dark-950">
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -174,11 +188,7 @@ function CoursesViewInner({
 
           {/* Same 4-option batch filters as the dedicated category pages. */}
           <BatchCourseList
-            options={
-              category === "ssc"
-                ? batchFilterOptions.ssc
-                : batchFilterOptions.hsc
-            }
+            options={category === "ssc" ? optionsFor("ssc") : optionsFor("hsc")}
             courses={typeCourses}
           />
         </section>
@@ -232,13 +242,22 @@ function DefaultGrid({
 export default function CoursesView({
   courses,
   categories,
+  sscFilterOptions,
+  hscFilterOptions,
 }: {
   courses: Course[];
   categories: CategoryRecord[];
+  sscFilterOptions?: BatchFilterOption[];
+  hscFilterOptions?: BatchFilterOption[];
 }) {
   return (
     <Suspense fallback={<DefaultGrid categories={categories} />}>
-      <CoursesViewInner courses={courses} categories={categories} />
+      <CoursesViewInner
+        courses={courses}
+        categories={categories}
+        sscFilterOptions={sscFilterOptions}
+        hscFilterOptions={hscFilterOptions}
+      />
     </Suspense>
   );
 }

@@ -1,22 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CategoryCard from "@/components/CategoryCard";
-import { batchFilterOptions, getPayableFee } from "@/lib/courses";
+import { getPayableFee } from "@/lib/courses";
 import { getLiveCourses } from "@/lib/course-catalog";
-import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
+import { fetchActiveCourseCategories, type CourseCategory } from "@/lib/course-categories-store";
+import { fetchBatchFilterOptions } from "@/lib/course-filters";
 import AdminBatchCourseList from "@/components/admin/AdminCoursesReplica";
 import CourseManagerChip from "@/components/admin/CourseManagerChip";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Admin → Courses. A same-to-same visual replica of the Main Website Courses
- * page (same layout, cards, filters, category structure, typography and
- * spacing — same MySQL data), with floating management controls attached.
- * Clicking a course card opens the same Course Details flow as the website.
+ * Admin → Course Control. A same-to-same visual replica of the Main Website
+ * Courses page with only the required admin controls attached:
+ *
+ *   Choose Your Path            → [ Edit ] [ + Add Category ] at the bottom
+ *     ↓ Explore Course
+ *   Category Course Page        → Filter [ Edit ], each card [ Edit ],
+ *                                 [ + Add Course ] at the end of the list
+ *
+ * Every view renders from the same MySQL data as the Main Website.
  */
 export const metadata: Metadata = {
-  title: "Courses — MediSpark Admin",
+  title: "Course Control — MediSpark Admin",
   description: "Admin view of the Main Website Courses page with manage controls.",
 };
 
@@ -28,6 +34,14 @@ const CATEGORY_TYPES = {
 } as const;
 
 type CategoryParam = keyof typeof CATEGORY_TYPES;
+
+/** Website category name → this panel's ?category= parameter. */
+function adminParamFor(category: CourseCategory): string | null {
+  const entry = (Object.entries(CATEGORY_TYPES) as Array<[CategoryParam, string]>).find(
+    ([, name]) => name === category.name,
+  );
+  return entry?.[0] ?? null;
+}
 
 const iconProps = {
   className: "h-8 w-8",
@@ -52,7 +66,7 @@ const CATEGORY_ICONS: Record<CategoryParam, React.ReactNode> = {
   ),
   hsc: (
     <svg {...iconProps}>
-      <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a2 2 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+      <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
       <path d="M22 10v6" />
       <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
     </svg>
@@ -102,18 +116,17 @@ export default async function AdminCoursesPage({
 
   if (!courseType && kind?.toLowerCase() === "paid") {
     const paidCourses = allCourses.filter((course) => getPayableFee(course) > 0);
+    const [sscOptions, hscOptions] = await Promise.all([
+      fetchBatchFilterOptions("ssc"),
+      fetchBatchFilterOptions("hsc"),
+    ]);
     const batchOptions = [
-      ...new Map(
-        [...batchFilterOptions.ssc, ...batchFilterOptions.hsc].map(
-          (option) => [option.id, option],
-        ),
-      ).values(),
+      ...new Map([...sscOptions, ...hscOptions].map((option) => [option.id, option])).values(),
     ];
     return (
       <main className="flex-1 bg-dark-950">
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
           <BackToCoursesLink />
-          <AdminToolbar />
 
           <header className="mb-10">
             <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-500">
@@ -128,21 +141,25 @@ export default async function AdminCoursesPage({
             </p>
           </header>
 
-          <AdminBatchCourseList options={batchOptions} courses={paidCourses} />
+          <FilterRow scope="ssc" />
+          <div className="mt-3">
+            <AdminBatchCourseList options={batchOptions} courses={paidCourses} editBase="/admin/courses/all" />
+          </div>
+          <AddCourseButton categoryName={null} />
         </section>
       </main>
     );
   }
 
   if (courseType) {
-    const typeCourses = allCourses.filter(
-      (course) => course.category === courseType,
+    const typeCourses = allCourses.filter((course) => course.category === courseType);
+    const filterOptions = await fetchBatchFilterOptions(
+      categoryParam === "ssc" ? "ssc" : "hsc",
     );
     return (
       <main className="flex-1 bg-dark-950">
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
           <BackToCoursesLink />
-          <AdminToolbar />
 
           <header className="mb-10">
             <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-500">
@@ -156,15 +173,18 @@ export default async function AdminCoursesPage({
             </p>
           </header>
 
-          {/* Same 4-option batch filters as the dedicated category pages. */}
-          <AdminBatchCourseList
-            options={
-              categoryParam === "ssc"
-                ? batchFilterOptions.ssc
-                : batchFilterOptions.hsc
-            }
-            courses={typeCourses}
-          />
+          {/* The website's own filter — with an admin [ Edit ] control. */}
+          <FilterRow scope={categoryParam === "ssc" ? "ssc" : "hsc"} />
+          <div className="mt-3">
+            <AdminBatchCourseList
+              options={filterOptions}
+              courses={typeCourses}
+              editBase="/admin/courses/all"
+            />
+          </div>
+
+          {/* End of course list — new courses land in THIS category. */}
+          <AddCourseButton categoryName={courseType} />
         </section>
       </main>
     );
@@ -175,8 +195,6 @@ export default async function AdminCoursesPage({
   return (
     <main className="flex-1 bg-dark-950">
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <AdminToolbar />
-
         <header className="mb-10 text-center">
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
             Explore Programs
@@ -190,18 +208,44 @@ export default async function AdminCoursesPage({
           </p>
         </header>
 
-        {/* Managed from Admin → Courses → Categories (course_categories table). */}
+        {/* Same category cards as the Main Website — navigation stays inside
+            the admin flow (page-by-page, one new page per category). */}
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          {categories.map((category) => (
-            <CategoryCard
-              key={category.id}
-              href={category.href || "/courses"}
-              title={category.name}
-              description={category.description ?? ""}
-              image={category.imageUrl}
-              icon={iconForSlug(category.slug)}
-            />
-          ))}
+          {categories.map((category) => {
+            const param = adminParamFor(category);
+            const href = param
+              ? `/admin/course?category=${param}`
+              : `/admin/courses/all?category=${encodeURIComponent(category.name)}`;
+            return (
+              <CategoryCard
+                key={category.id}
+                href={href}
+                title={category.name}
+                description={category.description ?? ""}
+                image={category.imageUrl}
+                icon={iconForSlug(category.slug)}
+              />
+            );
+          })}
+        </div>
+
+        {/* Bottom of Choose Your Path — category management controls. */}
+        <div className="mt-10 flex flex-wrap justify-center gap-3 border-t border-ink/10 pt-6">
+          <Link
+            href="/admin/courses/categories"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-primary-500/50 bg-dark-900 px-5 py-2.5 text-sm font-bold text-primary-300 shadow-md shadow-black/20 transition hover:border-primary-400 hover:text-primary-200"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.86 4.49a2.1 2.1 0 013 2.97L8.42 18.9l-3.9 1 1-3.9L16.87 4.5z" />
+            </svg>
+            Edit
+          </Link>
+          <Link
+            href="/admin/courses/categories?add=1"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+          >
+            + Add Category
+          </Link>
         </div>
       </section>
     </main>
@@ -231,13 +275,39 @@ function BackToCoursesLink() {
   );
 }
 
-function AdminToolbar() {
+/** The website's batch filter row + an admin-only [ Edit Filter ] control. */
+function FilterRow({ scope }: { scope: "ssc" | "hsc" }) {
   return (
-    <div className="mt-4 flex flex-wrap gap-2">
-      <CourseManagerChip href="/admin/courses/all" label="+ Add / Edit Course" />
-      <CourseManagerChip href="/admin/courses/categories" label="Manage Categories" />
-      <CourseManagerChip href="/admin/courses/pricing" label="Pricing & Discounts" />
-      <CourseManagerChip href="/admin/courses/coupons" label="Coupons" />
+    <div className="-mt-6 mb-2 flex justify-end">
+      <CourseManagerChip
+        href={`/admin/courses/filters?scope=${scope}`}
+        label="Edit Filter"
+      />
+    </div>
+  );
+}
+
+/** [ + Add Course ] — opens the add form pre-set to the current category. */
+function AddCourseButton({ categoryName }: { categoryName: string | null }) {
+  const query = new URLSearchParams({ add: "1" });
+  if (categoryName) query.set("category", categoryName);
+  return (
+    <div className="mt-8 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 px-6 py-8">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        End of course list
+      </p>
+      <Link
+        href={`/admin/courses/all?${query.toString()}`}
+        className="inline-flex items-center gap-1.5 rounded-xl bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98]"
+      >
+        + Add Course
+      </Link>
+      {categoryName && (
+        <p className="text-[11px] text-neutral-500">
+          The new course will be saved under{" "}
+          <span className="font-bold text-neutral-400">{categoryName}</span>.
+        </p>
+      )}
     </div>
   );
 }

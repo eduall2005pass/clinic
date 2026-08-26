@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import CoursesView from "@/components/CoursesView";
 import { getLivePublicCourses } from "@/lib/course-catalog";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
+import { fetchBatchFilterOptions } from "@/lib/course-filters";
 
 // Cached at the edge; admin changes appear within 60s. Category/kind URL
 // filters are applied client-side (see CoursesView) so this stays static.
@@ -14,9 +15,11 @@ export const metadata: Metadata = {
 };
 
 export default async function CoursesPage() {
-  const [courses, categories] = await Promise.all([
+  const [courses, categories, sscOptions, hscOptions] = await Promise.all([
     getLivePublicCourses(),
     fetchActiveCourseCategories(),
+    fetchBatchFilterOptions("ssc"),
+    fetchBatchFilterOptions("hsc"),
   ]);
 
   return (
@@ -30,6 +33,8 @@ export default async function CoursesPage() {
         imageUrl: category.imageUrl,
         href: category.href,
       }))}
+      sscFilterOptions={sscOptions}
+      hscFilterOptions={hscOptions}
     />
   );
 }

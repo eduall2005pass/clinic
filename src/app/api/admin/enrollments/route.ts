@@ -5,6 +5,9 @@ import {
   setEnrollmentStatus,
   assignCourseToStudent,
   deleteEnrollment,
+  acceptEnrollmentApplication,
+  rejectEnrollmentApplication,
+  getEnrollmentStatusById,
 } from "@/lib/enrollments-admin";
 import type { EnrollmentStatus } from "@/lib/enrollments";
 import { logAdminAction } from "@/lib/administration";
@@ -74,7 +77,15 @@ export async function POST(request: NextRequest) {
 return NextResponse.json({ message: "Course assigned and activated." });
 }
 
-/** Approve / cancel / complete an enrollment. */
+/**
+ * Update an enrollment.
+ *   { id, action: "accept" }  → transactional accept (pending → active,
+ *                               access granted, approval audited)
+ *   { id, action: "reject" }  → transactional reject (pending → cancelled,
+ *                               no access, rejection audited)
+ *   { id, status }            → other transitions (revoke/complete/reopen);
+ *                               pending rows must go through accept/reject
+ */
 export async function PUT(request: NextRequest) {
   const admin = await requirePermission(request, "manageCourses");
   if (!admin) {
@@ -84,14 +95,66 @@ export async function PUT(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
     id?: unknown;
     status?: unknown;
+    action?: unknown;
   } | null;
 
   const id = Number(body?.id);
   if (!Number.isInteger(id) || id <= 0) {
     return NextResponse.json({ error: "Missing enrollment id." }, { status: 400 });
   }
+  const adminUid = admin.uid;
+
+  // ── Accept Enrollment (after manual payment verification) ──
+  if (body?.action === "accept") {
+    const result = await acceptEnrollmentApplication(id, adminUid);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 409 });
+    }
+    await logAdminAction(
+      admin,
+      "enrollment.accept",
+      `#${id} accepted by ${adminUid}`,
+      request,
+    );
+    return NextResponse.json({ message: result.message });
+  }
+
+  // ── Reject (confirmation happens in the UI before this call) ──
+  if (body?.action === "reject") {
+    const result = await rejectEnrollmentApplication(id, adminUid);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 409 });
+    }
+    await logAdminAction(
+      admin,
+      "enrollment.reject",
+      `#${id} rejected by ${adminUid}`,
+      request,
+    );
+    return NextResponse.json({ message: result.message });
+  }
+
+  // ── Other status transitions (no direct pending → active shortcut) ──
   if (typeof body?.status !== "string" || !(STATUSES as string[]).includes(body.status)) {
     return NextResponse.json({ error: "Invalid status." }, { status: 400 });
+  }
+  if (body.status === "active") {
+    return NextResponse.json(
+      { error: "Use Accept Enrollment to activate a pending application." },
+      { status: 400 },
+    );
+  }
+  // Pending rows leaving "pending" as cancelled must be audited rejects.
+  if (body.status === "cancelled") {
+    const current = await getEnrollmentStatusById(id);
+    if (current === "pending") {
+      const result = await rejectEnrollmentApplication(id, adminUid);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 409 });
+      }
+      await logAdminAction(admin, "enrollment.reject", `#${id} rejected by ${adminUid}`, request);
+      return NextResponse.json({ message: result.message });
+    }
   }
 
   const success = await setEnrollmentStatus(id, body.status as EnrollmentStatus);

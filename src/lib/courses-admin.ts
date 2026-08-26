@@ -104,7 +104,7 @@ function toNumber(value: string | number | null): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function rowToCourse(row: CatalogCourseRow): CatalogCourse {
+export function rowToCourse(row: CatalogCourseRow): CatalogCourse {
   return {
     slug: row.slug,
     name: row.name,

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/admin";
+import { query } from "@/lib/mysql";
 import { logAdminAction } from "@/lib/administration";
 import {
   fetchCatalogCourses,
   fetchCatalogCourse,
+  rowToCourse,
+
   saveCatalogCourse,
   deleteCatalogCourse,
   setCatalogCourseFlags,
@@ -20,6 +23,28 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json(
       { course },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  // Backend-enforced category isolation: ?category=<name> (legacy ENUM) or
+  // ?categoryId=<course_categories.id>. Never returns other categories' rows.
+  const categoryName = request.nextUrl.searchParams.get("category");
+  const categoryId = request.nextUrl.searchParams.get("categoryId");
+  if ((categoryName && categoryName.trim()) || (categoryId && categoryId.trim())) {
+    const rows = await query(
+      `SELECT c.* FROM catalog_courses c
+         LEFT JOIN course_categories cc ON cc.id = c.category_id
+        WHERE COALESCE(c.category_id, cc.id) = ?
+           OR (? <> '' AND c.category = ?)
+        ORDER BY c.sort_order ASC`,
+      [
+        (categoryId ?? "").trim(),
+        (categoryName ?? "").trim(),
+        (categoryName ?? "").trim(),
+      ],
+    );
+        return NextResponse.json(
+      { courses: (rows as never[]).map((r) => rowToCourse(r as never)) },
       { headers: { "Cache-Control": "no-store" } },
     );
   }

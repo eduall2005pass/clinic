@@ -22,6 +22,16 @@ export default function PaidEnrollmentPage() {
 
   const paidCourses = (courses ?? []).filter((course) => course.kind === "paid");
 
+  // Flow: Category → Course → Pending Applications. Group courses under
+  // their category heading (order preserved from the catalog sort).
+  const categories: { name: string; courses: typeof paidCourses }[] = [];
+  for (const course of paidCourses) {
+    const name = course.category || "Other";
+    const bucket = categories.find((group) => group.name === name);
+    if (bucket) bucket.courses.push(course);
+    else categories.push({ name, courses: [course] });
+  }
+
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-extrabold text-heading">Paid Course Enrollment</h1>
@@ -30,6 +40,9 @@ export default function PaidEnrollmentPage() {
       </p>
 
       <h2 className="mt-8 text-lg font-bold text-heading">Manual Enrollment</h2>
+      <p className="mt-1 text-xs text-neutral-500">
+        Pick a category → course to review its pending applications.
+      </p>
 
       {error ? (
         <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
@@ -42,9 +55,18 @@ export default function PaidEnrollmentPage() {
           No paid courses published yet.
         </p>
       ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {paidCourses.map((course) => (
-            <ControlCourseCard key={course.slug} course={course} kind="paid" />
+        <div className="mt-4 space-y-6">
+          {categories.map((group) => (
+            <div key={group.name}>
+              <h3 className="text-xs font-extrabold uppercase tracking-widest text-neutral-500">
+                {group.name}
+              </h3>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                {group.courses.map((course) => (
+                  <ControlCourseCard key={course.slug} course={course} kind="paid" />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

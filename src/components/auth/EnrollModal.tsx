@@ -100,6 +100,39 @@ export default function EnrollModal({
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; finalFee: number } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [checkingCoupon, setCheckingCoupon] = useState(false);
+  // Step 4 — paid-course payment proof.
+  const [transactionId, setTransactionId] = useState("");
+  const [paidAmount, setPaidAmount] = useState("");
+  const [senderMobile, setSenderMobile] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Live payment card from MySQL (Admin Payment Card manager) — shows
+  // students exactly where to send the money.
+  const [paymentCard, setPaymentCard] = useState<{
+    bkashNumber: string | null;
+    nagadNumber: string | null;
+    instructions: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!open || !isPaid) return;
+    let cancelled = false;
+    fetch("/api/enrollment-payment-card", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setPaymentCard(data as {
+          bkashNumber: string | null;
+          nagadNumber: string | null;
+          instructions: string | null;
+        });
+      })
+      .catch(() => {
+        // Payment card is informational — silently skip on failure.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isPaid]);
 
   useEffect(() => {
     if (!open) return;
@@ -123,10 +156,37 @@ export default function EnrollModal({
 
   const handleEnroll = async () => {
     if (submitting || !user || !profile) return;
+
+    // Paid courses must submit complete, valid payment proof (Step 4).
+    let payment: { transactionId: string; paidAmount: number; senderMobile: string } | undefined;
+    if (isPaid) {
+      const errors: Record<string, string> = {};
+      const txn = transactionId.trim();
+      const amount = Number(paidAmount.trim());
+      const mobile = senderMobile.trim();
+      if (txn.length < 4 || txn.length > 64) {
+        errors.transactionId = "Transaction ID is required (4–64 characters).";
+      }
+      if (!Number.isFinite(amount) || amount <= 0) {
+        errors.paidAmount = "Enter a valid paid amount greater than 0.";
+      }
+      if (!/^01[3-9]\d{8}$/.test(mobile)) {
+        errors.senderMobile = "Enter a valid mobile number (e.g. 01XXXXXXXXX).";
+      }
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
+        return;
+      }
+      setFieldErrors({});
+      payment = { transactionId: txn, paidAmount: amount, senderMobile: mobile };
+    } else {
+      setFieldErrors({});
+    }
+
     setSubmitting(true);
     setError(null);
     try {
-      await enrollInCourse(course, user, appliedCoupon?.code ?? null);
+      await enrollInCourse(course, user, appliedCoupon?.code ?? null, payment);
       await refreshEnrollments();
       setCompleted(true);
     } catch (err) {
@@ -291,11 +351,12 @@ export default function EnrollModal({
             <ClockIcon />
           </StatusIcon>
           <h3 className="mt-5 text-lg font-bold text-heading">
-            Your enrollment is pending payment/approval.
+            Application submitted — Pending Validation
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-neutral-400">
-            Your enrollment will become active once payment or approval is
-            completed. You will get full course access at that point.
+            Your enrollment application has been received. An admin will verify
+            your payment and activate the course. You will get full access at
+            that point.
           </p>
           <button
             type="button"
@@ -431,10 +492,131 @@ export default function EnrollModal({
               )}
             </div>
 
+            {/* Payment card — live from MySQL (Admin → Enrollment Control →
+                Payment Card). Students pay to THESE numbers. */}
+            {paymentCard && (paymentCard.bkashNumber || paymentCard.nagadNumber) && (
+              <div className="mt-5 rounded-xl border border-primary-500/30 bg-primary-600/5 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+                  Send payment to
+                </p>
+                <div className="mt-3 space-y-2">
+                  {paymentCard.bkashNumber && (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-2">
+                      <span className="text-xs font-extrabold text-pink-300">bKash</span>
+                      <span className="truncate font-mono text-sm font-semibold text-heading">
+                        {paymentCard.bkashNumber}
+                      </span>
+                    </div>
+                  )}
+                  {paymentCard.nagadNumber && (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2">
+                      <span className="text-xs font-extrabold text-orange-300">Nagad</span>
+                      <span className="truncate font-mono text-sm font-semibold text-heading">
+                        {paymentCard.nagadNumber}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {paymentCard.instructions && (
+                  <p className="mt-3 whitespace-pre-line text-xs leading-relaxed text-neutral-300">
+                    {paymentCard.instructions}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Payment proof (Step 4) */}
+            <div className="mt-5 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                Payment Information
+              </p>
+              <div>
+                <label
+                  htmlFor="enroll-txn"
+                  className="text-xs font-semibold text-neutral-400"
+                >
+                  Transaction ID
+                </label>
+                <input
+                  id="enroll-txn"
+                  type="text"
+                  value={transactionId}
+                  onChange={(event) => setTransactionId(event.target.value)}
+                  placeholder="e.g. 8N7DQK2XLM"
+                  autoComplete="off"
+                  className={`mt-1 w-full rounded-xl border bg-dark-900 px-3.5 py-2.5 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
+                    fieldErrors.transactionId ? "border-red-500/60" : "border-ink/15"
+                  }`}
+                />
+                {fieldErrors.transactionId && (
+                  <p className="mt-1 text-xs font-semibold text-red-400">
+                    {fieldErrors.transactionId}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="enroll-amount"
+                  className="text-xs font-semibold text-neutral-400"
+                >
+                  Paid Amount (BDT)
+                </label>
+                <input
+                  id="enroll-amount"
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={paidAmount}
+                  onChange={(event) => setPaidAmount(event.target.value)}
+                  placeholder={
+                    appliedCoupon ? String(appliedCoupon.finalFee) : String(payableFee)
+                  }
+                  className={`mt-1 w-full rounded-xl border bg-dark-900 px-3.5 py-2.5 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
+                    fieldErrors.paidAmount ? "border-red-500/60" : "border-ink/15"
+                  }`}
+                />
+                {fieldErrors.paidAmount && (
+                  <p className="mt-1 text-xs font-semibold text-red-400">
+                    {fieldErrors.paidAmount}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="enroll-mobile"
+                  className="text-xs font-semibold text-neutral-400"
+                >
+                  Sender Mobile Number
+                </label>
+                <input
+                  id="enroll-mobile"
+                  type="tel"
+                  inputMode="numeric"
+                  value={senderMobile}
+                  onChange={(event) => setSenderMobile(event.target.value)}
+                  placeholder="01XXXXXXXXX"
+                  maxLength={11}
+                  className={`mt-1 w-full rounded-xl border bg-dark-900 px-3.5 py-2.5 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
+                    fieldErrors.senderMobile ? "border-red-500/60" : "border-ink/15"
+                  }`}
+                />
+                {fieldErrors.senderMobile && (
+                  <p className="mt-1 text-xs font-semibold text-red-400">
+                    {fieldErrors.senderMobile}
+                  </p>
+                )}
+              </div>
+            </div>
+
             <p className="mt-4 text-sm leading-relaxed text-neutral-400">
-              This is a paid course. Your enrollment request will be placed as
-              pending until payment or approval is completed. The course will
-              not be unlocked before that.
+              This is a paid course. Submit your payment details above — your
+              enrollment will remain{" "}
+              <span className="font-semibold text-yellow-400">
+                Pending Validation
+              </span>{" "}
+              until an admin verifies the payment. The course will not be
+              unlocked before that.
             </p>
           </div>
           {error && (
@@ -448,7 +630,7 @@ export default function EnrollModal({
             disabled={submitting}
             className={`${primaryButtonClass} mt-5`}
           >
-            {submitting ? "Requesting Enrollment..." : "Request Enrollment"}
+            {submitting ? "Submitting Application..." : "Submit Enrollment Application"}
           </button>
           <button
             type="button"
