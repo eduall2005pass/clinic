@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
@@ -17,11 +16,12 @@ import {
 export default function FreeEnrollmentPage() {
   const { user, authLoading } = useAuth();
   const toast = useAdminToast();
-  const { courses, error } = useControlCourses();
-  const [freeAutoEnroll, setFreeAutoEnroll] = useState<boolean | null>(null);
-  const [savingToggle, setSavingToggle] = useState(false);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [categoryId, setCategoryId] = useState("");
+  // Backend-filtered by category (?categoryId=) + kind==='free' client filter.
+  const { courses, error, loading } = useControlCourses(categoryId);
+  const [freeAutoEnroll, setFreeAutoEnroll] = useState<boolean | null>(null);
+  const [savingToggle, setSavingToggle] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -79,17 +79,9 @@ export default function FreeEnrollmentPage() {
 
   if (authLoading) return <AccessLoading label="Loading…" />;
 
-  const freeCourses = (courses ?? []).filter((course) => {
-    if (course.kind !== "free") return false;
-    if (!categoryId) return true;
-    const catName =
-      categories.find((c) => c.id === categoryId)?.name ?? "";
-    return (
-      course.category === catName ||
-      (course.category ?? "").toLowerCase().replace(/\s+/g, "-") ===
-        categoryId.toLowerCase()
-    );
-  });
+  const freeCourses = (courses ?? []).filter(
+    (course) => course.kind === "free",
+  );
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -178,14 +170,23 @@ export default function FreeEnrollmentPage() {
       </h3>
 
       {error ? (
-        <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-          Failed to load the course list.
-        </p>
-      ) : courses === null ? (
-        <AccessLoading label="Loading free courses…" />
+        <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          Could not load courses.
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="ml-3 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-700"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : loading || courses === null ? (
+        <AccessLoading label="Loading courses…" />
       ) : freeCourses.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-ink/15 px-4 py-8 text-center text-sm text-neutral-500">
-          No free courses published yet.
+          {categoryId
+            ? "No courses found in this category."
+            : "No free courses published yet."}
         </p>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">

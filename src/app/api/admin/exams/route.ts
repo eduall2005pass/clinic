@@ -30,10 +30,16 @@ export async function GET(request: NextRequest) {
           EXAM_KINDS.includes(value as ExamKind),
         )
     : [];
-  const exams =
+  let exams =
     kinds.length > 0
       ? (await fetchExams()).filter((exam) => kinds.includes(exam.kind))
       : await fetchExams();
+  // Backend-enforced category isolation (category_id synced from Course
+  // Control categories). Exams without a category never leak into a list.
+  const categoryId = request.nextUrl.searchParams.get("categoryId");
+  if (categoryId && categoryId.trim()) {
+    exams = exams.filter((exam) => exam.categoryId === categoryId.trim());
+  }
   return NextResponse.json(
     { exams },
     { headers: { "Cache-Control": "no-store" } },

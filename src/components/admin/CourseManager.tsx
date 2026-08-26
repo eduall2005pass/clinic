@@ -114,6 +114,7 @@ export default function CourseManager({
   const gate = useAdminGate();
   const searchParams = useSearchParams();
   const [courses, setCourses] = useState<CatalogCourse[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -129,6 +130,7 @@ export default function CourseManager({
   const requestedCategory = searchParams.get("category");
 
   const load = useCallback(async () => {
+    setLoadError(false);
     try {
       const response = await fetch(
         categoryFilter
@@ -136,11 +138,10 @@ export default function CourseManager({
           : "/api/admin/courses",
         { cache: "no-store", headers: gate.headers },
       );
+      if (!response.ok) throw new Error("failed");
       const data = (await response.json()) as { courses?: CatalogCourse[] };
-      let list = data.courses ?? [];
-      if (categoryFilter) {
-        list = list.filter((course) => course.category === categoryFilter);
-      }
+      // Backend already returns only this category's courses (?category=).
+      const list = data.courses ?? [];
       setCourses(list);
 
       // Handle the deep-linked action once the list is available.
@@ -168,10 +169,11 @@ export default function CourseManager({
         setNotice(null);
       }
     } catch {
+      setLoadError(true);
       setCourses([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryFilter, gate.headers, requestedEditSlug, autoAdd, requestedCategory]);
+
 
   useEffect(() => {
     if (gate.ready) void Promise.resolve().then(load);
@@ -312,7 +314,20 @@ export default function CourseManager({
         className={`${inputClass} mt-5`}
       />
 
-      {courses === null ? (
+      {loadError ? (
+        <div className={`${cardClass} mt-5 p-8 text-center`}>
+          <p className="text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+            Could not load courses.
+          </p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className={`${buttonPrimaryClass} mt-4`}
+          >
+            Try Again
+          </button>
+        </div>
+      ) : courses === null ? (
         <p className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>Loading…</p>
       ) : filtered.length === 0 ? (
         <p className={`${cardClass} mt-5 p-8 text-center text-sm text-zinc-500`}>

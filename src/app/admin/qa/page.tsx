@@ -161,6 +161,19 @@ export default function AdminQaControlPage() {
         description="Answer or delete student questions — each question shows its Category → Course → Subject context. Subjects come from Course Control; legacy subjects are kept below."
       />
 
+      {loadError && (
+        <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-6 text-center">
+          <p className="text-sm text-red-400">Could not load Q&amp;A data.</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="mt-3 rounded-xl bg-primary-600 px-4 py-2 text-xs font-bold text-white hover:bg-primary-700"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-primary-600/30 bg-primary-600/10 p-5 text-center">

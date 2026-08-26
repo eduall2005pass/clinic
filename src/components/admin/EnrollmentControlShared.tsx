@@ -14,17 +14,21 @@ export type ControlCourse = {
   totalApplications: number;
 };
 
-/** Live course list + per-course pending application counts (MySQL). */
-export function useControlCourses() {
+/** Live course list + per-course pending application counts (MySQL).
+ *  Pass categoryId to get ONLY that Course Control category's courses. */
+export function useControlCourses(categoryId = "") {
   const { user, authLoading } = useAuth();
   const [courses, setCourses] = useState<ControlCourse[] | null>(null);
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     try {
       const token = await user.getIdToken();
-      const res = await fetch("/api/admin/enrollment-control/summary", {
+      const qs = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : "";
+      const res = await fetch(`/api/admin/enrollment-control/summary${qs}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
@@ -34,8 +38,10 @@ export function useControlCourses() {
       setError(false);
     } catch {
       setError(true);
+    } finally {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, categoryId]);
 
   // Refresh every 30s so a new application raises its badge automatically.
   useEffect(() => {
@@ -46,7 +52,7 @@ export function useControlCourses() {
     return () => clearInterval(interval);
   }, [user, load]);
 
-  return { courses, error, authLoading, reload: load };
+  return { courses, error, loading, authLoading, reload: load };
 }
 
 /** Course card with a course-specific pending-applications badge. */

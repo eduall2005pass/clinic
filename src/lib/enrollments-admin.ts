@@ -521,8 +521,20 @@ export type ControlCourse = {
   totalApplications: number;
 };
 
-/** Every published catalog course + its per-course application counts. */
-export async function fetchEnrollmentControlCourses(): Promise<ControlCourse[]> {
+/**
+ * Published catalog courses + per-course application counts.
+ * When categoryId is given, ONLY that Course Control category's courses are
+ * returned (backend-enforced via catalog_courses.category_id).
+ */
+export async function fetchEnrollmentControlCourses(
+  categoryId?: string,
+): Promise<ControlCourse[]> {
+  const params: unknown[] = [];
+  let where = `WHERE c.status = 'published'`;
+  if (categoryId && categoryId.trim()) {
+    where += ` AND COALESCE(c.category_id, '') = ?`;
+    params.push(categoryId.trim());
+  }
   const rows = await query<
     {
       slug: string;
@@ -538,9 +550,10 @@ export async function fetchEnrollmentControlCourses(): Promise<ControlCourse[]> 
             COUNT(e.id) AS total
        FROM catalog_courses c
        LEFT JOIN enrollments e ON e.course_id = c.slug
-      WHERE c.status = 'published'
-      GROUP BY c.slug, c.name, c.category, c.fee
-      ORDER BY c.sort_order ASC, c.name ASC`,
+       ${where}
+       GROUP BY c.slug, c.name, c.category, c.fee
+       ORDER BY c.sort_order ASC, c.name ASC`,
+    params,
   );
   return rows.map((row) => ({
     slug: row.slug,

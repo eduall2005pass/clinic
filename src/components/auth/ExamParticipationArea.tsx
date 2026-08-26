@@ -26,8 +26,11 @@ type SubmissionOutcome = {
   correctCount: number;
   wrongCount: number;
   skippedCount: number;
+  rawMarks?: number;
   negativeMarks?: number;
   negativeDeduction?: number;
+  timerPenalty?: number;
+  secondTimer?: boolean;
   meritPosition?: number | null;
   timeTakenSeconds?: number | null;
   highestMark?: number | null;
@@ -570,20 +573,45 @@ export default function ExamParticipationArea({
         </div>
 
         <ul className="mx-auto mt-4 grid max-w-md gap-2 text-left text-sm">
+          {typeof outcome.rawMarks === "number" && (
+            <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
+              <span className="font-semibold text-neutral-400">Raw Marks</span>
+              <span className="font-extrabold text-emerald-300">
+                {outcome.rawMarks} / {outcome.totalMarks}
+              </span>
+            </li>
+          )}
           {outcome.negativeMarks != null && outcome.negativeMarks > 0 ? (
             <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
-              <span className="font-semibold text-neutral-400">Negative Marks</span>
+              <span className="font-semibold text-neutral-400">
+                Negative Marking Deduction
+              </span>
               <span className="font-extrabold text-red-300">
-                −{outcome.negativeMarks} per wrong
-                {outcome.negativeDeduction ? ` · total −${outcome.negativeDeduction}` : ""}
+                −{outcome.negativeDeduction ?? 0}
+                <span className="ml-1 text-[11px] font-bold text-neutral-500">
+                  (−{outcome.negativeMarks} × wrong)
+                </span>
               </span>
             </li>
           ) : (
             <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
-              <span className="font-semibold text-neutral-400">Negative Marks</span>
-              <span className="font-extrabold text-emerald-300">None</span>
+              <span className="font-semibold text-neutral-400">
+                Negative Marking Deduction
+              </span>
+              <span className="font-extrabold text-neutral-300">0 · Not Applicable</span>
             </li>
           )}
+          <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
+            <span className="font-semibold text-neutral-400">Second Timer Penalty</span>
+            {outcome.secondTimer ? (
+              <span className="font-extrabold text-red-300">
+                −{outcome.timerPenalty ?? 0}
+                <span className="ml-1 text-[11px] font-bold text-neutral-500">(repeat attempt)</span>
+              </span>
+            ) : (
+              <span className="font-extrabold text-neutral-300">0 · Not Applicable</span>
+            )}
+          </li>
           {typeof outcome.timeTakenSeconds === "number" && (
             <li className="flex items-center justify-between rounded-xl border border-ink/10 bg-dark-900 px-4 py-2.5">
               <span className="font-semibold text-neutral-400">Time Taken</span>

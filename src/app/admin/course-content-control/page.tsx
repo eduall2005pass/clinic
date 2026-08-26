@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
 
@@ -11,17 +11,26 @@ type Cat = { id: string; name: string };
 export default function ContentControlPage() {
   const { user, authLoading } = useAuth();
   const [categories, setCategories] = useState<Cat[] | null>(null);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!user) return;
+    setError(false);
+    try {
+      const res = await fetch("/api/course-categories", { cache: "no-store" });
+      if (!res.ok) throw new Error("failed");
+      const data = (await res.json()) as { categories?: Cat[] };
+      setCategories(Array.isArray(data.categories) ? data.categories : []);
+    } catch {
+      setError(true);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (authLoading || !user) return;
-    void (async () => {
-      const res = await fetch("/api/course-categories", { cache: "no-store" });
-      const data = res.ok
-        ? ((await res.json()) as { categories?: Cat[] })
-        : { categories: [] };
-      setCategories(Array.isArray(data.categories) ? data.categories : []);
-    })();
-  }, [authLoading, user]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [authLoading, user, load]);
 
   if (authLoading || categories === null)
     return <AccessLoading label="Loading Course Content Control…" />;
@@ -32,6 +41,23 @@ export default function ContentControlPage() {
       <p className="mt-1 text-sm text-neutral-400">
         Categories are synced from Course Control (read-only here).
       </p>
+      {error && (
+        <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-6 text-center">
+          <p className="text-sm text-red-400">Could not load categories.</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="mt-3 rounded-xl bg-primary-600 px-4 py-2 text-xs font-bold text-white hover:bg-primary-700"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+      {!error && categories.length === 0 && (
+        <p className="mt-6 rounded-xl border border-dashed border-ink/15 px-4 py-8 text-center text-sm text-neutral-500">
+          No categories found.
+        </p>
+      )}
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {categories.map((category) => (
           <Link

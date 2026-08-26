@@ -35,11 +35,18 @@ const CATEGORY_TYPES = {
 
 type CategoryParam = keyof typeof CATEGORY_TYPES;
 
-/** Website category name → this panel's ?category= parameter. */
+/** Website category name → this panel's ?category= parameter.
+ *  Normalized prefix match so "SSC Academic Courses" (Course Control's
+ *  display name) still maps to the "ssc" panel parameter. */
 function adminParamFor(category: CourseCategory): string | null {
-  const entry = (Object.entries(CATEGORY_TYPES) as Array<[CategoryParam, string]>).find(
-    ([, name]) => name === category.name,
-  );
+  const norm = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const token = norm(category.name);
+  const entry = (
+    Object.entries(CATEGORY_TYPES) as Array<[CategoryParam, string]>
+  ).find(([, name]) => {
+    const nameToken = norm(name);
+    return token === nameToken || token.startsWith(nameToken);
+  });
   return entry?.[0] ?? null;
 }
 
