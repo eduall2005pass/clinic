@@ -14,10 +14,13 @@ import {
   type Notice,
 } from "@/components/admin/admin-ui";
 import ExamQuestions from "@/components/admin/ExamQuestions";
+import ExamRulesEditor from "@/components/admin/ExamRulesEditor";
+import { MediaUploadField } from "@/components/admin/MediaUploadField";
 
 export type Exam = {
   id: string;
   title: string;
+  bannerUrl?: string | null;
   kind: "public" | "practice" | "enrolled";
   batchId: string;
   subject: string;
@@ -25,6 +28,12 @@ export type Exam = {
   durationMinutes: number;
   totalMarks: number;
   negativeMarks: number;
+  /** Per-exam Admin setting: wrong answers cost negativePerWrong when ON. */
+  negativeEnabled?: boolean;
+  negativePerWrong?: number;
+  /** Per-exam Admin setting: repeat attempt of THIS exam loses marks. */
+  secondTimerEnabled?: boolean;
+  secondTimerDeduction?: number;
   questionCount: number;
   status: "draft" | "published" | "closed";
   scheduledAt: string | null;
@@ -45,6 +54,11 @@ export type FixedCategory = { id: string; name: string };
 const EMPTY = {
   id: "",
   title: "",
+  bannerUrl: "",
+  negativeEnabled: false,
+  negativePerWrong: "0.25",
+  secondTimerEnabled: false,
+  secondTimerDeduction: "5",
   kind: "public" as Exam["kind"],
   batchId: "hsc-28",
   subject: "",
@@ -153,6 +167,11 @@ export default function ExamManager({
     setForm({
       id: exam.id,
       title: exam.title,
+      bannerUrl: exam.bannerUrl ?? "",
+      negativeEnabled: exam.negativeEnabled ?? exam.negativeMarks > 0,
+      negativePerWrong: String(exam.negativePerWrong ?? 0.25),
+      secondTimerEnabled: Boolean(exam.secondTimerEnabled),
+      secondTimerDeduction: String(exam.secondTimerDeduction ?? 5),
       kind: exam.kind,
       batchId: exam.batchId || "hsc-28",
       subject: exam.subject,
@@ -194,8 +213,14 @@ export default function ExamManager({
           ...(editingSortOrder !== null ? { sortOrder: editingSortOrder } : {}),
           courseIds: form.kind === "enrolled" ? courseIds : [],
           categoryId,
+          bannerUrl: form.bannerUrl,
+          negativeEnabled: form.negativeEnabled,
+          negativePerWrong: Number(form.negativePerWrong) || 0.25,
+          secondTimerEnabled: form.secondTimerEnabled,
+          secondTimerDeduction: Number(form.secondTimerDeduction) || 5,
+          // Legacy column mirrors the per-exam toggle for older views.
+          negativeMarks: form.negativeEnabled ? Number(form.negativePerWrong) || 0.25 : 0,
           durationMinutes: Number(form.durationMinutes) || 30,
-          negativeMarks: Number(form.negativeMarks) || 0,
           totalMarks: form.totalMarks ? Number(form.totalMarks) : undefined,
           scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
           endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
@@ -366,7 +391,8 @@ export default function ExamManager({
                       ` · ${chapterOptions.find((chapter) => chapter.id === exam.chapterId)?.name ?? exam.chapterId}`}{" "}
                     · {exam.questionCount} questions ·{" "}
                     {exam.totalMarks} marks · {exam.durationMinutes} min
-                    {exam.negativeMarks > 0 && ` · −${exam.negativeMarks} negative`}
+                    {exam.negativeEnabled && ` · −${exam.negativePerWrong ?? 0.25} negative`}
+                    {exam.secondTimerEnabled && ` · 2nd timer −${exam.secondTimerDeduction ?? 5}`}
                   </p>
                   {exam.kind === "enrolled" && (
                     <p className="mt-1 text-xs font-semibold text-zinc-500">
@@ -506,6 +532,17 @@ export default function ExamManager({
                   )}
                 </div>
               )}
+              <div className="sm:col-span-2">
+                <MediaUploadField
+                  id="ex-banner"
+                  label="Exam Banner (shown on the student exam card & rules page)"
+                  directory="exams"
+                  accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                  preview
+                  value={form.bannerUrl}
+                  onChange={(url) => setForm({ ...form, bannerUrl: url })}
+                />
+              </div>
               <div>
                 <label className={labelClass} htmlFor="ex-status">Status</label>
                 <select id="ex-status" className={inputClass} value={form.status}
@@ -557,10 +594,55 @@ export default function ExamManager({
                 <input id="ex-duration" type="number" min="1" className={inputClass} value={form.durationMinutes}
                   onChange={(event) => setForm({ ...form, durationMinutes: event.target.value })} />
               </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-neg">Negative marks per wrong answer</label>
-                <input id="ex-neg" type="number" step="0.25" min="0" className={inputClass} value={form.negativeMarks}
-                  onChange={(event) => setForm({ ...form, negativeMarks: event.target.value })} />
+              <div className="sm:col-span-2 rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-extrabold uppercase tracking-wide text-zinc-700 admin-dark:text-zinc-200">
+                    Negative Marking
+                  </span>
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600 admin-dark:text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={form.negativeEnabled}
+                      onChange={(event) => setForm({ ...form, negativeEnabled: event.target.checked })}
+                    />
+                    {form.negativeEnabled ? "ON" : "OFF"}
+                  </label>
+                </div>
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  Wrong Answer Penalty: <span className="font-bold">0.25</span> per wrong answer
+                  {form.negativeEnabled ? "" : " (no deduction while OFF)"}.
+                </p>
+              </div>
+              <div className="sm:col-span-2 rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-extrabold uppercase tracking-wide text-zinc-700 admin-dark:text-zinc-200">
+                    Second Timer Penalty
+                  </span>
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600 admin-dark:text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={form.secondTimerEnabled}
+                      onChange={(event) => setForm({ ...form, secondTimerEnabled: event.target.checked })}
+                    />
+                    {form.secondTimerEnabled ? "ON" : "OFF"}
+                  </label>
+                </div>
+                <div className="mt-2 flex items-center gap-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500">
+                    Second Timer Deduction
+                  </span>
+                  <input
+                    aria-label="Second timer deduction (marks)"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    disabled={!form.secondTimerEnabled}
+                    className={`${inputClass} w-28 disabled:opacity-50`}
+                    value={form.secondTimerDeduction}
+                    onChange={(event) => setForm({ ...form, secondTimerDeduction: event.target.value })}
+                  />
+                  <span className="text-[11px] text-zinc-500">marks (repeat attempt of THIS exam only)</span>
+                </div>
               </div>
               <div>
                 <label className={labelClass} htmlFor="ex-marks">Total marks (auto from questions)</label>
@@ -577,6 +659,10 @@ export default function ExamManager({
                 <input id="ex-ends" type="datetime-local" className={inputClass} value={form.endsAt}
                   onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
               </div>
+              {/* Per-exam rule management (exam_id-scoped, MySQL-backed). */}
+              {editingId && (
+                <ExamRulesEditor examId={editingId} authHeaders={gate.headers} />
+              )}
               <div className="sm:col-span-2 flex gap-3">
                 <button type="submit" disabled={busy} className={buttonPrimaryClass}>{busy ? "Saving…" : "Save Exam"}</button>
                 <button type="button" onClick={() => setShowForm(false)} className={buttonSecondaryClass}>Cancel</button>

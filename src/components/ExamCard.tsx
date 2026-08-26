@@ -72,17 +72,6 @@ const categoryMeta: Record<
   "varsity-admission": { icon: BuildingIcon },
 };
 
-const categoryDescriptions: Record<ExamCategory, string> = {
-  "ssc-academic":
-    "Chapter-wise MCQ practice built on the latest SSC syllabus and question patterns.",
-  "hsc-academic":
-    "Full-length board-style MCQ exam covering the complete HSC syllabus.",
-  "medical-admission":
-    "Medical admission preparation with previous year questions and detailed analysis.",
-  "varsity-admission":
-    "University admission practice designed around the latest question trends.",
-};
-
 const actionMeta: Record<ExamStatus, { label: string }> = {
   Live: { label: "Start Now" },
   Upcoming: { label: "View Details" },
@@ -131,32 +120,32 @@ export default function ExamCard({
     <article
       className={`group flex flex-col overflow-hidden rounded-2xl bg-dark-900 transition duration-300 hover:-translate-y-1 ${cardClasses}`}
     >
-      <div className="flex items-center justify-between gap-3 p-5 pb-0">
+      {/* Exam banner — per-exam image managed from the Admin Panel */}
+      <div className="relative h-32 w-full bg-gradient-to-br from-primary-600/25 via-dark-900 to-dark-950 sm:h-36">
+        {exam.bannerUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={exam.bannerUrl}
+            alt={`${exam.name} banner`}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <CategoryIcon className="h-10 w-10 text-neutral-600" />
+          </div>
+        )}
         <span
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-extrabold tracking-wider ${status.badge}`}
+          className={`absolute left-4 top-4 flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-extrabold tracking-wider ${status.badge}`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
           {status.label}
         </span>
 
         {!exam.published && (
-          <span className="flex items-center gap-1.5 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-3 py-1 text-[11px] font-extrabold tracking-wider text-yellow-300">
+          <span className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-3 py-1 text-[11px] font-extrabold tracking-wider text-yellow-300">
             DRAFT
           </span>
         )}
-
-        <span
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${
-            isLive
-              ? "border-primary-500/40 bg-primary-600/10 text-primary-300"
-              : "border-ink/10 bg-dark-850 text-neutral-400"
-          }`}
-        >
-          <CategoryIcon />
-          {exam.courseType}
-          <span className="text-neutral-500">·</span>
-          {exam.batch}
-        </span>
       </div>
 
       <div className="flex flex-1 flex-col p-5">
@@ -169,11 +158,24 @@ export default function ExamCard({
         >
           {exam.name}
         </h3>
-        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-400">
-          {categoryDescriptions[category]}
-        </p>
 
-        <div className="mt-5 grid grid-cols-3 gap-2 rounded-xl border border-ink/10 bg-ink/5 p-3">
+        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl border border-ink/10 bg-ink/5 p-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+              Questions
+            </p>
+            <p className="mt-1 text-sm font-bold text-heading">
+              {exam.totalQuestions > 0 ? exam.totalQuestions : "—"}
+            </p>
+          </div>
+          <div className="border-x border-ink/10 px-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+              Total Marks
+            </p>
+            <p className="mt-1 text-sm font-bold text-heading">
+              {exam.totalMarks || "—"}
+            </p>
+          </div>
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
               Duration
@@ -181,20 +183,6 @@ export default function ExamCard({
             <p className="mt-1 text-sm font-bold text-heading">
               {exam.durationMinutes} min
             </p>
-          </div>
-          <div className="border-x border-ink/10 px-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
-              Marks
-            </p>
-            <p className="mt-1 text-sm font-bold text-heading">
-              {exam.totalMarks}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
-              Participants
-            </p>
-            <p className="mt-1 text-sm font-bold text-heading">—</p>
           </div>
         </div>
 

@@ -5,7 +5,9 @@ import { fetchExams, hasEnrolledExamAccess, type Exam } from "@/lib/exams-admin"
 // Student-facing exam taking. MediSpark exam rules enforced here:
 //  - answers are stored server-side and locked after the first selection
 //  - forward-only navigation (client-side) with server-side answer storage
-//  - negative marking ONLY for Medical Admission exams (−0.25 per wrong)
+//  - negative marking is a per-exam Admin setting (ON → −0.25 per wrong)
+//  - second-timer penalty (per-exam Admin setting): repeating the SAME exam
+//    deducts extra marks AFTER negative marking; first attempts never lose marks
 //  - starting an attempt on another device terminates + auto-submits the
 //    previous session
 // Questions are always sanitized (no correct answers leave the server).
@@ -26,6 +28,19 @@ export function negativeMarksFor(courseType: string): number {
   return courseType === "Admission" ? 0.25 : 0;
 }
 
+/** Per-exam Admin setting — wrong-answer penalty (0 when the toggle is OFF). */
+export function negativePerWrongFor(exam: {
+  negativeEnabled?: boolean;
+  negativePerWrong?: number;
+  courseType: string;
+}): number {
+  if (exam.negativeEnabled === undefined) {
+    // Legacy exams stored before the per-exam toggle keep the old rule.
+    return negativeMarksFor(exam.courseType);
+  }
+  return exam.negativeEnabled ? Math.max(0, exam.negativePerWrong ?? 0.25) : 0;
+}
+
 export type TakingQuestion = {
   id: number;
   question: string;
@@ -41,6 +56,12 @@ export type SubmissionOutcome = {
   skippedCount: number;
   negativeMarks?: number;
   negativeDeduction?: number;
+  /** Second-timer penalty applied (marks). 0 when OFF / first attempt. */
+  timerPenalty?: number;
+  /** True when this submission counted as a repeat attempt of the same exam. */
+  secondTimer?: boolean;
+  /** Sum of marks earned from correct answers alone (before deductions). */
+  rawMarks?: number;
   meritPosition?: number | null;
   timeTakenSeconds?: number | null;
   /** Best score achieved by any student on this exam. */
@@ -246,6 +267,7 @@ function gradeAnswers(
   details: ResultDetail[];
 } {
   let score = 0;
+  let rawMarks = 0;
   let correctCount = 0;
   let wrongCount = 0;
   let skippedCount = 0;
@@ -267,6 +289,7 @@ function gradeAnswers(
     }
     if (chosen === row.correct_index) {
       score += marks;
+      rawMarks += marks;
       correctCount += 1;
       details.push({
         questionId: row.id,
@@ -299,6 +322,7 @@ function gradeAnswers(
     correctCount,
     wrongCount,
     skippedCount,
+    rawMarks: Math.round(rawMarks * 100) / 100,
     negativeMarks: negativePerWrong,
     negativeDeduction:
       wrongCount > 0 && negativePerWrong > 0
@@ -334,8 +358,32 @@ async function finalizeAttempt(
     [examId],
   );
 
-  const negativePerWrong = negativeMarksFor(found.courseType);
+  const negativePerWrong = negativePerWrongFor(found);
   const graded = gradeAnswers(rows, merged, negativePerWrong);
+
+  // Second-timer check — only PRIOR submissions of this SAME exam count.
+  let isSecondTimer = false;
+  try {
+    const priorRows = await query<{ n: number }[]>(
+      `SELECT COUNT(*) AS n FROM exam_results WHERE exam_id = ? AND student_uid = ?`,
+      [examId, uid],
+    );
+    isSecondTimer = (priorRows[0]?.n ?? 0) > 0;
+  } catch {
+    // On failure treat as first timer — never penalise without evidence.
+  }
+  const secondTimerDeduction =
+    found.secondTimerEnabled && found.secondTimerDeduction > 0
+      ? found.secondTimerDeduction
+      : 0;
+  const timerPenalty =
+    found.secondTimerEnabled && isSecondTimer ? secondTimerDeduction : 0;
+
+  // Final marks = raw (post-negative-marking) − second-timer penalty.
+  const finalScore = Math.max(
+    0,
+    Math.round((graded.score - timerPenalty) * 100) / 100,
+  );
 
   // Time taken = seconds between attempt start and submission (server clock).
   let timeTakenSeconds: number | null = null;
@@ -368,17 +416,21 @@ async function finalizeAttempt(
   await exec(
     `INSERT INTO exam_results
        (exam_id, student_uid, student_name, score, total_marks, answers,
-        details, time_taken_seconds)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        details, time_taken_seconds, negative_deduction, timer_penalty,
+        is_second_timer)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       examId,
       uid,
       studentName,
-      graded.score,
+      finalScore,
       graded.totalMarks,
       JSON.stringify(merged),
       JSON.stringify(graded.details),
       timeTakenSeconds,
+      graded.negativeDeduction ?? 0,
+      timerPenalty,
+      isSecondTimer ? 1 : 0,
     ],
   );
   await updateMeritPositions(examId);
@@ -406,6 +458,9 @@ async function finalizeAttempt(
 
   return {
     ...graded,
+    score: finalScore,
+    timerPenalty,
+    secondTimer: isSecondTimer,
     meritPosition,
     timeTakenSeconds,
     examName: found.title,
@@ -424,9 +479,14 @@ async function latestOutcome(
       total_marks: string | number;
       merit_position: number | null;
       time_taken_seconds: number | null;
+      negative_deduction: string | number | null;
+      timer_penalty: string | number | null;
+      is_second_timer: number | null;
     }[]
   >(
-    `SELECT score, total_marks, merit_position, time_taken_seconds FROM exam_results
+    `SELECT score, total_marks, merit_position, time_taken_seconds,
+            negative_deduction, timer_penalty, is_second_timer
+     FROM exam_results
      WHERE exam_id = ? AND student_uid = ? ORDER BY id DESC LIMIT 1`,
     [examId, uid],
   );
@@ -449,30 +509,47 @@ async function latestOutcome(
   let correctCount = 0;
   let wrongCount = 0;
   let skippedCount = 0;
+  let rawMarks = 0;
   for (const question of questions) {
     const chosen = answers[String(question.id)];
     if (typeof chosen !== "number") skippedCount += 1;
-    else if (chosen === question.correct_index) correctCount += 1;
-    else wrongCount += 1;
+    else if (chosen === question.correct_index) {
+      correctCount += 1;
+      rawMarks += Number(question.marks) || 1;
+    } else wrongCount += 1;
   }
-  const negativePerWrong = negativeMarksFor(found?.courseType ?? "Academic");
+  const negativePerWrong = negativePerWrongFor(
+    found ?? { courseType: "Academic" },
+  );
   const score = Number(row.score) || 0;
+  const timerPenalty = toNum(row.timer_penalty);
   return {
     score,
     totalMarks: Number(row.total_marks) || 0,
     correctCount,
     wrongCount,
     skippedCount,
+    rawMarks: Math.round(rawMarks * 100) / 100,
     negativeMarks: negativePerWrong,
     negativeDeduction:
-      wrongCount > 0 && negativePerWrong > 0
-        ? Math.round(negativePerWrong * wrongCount * 100) / 100
-        : 0,
+      row.negative_deduction !== null && row.negative_deduction !== undefined
+        ? toNum(row.negative_deduction)
+        : wrongCount > 0 && negativePerWrong > 0
+          ? Math.round(negativePerWrong * wrongCount * 100) / 100
+          : 0,
+    timerPenalty,
+    secondTimer: (row.is_second_timer ?? 0) === 1,
     examName: found?.title ?? undefined,
     meritPosition: row.merit_position ?? null,
     timeTakenSeconds: row.time_taken_seconds ?? null,
     highestMark: await highestMarkFor(examId),
   };
+}
+
+function toNum(value: string | number | null | undefined): number {
+  if (value === null || value === undefined) return 0;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 export async function getExamForTaking(
@@ -524,8 +601,8 @@ export async function getExamForTaking(
       courseType: found.courseType,
       durationMinutes: found.durationMinutes,
       totalMarks: questions.reduce((sum, item) => sum + item.marks, 0),
-      // Rule-based: −0.25 per wrong for Medical Admission, none for HSC.
-      negativeMarks: negativeMarksFor(found.courseType),
+      // Per-exam Admin setting — 0 when negative marking is OFF.
+      negativeMarks: negativePerWrongFor(found),
     },
     questions,
     // The attempt (and its timer) starts only when the student accepts the
@@ -585,6 +662,9 @@ export type ExamResultScript = {
   submittedAt: string | null;
   timeTakenSeconds: number | null;
   meritPosition: number | null;
+  negativeDeduction: number;
+  timerPenalty: number;
+  secondTimer: boolean;
   questions: AnswerScriptQuestion[];
 };
 
@@ -607,10 +687,14 @@ export async function getExamResultScript(
       submitted_at: Date | string;
       time_taken_seconds: number | null;
       merit_position: number | null;
+      negative_deduction: string | number | null;
+      timer_penalty: string | number | null;
+      is_second_timer: number | null;
     }[]
   >(
     `SELECT student_name, score, total_marks, answers, details, submitted_at,
-            time_taken_seconds, merit_position
+            time_taken_seconds, merit_position, negative_deduction,
+            timer_penalty, is_second_timer
      FROM exam_results
      WHERE exam_id = ? AND student_uid = ?
      ORDER BY id DESC LIMIT 1`,
@@ -711,6 +795,9 @@ export async function getExamResultScript(
       result.merit_position === null || result.merit_position === undefined
         ? null
         : Number(result.merit_position),
+    negativeDeduction: toNum(result.negative_deduction),
+    timerPenalty: toNum(result.timer_penalty),
+    secondTimer: (result.is_second_timer ?? 0) === 1,
     questions,
   };
 }

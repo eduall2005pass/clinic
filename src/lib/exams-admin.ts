@@ -1,4 +1,5 @@
 import { exec, parseJsonColumn, query } from "@/lib/mysql";
+import { seedDefaultExamRules } from "@/lib/exam-rules";
 
 // Admin Panel → Exams. Exams, question bank, enrollments, results and
 // settings all live in MySQL. `exam_questions.exam_id = NULL` marks a
@@ -26,8 +27,16 @@ export type Exam = {
   durationMinutes: number;
   totalMarks: number;
   negativeMarks: number;
+  /** Admin ON/OFF — when true, wrong answers cost `negativePerWrong`. */
+  negativeEnabled: boolean;
+  negativePerWrong: number;
+  /** Admin ON/OFF — repeat attempt of the SAME exam loses marks. */
+  secondTimerEnabled: boolean;
+  secondTimerDeduction: number;
   questionCount: number;
   status: ExamStatus;
+  /** Featured public exams auto-appear as homepage slider slides. */
+  featured: boolean;
   scheduledAt: string | null;
   endsAt: string | null;
   answerKey: Record<string, number> | null;
@@ -37,6 +46,8 @@ export type Exam = {
   chapterId: string | null;
   /** Admin-controlled display order inside a chapter. */
   sortOrder: number;
+  /** Public Exam Control category (synced from Course Control categories). */
+  categoryId?: string | null;
 };
 
 export type ExamQuestion = {
@@ -91,13 +102,19 @@ type ExamRow = {
   duration_minutes: number;
   total_marks: number;
   negative_marks: string | number;
+  negative_enabled?: number | boolean;
+  negative_per_wrong?: string | number;
+  second_timer_enabled?: number | boolean;
+  second_timer_deduction?: string | number;
   question_count: number;
   status: string;
+  featured?: number | boolean;
   scheduled_at: Date | string | null;
   ends_at?: Date | string | null;
   answer_key: string | null;
   chapter_id: string | null;
   sort_order?: string | number | null;
+  category_id?: string | null;
 };
 
 type QuestionRow = {
@@ -147,6 +164,21 @@ function rowToExam(row: ExamRow): Exam {
     durationMinutes: row.duration_minutes ?? 30,
     totalMarks: row.total_marks ?? 0,
     negativeMarks: toNumber(row.negative_marks),
+    negativeEnabled:
+      row.negative_enabled === undefined
+        ? // Rows read before the column existed keep the legacy behaviour.
+          row.course_type === "Admission"
+        : Boolean(row.negative_enabled),
+    negativePerWrong:
+      row.negative_per_wrong === undefined || row.negative_per_wrong === null
+        ? 0.25
+        : toNumber(row.negative_per_wrong as string | number),
+    secondTimerEnabled: Boolean(row.second_timer_enabled),
+    secondTimerDeduction:
+      row.second_timer_deduction === undefined ||
+      row.second_timer_deduction === null
+        ? 5
+        : toNumber(row.second_timer_deduction as string | number),
     questionCount: row.question_count ?? 0,
     status:
       row.status === "published"
@@ -154,12 +186,14 @@ function rowToExam(row: ExamRow): Exam {
         : row.status === "closed"
           ? "closed"
           : "draft",
+    featured: Boolean(row.featured),
     scheduledAt: toIso(row.scheduled_at),
     endsAt: toIso(row.ends_at),
     answerKey,
     courseIds: [],
     chapterId: row.chapter_id ?? null,
     sortOrder: toNumber(row.sort_order ?? null),
+    categoryId: row.category_id ?? null,
   };
 }
 
@@ -231,6 +265,43 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — columns may already exist.
   }
+  // Per-exam grading settings + category linkage + featured slider flag.
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS category_id VARCHAR(64) NULL AFTER answer_key`);
+  } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS negative_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER negative_marks`);
+  } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS negative_per_wrong DECIMAL(4,2) NOT NULL DEFAULT 0.25 AFTER negative_enabled`);
+  } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS second_timer_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER negative_per_wrong`);
+  } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS second_timer_deduction DECIMAL(6,2) NOT NULL DEFAULT 5 AFTER second_timer_enabled`);
+  } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await exec(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS featured TINYINT(1) NOT NULL DEFAULT 0 AFTER status`);
+  } catch {
+    // Best effort — column may already exist.
+  }
+  // Preserve legacy behaviour: Admission exams always had −0.25 per wrong.
+  try {
+    await exec(`UPDATE exams SET negative_enabled = 1 WHERE course_type = 'Admission' AND negative_enabled = 0`);
+  } catch {
+    // Best effort — column may not exist yet (apply the SQL migration).
+  }
   await exec(`CREATE TABLE IF NOT EXISTS exam_courses (
     exam_id VARCHAR(64) NOT NULL,
     course_id VARCHAR(191) NOT NULL,
@@ -252,8 +323,9 @@ async function ensureTables(): Promise<void> {
 
 const EXAM_COLUMNS = `id, title, description, banner_url, kind, batch_id,
   subject, chapter_id, sort_order, course_type, duration_minutes,
-  total_marks, negative_marks, question_count, status, scheduled_at, ends_at,
-  answer_key`;
+  total_marks, negative_marks, negative_enabled, negative_per_wrong,
+  second_timer_enabled, second_timer_deduction, question_count, status,
+  featured, scheduled_at, ends_at, answer_key, category_id`;
 
 // ── Exams CRUD ───────────────────────────────────────────────────────────
 
@@ -343,6 +415,21 @@ export async function saveExam(
     throw new Error("Assign at least one course to an enrolled exam.");
   }
   const chapterId = asString(input.chapterId) || null;
+  const categoryId = asString(input.categoryId) || null;
+  // Per-exam marking settings (Admin → Public Exam Control).
+  const negativeEnabled = input.negativeEnabled === true;
+  const negativePerWrongRaw = Number(input.negativePerWrong);
+  const negativePerWrong =
+    Number.isFinite(negativePerWrongRaw) && negativePerWrongRaw > 0
+      ? Math.min(99, negativePerWrongRaw)
+      : 0.25;
+  const secondTimerEnabled = input.secondTimerEnabled === true;
+  const secondTimerDeductionRaw = Number(input.secondTimerDeduction);
+  const secondTimerDeduction =
+    Number.isFinite(secondTimerDeductionRaw) && secondTimerDeductionRaw > 0
+      ? Math.min(9999, secondTimerDeductionRaw)
+      : 5;
+  const featured = input.featured === true;
   // Keep the admin's explicit order; new exams without one go to the end.
   let sortOrder = Math.max(0, Number(input.sortOrder) || 0);
   if (!sortOrder && !id) {
@@ -352,17 +439,28 @@ export async function saveExam(
     sortOrder = toNumber(maxRows[0]?.m ?? null) + 1;
   }
 
+  const existing = await query<{ id: string }[]>(
+    `SELECT id FROM exams WHERE id = ? LIMIT 1`,
+    [id],
+  );
+  const isNew = existing.length === 0;
   await exec(
     `INSERT INTO exams (${EXAM_COLUMNS}, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE title = VALUES(title), description = VALUES(description),
        banner_url = VALUES(banner_url),
        kind = VALUES(kind), batch_id = VALUES(batch_id),
        subject = VALUES(subject), chapter_id = VALUES(chapter_id), sort_order = VALUES(sort_order),
+       category_id = VALUES(category_id),
        course_type = VALUES(course_type),
        duration_minutes = VALUES(duration_minutes),
        total_marks = VALUES(total_marks), negative_marks = VALUES(negative_marks),
+       negative_enabled = VALUES(negative_enabled),
+       negative_per_wrong = VALUES(negative_per_wrong),
+       second_timer_enabled = VALUES(second_timer_enabled),
+       second_timer_deduction = VALUES(second_timer_deduction),
        question_count = VALUES(question_count), status = VALUES(status),
+       featured = VALUES(featured),
        scheduled_at = VALUES(scheduled_at), ends_at = VALUES(ends_at),
        answer_key = VALUES(answer_key), created_by = VALUES(created_by)`,
     [
@@ -375,20 +473,36 @@ export async function saveExam(
       asString(input.subject),
       chapterId,
       sortOrder,
+      categoryId,
       input.courseType === "Admission" ? "Admission" : "Academic",
       Math.max(1, Number(input.durationMinutes) || 30),
       Number(totals[0]?.marks ?? input.totalMarks) || 0,
       Math.max(0, Number(input.negativeMarks) || 0),
+      negativeEnabled ? 1 : 0,
+      negativePerWrong,
+      secondTimerEnabled ? 1 : 0,
+      secondTimerDeduction,
       totals[0]?.count ?? 0,
       ["draft", "published", "closed"].includes(String(input.status))
         ? String(input.status)
         : "draft",
+      featured ? 1 : 0,
       scheduledAt,
       endsAt,
       answerKeyJson,
       adminUid,
     ],
   );
+
+  // New public exams start with MediSpark's standard rule set — fully
+  // editable/deletable afterwards from Public Exam Control → Rules.
+  if (isNew) {
+    try {
+      await seedDefaultExamRules(id);
+    } catch {
+      // Best effort — rules can still be added manually.
+    }
+  }
 
   // Keep course assignments in sync (enrolled exams).
   await exec(`DELETE FROM exam_courses WHERE exam_id = ?`, [id]);
@@ -424,6 +538,7 @@ export async function deleteExam(id: string): Promise<void> {
   await exec(`DELETE FROM exam_enrollments WHERE exam_id = ?`, [id]);
   await exec(`DELETE FROM exam_results WHERE exam_id = ?`, [id]);
   await exec(`DELETE FROM exam_courses WHERE exam_id = ?`, [id]);
+  await exec(`DELETE FROM exam_rules WHERE exam_id = ?`, [id]);
   await exec(`DELETE FROM exams WHERE id = ?`, [id]);
 }
 
@@ -594,6 +709,9 @@ async function ensureResultTables(): Promise<void> {
     await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS time_taken_seconds INT NULL`);
     await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS merit_position INT NULL`);
     await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS details JSON NULL`);
+    await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS negative_deduction DECIMAL(6,2) NOT NULL DEFAULT 0`);
+    await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS timer_penalty DECIMAL(6,2) NOT NULL DEFAULT 0`);
+    await exec(`ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS is_second_timer TINYINT(1) NOT NULL DEFAULT 0`);
   } catch {
     // Best effort — columns may already exist.
   }
@@ -782,11 +900,20 @@ export async function hasEnrolledExamAccess(
 }
 
 /**
- * Public exams highlighted as banner slides on the homepage.
- * The slider currently generates slides from admin banners and featured
- * courses only — no manual "featured exam" flag exists yet, so this
- * returns an empty list until that source is introduced.
+ * Public exams highlighted as banner slides on the homepage. The exam itself
+ * is the source of truth — toggling Featured in the Admin Panel makes the
+ * slide appear/disappear automatically (no manual banner records).
  */
 export async function fetchFeaturedPublicExams(): Promise<Exam[]> {
-  return [];
+  try {
+    await ensureTables();
+    const rows = await query<ExamRow[]>(
+      `SELECT ${EXAM_COLUMNS} FROM exams
+       WHERE featured = 1 AND status = 'published' AND kind = 'public'
+       ORDER BY sort_order ASC, created_at DESC`,
+    );
+    return rows.map(rowToExam);
+  } catch {
+    return [];
+  }
 }
