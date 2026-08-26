@@ -44,6 +44,13 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   const { theme } = useAdminTheme();
   const gate = useAdminGate();
   const { user, logout: signOut } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 32);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -322,7 +329,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top header */}
-        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-neutral-200 bg-white px-4 transition-colors duration-300 sm:px-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900">
+        <header className={`sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-neutral-200 bg-white/90 px-4 backdrop-blur transition-all duration-300 sm:px-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900/90 ${scrolled ? "lg:shadow-lg lg:shadow-black/25" : ""}`}>
           <button
             type="button"
             aria-label="Open menu"
