@@ -170,9 +170,7 @@ async function ensureTables(): Promise<void> {
   }
   // Links every course to its Course Control category (course_categories.id).
   try {
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS category_id VARCHAR(191) NULL`,
-    );
+    await ensureColumn("catalog_courses", "category_id", "`category_id` VARCHAR(191) NULL");
   } catch {
     // Best effort — column may already exist.
   }
