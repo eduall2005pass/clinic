@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import CategoryCourseManager from "@/components/admin/CategoryCourseManager";
 import {
   fetchAllCourseCategories,
+  DEFAULT_COURSE_CATEGORIES,
 } from "@/lib/course-categories-store";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +18,19 @@ export default async function AdminCourseCategoryPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const decoded = decodeURIComponent(id);
   const categories = await fetchAllCourseCategories();
-  const category = categories.find(
-    (item) => item.id === decodeURIComponent(id) && item.isActive,
-  );
+  let category = categories.find((item) => item.id === decoded && item.isActive);
+  if (!category) {
+    // The selection page appends canonical defaults that have no DB row yet
+    // (fresh databases). Accept those ids here too so Explore never 404s —
+    // an explicit row with the same slug always wins over the default.
+    const fallback = DEFAULT_COURSE_CATEGORIES.find((item) => item.id === decoded);
+    const hasExplicitRow = fallback
+      ? categories.some((item) => item.slug === fallback.slug)
+      : false;
+    if (fallback && !hasExplicitRow) category = fallback;
+  }
   if (!category) notFound();
 
   return (
