@@ -216,16 +216,72 @@ export function CourseKindChaptersView({
     : contentBase(slug);
   const backLabel = subjectId ? "Course Content" : "Course Content";
 
+  // For Class, show exactly 12 chapter cards (course-specific, order from Admin Panel)
+  const isClassView = kind === "classes";
+  const classChapters = isClassView
+    ? (() => {
+        // Keep admin order (sort_order) as returned, slice to 12 to enforce design
+        const sorted = [...chaptersToShow];
+        // If admin has created fewer than 12, show what exists; if 0, empty state will handle
+        // If more than 12, show first 12 to keep layout exactly 12 as per spec
+        return sorted.slice(0, 12);
+      })()
+    : chaptersToShow;
+
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <BackLink href={backHref} label={backLabel} />
       <h1 className="mt-4 text-2xl font-extrabold text-heading sm:text-3xl">{cardTitle}</h1>
-      <p className="mt-1 text-sm text-neutral-400">Select a chapter to open its {cardTitle.toLowerCase()}.</p>
-      {chaptersToShow.length === 0 ? (
+      <p className="mt-1 text-sm text-neutral-400">
+        {isClassView
+          ? "Select a chapter to open its lessons — 12 chapters, course-specific."
+          : `Select a chapter to open its ${cardTitle.toLowerCase()}.`}
+      </p>
+      {classChapters.length === 0 && isClassView ? (
+        <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
+          <p className="font-semibold text-heading">No chapters yet</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
+            Admin has not published chapters for this course yet. Chapters will appear here once added from Admin Panel → Course Content Control.
+          </p>
+        </div>
+      ) : chaptersToShow.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
           <p className="font-semibold text-heading">No course content available yet.</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">No chapters have been published for {cardTitle.toLowerCase()} yet.</p>
         </div>
+      ) : isClassView ? (
+        // Class → exactly 12 clickable chapter cards, clean responsive grid, dynamic names from Admin Panel
+        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {classChapters.map((chapter, idx) => {
+            const num = String(idx + 1).padStart(2, "0");
+            return (
+              <li key={chapter.id}>
+                <Link
+                  href={chapterHref(slug, chapter.id, kind)}
+                  className="group flex h-full min-h-[110px] flex-col justify-between rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-sm font-black text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white">
+                      {num}
+                    </span>
+                    <span className="rounded-full border border-ink/10 bg-dark-850 px-2.5 py-1 text-[11px] font-bold text-neutral-400">
+                      {chapter.classes.length} class{chapter.classes.length === 1 ? "" : "es"}
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <p className="text-xs font-bold uppercase tracking-widest text-primary-400">Chapter {num}</p>
+                    <p className="mt-1 line-clamp-2 break-words text-sm font-extrabold leading-snug text-heading transition group-hover:text-primary-400">
+                      {chapter.name}
+                    </p>
+                  </div>
+                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-neutral-500 transition group-hover:text-primary-400">
+                    Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3.5 w-3.5 transition group-hover:translate-x-0.5"><path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" /></svg>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
         <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {chaptersToShow.map((chapter) => (
