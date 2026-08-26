@@ -285,20 +285,20 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
     <AdminToastProvider>
       <div
         data-admin-theme={theme}
-        className="flex min-h-screen bg-[#f1f5f9] transition-colors duration-300 admin-dark:bg-[#0a162e]"
+        className="flex min-h-screen overflow-x-hidden bg-[#f1f5f9] transition-colors duration-300 admin-dark:bg-[#0a162e]"
       >
-      {/* Desktop sidebar — Deep Navy */}
+      {/* Desktop sidebar — Deep Navy (visible only on xl+; hamburger handles laptop/tablet) */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-[#0b1e3a] lg:flex ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-[#0b1e3a] xl:flex ${
           collapsed ? "w-[76px]" : "w-64"
         } transition-[width] duration-300`}
       >
         {sidebarContent}
       </aside>
 
-      {/* Mobile drawer — Deep Navy */}
+      {/* Mobile/tablet/laptop drawer — Deep Navy with overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-[70] lg:hidden">
+        <div className="fixed inset-0 z-[70] xl:hidden">
           <button
             type="button"
             aria-label="Close menu"
@@ -320,14 +320,14 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main column */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         {/* Top header — clean white/light-blue */}
         <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-[#dbeafe] bg-white px-4 shadow-sm transition-colors duration-300 sm:px-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]">
           <button
             type="button"
             aria-label="Open menu"
             onClick={() => setMobileOpen(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] lg:hidden admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] xl:hidden admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
           >
             <MenuIcon className="h-5 w-5" />
           </button>

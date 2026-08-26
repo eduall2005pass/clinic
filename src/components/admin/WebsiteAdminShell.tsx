@@ -104,15 +104,15 @@ function WebsiteAdminShellInner({
     >
       {/* Premium Navy Header — clean white / light-blue surface */}
       <header className="sticky top-0 z-50 border-b border-[#dbeafe] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/95">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:gap-3">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 xl:gap-3">
           <div className="flex items-center gap-3">
-            {/* Hamburger — navy */}
+            {/* Hamburger — visible on laptop/tablet/mobile (xl:hidden), not on xl+ desktop */}
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] focus:outline-none focus:ring-2 focus:ring-[#2f6bce]/20 lg:hidden admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] focus:outline-none focus:ring-2 focus:ring-[#2f6bce]/20 xl:hidden admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
             >
               {menuOpen ? (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round">
@@ -141,8 +141,8 @@ function WebsiteAdminShellInner({
             </Link>
           </div>
 
-          {/* Desktop nav — cohesive navy active highlight */}
-          <ul className="hidden items-center gap-1 lg:flex">
+          {/* Desktop nav — cohesive navy active highlight (xl+ only) */}
+          <ul className="hidden items-center gap-1 xl:flex">
             {ADMIN_NAV.map((item) => (
               <li key={item.href}>
                 <Link
@@ -178,9 +178,17 @@ function WebsiteAdminShellInner({
           </div>
         </nav>
 
-        {/* Mobile drawer — Deep Navy background, proper spacing */}
+        {/* Mobile/tablet/laptop drawer — Deep Navy with overlay */}
         {menuOpen && (
-          <div className="border-t border-[#0f2a4d] bg-[#0b1e3a] lg:hidden">
+          <>
+            {/* Subtle overlay — clicking closes the drawer */}
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setMenuOpen(false)}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] xl:hidden"
+            />
+            <div className="relative z-50 border-t border-[#0f2a4d] bg-[#0b1e3a] xl:hidden">
             <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3">
               {ADMIN_NAV.map((item) => (
                 <li key={item.href}>
@@ -207,7 +215,8 @@ function WebsiteAdminShellInner({
                 </Link>
               </li>
             </ul>
-          </div>
+            </div>
+          </>
         )}
       </header>
 
