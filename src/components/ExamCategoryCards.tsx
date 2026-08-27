@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { ExamCategory } from "@/lib/public-exams";
 
 function BookIcon() {
@@ -38,34 +39,35 @@ function BuildingIcon() {
 const categoryCards: {
   key: ExamCategory;
   label: string;
-  description: string;
   Icon: () => React.ReactElement;
 }[] = [
   {
     key: "ssc-academic",
     label: "SSC Academic Exam",
-    description: "Board-style MCQ model tests for SSC students.",
     Icon: BookIcon,
   },
   {
     key: "hsc-academic",
     label: "HSC Academic Exam",
-    description: "Full-length HSC academic exam preparation.",
     Icon: GraduationCapIcon,
   },
   {
     key: "medical-admission",
     label: "Medical Admission Exam",
-    description: "Medical admission mock tests with negative marking.",
     Icon: StethoscopeIcon,
   },
   {
     key: "varsity-admission",
     label: "University Admission Exam",
-    description: "University admission practice by latest patterns.",
     Icon: BuildingIcon,
   },
 ];
+
+type LiveCounts = Record<ExamCategory, number>;
+
+function formatLiveText(count: number): string {
+  return `${count} ${count === 1 ? "Exam" : "Exams"} Live Now`;
+}
 
 /**
  * Public Exam section — 4 exam-category cards visually identical to the
@@ -79,9 +81,46 @@ const categoryCards: {
  */
 export default function ExamCategoryCards({
   basePath = "/exam/category",
+  initialCounts,
 }: {
   basePath?: string;
+  initialCounts?: Partial<LiveCounts> | null;
 }) {
+  const [liveCounts, setLiveCounts] = useState<Record<ExamCategory, number | null>>({
+    "ssc-academic": initialCounts?.["ssc-academic"] ?? null,
+    "hsc-academic": initialCounts?.["hsc-academic"] ?? null,
+    "medical-admission": initialCounts?.["medical-admission"] ?? null,
+    "varsity-admission": initialCounts?.["varsity-admission"] ?? null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/public-exams/live-counts", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { counts: LiveCounts };
+        if (cancelled) return;
+        if (data?.counts) {
+          setLiveCounts({
+            "ssc-academic": data.counts["ssc-academic"] ?? 0,
+            "hsc-academic": data.counts["hsc-academic"] ?? 0,
+            "medical-admission": data.counts["medical-admission"] ?? 0,
+            "varsity-admission": data.counts["varsity-admission"] ?? 0,
+          });
+        }
+      } catch {
+        // Keep previous counts on error.
+      }
+    }
+    load();
+    const id = setInterval(load, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+
   return (
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <div className="mb-10 text-center">
@@ -98,7 +137,9 @@ export default function ExamCategoryCards({
 
       {/* 4 cards — same grid as Course Section: gap-6 sm:grid-cols-2 xl:grid-cols-4 */}
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {categoryCards.map(({ key, label, description, Icon }) => (
+        {categoryCards.map(({ key, label, Icon }) => {
+          const count = liveCounts[key];
+          return (
           <Link
             key={key}
             href={`${basePath}/${key}`}
@@ -117,9 +158,16 @@ export default function ExamCategoryCards({
               </h3>
             </div>
 
-            <p className="relative mt-3 line-clamp-2 text-sm leading-relaxed text-neutral-400">
-              {description}
-            </p>
+            {/* Dynamic live count — replaces static description */}
+            <div className="relative mt-3 flex items-center gap-2 text-sm font-semibold">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.18)]" />
+              </span>
+              <span className={count === null ? "text-neutral-500" : count > 0 ? "text-emerald-400" : "text-neutral-400"}>
+                {count === null ? "Loading..." : formatLiveText(count)}
+              </span>
+            </div>
 
             {/* Same button style as CategoryCard — only text differs: Explore Exam */}
             <div className="relative mt-auto pt-6">
@@ -140,7 +188,8 @@ export default function ExamCategoryCards({
               </span>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

@@ -7,7 +7,9 @@ import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
 import type { Eligibility } from "@/lib/eligibility";
 import {
   batchLabel,
+  categorizeExam,
   deriveStatus,
+  examCategories,
   examCategorySlugs,
   formatExamTime,
   negativeMarksFor,
@@ -121,4 +123,55 @@ export async function fetchAdminPublicExams(): Promise<PublicExam[]> {
       ...toPublicExam(exam),
       published: exam.status !== "draft",
     }));
+}
+
+/**
+ * Live exam counts per Public Exam category — used by the 4 category cards
+ * on /exam and /admin/exams/public. Counts ONLY currently Live exams
+ * (published + deriveStatus === "Live") that belong to each category via
+ * category_id. Falls back to heuristic categorizeExam for legacy exams that
+ * have no category_id. Returns 0 for categories with no live exams.
+ */
+export async function fetchLiveExamCounts(): Promise<
+  Record<ExamCategory, number>
+> {
+  const counts = {} as Record<ExamCategory, number>;
+  for (const category of examCategories) counts[category.key] = 0;
+
+  try {
+    const categories = await fetchActiveCourseCategories();
+    const idToKey = new Map<string, ExamCategory>();
+    for (const item of examCategories) {
+      const slug = examCategorySlugs[item.key];
+      const match = categories.find(
+        (category) =>
+          category.slug.toLowerCase() === slug ||
+          category.slug.toLowerCase().startsWith(slug),
+      );
+      if (match) idToKey.set(match.id, item.key);
+    }
+
+    const exams = await fetchPublicExams();
+    for (const exam of exams) {
+      if (exam.status !== "Live") continue;
+      // Must be published (fetchPublicExams already filters drafts, but
+      // double-check for the admin variant path).
+      if (!exam.published) continue;
+      let key: ExamCategory | undefined;
+      if (exam.categoryId && idToKey.has(exam.categoryId)) {
+        key = idToKey.get(exam.categoryId);
+      } else if (!exam.categoryId) {
+        // Legacy exam without category_id — infer via heuristic.
+        try {
+          key = categorizeExam(exam);
+        } catch {
+          key = undefined;
+        }
+      }
+      if (key && counts[key] !== undefined) counts[key] += 1;
+    }
+  } catch {
+    // On DB errors return zero counts — cards still render.
+  }
+  return counts;
 }

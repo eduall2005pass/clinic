@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ExamCategoryCards from "@/components/ExamCategoryCards";
+import { fetchLiveExamCounts } from "@/lib/public-exams-server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +15,11 @@ export const metadata: Metadata = {
  * Menu. Shows ONLY the 4 course-category cards; exam lists live inside each
  * category page (/exam/category/<key>).
  */
-export default function ExamPage() {
+export default async function ExamPage() {
+  const initialCounts = await fetchLiveExamCounts();
   return (
     <main className="flex-1 bg-dark-950">
-      <ExamCategoryCards />
+      <ExamCategoryCards initialCounts={initialCounts} />
     </main>
   );
 }
