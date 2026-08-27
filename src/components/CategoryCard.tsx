@@ -103,17 +103,32 @@ export default function CategoryCard({
       </div>
 
       {/* Dynamic category-wise course availability — replaces static description */}
-      <p
-        className={`relative mt-3 line-clamp-2 text-sm font-semibold leading-relaxed ${
-          count === null
-            ? "text-neutral-500"
-            : count === 0
-              ? "text-neutral-400"
-              : "text-emerald-400"
-        }`}
-      >
-        {count === null ? "Loading..." : formatAvailability(count)}
-      </p>
+      <div className="relative mt-3 flex items-center gap-2 text-sm font-semibold">
+        {count === null ? (
+          <>
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-neutral-500" />
+            </span>
+            <span className="text-neutral-500">Loading...</span>
+          </>
+        ) : count === 0 ? (
+          <>
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.18)]" />
+            </span>
+            <span className="text-red-400">{formatAvailability(count)}</span>
+          </>
+        ) : (
+          <>
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.18)]" />
+            </span>
+            <span className="text-emerald-400">{formatAvailability(count)}</span>
+          </>
+        )}
+      </div>
 
       {/* Single rounded-square action button — text and arrow together. */}
       <div className="relative mt-auto pt-6">
