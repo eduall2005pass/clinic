@@ -160,13 +160,30 @@ export default function ExamCategoryCards({
 
             {/* Dynamic live count — replaces static description */}
             <div className="relative mt-3 flex items-center gap-2 text-sm font-semibold">
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.18)]" />
-              </span>
-              <span className={count === null ? "text-neutral-500" : count > 0 ? "text-emerald-400" : "text-neutral-400"}>
-                {count === null ? "Loading..." : formatLiveText(count)}
-              </span>
+              {count === null ? (
+                <>
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-neutral-500" />
+                  </span>
+                  <span className="text-neutral-500">Loading...</span>
+                </>
+              ) : count === 0 ? (
+                <>
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.18)]" />
+                  </span>
+                  <span className="text-red-400">No Exam Is Live Now</span>
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.18)]" />
+                  </span>
+                  <span className="text-emerald-400">{formatLiveText(count)}</span>
+                </>
+              )}
             </div>
 
             {/* Same button style as CategoryCard — only text differs: Explore Exam */}
