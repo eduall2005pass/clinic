@@ -186,9 +186,8 @@ export async function recordAdminLogin(
 export const AVAILABLE_ROLES = [
   "super-admin",
   "admin",
-  "content-manager",
-  "course-manager",
-  "exam-manager",
+  "moderator",
+  "teacher",
 ] as const;
 
 export type AdminRole = (typeof AVAILABLE_ROLES)[number];
@@ -196,12 +195,11 @@ export type AdminRole = (typeof AVAILABLE_ROLES)[number];
 export const ROLE_LABELS: Record<AdminRole, string> = {
   "super-admin": "Super Admin",
   admin: "Admin",
-  "content-manager": "Content Manager",
-  "course-manager": "Course Manager",
-  "exam-manager": "Exam Manager",
+  moderator: "Moderator",
+  teacher: "Teacher",
 };
 
-/** Permission categories enforced on every admin API write. */
+/** Permission categories enforced on every admin API write. Flexible matrix: role_permissions overrides defaults. */
 export const ALL_PERMISSIONS = [
   "manageContent",
   "manageCourses",
@@ -209,17 +207,67 @@ export const ALL_PERMISSIONS = [
   "manageStudents",
   "manageAdmins",
   "manageSystem",
+  // Teacher-scoped granular permissions (flexible, can be reconfigured per role)
+  "manageCourseContent",
+  "managePublicExam",
+  "manageQa",
+  "manageResults",
 ] as const;
 
 export type AdminPermission = (typeof ALL_PERMISSIONS)[number];
 
 const DEFAULT_PERMISSIONS_BY_ROLE: Record<AdminRole, readonly AdminPermission[]> = {
   "super-admin": [...ALL_PERMISSIONS],
+  // Admin retains broad access; specific matrix will be defined later.
   admin: ["manageContent", "manageCourses", "manageExams", "manageStudents"],
-  "content-manager": ["manageContent"],
-  "course-manager": ["manageCourses"],
-  "exam-manager": ["manageExams"],
+  // Moderator permissions to be defined separately later — default mirrors admin without admin/system powers.
+  moderator: ["manageContent", "manageCourses", "manageExams"],
+  // Teacher: strictly limited to 4 controls — no other panel access unless explicitly granted later.
+  teacher: ["manageCourseContent", "managePublicExam", "manageQa", "manageResults"],
 };
+
+/**
+ * Admin Panel control → required permissions.
+ * Each control lists the granular permission(s) that grant access; broader
+ * legacy permissions are accepted as fallback so Admin/Moderator keep their
+ * existing access while Teacher is scoped to exactly 4 controls.
+ * Flexible: role_permissions can reconfigure any of these per role at runtime.
+ */
+export const ADMIN_CONTROL_PERMISSIONS: Record<string, readonly AdminPermission[]> = {
+  "/admin/website-information": ["manageContent"],
+  "/admin/enrollment-control": ["manageStudents", "manageCourses"],
+  "/admin/home-control": ["manageContent"],
+  "/admin/course-control": ["manageCourses"],
+  "/admin/course-content-control": ["manageCourseContent", "manageCourses"],
+  "/admin/public-exam-control": ["managePublicExam", "manageExams"],
+  "/admin/qa-control": ["manageQa", "manageContent"],
+  "/admin/dashboard-control": ["manageSystem", "manageContent"],
+  "/admin/student-control": ["manageStudents"],
+  "/admin/result-control": ["manageResults", "manageExams"],
+  "/admin/notification-control": ["manageContent", "manageSystem"],
+  "/admin/admin-center": ["manageAdmins"],
+};
+
+export function hasControlAccess(
+  role: string | null | undefined,
+  permissions: string[],
+  href: string,
+): boolean {
+  if (role === "super-admin") return true;
+  const required = ADMIN_CONTROL_PERMISSIONS[href];
+  if (!required) return true; // unknown route → allow for non-restricted pages
+  return required.some((perm) => permissions.includes(perm));
+}
+
+/** Check if a permission set grants any of the required permissions (super-admin always passes). */
+export function hasAnyPermission(
+  role: string | null | undefined,
+  permissions: string[],
+  required: readonly string[],
+): boolean {
+  if (role === "super-admin") return true;
+  return required.some((perm) => permissions.includes(perm));
+}
 
 async function ensureRolesTable(): Promise<void> {
   await exec(`CREATE TABLE IF NOT EXISTS admin_roles (

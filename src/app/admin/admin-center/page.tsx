@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
@@ -17,17 +18,42 @@ type AdminAccount = {
 
 type RoleAssignment = { email: string; role: string };
 
+// Staff Roles / Admin Roles — 4 levels as per spec (flexible, future RBAC)
 const ROLE_OPTIONS = [
   { value: "super-admin", label: "Super Admin" },
   { value: "admin", label: "Admin" },
-  { value: "content-manager", label: "Content Manager" },
-  { value: "course-manager", label: "Course Manager" },
-  { value: "exam-manager", label: "Exam Manager" },
+  { value: "moderator", label: "Moderator" },
+  { value: "teacher", label: "Teacher" },
 ] as const;
 
 const ROLE_LABELS: Record<string, string> = Object.fromEntries(
   ROLE_OPTIONS.map((role) => [role.value, role.label]),
 );
+
+// Teacher-scoped permission summary for Staff Roles display
+const ROLE_SUMMARY: Record<string, { description: string; permissions: string[] }> = {
+  "super-admin": {
+    description: "Full access to all Admin Panel controls and system settings.",
+    permissions: ["All permissions"],
+  },
+  admin: {
+    description: "Broad access to content, courses, exams and student controls. Specific matrix configurable.",
+    permissions: ["Will be defined separately"],
+  },
+  moderator: {
+    description: "Moderation-level access. Permissions to be defined separately.",
+    permissions: ["Will be defined separately"],
+  },
+  teacher: {
+    description: "Limited to teaching controls only. No other panel access unless explicitly granted.",
+    permissions: [
+      "Course Content Control",
+      "Public Exam Control",
+      "Q&A Answer",
+      "Result Sheet / Result Control",
+    ],
+  },
+};
 
 export default function AdminCenterPage() {
   const toast = useAdminToast();
@@ -159,6 +185,48 @@ export default function AdminCenterPage() {
       <p className="mt-1 text-sm text-neutral-400">
         All authorized admin accounts and their access / roles.
       </p>
+
+      {/* Staff Roles — sub-section inside Admin Center (not a top-level menu) */}
+      <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-heading">Staff Roles / Admin Roles</h2>
+            <p className="mt-1 text-xs text-neutral-500">
+              4 role levels — flexible permission matrix for future RBAC. Teacher is scoped to 4 controls.
+            </p>
+          </div>
+          <Link
+            href="/admin/admin-center/staff-roles"
+            className="rounded-xl bg-[#1a3a78] px-4 py-2 text-xs font-bold text-white shadow-md transition hover:bg-[#123060] admin-dark:bg-[#234e9f] admin-dark:hover:bg-[#1a3a78]"
+          >
+            Manage Staff Roles →
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {ROLE_OPTIONS.map((role) => (
+            <Link
+              key={role.value}
+              href={`/admin/admin-center/staff-roles#${role.value}`}
+              className="rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-4 transition hover:border-[#93c5fd] hover:bg-white admin-dark:hover:bg-[#132a4f]"
+            >
+              <p className="text-sm font-extrabold text-heading">{role.label}</p>
+              <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+                {ROLE_SUMMARY[role.value].description}
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-1">
+                {ROLE_SUMMARY[role.value].permissions.map((perm) => (
+                  <li key={perm} className="rounded-full border border-[#dbeafe] bg-white px-2 py-0.5 text-[10px] font-bold text-[#1a3a78] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#93c5fd]">
+                    {perm}
+                  </li>
+                ))}
+              </ul>
+            </Link>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] text-neutral-400">
+          Each staff/admin account has an assigned role. Both frontend and backend enforce the role’s permissions.
+        </p>
+      </div>
 
       {/* Add admin */}
       <div className="mt-8 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">

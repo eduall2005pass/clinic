@@ -27,25 +27,22 @@ type AdminAccount = {
 const ROLES = [
   "super-admin",
   "admin",
-  "content-manager",
-  "course-manager",
-  "exam-manager",
+  "moderator",
+  "teacher",
 ] as const;
 
 const ROLE_LABELS: Record<string, string> = {
   "super-admin": "Super Admin",
   admin: "Admin",
-  "content-manager": "Content Manager",
-  "course-manager": "Course Manager",
-  "exam-manager": "Exam Manager",
+  moderator: "Moderator",
+  teacher: "Teacher",
 };
 
 const roleBadgeClass: Record<string, string> = {
   "super-admin": "bg-violet-100 text-violet-800 admin-dark:bg-violet-500/15 admin-dark:text-violet-300",
   admin: "bg-sky-100 text-sky-800 admin-dark:bg-sky-500/15 admin-dark:text-sky-300",
-  "content-manager": "bg-emerald-100 text-emerald-800 admin-dark:bg-emerald-500/15 admin-dark:text-emerald-300",
-  "course-manager": "bg-indigo-100 text-indigo-800 admin-dark:bg-indigo-500/15 admin-dark:text-indigo-300",
-  "exam-manager": "bg-amber-100 text-amber-800 admin-dark:bg-amber-500/15 admin-dark:text-amber-300",
+  moderator: "bg-emerald-100 text-emerald-800 admin-dark:bg-emerald-500/15 admin-dark:text-emerald-300",
+  teacher: "bg-amber-100 text-amber-800 admin-dark:bg-amber-500/15 admin-dark:text-amber-300",
 };
 
 export default function AdminsPage() {

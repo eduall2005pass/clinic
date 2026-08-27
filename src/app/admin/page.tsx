@@ -1,12 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { useAdminGate } from "@/components/admin/admin-ui";
+import { AccessLoading } from "@/components/auth/AccessGuard";
 
 /**
  * Admin Panel Home — exactly 12 control cards (2 columns × 6 rows on every
  * device), each with an icon on the left and the control name on the right.
- * Website-control sections mirror the Main Website structure page-by-page;
- * system sections follow their own defined flows.
+ * RBAC: Teacher sees only 4 teaching controls; other roles see their permitted set.
  */
-export const metadata = { title: "Admin Panel — MediSpark" };
 
 const CARDS: Array<{ href: string; icon: string; title: string }> = [
   { href: "/admin/website-information", icon: "🌐", title: "Website Information" },
@@ -23,7 +25,35 @@ const CARDS: Array<{ href: string; icon: string; title: string }> = [
   { href: "/admin/admin-center", icon: "🛡️", title: "Admin Center" },
 ];
 
+// Client-safe RBAC mapping (mirrors src/lib/administration.ts)
+const CARD_PERMISSIONS: Record<string, readonly string[]> = {
+  "/admin/website-information": ["manageContent"],
+  "/admin/enrollment-control": ["manageStudents", "manageCourses"],
+  "/admin/home-control": ["manageContent"],
+  "/admin/course-control": ["manageCourses"],
+  "/admin/course-content-control": ["manageCourseContent", "manageCourses"],
+  "/admin/public-exam-control": ["managePublicExam", "manageExams"],
+  "/admin/qa-control": ["manageQa", "manageContent"],
+  "/admin/dashboard-control": ["manageSystem", "manageContent"],
+  "/admin/student-control": ["manageStudents"],
+  "/admin/result-control": ["manageResults", "manageExams"],
+  "/admin/notification-control": ["manageContent", "manageSystem"],
+  "/admin/admin-center": ["manageAdmins"],
+};
+
+function hasAccess(role: string | null, permissions: string[], href: string): boolean {
+  if (role === "super-admin") return true;
+  const required = CARD_PERMISSIONS[href];
+  if (!required) return true;
+  return required.some((perm) => permissions.includes(perm));
+}
+
 export default function AdminHomePage() {
+  const gate = useAdminGate();
+  const ready = gate.ready;
+  const visibleCards = ready
+    ? CARDS.filter((card) => hasAccess(gate.role, gate.permissions, card.href))
+    : CARDS;
   return (
     <section className="mx-auto max-w-6xl px-3 py-10 sm:px-6">
       <header>
@@ -39,9 +69,21 @@ export default function AdminHomePage() {
         </p>
       </header>
 
+      {!ready && <AccessLoading label="Loading Admin Panel…" />}
+      {ready && visibleCards.length === 0 && (
+        <div className="mt-8 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-6 text-center">
+          <p className="text-sm font-bold text-yellow-600 admin-dark:text-yellow-300">No accessible controls for your role.</p>
+          <p className="mt-1 text-xs text-neutral-500">Contact a Super Admin to grant permissions.</p>
+        </div>
+      )}
+      {ready && gate.role === "teacher" && (
+        <p className="mt-4 rounded-xl border border-[#dbeafe] bg-[#eff6ff] px-4 py-3 text-xs font-semibold text-[#1a3a78] admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd]">
+          Teacher access: Course Content Control · Public Exam Control · Q&A Answer · Result Control
+        </p>
+      )}
       {/* Exactly 2 columns × 6 rows on every device — Unified Smart Card */}
       <nav className="mt-8 grid grid-cols-2 gap-3 sm:gap-4">
-        {CARDS.map((card) => (
+        {(ready ? visibleCards : CARDS).map((card) => (
           <Link
             key={card.href}
             href={card.href}

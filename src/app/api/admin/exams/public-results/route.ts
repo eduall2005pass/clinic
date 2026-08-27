@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/lib/admin";
+import { requirePermission, requireAnyPermission } from "@/lib/admin";
 import { logAdminAction } from "@/lib/administration";
 import {
   fetchPublicExamRankedResults,
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  * Strictly exam-specific: every query is scoped by exam_id (and student_id).
  */
 export async function GET(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "manageResults"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

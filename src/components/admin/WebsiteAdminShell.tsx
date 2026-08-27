@@ -31,6 +31,35 @@ const ADMIN_NAV = [
   { label: "Admin Center", href: "/admin/admin-center" },
 ] as const;
 
+// Flexible RBAC mapping — mirrors src/lib/administration.ts ADMIN_CONTROL_PERMISSIONS
+// Client-safe duplicate to avoid pulling server MySQL deps into the bundle.
+const ADMIN_CONTROL_PERMISSIONS: Record<string, readonly string[]> = {
+  "/admin/website-information": ["manageContent"],
+  "/admin/enrollment-control": ["manageStudents", "manageCourses"],
+  "/admin/home-control": ["manageContent"],
+  "/admin/course-control": ["manageCourses"],
+  "/admin/course-content-control": ["manageCourseContent", "manageCourses"],
+  "/admin/public-exam-control": ["managePublicExam", "manageExams"],
+  "/admin/qa-control": ["manageQa", "manageContent"],
+  "/admin/dashboard-control": ["manageSystem", "manageContent"],
+  "/admin/student-control": ["manageStudents"],
+  "/admin/result-control": ["manageResults", "manageExams"],
+  "/admin/notification-control": ["manageContent", "manageSystem"],
+  "/admin/admin-center": ["manageAdmins"],
+};
+
+function hasControlAccess(
+  role: string | null,
+  permissions: string[],
+  href: string,
+): boolean {
+  if (role === "super-admin") return true;
+  if (href === "/admin") return true;
+  const required = ADMIN_CONTROL_PERMISSIONS[href];
+  if (!required) return true;
+  return required.some((perm) => permissions.includes(perm));
+}
+
 export default function WebsiteAdminShell({
   children,
 }: {
@@ -78,8 +107,28 @@ function WebsiteAdminShellInner({
     );
   }
 
+  const visibleNav = ADMIN_NAV.filter((item) =>
+    hasControlAccess(gate.role, gate.permissions, item.href),
+  );
+
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+
+  // Route-level RBAC: block direct navigation to controls the role cannot access
+  const isDeniedByRole = (() => {
+    if (gate.role === "super-admin") return false;
+    if (pathname === "/admin") return false;
+    // Longest prefix match among ADMIN_CONTROL_PERMISSIONS
+    let matched: string | null = null;
+    for (const href of Object.keys(ADMIN_CONTROL_PERMISSIONS)) {
+      if (pathname === href || pathname.startsWith(href + "/")) {
+        if (!matched || href.length > matched.length) matched = href;
+      }
+    }
+    if (!matched) return false;
+    const required = ADMIN_CONTROL_PERMISSIONS[matched];
+    return !required.some((perm) => gate.permissions.includes(perm));
+  })();
 
   async function handleLogout() {
     try {
@@ -143,7 +192,7 @@ function WebsiteAdminShellInner({
 
           {/* Desktop nav — cohesive navy active highlight (xl+ only) */}
           <ul className="hidden items-center gap-1 xl:flex">
-            {ADMIN_NAV.map((item) => (
+            {visibleNav.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
@@ -190,7 +239,7 @@ function WebsiteAdminShellInner({
             />
             <div className="relative z-50 border-t border-[#0f2a4d] bg-[#0b1e3a] xl:hidden">
             <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3">
-              {ADMIN_NAV.map((item) => (
+              {visibleNav.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
@@ -220,7 +269,27 @@ function WebsiteAdminShellInner({
         )}
       </header>
 
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        {isDeniedByRole ? (
+          <div className="mx-auto max-w-lg px-4 py-16 text-center sm:px-6">
+            <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-8 admin-dark:border-yellow-500/20 admin-dark:bg-yellow-500/10">
+              <p className="text-lg font-extrabold text-yellow-700 admin-dark:text-yellow-300">Access denied for your role</p>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600 admin-dark:text-slate-400">
+                Your current role (<span className="font-bold capitalize">{gate.role ?? "unknown"}</span>) does not have permission to access{" "}
+                <span className="font-mono text-xs font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">{pathname}</span>. Teacher accounts are limited to Course Content, Public Exam, Q&A and Result controls.
+              </p>
+              <Link
+                href="/admin"
+                className="mt-6 inline-block rounded-xl bg-[#1a3a78] px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-[#123060] admin-dark:bg-[#234e9f]"
+              >
+                Back to Admin Home
+              </Link>
+            </div>
+          </div>
+        ) : (
+          children
+        )}
+      </main>
 
       <footer className="border-t border-[#dbeafe] bg-white px-4 py-6 text-center text-xs font-medium text-slate-500 sm:px-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#8da0c0]">
         MediSpark Admin Panel — Premium Navy Smart Dashboard

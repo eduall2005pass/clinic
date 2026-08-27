@@ -18,17 +18,21 @@ type Assignment = { email: string; role: string; permissions: string[] };
 const ROLES = [
   { value: "super-admin", label: "Super Admin" },
   { value: "admin", label: "Admin" },
-  { value: "content-manager", label: "Content Manager" },
-  { value: "course-manager", label: "Course Manager" },
-  { value: "exam-manager", label: "Exam Manager" },
+  { value: "moderator", label: "Moderator" },
+  { value: "teacher", label: "Teacher" },
 ] as const;
 
 const PERMISSIONS = [
   { value: "manageContent", label: "Content (notifications, jerseys, media, website)" },
   { value: "manageCourses", label: "Courses (courses, chapters, classes, coupons, enrollments)" },
-  { value: "manageExams", label: "Exams (exams, questions, results, settings)" },
+  { value: "manageExams", label: "Exams (legacy broad)" },
   { value: "manageStudents", label: "Students (student management)" },
   { value: "manageAdmins", label: "Administration (admins, roles, security, system)" },
+  { value: "manageSystem", label: "System" },
+  { value: "manageCourseContent", label: "Course Content Control" },
+  { value: "managePublicExam", label: "Public Exam Control" },
+  { value: "manageQa", label: "Q&A Answer" },
+  { value: "manageResults", label: "Result Sheet / Result Control" },
 ] as const;
 
 const DEFAULT_ROLE = "admin";
