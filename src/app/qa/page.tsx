@@ -9,9 +9,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * Q&A is available ONLY to students enrolled in a PAID course.
- * PermissionGate (inside QaPageClient) shows the proper guidance card per
- * access level; every Q&A API request is re-validated server-side.
+ * Q&A is publicly viewable — every visitor can browse subjects, questions
+ * and answers. Only the Ask-a-Question action is gated to paid enrollments.
  * Subjects/questions load live from MySQL so admin changes appear instantly.
  */
 export const dynamic = "force-dynamic";

@@ -133,6 +133,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // (2b) Paid enrollment required — user must have at least one active paid course.
+    const paidEnrolled = await query<{ found: number }[]>(
+      `SELECT 1 AS found FROM enrollments
+        WHERE student_uid = ? AND enrollment_status = 'active'
+          AND course_kind = 'paid' LIMIT 1`,
+      [user.uid],
+    );
+    if (paidEnrolled.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Asking questions is available only to students enrolled in a paid course. Please enroll in a paid course to ask questions.",
+        },
+        { status: 403 },
+      );
+    }
+
     // (3) Course belongs to the submitted category.
     const catalogRows = await query<{ category: string | null }[]>(
       "SELECT category FROM catalog_courses WHERE slug = ? LIMIT 1",
