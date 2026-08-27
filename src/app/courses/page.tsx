@@ -3,7 +3,7 @@ import Link from "next/link";
 import CategoryCard from "@/components/CategoryCard";
 import BatchCourseList from "@/components/BatchCourseList";
 import { getPayableFee } from "@/lib/courses";
-import { getLivePublicCourses } from "@/lib/course-catalog";
+import { fetchCourseCategoryCounts, getLivePublicCourses } from "@/lib/course-catalog";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
 import { fetchBatchFilterOptions } from "@/lib/course-filters";
 
@@ -198,7 +198,10 @@ export default async function CoursesPage({
     );
   }
 
-  const categories = await fetchActiveCourseCategories();
+  const [categories, counts] = await Promise.all([
+    fetchActiveCourseCategories(),
+    fetchCourseCategoryCounts(),
+  ]);
 
   return (
     <main className="flex-1 bg-dark-950">
@@ -223,9 +226,11 @@ export default async function CoursesPage({
               key={category.id}
               href={category.href || "/courses"}
               title={category.name}
-              description={category.description ?? ""}
               image={category.imageUrl}
               icon={iconForSlug(category.slug)}
+              categoryId={category.id}
+              categorySlug={category.slug}
+              initialCount={counts[category.id] ?? 0}
             />
           ))}
         </div>

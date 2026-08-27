@@ -1,13 +1,25 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 type CategoryCardProps = {
   href: string;
   title: string;
-  description: string;
+  description?: string;
   icon?: ReactNode;
   image?: string | null;
+  categoryId?: string | null;
+  categorySlug?: string | null;
+  initialCount?: number | null;
 };
+
+function formatAvailability(count: number): string {
+  if (count === 0) return "No Course Is Available Now";
+  if (count === 1) return "1 Course Is Available Now";
+  return `${count} Courses Are Available Now`;
+}
 
 /**
  * Course category card — icon on the LEFT, course name beside it,
@@ -17,10 +29,52 @@ type CategoryCardProps = {
 export default function CategoryCard({
   href,
   title,
-  description,
   icon,
   image,
+  categoryId,
+  categorySlug,
+  initialCount,
 }: CategoryCardProps) {
+  const [count, setCount] = useState<number | null>(initialCount ?? null);
+
+  useEffect(() => {
+    // If no category identifiers, nothing to fetch (e.g. static fallback cards).
+    if (!categoryId && !categorySlug) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/courses/category-counts", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          counts: Record<string, number>;
+          slugCounts: Record<string, number>;
+        };
+        if (cancelled) return;
+        let next: number | null = null;
+        if (categoryId && data.counts && data.counts[categoryId] !== undefined) {
+          next = data.counts[categoryId];
+        } else if (categorySlug && data.slugCounts && data.slugCounts[categorySlug.toLowerCase()] !== undefined) {
+          next = data.slugCounts[categorySlug.toLowerCase()];
+        } else if (categorySlug && data.slugCounts) {
+          // Fallback: try prefix match (e.g. "ssc" matches "ssc-academic")
+          const key = Object.keys(data.slugCounts).find((k) =>
+            categorySlug.toLowerCase().includes(k) || k.includes(categorySlug.toLowerCase()),
+          );
+          if (key) next = data.slugCounts[key];
+        }
+        if (next !== null) setCount(next);
+      } catch {
+        // Keep previous count on error.
+      }
+    }
+    load();
+    const id = setInterval(load, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [categoryId, categorySlug]);
+
   return (
     <Link
       href={href}
@@ -48,11 +102,18 @@ export default function CategoryCard({
         </h2>
       </div>
 
-      {description && (
-        <p className="relative mt-3 line-clamp-2 text-sm leading-relaxed text-neutral-400">
-          {description}
-        </p>
-      )}
+      {/* Dynamic category-wise course availability — replaces static description */}
+      <p
+        className={`relative mt-3 line-clamp-2 text-sm font-semibold leading-relaxed ${
+          count === null
+            ? "text-neutral-500"
+            : count === 0
+              ? "text-neutral-400"
+              : "text-emerald-400"
+        }`}
+      >
+        {count === null ? "Loading..." : formatAvailability(count)}
+      </p>
 
       {/* Single rounded-square action button — text and arrow together. */}
       <div className="relative mt-auto pt-6">
