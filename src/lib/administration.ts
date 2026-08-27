@@ -215,12 +215,11 @@ export const ALL_PERMISSIONS = [
 export type AdminPermission = (typeof ALL_PERMISSIONS)[number];
 
 const DEFAULT_PERMISSIONS_BY_ROLE: Record<AdminRole, readonly AdminPermission[]> = {
-  // Admin now holds all controls previously available to Super Admin (full access).
+  // Temporary: all three levels have identical access (full permissions).
+  // Actual role-wise permissions will be defined later.
   admin: [...ALL_PERMISSIONS],
-  // Moderator permissions to be defined separately later — default mirrors admin without admin/system powers.
-  moderator: ["manageContent", "manageCourses", "manageExams"],
-  // Teacher: strictly limited to 4 controls — no other panel access unless explicitly granted later.
-  teacher: ["manageCourseContent", "managePublicExam", "manageQa", "manageResults"],
+  moderator: [...ALL_PERMISSIONS],
+  teacher: [...ALL_PERMISSIONS],
 };
 
 /**
@@ -250,19 +249,21 @@ export function hasControlAccess(
   permissions: string[],
   href: string,
 ): boolean {
-  if (role === "admin") return true;
+  // Temporary: all three levels have identical access.
+  if (role === "admin" || role === "moderator" || role === "teacher") return true;
   const required = ADMIN_CONTROL_PERMISSIONS[href];
   if (!required) return true; // unknown route → allow for non-restricted pages
   return required.some((perm) => permissions.includes(perm));
 }
 
-/** Check if a permission set grants any of the required permissions (Admin always passes). */
+/** Check if a permission set grants any of the required permissions (temporary: all roles pass). */
 export function hasAnyPermission(
   role: string | null | undefined,
   permissions: string[],
   required: readonly string[],
 ): boolean {
-  if (role === "admin") return true;
+  // Temporary: all three levels have identical access.
+  if (role === "admin" || role === "moderator" || role === "teacher") return true;
   return required.some((perm) => permissions.includes(perm));
 }
 
@@ -287,35 +288,12 @@ async function ensureRolePermissionsTable(): Promise<void> {
 
 /** Configured permission set for a role; falls back to built-in defaults. */
 export async function fetchRolePermissions(): Promise<Record<string, string[]>> {
-  try {
-    await ensureRolePermissionsTable();
-    const rows = await query<{ role: string; permissions: string | null }[]>(
-      `SELECT role, permissions FROM role_permissions`,
-    );
-    const result: Record<string, string[]> = {};
-    for (const role of AVAILABLE_ROLES) {
-      result[role] = [...DEFAULT_PERMISSIONS_BY_ROLE[role]];
-    }
-    for (const row of rows) {
-      if (!(AVAILABLE_ROLES as readonly string[]).includes(row.role)) continue;
-      const parsed = parseJsonColumn<string[]>(row.permissions);
-      if (Array.isArray(parsed)) {
-        result[row.role] = parsed
-          .map(String)
-          .filter((permission): permission is AdminPermission =>
-            (ALL_PERMISSIONS as readonly string[]).includes(permission),
-          );
-      }
-    }
-    return result;
-  } catch {
-    // Table not migrated yet — built-in defaults only.
-    const result: Record<string, string[]> = {};
-    for (const role of AVAILABLE_ROLES) {
-      result[role] = [...DEFAULT_PERMISSIONS_BY_ROLE[role]];
-    }
-    return result;
+  // Temporary: all three levels have identical permissions (full access).
+  const result: Record<string, string[]> = {};
+  for (const role of AVAILABLE_ROLES) {
+    result[role] = [...ALL_PERMISSIONS];
   }
+  return result;
 }
 
 /** Bulk-save the configurable permission matrix (Admin only). */
@@ -373,14 +351,8 @@ export async function resolveAdminPermissions(
         assignedRole = "admin";
       }
     }
-    const matrix = await fetchRolePermissions();
-    const configured: AdminPermission[] =
-      assignedRole === "admin"
-        ? [...ALL_PERMISSIONS]
-        : ((matrix[assignedRole] ?? []) as AdminPermission[]).length > 0
-          ? (matrix[assignedRole] as AdminPermission[])
-          : [...DEFAULT_PERMISSIONS_BY_ROLE[assignedRole]];
-    return { role: assignedRole, permissions: configured };
+    // Temporary: all three levels have identical permissions (full access).
+    return { role: assignedRole, permissions: [...ALL_PERMISSIONS] };
   } catch {
     return fallback;
   }

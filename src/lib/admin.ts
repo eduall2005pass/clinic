@@ -81,13 +81,15 @@ export async function requireAdmin(
  */
 export async function requirePermission(
   request: NextRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   permission: AdminPermission,
 ): Promise<DecodedIdToken | null> {
   const user = await requireAdmin(request);
   if (!user) return null;
-  const { role, permissions } = await resolveAdminPermissions(user.email);
-  if (role === "admin") return user;
-  return permissions.includes(permission) ? user : null;
+  const { role } = await resolveAdminPermissions(user.email);
+  // Temporary: all three levels have identical access.
+  if (role === "admin" || role === "moderator" || role === "teacher") return user;
+  return null;
 }
 
 /**
@@ -97,12 +99,13 @@ export async function requirePermission(
  */
 export async function requireAnyPermission(
   request: NextRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   permissions: readonly AdminPermission[],
 ): Promise<DecodedIdToken | null> {
   const user = await requireAdmin(request);
   if (!user) return null;
-  const { role, permissions: granted } = await resolveAdminPermissions(user.email);
-  if (role === "admin") return user;
-  const ok = permissions.some((permission) => granted.includes(permission));
-  return ok ? user : null;
+  const { role } = await resolveAdminPermissions(user.email);
+  // Temporary: all three levels have identical access.
+  if (role === "admin" || role === "moderator" || role === "teacher") return user;
+  return null;
 }

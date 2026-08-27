@@ -88,7 +88,8 @@ export function hasAdminPermission(
   gate: Pick<AdminGate, "role" | "permissions">,
   permission: string,
 ): boolean {
-  if (gate.role === "admin") return true;
+  // Temporary: all three levels have identical access.
+  if (gate.role === "admin" || gate.role === "moderator" || gate.role === "teacher") return true;
   return gate.permissions.includes(permission);
 }
 
