@@ -53,7 +53,7 @@ function hasControlAccess(
   permissions: string[],
   href: string,
 ): boolean {
-  if (role === "super-admin") return true;
+  if (role === "admin") return true;
   if (href === "/admin") return true;
   const required = ADMIN_CONTROL_PERMISSIONS[href];
   if (!required) return true;
@@ -116,7 +116,7 @@ function WebsiteAdminShellInner({
 
   // Route-level RBAC: block direct navigation to controls the role cannot access
   const isDeniedByRole = (() => {
-    if (gate.role === "super-admin") return false;
+    if (gate.role === "admin") return false;
     if (pathname === "/admin") return false;
     // Longest prefix match among ADMIN_CONTROL_PERMISSIONS
     let matched: string | null = null;
@@ -227,17 +227,21 @@ function WebsiteAdminShellInner({
           </div>
         </nav>
 
-        {/* Mobile/tablet/laptop drawer — compact left-side drawer (not full-page overlay) */}
-        {menuOpen && (
-          <div className="fixed inset-0 z-[60] xl:hidden">
-            {/* Subtle overlay — keeps main page visible beside the drawer */}
-            <button
-              type="button"
-              aria-label="Close menu"
-              onClick={() => setMenuOpen(false)}
-              className="absolute inset-0 bg-black/30 backdrop-blur-[1px]"
-            />
-            <aside className="absolute left-0 top-0 flex h-full w-[78vw] max-w-[320px] flex-col overflow-y-auto border-r border-[#0f2a4d] bg-[#0b1e3a] shadow-2xl sm:w-72">
+        {/* Left-side navigation drawer — 280-360px, not full-screen, page remains visible beside it */}
+        <div
+          className={`fixed inset-0 z-[60] xl:hidden transition ${menuOpen ? "visible" : "invisible pointer-events-none"}`}
+          aria-hidden={!menuOpen}
+        >
+          {/* Subtle overlay — page behind remains visible (not a full-page menu) */}
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+            tabIndex={menuOpen ? 0 : -1}
+            className={`absolute inset-0 bg-black/25 backdrop-blur-[1px] transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0"}`}
+          />
+          <aside
+            className={`absolute left-0 top-0 flex h-full w-[320px] max-w-[85vw] flex-col overflow-y-auto border-r border-[#0f2a4d] bg-[#0b1e3a] shadow-2xl transition-transform duration-300 ease-in-out sm:w-[340px] ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}>
               <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4">
                 <span className="text-sm font-extrabold tracking-tight text-white">Menu</span>
                 <button
@@ -282,7 +286,6 @@ function WebsiteAdminShellInner({
               </nav>
             </aside>
           </div>
-        )}
       </header>
 
       <main className="flex-1">
