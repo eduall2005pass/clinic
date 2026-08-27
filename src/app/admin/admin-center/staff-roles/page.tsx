@@ -17,8 +17,7 @@ import {
 type Assignment = { email: string; role: string; permissions: string[] };
 
 const ROLES = [
-  { value: "super-admin", label: "Super Admin", description: "Full access to every Admin Panel control and system settings. Cannot be restricted." },
-  { value: "admin", label: "Admin", description: "Broad access — permissions to be defined separately (flexible matrix)." },
+  { value: "admin", label: "Admin", description: "Full access to every Admin Panel control and system settings. Cannot be restricted (previous Super Admin)." },
   { value: "moderator", label: "Moderator", description: "Moderation access — permissions to be defined separately (flexible matrix)." },
   { value: "teacher", label: "Teacher", description: "Limited to 4 teaching controls only. No other panel access unless explicitly granted." },
 ] as const;
@@ -69,7 +68,7 @@ export default function StaffRolesPage() {
     return (
       <AccessMessage
         title="Staff Roles — Administration access required"
-        message="Your role does not include permission to manage staff roles. Only Super Admin / Admin Center can manage roles."
+        message="Your role does not include permission to manage staff roles. Only Admin / Admin Center can manage roles."
         actionLabel="Back to Admin Center"
         actionHref="/admin/admin-center"
       />
@@ -81,7 +80,7 @@ export default function StaffRolesPage() {
   }
 
   function togglePermission(role: string, permission: string) {
-    if (role === "super-admin") return;
+    if (role === "admin") return;
     setMatrix((prev) => {
       const current = prev?.[role] ?? (role === "teacher" ? [...TEACHER_DEFAULT] : []);
       const next = current.includes(permission) ? current.filter((p) => p !== permission) : [...current, permission];
@@ -123,7 +122,7 @@ export default function StaffRolesPage() {
       <header className="mt-3">
         <h1 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Staff Roles / Admin Roles</h1>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
-          Admin Center → Staff Roles. 4 role levels with a flexible, future-proof RBAC matrix. Each admin account has an assigned role enforced on both frontend and backend.
+          Admin Center → Staff Roles. 3 role levels with a flexible, future-proof RBAC matrix. Each admin account has an assigned role enforced on both frontend and backend.
         </p>
       </header>
 
@@ -146,10 +145,10 @@ export default function StaffRolesPage() {
                 <p className="mt-2 text-[11px] text-neutral-400">Teacher has no access to other Admin Panel controls unless explicitly granted later.</p>
               </div>
             )}
-            {role.value !== "teacher" && role.value !== "super-admin" && (
+            {role.value !== "teacher" && role.value !== "admin" && (
               <p className="mt-2 text-[11px] text-neutral-400">Permissions will be defined separately — edit the matrix below.</p>
             )}
-            {role.value === "super-admin" && (
+            {role.value === "admin" && (
               <p className="mt-2 text-[11px] font-semibold text-[#234e9f] admin-dark:text-[#93c5fd]">Always has all permissions.</p>
             )}
           </div>
@@ -179,13 +178,13 @@ export default function StaffRolesPage() {
                     <span className="text-xs font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{role.label}</span>
                   </td>
                   {PERMISSIONS.map((perm) => {
-                    const checked = role.value === "super-admin" || Boolean(matrix?.[role.value]?.includes(perm.value));
+                    const checked = role.value === "admin" || Boolean(matrix?.[role.value]?.includes(perm.value));
                     return (
                       <td key={perm.value} className="px-2 py-2 text-center" title={perm.label}>
                         <input
                           type="checkbox"
                           aria-label={`${role.label}: ${perm.label}`}
-                          disabled={role.value === "super-admin"}
+                          disabled={role.value === "admin"}
                           checked={checked}
                           onChange={() => togglePermission(role.value, perm.value)}
                         />
@@ -197,7 +196,7 @@ export default function StaffRolesPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-slate-500 admin-dark:text-slate-400">Super Admin always has every permission. Teacher defaults to Course Content, Public Exam, Q&A, Result — keep flexible so permissions can be changed later.</p>
+        <p className="mt-2 text-xs text-slate-500 admin-dark:text-slate-400">Admin always has every permission. Teacher defaults to Course Content, Public Exam, Q&A, Result — keep flexible so permissions can be changed later.</p>
       </div>
 
       {/* Email → role assignments */}

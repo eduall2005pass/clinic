@@ -184,7 +184,6 @@ export async function recordAdminLogin(
 // ── Roles & permissions ──────────────────────────────────────────────────
 
 export const AVAILABLE_ROLES = [
-  "super-admin",
   "admin",
   "moderator",
   "teacher",
@@ -193,7 +192,6 @@ export const AVAILABLE_ROLES = [
 export type AdminRole = (typeof AVAILABLE_ROLES)[number];
 
 export const ROLE_LABELS: Record<AdminRole, string> = {
-  "super-admin": "Super Admin",
   admin: "Admin",
   moderator: "Moderator",
   teacher: "Teacher",
@@ -217,9 +215,8 @@ export const ALL_PERMISSIONS = [
 export type AdminPermission = (typeof ALL_PERMISSIONS)[number];
 
 const DEFAULT_PERMISSIONS_BY_ROLE: Record<AdminRole, readonly AdminPermission[]> = {
-  "super-admin": [...ALL_PERMISSIONS],
-  // Admin retains broad access; specific matrix will be defined later.
-  admin: ["manageContent", "manageCourses", "manageExams", "manageStudents"],
+  // Admin now holds all controls previously available to Super Admin (full access).
+  admin: [...ALL_PERMISSIONS],
   // Moderator permissions to be defined separately later — default mirrors admin without admin/system powers.
   moderator: ["manageContent", "manageCourses", "manageExams"],
   // Teacher: strictly limited to 4 controls — no other panel access unless explicitly granted later.
@@ -253,19 +250,19 @@ export function hasControlAccess(
   permissions: string[],
   href: string,
 ): boolean {
-  if (role === "super-admin") return true;
+  if (role === "admin") return true;
   const required = ADMIN_CONTROL_PERMISSIONS[href];
   if (!required) return true; // unknown route → allow for non-restricted pages
   return required.some((perm) => permissions.includes(perm));
 }
 
-/** Check if a permission set grants any of the required permissions (super-admin always passes). */
+/** Check if a permission set grants any of the required permissions (Admin always passes). */
 export function hasAnyPermission(
   role: string | null | undefined,
   permissions: string[],
   required: readonly string[],
 ): boolean {
-  if (role === "super-admin") return true;
+  if (role === "admin") return true;
   return required.some((perm) => permissions.includes(perm));
 }
 
@@ -321,7 +318,7 @@ export async function fetchRolePermissions(): Promise<Record<string, string[]>> 
   }
 }
 
-/** Bulk-save the configurable permission matrix (super-admin only). */
+/** Bulk-save the configurable permission matrix (Admin only). */
 export async function saveRolePermissions(
   input: Record<string, unknown>,
   adminUid: string,
@@ -351,7 +348,7 @@ export async function saveRolePermissions(
  * Resolve an admin's role and effective permissions.
  * Role assignment lives in `admin_roles` (email-keyed, defaults to
  * "admin"); the permission matrix comes from `role_permissions`.
- * Super-admins always hold every permission.
+ * Admin always holds every permission.
  */
 export async function resolveAdminPermissions(
   email: string | null | undefined,
@@ -371,11 +368,14 @@ export async function resolveAdminPermissions(
       const role = rows[0]?.role as AdminRole | undefined;
       if (role && (AVAILABLE_ROLES as readonly string[]).includes(role)) {
         assignedRole = role;
+      } else if (role === "super-admin") {
+        // Legacy super-admin migrated to Admin (full access).
+        assignedRole = "admin";
       }
     }
     const matrix = await fetchRolePermissions();
     const configured: AdminPermission[] =
-      assignedRole === "super-admin"
+      assignedRole === "admin"
         ? [...ALL_PERMISSIONS]
         : ((matrix[assignedRole] ?? []) as AdminPermission[]).length > 0
           ? (matrix[assignedRole] as AdminPermission[])

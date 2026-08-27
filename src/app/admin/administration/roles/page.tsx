@@ -16,7 +16,6 @@ import {
 type Assignment = { email: string; role: string; permissions: string[] };
 
 const ROLES = [
-  { value: "super-admin", label: "Super Admin" },
   { value: "admin", label: "Admin" },
   { value: "moderator", label: "Moderator" },
   { value: "teacher", label: "Teacher" },
@@ -73,7 +72,7 @@ export default function RolesPage() {
   if (!allowed) {
     return (
       <AccessMessage
-        title="Super Admin / Administration access required"
+        title="Admin / Administration access required"
         message="Your role does not include permission to manage roles and permissions."
         actionLabel="Back to Admin Home"
         actionHref="/admin"
@@ -86,7 +85,7 @@ export default function RolesPage() {
   }
 
   function togglePermission(role: string, permission: string) {
-    if (role === "super-admin") return; // super-admin always has everything.
+    if (role === "admin") return; // Admin always has everything.
     setMatrix((prev) => {
       const current = prev?.[role] ?? [];
       const next = current.includes(permission)
@@ -156,14 +155,14 @@ export default function RolesPage() {
                   </td>
                   {PERMISSIONS.map((permission) => {
                     const checked =
-                      role.value === "super-admin" ||
+                      role.value === "admin" ||
                       Boolean(matrix?.[role.value]?.includes(permission.value));
                     return (
                       <td key={permission.value} className="px-2 py-2 text-center" title={permission.label}>
                         <input
                           type="checkbox"
                           aria-label={`${role.label}: ${permission.label}`}
-                          disabled={role.value === "super-admin"}
+                          disabled={role.value === "admin"}
                           checked={checked}
                           onChange={() => togglePermission(role.value, permission.value)}
                         />
@@ -175,7 +174,7 @@ export default function RolesPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-slate-500 admin-dark:text-slate-400">Super Admin always has every permission.</p>
+        <p className="mt-2 text-xs text-slate-500 admin-dark:text-slate-400">Admin always has every permission.</p>
       </div>
 
       {/* Email → role assignments */}

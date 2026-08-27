@@ -86,13 +86,13 @@ export async function requirePermission(
   const user = await requireAdmin(request);
   if (!user) return null;
   const { role, permissions } = await resolveAdminPermissions(user.email);
-  if (role === "super-admin") return user;
+  if (role === "admin") return user;
   return permissions.includes(permission) ? user : null;
 }
 
 /**
  * Flexible gate: succeeds if the admin has ANY of the listed permissions.
- * Super Admin always passes. Used for Teacher-scoped controls where either
+ * Admin always passes. Used for Teacher-scoped controls where either
  * the granular or the legacy broad permission should grant access.
  */
 export async function requireAnyPermission(
@@ -102,7 +102,7 @@ export async function requireAnyPermission(
   const user = await requireAdmin(request);
   if (!user) return null;
   const { role, permissions: granted } = await resolveAdminPermissions(user.email);
-  if (role === "super-admin") return user;
+  if (role === "admin") return user;
   const ok = permissions.some((permission) => granted.includes(permission));
   return ok ? user : null;
 }

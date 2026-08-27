@@ -42,7 +42,7 @@ const CARD_PERMISSIONS: Record<string, readonly string[]> = {
 };
 
 function hasAccess(role: string | null, permissions: string[], href: string): boolean {
-  if (role === "super-admin") return true;
+  if (role === "admin") return true;
   const required = CARD_PERMISSIONS[href];
   if (!required) return true;
   return required.some((perm) => permissions.includes(perm));
@@ -73,7 +73,7 @@ export default function AdminHomePage() {
       {ready && visibleCards.length === 0 && (
         <div className="mt-8 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-6 text-center">
           <p className="text-sm font-bold text-yellow-600 admin-dark:text-yellow-300">No accessible controls for your role.</p>
-          <p className="mt-1 text-xs text-neutral-500">Contact a Super Admin to grant permissions.</p>
+          <p className="mt-1 text-xs text-neutral-500">Contact an Admin to grant permissions.</p>
         </div>
       )}
       {ready && gate.role === "teacher" && (

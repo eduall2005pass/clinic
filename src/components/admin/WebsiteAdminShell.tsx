@@ -227,45 +227,61 @@ function WebsiteAdminShellInner({
           </div>
         </nav>
 
-        {/* Mobile/tablet/laptop drawer — Deep Navy with overlay */}
+        {/* Mobile/tablet/laptop drawer — compact left-side drawer (not full-page overlay) */}
         {menuOpen && (
-          <>
-            {/* Subtle overlay — clicking closes the drawer */}
+          <div className="fixed inset-0 z-[60] xl:hidden">
+            {/* Subtle overlay — keeps main page visible beside the drawer */}
             <button
               type="button"
               aria-label="Close menu"
               onClick={() => setMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] xl:hidden"
+              className="absolute inset-0 bg-black/30 backdrop-blur-[1px]"
             />
-            <div className="relative z-50 border-t border-[#0f2a4d] bg-[#0b1e3a] xl:hidden">
-            <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3">
-              {visibleNav.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    aria-current={isActive(item.href) ? "page" : undefined}
-                    className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                      isActive(item.href)
-                        ? "bg-[#234e9f] text-white shadow-md"
-                        : "text-slate-300 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <Link
-                  href="/"
-                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#93c5fd] hover:bg-white/10 hover:text-white"
+            <aside className="absolute left-0 top-0 flex h-full w-[78vw] max-w-[320px] flex-col overflow-y-auto border-r border-[#0f2a4d] bg-[#0b1e3a] shadow-2xl sm:w-72">
+              <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4">
+                <span className="text-sm font-extrabold tracking-tight text-white">Menu</span>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
                 >
-                  View Website →
-                </Link>
-              </li>
-            </ul>
-            </div>
-          </>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round">
+                    <path d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <nav className="flex-1 px-3 py-4">
+                <ul className="space-y-1">
+                  {visibleNav.map((item) => (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setMenuOpen(false)}
+                        aria-current={isActive(item.href) ? "page" : undefined}
+                        className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                          isActive(item.href)
+                            ? "bg-[#234e9f] text-white shadow-md"
+                            : "text-slate-300 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                  <li>
+                    <Link
+                      href="/"
+                      onClick={() => setMenuOpen(false)}
+                      className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#93c5fd] hover:bg-white/10 hover:text-white"
+                    >
+                      View Website →
+                    </Link>
+                  </li>
+                </ul>
+              </nav>
+            </aside>
+          </div>
         )}
       </header>
 

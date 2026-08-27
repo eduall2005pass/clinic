@@ -10,7 +10,7 @@ export type AdminGate = {
   token: string | null;
   /** Auth headers for admin API calls. */
   headers: Record<string, string>;
-  /** Current admin's role ("super-admin", "admin", …) — null while loading. */
+  /** Current admin's role ("admin", "moderator", "teacher" …) — null while loading. */
   role: string | null;
   /** Permission categories granted by the admin's role. */
   permissions: string[];
@@ -88,7 +88,7 @@ export function hasAdminPermission(
   gate: Pick<AdminGate, "role" | "permissions">,
   permission: string,
 ): boolean {
-  if (gate.role === "super-admin") return true;
+  if (gate.role === "admin") return true;
   return gate.permissions.includes(permission);
 }
 

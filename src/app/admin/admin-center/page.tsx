@@ -18,9 +18,8 @@ type AdminAccount = {
 
 type RoleAssignment = { email: string; role: string };
 
-// Staff Roles / Admin Roles — 4 levels as per spec (flexible, future RBAC)
+// Staff Roles / Admin Roles — 3 levels (Admin holds all Super Admin controls)
 const ROLE_OPTIONS = [
-  { value: "super-admin", label: "Super Admin" },
   { value: "admin", label: "Admin" },
   { value: "moderator", label: "Moderator" },
   { value: "teacher", label: "Teacher" },
@@ -30,15 +29,11 @@ const ROLE_LABELS: Record<string, string> = Object.fromEntries(
   ROLE_OPTIONS.map((role) => [role.value, role.label]),
 );
 
-// Teacher-scoped permission summary for Staff Roles display
+// Permission summary for Staff Roles display
 const ROLE_SUMMARY: Record<string, { description: string; permissions: string[] }> = {
-  "super-admin": {
-    description: "Full access to all Admin Panel controls and system settings.",
-    permissions: ["All permissions"],
-  },
   admin: {
-    description: "Broad access to content, courses, exams and student controls. Specific matrix configurable.",
-    permissions: ["Will be defined separately"],
+    description: "Full access to all Admin Panel controls and system settings (previous Super Admin controls).",
+    permissions: ["All permissions"],
   },
   moderator: {
     description: "Moderation-level access. Permissions to be defined separately.",
@@ -192,7 +187,7 @@ export default function AdminCenterPage() {
           <div>
             <h2 className="text-lg font-bold text-heading">Staff Roles / Admin Roles</h2>
             <p className="mt-1 text-xs text-neutral-500">
-              4 role levels — flexible permission matrix for future RBAC. Teacher is scoped to 4 controls.
+              3 role levels — flexible permission matrix for future RBAC. Teacher is scoped to 4 controls.
             </p>
           </div>
           <Link
