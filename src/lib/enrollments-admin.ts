@@ -14,6 +14,7 @@ export type AdminEnrollment = {
   courseName: string;
   courseType: string;
   courseKind: "free" | "paid";
+  /** Final payable amount stored on the enrollment (original discount + coupon applied). */
   fee: number;
   status: EnrollmentStatus;
   enrolledAt: number | null;
@@ -22,6 +23,17 @@ export type AdminEnrollment = {
   paymentTransactionId: string | null;
   paymentAmount: number | null;
   paymentSender: string | null;
+  /** Original course fee (before any built-in discount or coupon) from the catalog. */
+  originalFee: number | null;
+  /** Coupon code used, if any (from the latest enrollment application). */
+  couponCode: string | null;
+  /** When the payment proof was submitted (latest application), epoch ms. */
+  paymentDate: number | null;
+  /** Approval / rejection audit (Step 6) — set once an admin processes it. */
+  approvedAt: number | null;
+  approvedBy: string | null;
+  rejectedAt: number | null;
+  rejectedBy: string | null;
 };
 
 export type EnrollmentListOptions = {
@@ -47,6 +59,12 @@ type EnrollmentRow = {
   payment_transaction_id?: string | null;
   payment_amount?: string | number | null;
   payment_sender?: string | null;
+  approved_at?: Date | string | null;
+  approved_by?: string | null;
+  rejected_at?: Date | string | null;
+  rejected_by?: string | null;
+  coupon_code?: string | null;
+  payment_created_at?: Date | string | null;
 };
 
 function toNumber(value: unknown): number {
@@ -70,6 +88,7 @@ function normalizeStatus(value: string): EnrollmentStatus {
 }
 
 function mapEnrollment(row: EnrollmentRow): AdminEnrollment {
+  const course = getCourse(row.course_id);
   return {
     id: toNumber(row.id),
     studentUid: row.student_uid,
@@ -90,6 +109,13 @@ function mapEnrollment(row: EnrollmentRow): AdminEnrollment {
         ? null
         : toNumber(row.payment_amount) || null,
     paymentSender: row.payment_sender ?? null,
+    originalFee: course && course.fee > 0 ? course.fee : (toNumber(row.fee) || null),
+    couponCode: row.coupon_code ?? null,
+    paymentDate: parseTime(row.payment_created_at ?? null),
+    approvedAt: parseTime(row.approved_at ?? null),
+    approvedBy: row.approved_by ?? null,
+    rejectedAt: parseTime(row.rejected_at ?? null),
+    rejectedBy: row.rejected_by ?? null,
   };
 }
 
@@ -100,9 +126,19 @@ const SELECT_ENROLLMENTS = `
   FROM enrollments e
   LEFT JOIN students s ON s.uid = e.student_uid`;
 
-/** Payment columns (Step 3 migration) — absent on databases not yet migrated. */
+/** Payment columns (Step 3 + Step 6 migration) — absent on databases not yet migrated. */
 const PAYMENT_COLUMNS = `,
-         e.payment_transaction_id, e.payment_amount, e.payment_sender`;
+         e.payment_transaction_id, e.payment_amount, e.payment_sender,
+         e.approved_at, e.approved_by, e.rejected_at, e.rejected_by,
+         ea.coupon_code, ea.created_at AS payment_created_at`;
+
+/** Latest (best-effort) application join for coupon + payment submission time. */
+const PAYMENT_JOIN = `
+  LEFT JOIN enrollment_applications ea ON ea.id = (
+    SELECT ea2.id FROM enrollment_applications ea2
+    WHERE ea2.student_uid = e.student_uid AND ea2.course_id = e.course_id
+    ORDER BY ea2.created_at DESC LIMIT 1
+  )`;
 
 /** All enrollments with student info — supports search + status filter. */
 export async function fetchEnrollmentsAdmin(
@@ -133,9 +169,9 @@ export async function fetchEnrollmentsAdmin(
   try {
     let rows: EnrollmentRow[];
     try {
-      // Preferred — includes the payment details (Step 3 migration applied).
+      // Preferred — includes payment + approval details (Step 3/6 migration applied).
       rows = await query<EnrollmentRow[]>(
-        `${SELECT_ENROLLMENTS}${PAYMENT_COLUMNS} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
+        `${SELECT_ENROLLMENTS}${PAYMENT_COLUMNS} ${PAYMENT_JOIN} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
         params,
       );
     } catch {

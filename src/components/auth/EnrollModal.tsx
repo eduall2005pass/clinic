@@ -93,9 +93,6 @@ export default function EnrollModal({
   const { isActive, isPending, isCancelled, isCompleted } = useCourseAccess(course);
   const isPaid = getCourseKind(course) === "paid";
   const payableFee = getPayableFee(course);
-  // Final system-derived payable amount (built-in discount already inside
-  // payableFee, plus any valid coupon on top). The student can never edit it.
-  const finalAmount = appliedCoupon?.finalFee ?? payableFee;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
@@ -105,6 +102,9 @@ export default function EnrollModal({
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   // Step 4 — paid-course payment proof.
   const [transactionId, setTransactionId] = useState("");
+  // Final system-derived payable amount (built-in discount already inside
+  // payableFee, plus any valid coupon on top). The student can never edit it.
+  const finalAmount = appliedCoupon?.finalFee ?? payableFee;
   const [senderMobile, setSenderMobile] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   // Live payment card from MySQL (Admin Payment Card manager) — shows
