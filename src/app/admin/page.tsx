@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useAdminGate } from "@/components/admin/admin-ui";
 import { AccessLoading } from "@/components/auth/AccessGuard";
+import {
+  PendingIndicator,
+  useEnrollmentPendingTotals,
+} from "@/components/admin/EnrollmentControlShared";
 
 /**
  * Admin Panel Home — exactly 12 control cards (2 columns × 6 rows on every
@@ -51,6 +55,7 @@ function hasAccess(role: string | null, permissions: string[], href: string): bo
 export default function AdminHomePage() {
   const gate = useAdminGate();
   const ready = gate.ready;
+  const { totalPending } = useEnrollmentPendingTotals();
   const visibleCards = ready
     ? CARDS.filter((card) => hasAccess(gate.role, gate.permissions, card.href))
     : CARDS;
@@ -87,8 +92,11 @@ export default function AdminHomePage() {
           <Link
             key={card.href}
             href={card.href}
-            className="group flex min-h-[72px] items-center gap-3 overflow-hidden rounded-2xl border border-[#dbeafe] bg-white p-3 shadow-sm shadow-[#0b1e3a]/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#93c5fd] hover:shadow-md hover:shadow-[#0b1e3a]/10 sm:min-h-[84px] sm:p-5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:shadow-black/20 admin-dark:hover:border-[#2f5aa0]"
+            className="group relative flex min-h-[72px] items-center gap-3 overflow-hidden rounded-2xl border border-[#dbeafe] bg-white p-3 shadow-sm shadow-[#0b1e3a]/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#93c5fd] hover:shadow-md hover:shadow-[#0b1e3a]/10 sm:min-h-[84px] sm:p-5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:shadow-black/20 admin-dark:hover:border-[#2f5aa0]"
           >
+            {card.href === "/admin/enrollment-control" && (
+              <PendingIndicator count={totalPending} className="right-2 top-2" />
+            )}
             <span
               aria-hidden
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eff6ff] text-lg ring-1 ring-[#dbeafe] transition group-hover:bg-[#1a3a78] group-hover:text-white group-hover:ring-[#1a3a78] sm:h-12 sm:w-12 sm:text-2xl admin-dark:bg-[#0f2547] admin-dark:ring-[#1e3a65] admin-dark:group-hover:bg-[#234e9f]"

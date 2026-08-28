@@ -5,6 +5,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
 import { useAdminToast } from "@/components/admin/AdminToastProvider";
+import { notifyEnrollmentChanged } from "@/components/admin/EnrollmentControlShared";
 
 type Application = {
   id: number;
@@ -115,6 +116,8 @@ export default function CourseApplicationsPage({
       );
       // Refresh list — processed applications leave the pending view.
       await load();
+      // Refresh the whole hierarchy's pending indicators immediately.
+      notifyEnrollmentChanged();
     } catch {
       toast.showToast("error", "Failed to update the application.");
     } finally {
