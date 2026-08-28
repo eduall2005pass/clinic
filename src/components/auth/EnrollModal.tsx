@@ -93,6 +93,9 @@ export default function EnrollModal({
   const { isActive, isPending, isCancelled, isCompleted } = useCourseAccess(course);
   const isPaid = getCourseKind(course) === "paid";
   const payableFee = getPayableFee(course);
+  // Final system-derived payable amount (built-in discount already inside
+  // payableFee, plus any valid coupon on top). The student can never edit it.
+  const finalAmount = appliedCoupon?.finalFee ?? payableFee;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
@@ -102,7 +105,6 @@ export default function EnrollModal({
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   // Step 4 — paid-course payment proof.
   const [transactionId, setTransactionId] = useState("");
-  const [paidAmount, setPaidAmount] = useState("");
   const [senderMobile, setSenderMobile] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   // Live payment card from MySQL (Admin Payment Card manager) — shows
@@ -160,17 +162,13 @@ export default function EnrollModal({
     if (submitting || !user || !profile) return;
 
     // Paid courses must submit complete, valid payment proof (Step 4).
-    let payment: { transactionId: string; paidAmount: number; senderMobile: string } | undefined;
+    let payment: { transactionId: string; senderMobile: string } | undefined;
     if (isPaid) {
       const errors: Record<string, string> = {};
       const txn = transactionId.trim();
-      const amount = Number(paidAmount.trim());
       const mobile = senderMobile.trim();
       if (txn.length < 4 || txn.length > 64) {
         errors.transactionId = "Transaction ID is required (4–64 characters).";
-      }
-      if (!Number.isFinite(amount) || amount <= 0) {
-        errors.paidAmount = "Enter a valid paid amount greater than 0.";
       }
       if (!/^01[3-9]\d{8}$/.test(mobile)) {
         errors.senderMobile = "Enter a valid mobile number (e.g. 01XXXXXXXXX).";
@@ -180,7 +178,7 @@ export default function EnrollModal({
         return;
       }
       setFieldErrors({});
-      payment = { transactionId: txn, paidAmount: amount, senderMobile: mobile };
+      payment = { transactionId: txn, senderMobile: mobile };
     } else {
       setFieldErrors({});
     }
@@ -261,11 +259,11 @@ export default function EnrollModal({
 
     if (!user || !profile) {
       return (
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <StatusIcon>
             <LockIcon />
           </StatusIcon>
-          <h3 className="mt-5 text-lg font-bold text-heading">
+          <h3 className="mt-4 text-lg font-bold text-heading">
             Registration First
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-neutral-400">
@@ -274,14 +272,14 @@ export default function EnrollModal({
           <button
             type="button"
             onClick={() => router.push(registerHref)}
-            className={`${primaryButtonClass} mt-6`}
+            className={`${primaryButtonClass} mt-4`}
           >
             Register Now
           </button>
           <button
             type="button"
             onClick={onClose}
-            className={`${secondaryButtonClass} mt-3`}
+            className={`${secondaryButtonClass} mt-2`}
           >
             Back
           </button>
@@ -291,11 +289,11 @@ export default function EnrollModal({
 
     if (completed && !isPaid) {
       return (
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <StatusIcon>
             <CheckIcon />
           </StatusIcon>
-          <h3 className="mt-5 text-lg font-bold text-heading">
+          <h3 className="mt-4 text-lg font-bold text-heading">
             Enrollment successful!
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-neutral-400">
@@ -308,7 +306,7 @@ export default function EnrollModal({
               onClose();
               router.push("/dashboard/enrolled-courses");
             }}
-            className={`${primaryButtonClass} mt-6`}
+            className={`${primaryButtonClass} mt-4`}
           >
             Go to Course
           </button>
@@ -318,11 +316,11 @@ export default function EnrollModal({
 
     if (isActive) {
       return (
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <StatusIcon>
             <CheckIcon />
           </StatusIcon>
-          <h3 className="mt-5 text-lg font-bold text-heading">
+          <h3 className="mt-4 text-lg font-bold text-heading">
             You&apos;re already enrolled in this course.
           </h3>
           <button
@@ -331,14 +329,14 @@ export default function EnrollModal({
               onClose();
               router.push("/dashboard/enrolled-courses");
             }}
-            className={`${primaryButtonClass} mt-6`}
+            className={`${primaryButtonClass} mt-4`}
           >
             Go to Course
           </button>
           <button
             type="button"
             onClick={onClose}
-            className={`${secondaryButtonClass} mt-3`}
+            className={`${secondaryButtonClass} mt-2`}
           >
             Close
           </button>
@@ -348,11 +346,11 @@ export default function EnrollModal({
 
     if (isPending || completed) {
       return (
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <StatusIcon>
             <ClockIcon />
           </StatusIcon>
-          <h3 className="mt-5 text-lg font-bold text-heading">
+          <h3 className="mt-4 text-lg font-bold text-heading">
             Application submitted — Pending Validation
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-neutral-400">
@@ -366,14 +364,14 @@ export default function EnrollModal({
               onClose();
               router.push("/dashboard");
             }}
-            className={`${primaryButtonClass} mt-6`}
+            className={`${primaryButtonClass} mt-4`}
           >
             Go to Dashboard
           </button>
           <button
             type="button"
             onClick={onClose}
-            className={`${secondaryButtonClass} mt-3`}
+            className={`${secondaryButtonClass} mt-2`}
           >
             Close
           </button>
@@ -383,11 +381,11 @@ export default function EnrollModal({
 
     if (isCompleted) {
       return (
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <StatusIcon>
             <CheckIcon />
           </StatusIcon>
-          <h3 className="mt-5 text-lg font-bold text-heading">
+          <h3 className="mt-4 text-lg font-bold text-heading">
             You&apos;ve completed this course.
           </h3>
           <button
@@ -396,14 +394,14 @@ export default function EnrollModal({
               onClose();
               router.push("/dashboard/enrolled-courses");
             }}
-            className={`${primaryButtonClass} mt-6`}
+            className={`${primaryButtonClass} mt-4`}
           >
             Go to Course
           </button>
           <button
             type="button"
             onClick={onClose}
-            className={`${secondaryButtonClass} mt-3`}
+            className={`${secondaryButtonClass} mt-2`}
           >
             Close
           </button>
@@ -416,41 +414,44 @@ export default function EnrollModal({
       // Card → Coupon Availability). Defaults to visible while loading.
       const couponVisible = paymentCard ? paymentCard.couponEnabled : true;
       return (
-        <div className="mt-5">
+        <div className="mt-4">
           {isCancelled && (
-            <p className="mb-4 rounded-xl border border-ink/10 bg-ink/5 p-3 text-center text-xs text-neutral-400">
+            <p className="mb-3 rounded-xl border border-ink/10 bg-ink/5 p-2 text-center text-xs text-neutral-400">
               Your previous enrollment was cancelled. You can request a new one.
             </p>
           )}
-          <div className="rounded-xl border border-ink/10 bg-dark-950 p-4 sm:p-5">
-            {/* Fee + coupon share one compact row on wider screens */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-              <div className="shrink-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Course Fee
-                </p>
-                <div className="mt-1 flex items-baseline gap-2">
-                  {appliedCoupon && appliedCoupon.finalFee < payableFee && (
-                    <span className="text-sm text-neutral-500 line-through">
-                      {formatFee(payableFee)}
-                    </span>
-                  )}
-                  <p className="text-xl font-extrabold leading-none text-primary-500">
-                    {formatFee(appliedCoupon?.finalFee ?? payableFee)}
+          <div className="rounded-xl border border-ink/10 bg-dark-950 p-4">
+            {/* Fee + Coupon — compact responsive layout */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              {/* Fixed fee breakdown — Course Fee → Discount → Payable.
+                  Fully system-derived; the student can never edit the amount. */}
+              <div className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Course Fee
+                  </p>
+                  <p className="text-sm font-semibold text-neutral-300">
+                    {formatFee(course.fee)}
                   </p>
                 </div>
+                {(appliedCoupon &&
+                  appliedCoupon.finalFee < payableFee) ||
+                (payableFee < course.fee) ? (
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Discount
+                    </p>
+                    <p className="text-sm font-semibold text-emerald-400">
+                      − {formatFee(finalAmount < course.fee ? course.fee - finalAmount : course.fee - payableFee)}
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
-              {/* Coupon code — hidden entirely when admin sets availability OFF */}
+              {/* Coupon code — hidden when admin sets availability OFF */}
               {couponVisible && (
-                <div className="w-full sm:max-w-[15rem] lg:max-w-xs">
-                  <label
-                    htmlFor="enroll-coupon"
-                    className="text-xs font-semibold text-neutral-400"
-                  >
-                    Have a coupon?
-                  </label>
-                  <div className="mt-1 flex gap-2">
+                <div className="w-full sm:max-w-[160px] lg:max-w-xs">
+                  <div className="flex gap-2">
                     <input
                       id="enroll-coupon"
                       type="text"
@@ -496,31 +497,60 @@ export default function EnrollModal({
               )}
             </div>
 
+            {/* Fixed Payable Amount — prominent display */}
+            <div className="mt-3 rounded-xl border border-primary-500/30 bg-primary-600/10 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+                    Payable Amount
+                  </p>
+                  <p className="mt-1 text-2xl sm:text-3xl font-extrabold text-primary-400">
+                    {formatFee(finalAmount)}
+                  </p>
+                </div>
+                {appliedCoupon && appliedCoupon.finalFee < payableFee && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-neutral-500 line-through">
+                      {formatFee(payableFee)}
+                    </span>
+                    <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-300">
+                      Coupon {appliedCoupon.code} applied
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-neutral-500">
+                This is the exact amount you must pay. Do not pay more or less.
+              </p>
+            </div>
+
             {/* Payment card — live from MySQL (Admin → Enrollment Control →
                 Payment Card). Students pay to THESE numbers. Methods sit
                 side-by-side on wider screens. */}
             {paymentCard && (paymentCard.bkashNumber || paymentCard.nagadNumber) && (
-              <div className="mt-4 rounded-xl border border-primary-500/30 bg-primary-600/5 p-3 sm:p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
-                  Send payment to
-                </p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {paymentCard.bkashNumber && (
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-2">
-                      <span className="text-xs font-extrabold text-pink-300">bKash</span>
-                      <span className="truncate font-mono text-sm font-semibold text-heading">
-                        {paymentCard.bkashNumber}
-                      </span>
-                    </div>
-                  )}
-                  {paymentCard.nagadNumber && (
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2">
-                      <span className="text-xs font-extrabold text-orange-300">Nagad</span>
-                      <span className="truncate font-mono text-sm font-semibold text-heading">
-                        {paymentCard.nagadNumber}
-                      </span>
-                    </div>
-                  )}
+              <div className="mt-3 rounded-xl border border-primary-500/20 bg-primary-600/5 p-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+                    Payment Methods
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {paymentCard.bkashNumber && (
+                      <div className="flex items-center gap-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-1.5">
+                        <span className="text-xs font-extrabold text-pink-300">bKash</span>
+                        <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
+                          {paymentCard.bkashNumber}
+                        </span>
+                      </div>
+                    )}
+                    {paymentCard.nagadNumber && (
+                      <div className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5">
+                        <span className="text-xs font-extrabold text-orange-300">Nagad</span>
+                        <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
+                          {paymentCard.nagadNumber}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {paymentCard.instructions && (
                   <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-neutral-300">
@@ -530,12 +560,9 @@ export default function EnrollModal({
               </div>
             )}
 
-            {/* Payment proof (Step 4) — three-up on desktop, stacked on mobile */}
-            <div className="mt-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                Payment Information
-              </p>
-              <div className="mt-2 grid gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Payment proof — compact responsive grid (only Transaction ID + Sender Mobile) */}
+            <div className="mt-3">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <label
                     htmlFor="enroll-txn"
@@ -562,38 +589,10 @@ export default function EnrollModal({
                 </div>
                 <div>
                   <label
-                    htmlFor="enroll-amount"
-                    className="text-xs font-semibold text-neutral-400"
-                  >
-                    Paid Amount (BDT)
-                  </label>
-                  <input
-                    id="enroll-amount"
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={paidAmount}
-                    onChange={(event) => setPaidAmount(event.target.value)}
-                    placeholder={
-                      appliedCoupon ? String(appliedCoupon.finalFee) : String(payableFee)
-                    }
-                    className={`mt-1 w-full rounded-xl border bg-dark-900 px-3 py-2 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
-                      fieldErrors.paidAmount ? "border-red-500/60" : "border-ink/15"
-                    }`}
-                  />
-                  {fieldErrors.paidAmount && (
-                    <p className="mt-1 text-xs font-semibold text-red-400">
-                      {fieldErrors.paidAmount}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label
                     htmlFor="enroll-mobile"
                     className="text-xs font-semibold text-neutral-400"
                   >
-                    Sender Mobile Number
+                    Payment From Number
                   </label>
                   <input
                     id="enroll-mobile"
@@ -616,14 +615,12 @@ export default function EnrollModal({
               </div>
             </div>
 
-            <p className="mt-3 text-xs leading-relaxed text-neutral-400">
-              This is a paid course. Submit your payment details above — your
-              enrollment will remain{" "}
+            <p className="mt-2 text-xs leading-relaxed text-neutral-400">
+              Submit payment details — enrollment stays{" "}
               <span className="font-semibold text-yellow-400">
                 Pending Validation
               </span>{" "}
-              until an admin verifies the payment. The course will not be
-              unlocked before that.
+              until admin verifies payment.
             </p>
           </div>
           {error && (
@@ -645,7 +642,7 @@ export default function EnrollModal({
               disabled={submitting}
               className={`${primaryButtonClass} sm:flex-[2]`}
             >
-              {submitting ? "Submitting Application..." : "Submit Enrollment Application"}
+              {submitting ? "Submitting Payment..." : "Submit Payment"}
             </button>
           </div>
         </div>
@@ -653,26 +650,26 @@ export default function EnrollModal({
     }
 
     return (
-      <div className="mt-6">
+      <div className="mt-4">
         {isCancelled && (
-          <p className="mb-4 rounded-xl border border-ink/10 bg-ink/5 p-3 text-center text-xs text-neutral-400">
+          <p className="mb-3 rounded-xl border border-ink/10 bg-ink/5 p-2 text-center text-xs text-neutral-400">
             Your previous enrollment was cancelled. You can enroll again.
           </p>
         )}
-        <div className="rounded-xl border border-ink/10 bg-dark-950 p-5">
+        <div className="rounded-xl border border-ink/10 bg-dark-950 p-4">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
               Course Fee
             </p>
             <p className="text-xl font-extrabold text-primary-500">Free</p>
           </div>
-          <p className="mt-4 text-sm leading-relaxed text-neutral-400">
+          <p className="mt-2 text-sm leading-relaxed text-neutral-400">
             This course is free. Confirming enrollment gives you immediate
             access to all course content.
           </p>
         </div>
         {error && (
-          <p className="mt-4 rounded-xl border border-primary-500/30 bg-primary-500/10 p-3 text-center text-sm text-primary-300">
+          <p className="mt-3 rounded-xl border border-primary-500/30 bg-primary-500/10 p-2 text-center text-sm text-primary-300">
             {error}
           </p>
         )}
@@ -680,14 +677,14 @@ export default function EnrollModal({
           type="button"
           onClick={handleEnroll}
           disabled={submitting}
-          className={`${primaryButtonClass} mt-5`}
+          className={`${primaryButtonClass} mt-4`}
         >
           {submitting ? "Enrolling..." : "Confirm Enrollment"}
         </button>
         <button
           type="button"
           onClick={onClose}
-          className={`${secondaryButtonClass} mt-3`}
+          className={`${secondaryButtonClass} mt-2`}
         >
           Cancel
         </button>
@@ -695,52 +692,52 @@ export default function EnrollModal({
     );
   };
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Enroll in ${course.name}`}
-    >
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div
-        className={`relative w-full animate-fade-in rounded-2xl border border-ink/10 bg-dark-900 shadow-2xl shadow-black/50 ${
-          isPaid
-            ? "max-w-lg p-5 sm:max-w-2xl sm:p-6"
-            : "max-w-md p-8"
-        }`}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-4 top-4 rounded-lg p-1.5 text-neutral-500 transition hover:bg-ink/10 hover:text-heading"
+return (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Enroll in ${course.name}`}
         >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            viewBox="0 0 24 24"
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <div
+            className={`relative w-full max-h-[90vh] overflow-y-auto animate-fade-in rounded-2xl border border-ink/10 bg-dark-900 shadow-2xl shadow-black/50 ${
+              isPaid
+                ? "max-w-lg p-4 sm:max-w-xl sm:p-5"
+                : "max-w-md p-6"
+            }`}
           >
-            <path d="M18 6 6 18M6 6l12 12" />
-          </svg>
-        </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="absolute right-3 top-3 rounded-lg p-1.5 text-neutral-500 transition hover:bg-ink/10 hover:text-heading"
+            >
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+              >
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
 
-        <div className="pr-6">
-          <span className="inline-block rounded-md border border-primary-500/40 bg-dark-950/80 px-2.5 py-1 text-xs font-bold text-primary-400">
-            {isPaid ? "Paid Course" : "Free Course"}
-          </span>
-          <h2 className="mt-3 text-xl font-extrabold text-heading">{course.name}</h2>
+            <div className="pr-6">
+              <span className="inline-block rounded-md border border-primary-500/40 bg-dark-950/80 px-2.5 py-1 text-xs font-bold text-primary-400">
+                {isPaid ? "Paid Course" : "Free Course"}
+              </span>
+              <h2 className="mt-2 text-lg sm:text-xl font-extrabold text-heading">{course.name}</h2>
+            </div>
+
+            {renderContent()}
+          </div>
         </div>
-
-        {renderContent()}
-      </div>
-    </div>
-  );
+      );
 }
