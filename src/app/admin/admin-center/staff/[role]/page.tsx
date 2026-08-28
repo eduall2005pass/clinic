@@ -9,7 +9,7 @@ import {
   hasAdminPermission,
   cardClass,
 } from "@/components/admin/admin-ui";
-import { AVAILABLE_ROLES, ROLE_LABELS } from "@/lib/administration";
+import { AVAILABLE_ROLES, ROLE_LABELS } from "@/lib/admin-roles";
 
 type AdminAccount = {
   uid?: string;
