@@ -53,7 +53,10 @@ export default function EnrollmentControlPage() {
             href={card.href}
             className="group relative flex min-h-[110px] flex-col justify-center gap-2 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-4 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:min-h-[140px] sm:p-6"
           >
-            <PendingIndicator count={pendingFor[card.href] ?? 0} />
+            <PendingIndicator
+              count={pendingFor[card.href] ?? 0}
+              className="right-3 top-3"
+            />
             <span aria-hidden className="text-2xl sm:text-3xl">{card.icon}</span>
             <span className="break-words text-sm font-extrabold leading-snug text-heading transition group-hover:text-[#1a3a78] sm:text-lg">
               {card.title}
