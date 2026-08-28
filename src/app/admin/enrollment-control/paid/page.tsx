@@ -20,17 +20,11 @@ export default function PaidEnrollmentPage() {
 
   if (authLoading) return <AccessLoading label="Loading…" />;
 
-  const paidCourses = (courses ?? []).filter((course) => course.kind === "paid");
-
-  // Flow: Category → Course → Pending Applications. Group courses under
-  // their category heading (order preserved from the catalog sort).
-  const categories: { name: string; courses: typeof paidCourses }[] = [];
-  for (const course of paidCourses) {
-    const name = course.category || "Other";
-    const bucket = categories.find((group) => group.name === name);
-    if (bucket) bucket.courses.push(course);
-    else categories.push({ name, courses: [course] });
-  }
+  // Unified list — every paid course in ONE list, no category separation.
+  // Sorted: highest pending count first → lowest → no pending (last).
+  const paidCourses = (courses ?? [])
+    .filter((course) => course.kind === "paid")
+    .sort((a, b) => b.pendingCount - a.pendingCount);
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -39,9 +33,9 @@ export default function PaidEnrollmentPage() {
         Manual enrollment only — review and accept paid course applications.
       </p>
 
-      <h2 className="mt-8 text-lg font-bold text-heading">Manual Enrollment</h2>
+      <h2 className="mt-8 text-lg font-bold text-heading">All Paid Courses</h2>
       <p className="mt-1 text-xs text-neutral-500">
-        Pick a category → course to review its pending applications.
+        One unified list — sorted by highest pending applications first. Pending counts update automatically.
       </p>
 
       {error ? (
@@ -55,18 +49,9 @@ export default function PaidEnrollmentPage() {
           No paid courses published yet.
         </p>
       ) : (
-        <div className="mt-4 space-y-6">
-          {categories.map((group) => (
-            <div key={group.name}>
-              <h3 className="text-xs font-extrabold uppercase tracking-widest text-neutral-500">
-                {group.name}
-              </h3>
-              <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                {group.courses.map((course) => (
-                  <ControlCourseCard key={course.slug} course={course} kind="paid" />
-                ))}
-              </div>
-            </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {paidCourses.map((course) => (
+            <ControlCourseCard key={course.slug} course={course} kind="paid" />
           ))}
         </div>
       )}
