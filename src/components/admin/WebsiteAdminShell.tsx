@@ -157,13 +157,13 @@ function WebsiteAdminShellInner({
       <header className="sticky top-0 z-50 border-b border-[#dbeafe] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/95">
         <nav className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 xl:gap-3">
           <div className="flex items-center gap-3">
-            {/* Hamburger — visible on laptop/tablet/mobile (xl:hidden), not on xl+ desktop */}
+            {/* Hamburger — opens left-side drawer on all screen sizes (laptop, tablet, mobile and desktop) */}
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] focus:outline-none focus:ring-2 focus:ring-[#2f6bce]/20 xl:hidden admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] focus:outline-none focus:ring-2 focus:ring-[#2f6bce]/20 admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
             >
               {menuOpen ? (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round">
@@ -229,63 +229,79 @@ function WebsiteAdminShellInner({
           </div>
         </nav>
 
-        {/* Mobile/tablet/laptop drawer — compact left-side drawer (not full-page overlay) */}
-        {menuOpen && (
-          <div className="fixed inset-0 z-[60] xl:hidden">
-            {/* Subtle overlay — keeps main page visible beside the drawer */}
+      </header>
+
+      {/* Left-side navigation drawer — rendered outside the sticky header so it can
+          cover the full viewport as a proper side drawer (parent backdrop-filter
+          would otherwise trap position:fixed). Slides in from the LEFT, part-width
+          only (280–340px), never full-screen. */}
+      <div
+        aria-hidden={!menuOpen}
+        className={`fixed inset-0 z-[60] ${menuOpen ? "" : "pointer-events-none"}`}
+      >
+        {/* Subtle overlay — keeps main page visible beside the drawer; click to close */}
+        <button
+          type="button"
+          aria-label="Close menu"
+          tabIndex={menuOpen ? 0 : -1}
+          onClick={() => setMenuOpen(false)}
+          className={`absolute inset-0 bg-black/30 backdrop-blur-[1px] transition-opacity duration-300 ${
+            menuOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        {/* Drawer panel — fixed width on desktop/tablet, wider-but-bounded on mobile */}
+        <aside
+          role="dialog"
+          aria-modal="false"
+          aria-label="Admin navigation"
+          className={`absolute left-0 top-0 z-10 flex h-full w-[85vw] max-w-[340px] flex-col overflow-y-auto border-r border-[#0f2a4d] bg-[#0b1e3a] shadow-2xl transition-transform duration-300 ease-out ${
+            menuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4">
+            <span className="text-sm font-extrabold tracking-tight text-white">Menu</span>
             <button
               type="button"
               aria-label="Close menu"
               onClick={() => setMenuOpen(false)}
-              className="absolute inset-0 bg-black/30 backdrop-blur-[1px]"
-            />
-            <aside className="absolute left-0 top-0 flex h-full w-[78vw] max-w-[320px] flex-col overflow-y-auto border-r border-[#0f2a4d] bg-[#0b1e3a] shadow-2xl sm:w-72">
-              <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4">
-                <span className="text-sm font-extrabold tracking-tight text-white">Menu</span>
-                <button
-                  type="button"
-                  aria-label="Close menu"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round">
-                    <path d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <nav className="flex-1 px-3 py-4">
-                <ul className="space-y-1">
-                  {visibleNav.map((item) => (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={() => setMenuOpen(false)}
-                        aria-current={isActive(item.href) ? "page" : undefined}
-                        className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                          isActive(item.href)
-                            ? "bg-[#234e9f] text-white shadow-md"
-                            : "text-slate-300 hover:bg-white/10 hover:text-white"
-                        }`}
-                      >
-                        {item.label}
-                      </Link>
-                    </li>
-                  ))}
-                  <li>
-                    <Link
-                      href="/"
-                      onClick={() => setMenuOpen(false)}
-                      className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#93c5fd] hover:bg-white/10 hover:text-white"
-                    >
-                      View Website →
-                    </Link>
-                  </li>
-                </ul>
-              </nav>
-            </aside>
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round">
+                <path d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-        )}
-      </header>
+          <nav className="flex-1 px-3 py-4">
+            <ul className="space-y-1">
+              {visibleNav.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    aria-current={isActive(item.href) ? "page" : undefined}
+                    className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                      isActive(item.href)
+                        ? "bg-[#234e9f] text-white shadow-md"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link
+                  href="/"
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#93c5fd] hover:bg-white/10 hover:text-white"
+                >
+                  View Website →
+                </Link>
+              </li>
+            </ul>
+          </nav>
+        </aside>
+      </div>
 
       <main className="flex-1">
         {isDeniedByRole ? (
