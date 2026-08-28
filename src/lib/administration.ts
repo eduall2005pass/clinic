@@ -343,10 +343,10 @@ export async function resolveAdminPermissions(
         `SELECT role FROM admin_roles WHERE email = ? LIMIT 1`,
         [email.trim().toLowerCase()],
       );
-      const role = rows[0]?.role as AdminRole | undefined;
-      if (role && (AVAILABLE_ROLES as readonly string[]).includes(role)) {
-        assignedRole = role;
-      } else if (role === "super-admin") {
+      const rawRole = String(rows[0]?.role ?? "").trim().toLowerCase();
+      if ((AVAILABLE_ROLES as readonly string[]).includes(rawRole)) {
+        assignedRole = rawRole as AdminRole;
+      } else if (rawRole === "super-admin") {
         // Legacy super-admin migrated to Admin (full access).
         assignedRole = "admin";
       }

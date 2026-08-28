@@ -18,7 +18,9 @@ type AdminAccount = {
 
 type RoleAssignment = { email: string; role: string };
 
-// Staff Roles / Admin Roles — 3 levels (Admin holds all Super Admin controls)
+// Staff Levels — exactly 3 level categories (Admin / Moderator / Teacher).
+// These are ONLY level categories for now — no permissions or responsibilities
+// are defined yet. The role/permission system will be configured later.
 const ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
   { value: "moderator", label: "Moderator" },
@@ -28,27 +30,6 @@ const ROLE_OPTIONS = [
 const ROLE_LABELS: Record<string, string> = Object.fromEntries(
   ROLE_OPTIONS.map((role) => [role.value, role.label]),
 );
-
-// Permission summary for Staff Roles display
-const ROLE_SUMMARY: Record<string, { description: string; permissions: string[] }> = {
-  admin: {
-    description: "Full access to all Admin Panel controls and system settings (previous Super Admin controls).",
-    permissions: ["All permissions"],
-  },
-  moderator: {
-    description: "Moderation-level access. Permissions to be defined separately.",
-    permissions: ["Will be defined separately"],
-  },
-  teacher: {
-    description: "Limited to teaching controls only. No other panel access unless explicitly granted.",
-    permissions: [
-      "Course Content Control",
-      "Public Exam Control",
-      "Q&A Answer",
-      "Result Sheet / Result Control",
-    ],
-  },
-};
 
 export default function AdminCenterPage() {
   const toast = useAdminToast();
@@ -181,13 +162,14 @@ export default function AdminCenterPage() {
         All authorized admin accounts and their access / roles.
       </p>
 
-      {/* Staff Roles — sub-section inside Admin Center (not a top-level menu) */}
+      {/* Staff Levels — 3 clickable level cards → staff profiles per level */}
       <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-heading">Staff Roles / Admin Roles</h2>
+            <h2 className="text-lg font-bold text-heading">Staff Levels</h2>
             <p className="mt-1 text-xs text-neutral-500">
-              3 role levels — flexible permission matrix for future RBAC. Teacher is scoped to 4 controls.
+              Exactly 3 staff levels — click a level to see the staff profiles assigned to it.
+              These are only level categories for now; permissions will be configured later.
             </p>
           </div>
           <Link
@@ -197,29 +179,46 @@ export default function AdminCenterPage() {
             Manage Staff Roles →
           </Link>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {ROLE_OPTIONS.map((role) => (
-            <Link
-              key={role.value}
-              href={`/admin/admin-center/staff-roles#${role.value}`}
-              className="rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-4 transition hover:border-[#93c5fd] hover:bg-white admin-dark:hover:bg-[#132a4f]"
-            >
-              <p className="text-sm font-extrabold text-heading">{role.label}</p>
-              <p className="mt-1 text-xs leading-relaxed text-neutral-500">
-                {ROLE_SUMMARY[role.value].description}
-              </p>
-              <ul className="mt-2 flex flex-wrap gap-1">
-                {ROLE_SUMMARY[role.value].permissions.map((perm) => (
-                  <li key={perm} className="rounded-full border border-[#dbeafe] bg-white px-2 py-0.5 text-[10px] font-bold text-[#1a3a78] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#93c5fd]">
-                    {perm}
-                  </li>
-                ))}
-              </ul>
-            </Link>
-          ))}
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {ROLE_OPTIONS.map((level) => {
+            const count = (admins ?? []).filter(
+              (admin) => (admin.role ?? "admin").toLowerCase() === level.value,
+            ).length;
+            return (
+              <Link
+                key={level.value}
+                href={`/admin/admin-center/staff/${level.value}`}
+                className="group rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-5 text-center transition hover:border-[#93c5fd] hover:bg-white admin-dark:hover:bg-[#132a4f]"
+              >
+                <span
+                  aria-hidden
+                  className={`mx-auto flex h-11 w-11 items-center justify-center rounded-xl text-base font-extrabold text-white shadow-md ${
+                    level.value === "admin"
+                      ? "bg-purple-500"
+                      : level.value === "moderator"
+                        ? "bg-blue-500"
+                        : "bg-emerald-500"
+                  }`}
+                >
+                  {level.label.charAt(0)}
+                </span>
+                <p className="mt-3 text-base font-extrabold text-heading">{level.label}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+                  All staff profiles assigned to the {level.label} level.
+                </p>
+                <p className="mt-2 text-[11px] font-bold text-neutral-400">
+                  {count} {count === 1 ? "staff member" : "staff members"}
+                </p>
+                <span className="mt-3 inline-block rounded-lg border border-[#bfdbfe] bg-[#eff6ff] px-3 py-1 text-[11px] font-bold text-[#1a3a78] transition group-hover:bg-[#1a3a78] group-hover:text-white admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:group-hover:bg-[#234e9f]">
+                  View Staff →
+                </span>
+              </Link>
+            );
+          })}
         </div>
         <p className="mt-3 text-[11px] text-neutral-400">
-          Each staff/admin account has an assigned role. Both frontend and backend enforce the role’s permissions.
+          Each staff account keeps its assigned level. No role permissions or
+          responsibilities are defined yet — only the 3 levels and the staff assigned to them.
         </p>
       </div>
 
