@@ -497,31 +497,26 @@ export default function EnrollModal({
               )}
             </div>
 
-            {/* Fixed Payable Amount — prominent display */}
-            <div className="mt-3 rounded-xl border border-primary-500/30 bg-primary-600/10 p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
-                    Payable Amount
-                  </p>
-                  <p className="mt-1 text-2xl sm:text-3xl font-extrabold text-primary-400">
-                    {formatFee(finalAmount)}
-                  </p>
-                </div>
+            {/* Fixed Payable Amount — compact horizontal box */}
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-primary-500/30 bg-primary-600/10 px-4 py-3">
+              <p className="shrink-0 text-xs font-bold uppercase tracking-wide text-neutral-400">
+                Payable Amount
+              </p>
+              <div className="flex min-w-0 items-center justify-end gap-3">
                 {appliedCoupon && appliedCoupon.finalFee < payableFee && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-neutral-500 line-through">
+                  <>
+                    <span className="shrink-0 text-xs text-neutral-500 line-through">
                       {formatFee(payableFee)}
                     </span>
-                    <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-300">
-                      Coupon {appliedCoupon.code} applied
+                    <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-300">
+                      Coupon {appliedCoupon.code}
                     </span>
-                  </div>
+                  </>
                 )}
+                <p className="shrink-0 text-lg font-extrabold text-primary-400 sm:text-xl">
+                  {formatFee(finalAmount)}
+                </p>
               </div>
-              <p className="mt-2 text-xs text-neutral-500">
-                This is the exact amount you must pay. Do not pay more or less.
-              </p>
             </div>
 
             {/* Payment card — live from MySQL (Admin → Enrollment Control →
