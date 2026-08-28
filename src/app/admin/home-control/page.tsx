@@ -10,6 +10,7 @@ import FaqSection from "@/components/home/FaqSection";
 import PromotionsSection from "@/components/home/PromotionsSection";
 import Footer from "@/components/Footer";
 import HomeControlBar from "@/components/admin/HomeControlBar";
+import HeroTextEditor from "@/components/admin/HeroTextEditor";
 import { fetchHomepageSections } from "@/lib/homepage-sections";
 import { fetchHeroSettings } from "@/lib/hero-settings";
 import { fetchPublishedReviewRecords } from "@/lib/reviews-store";
@@ -114,7 +115,18 @@ export default async function HomeControlPage() {
         // Edit opens the Sliding Banner interface showing its live sources.
         return controlled("banner", renderSectionNode(section), "/admin/home-control/banner");
       case "hero":
-        return controlled("hero", renderSectionNode(section), "/admin/website/homepage/hero");
+        return (
+          <div key="hero">
+            {renderSectionNode(section)}
+            <HomeControlBar
+              sectionKey="hero"
+              editHref="/admin/website/homepage/hero"
+            />
+            <div className="flex justify-center px-4 pb-4">
+              <HeroTextEditor />
+            </div>
+          </div>
+        );
       case "featured-courses":
         return controlled("featured-courses", renderSectionNode(section), "/admin/marketing/featured-courses", {
           href: "/admin/marketing/featured-courses",
