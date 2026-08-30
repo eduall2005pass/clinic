@@ -223,42 +223,37 @@ export default function CourseApplicationsPage({
                 </span>
               </div>
 
-              {/* Payment details for manual verification — admin checks
-                  Transaction ID + Paid Amount + Sender Number against the
-                  actual bKash/Nagad statement. No external auto-verification. */}
-              {(application.paymentTransactionId ||
-                (application.paymentAmount !== null &&
-                  application.paymentAmount !== undefined) ||
-                application.paymentSender) && (
-                <dl className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-3 text-xs sm:grid-cols-3">
-                  <div className="min-w-0">
-                    <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
-                      Transaction ID
-                    </dt>
-                    <dd className="mt-0.5 truncate font-mono font-semibold text-heading">
-                      {application.paymentTransactionId || "—"}
-                    </dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
-                      Paid Amount
-                    </dt>
-                    <dd className="mt-0.5 truncate font-mono font-semibold text-heading">
-                      {application.paymentAmount != null
-                        ? `৳ ${application.paymentAmount}`
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
-                      Sender Mobile
-                    </dt>
-                    <dd className="mt-0.5 truncate font-mono font-semibold text-heading">
-                      {application.paymentSender || "—"}
-                    </dd>
-                  </div>
-                </dl>
-              )}
+              {/* Payment details — student's submitted bKash/Nagad number + Transaction ID
+                  for manual verification against the actual bKash/Nagad statement. Always
+                  visible for pending applications so admin can verify. */}
+              <dl className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-3 text-xs sm:grid-cols-3">
+                <div className="min-w-0">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                    Transaction ID
+                  </dt>
+                  <dd className="mt-0.5 truncate font-mono font-semibold text-heading">
+                    {application.paymentTransactionId || "—"}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                    Paid Amount
+                  </dt>
+                  <dd className="mt-0.5 truncate font-mono font-semibold text-heading">
+                    {application.paymentAmount != null
+                      ? `৳ ${application.paymentAmount}`
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                    bKash / Nagad Number
+                  </dt>
+                  <dd className="mt-0.5 truncate font-mono font-semibold text-heading">
+                    {application.paymentSender || "—"}
+                  </dd>
+                </div>
+              </dl>
 
               <div className="mt-4 flex flex-wrap gap-2 border-t border-ink/10 pt-4">
                 {application.status !== "active" && (
