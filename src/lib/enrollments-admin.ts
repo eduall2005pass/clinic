@@ -119,10 +119,11 @@ function mapEnrollment(row: EnrollmentRow): AdminEnrollment {
   };
 }
 
-const SELECT_ENROLLMENTS = `
+const SELECT_BASE = `
   SELECT e.id, e.student_uid, s.student_id, s.full_name, s.email,
          e.course_id, e.course_name, e.course_type, e.course_kind,
-         e.fee, e.enrollment_status, e.enrollment_date, e.updated_at
+         e.fee, e.enrollment_status, e.enrollment_date, e.updated_at`;
+const FROM_CLAUSE = `
   FROM enrollments e
   LEFT JOIN students s ON s.uid = e.student_uid`;
 
@@ -139,6 +140,9 @@ const PAYMENT_JOIN = `
     WHERE ea2.student_uid = e.student_uid AND ea2.course_id = e.course_id
     ORDER BY ea2.created_at DESC LIMIT 1
   )`;
+
+// Back-compat alias used by older code paths (base select without payment join).
+const SELECT_ENROLLMENTS = `${SELECT_BASE}${FROM_CLAUSE}`;
 
 /** All enrollments with student info — supports search + status filter. */
 export async function fetchEnrollmentsAdmin(
@@ -171,13 +175,13 @@ export async function fetchEnrollmentsAdmin(
     try {
       // Preferred — includes payment + approval details (Step 3/6 migration applied).
       rows = await query<EnrollmentRow[]>(
-        `${SELECT_ENROLLMENTS}${PAYMENT_COLUMNS} ${PAYMENT_JOIN} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
+        `${SELECT_BASE}${PAYMENT_COLUMNS} ${FROM_CLAUSE}${PAYMENT_JOIN} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
         params,
       );
     } catch {
       // Payment columns not migrated yet — fall back to the base columns.
       rows = await query<EnrollmentRow[]>(
-        `${SELECT_ENROLLMENTS} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
+        `${SELECT_BASE} ${FROM_CLAUSE} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
         params,
       );
     }
