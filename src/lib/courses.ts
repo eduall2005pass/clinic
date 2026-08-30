@@ -15,6 +15,20 @@ export type CourseStatus = "published" | "unpublished";
 
 export type CourseAvailability = "available" | "hidden";
 
+export type CourseTeacher = {
+  name: string;
+  designation: string;
+  photoUrl?: string;
+};
+
+export type CourseDetails = {
+  duration?: string;
+  description?: string;
+  teachers?: CourseTeacher[];
+  topics?: string[];
+  chapterOverview?: string[];
+};
+
 export type Course = {
   slug: string;
   name: string;
@@ -35,9 +49,11 @@ export type Course = {
   status: CourseStatus;
   availability: CourseAvailability;
   couponEnabled: boolean;
-  /** Live counts from the learning tables (optional — hidden when unknown). */
+  /** Admin-entered totals (card display). */
   totalClasses?: number;
   totalExams?: number;
+  /** Extended course details (Course Details section). */
+  courseDetails?: CourseDetails;
 };
 
 export const batches: Batch[] = [

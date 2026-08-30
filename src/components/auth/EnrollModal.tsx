@@ -109,12 +109,37 @@ export default function EnrollModal({
   const [senderMobile, setSenderMobile] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   // Live payment card from MySQL (Admin Payment Card manager) — shows
-  // students exactly where to send the money.
+  // students exactly where to send the money. All labels, placeholders and
+  // toggles are admin-controlled via the Payment Card editor.
   const [paymentCard, setPaymentCard] = useState<{
     bkashNumber: string | null;
     nagadNumber: string | null;
     couponEnabled: boolean;
     instructions: string | null;
+    feeEnabled: boolean;
+    feeLabel: string;
+    discountLabel: string;
+    couponPlaceholder: string;
+    applyLabel: string;
+    payableEnabled: boolean;
+    payableLabel: string;
+    methodsLabel: string;
+    bkashLabel: string;
+    nagadLabel: string;
+    instructionsEnabled: boolean;
+    txEnabled: boolean;
+    txLabel: string;
+    txPlaceholder: string;
+    senderEnabled: boolean;
+    senderLabel: string;
+    senderPlaceholder: string;
+    pendingNoteEnabled: boolean;
+    pendingNote: string;
+    cancelEnabled: boolean;
+    cancelLabel: string;
+    submitEnabled: boolean;
+    submitLabel: string;
+    submittingLabel: string;
   } | null>(null);
 
   useEffect(() => {
@@ -124,12 +149,7 @@ export default function EnrollModal({
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
         if (cancelled || !data) return;
-        setPaymentCard(data as {
-          bkashNumber: string | null;
-          nagadNumber: string | null;
-          couponEnabled: boolean;
-          instructions: string | null;
-        });
+        setPaymentCard(data as typeof paymentCard);
       })
       .catch(() => {
         // Payment card is informational — silently skip on failure.
@@ -431,13 +451,14 @@ export default function EnrollModal({
           )}
           <div className="rounded-xl border border-ink/10 bg-dark-950 p-4">
             {/* Fee + Coupon — compact responsive layout */}
+            {paymentCard?.feeEnabled !== false && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
               {/* Fixed fee breakdown — Course Fee → Discount → Payable.
                   Fully system-derived; the student can never edit the amount. */}
               <div className="space-y-1.5">
                 <div className="flex items-baseline gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    Course Fee
+                    {paymentCard?.feeLabel || "Course Fee"}
                   </p>
                   <p className="text-sm font-semibold text-neutral-300">
                     {formatFee(course.fee)}
@@ -448,7 +469,7 @@ export default function EnrollModal({
                 (payableFee < course.fee) ? (
                   <div className="flex items-baseline gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                      Discount
+                      {paymentCard?.discountLabel || "Discount"}
                     </p>
                     <p className="text-sm font-semibold text-emerald-400">
                       − {formatFee(finalAmount < course.fee ? course.fee - finalAmount : course.fee - payableFee)}
@@ -466,7 +487,7 @@ export default function EnrollModal({
                       type="text"
                       value={couponInput}
                       onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
-                      placeholder="COUPON CODE"
+                      placeholder={paymentCard?.couponPlaceholder || "COUPON CODE"}
                       disabled={Boolean(appliedCoupon)}
                       className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 disabled:opacity-60"
                     />
@@ -489,7 +510,7 @@ export default function EnrollModal({
                         disabled={checkingCoupon || !couponInput.trim()}
                         className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-3 py-2 text-xs font-bold text-primary-300 transition hover:bg-primary-600/20 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {checkingCoupon ? "Checking…" : "Apply"}
+                        {checkingCoupon ? "Checking…" : (paymentCard?.applyLabel || "Apply")}
                       </button>
                     )}
                   </div>
@@ -505,11 +526,13 @@ export default function EnrollModal({
                 </div>
               )}
             </div>
+            )}
 
             {/* Fixed Payable Amount — compact horizontal box */}
+            {paymentCard?.payableEnabled !== false && (
             <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-primary-500/30 bg-primary-600/10 px-4 py-3">
               <p className="shrink-0 text-xs font-bold uppercase tracking-wide text-neutral-400">
-                Payable Amount
+                {paymentCard?.payableLabel || "Payable Amount"}
               </p>
               <div className="flex min-w-0 items-center justify-end gap-3">
                 {appliedCoupon && appliedCoupon.finalFee < payableFee && (
@@ -527,6 +550,7 @@ export default function EnrollModal({
                 </p>
               </div>
             </div>
+            )}
 
             {/* Payment card — live from MySQL (Admin → Enrollment Control →
                 Payment Card). Students pay to THESE numbers. Methods sit
@@ -535,12 +559,12 @@ export default function EnrollModal({
               <div className="mt-3 rounded-xl border border-primary-500/20 bg-primary-600/5 p-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
-                    Payment Methods
+                    {paymentCard?.methodsLabel || "Payment Methods"}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {paymentCard.bkashNumber && (
                       <div className="flex items-center gap-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-1.5">
-                        <span className="text-xs font-extrabold text-pink-300">bKash</span>
+                        <span className="text-xs font-extrabold text-pink-300">{paymentCard?.bkashLabel || "bKash"}</span>
                         <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
                           {paymentCard.bkashNumber}
                         </span>
@@ -548,7 +572,7 @@ export default function EnrollModal({
                     )}
                     {paymentCard.nagadNumber && (
                       <div className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5">
-                        <span className="text-xs font-extrabold text-orange-300">Nagad</span>
+                        <span className="text-xs font-extrabold text-orange-300">{paymentCard?.nagadLabel || "Nagad"}</span>
                         <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
                           {paymentCard.nagadNumber}
                         </span>
@@ -556,7 +580,7 @@ export default function EnrollModal({
                     )}
                   </div>
                 </div>
-                {paymentCard.instructions && (
+                {paymentCard.instructionsEnabled !== false && paymentCard.instructions && (
                   <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-neutral-300">
                     {paymentCard.instructions}
                   </p>
@@ -567,19 +591,20 @@ export default function EnrollModal({
             {/* Payment proof — compact responsive grid (only Transaction ID + Sender Mobile) */}
             <div className="mt-3">
               <div className="grid gap-2 sm:grid-cols-2">
+                {paymentCard?.txEnabled !== false && (
                 <div>
                   <label
                     htmlFor="enroll-txn"
                     className="text-xs font-semibold text-neutral-400"
                   >
-                    Transaction ID
+                    {paymentCard?.txLabel || "Transaction ID"}
                   </label>
                   <input
                     id="enroll-txn"
                     type="text"
                     value={transactionId}
                     onChange={(event) => setTransactionId(event.target.value)}
-                    placeholder="e.g. 8N7DQK2XLM"
+                    placeholder={paymentCard?.txPlaceholder || "e.g. 8N7DQK2XLM"}
                     autoComplete="off"
                     className={`mt-1 w-full rounded-xl border bg-dark-900 px-3 py-2 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
                       fieldErrors.transactionId ? "border-red-500/60" : "border-ink/15"
@@ -591,12 +616,14 @@ export default function EnrollModal({
                     </p>
                   )}
                 </div>
+                )}
+                {paymentCard?.senderEnabled !== false && (
                 <div>
                   <label
                     htmlFor="enroll-mobile"
                     className="text-xs font-semibold text-neutral-400"
                   >
-                    Payment From Number
+                    {paymentCard?.senderLabel || "Payment From Number"}
                   </label>
                   <input
                     id="enroll-mobile"
@@ -604,7 +631,7 @@ export default function EnrollModal({
                     inputMode="numeric"
                     value={senderMobile}
                     onChange={(event) => setSenderMobile(event.target.value)}
-                    placeholder="01XXXXXXXXX"
+                    placeholder={paymentCard?.senderPlaceholder || "01XXXXXXXXX"}
                     maxLength={11}
                     className={`mt-1 w-full rounded-xl border bg-dark-900 px-3 py-2 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
                       fieldErrors.senderMobile ? "border-red-500/60" : "border-ink/15"
@@ -616,16 +643,15 @@ export default function EnrollModal({
                     </p>
                   )}
                 </div>
+                )}
               </div>
             </div>
 
+            {paymentCard?.pendingNoteEnabled !== false && paymentCard?.pendingNote && (
             <p className="mt-2 text-xs leading-relaxed text-neutral-400">
-              Submit payment details — enrollment stays{" "}
-              <span className="font-semibold text-yellow-400">
-                Pending Validation
-              </span>{" "}
-              until admin verifies payment.
+              {paymentCard.pendingNote}
             </p>
+            )}
           </div>
           {error && (
             <p className="mt-4 rounded-xl border border-primary-500/30 bg-primary-500/10 p-3 text-center text-sm text-primary-300">
@@ -633,21 +659,25 @@ export default function EnrollModal({
             </p>
           )}
           <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+            {paymentCard?.cancelEnabled !== false && (
             <button
               type="button"
               onClick={onClose}
               className={`${secondaryButtonClass} sm:flex-1`}
             >
-              Cancel
+              {paymentCard?.cancelLabel || "Cancel"}
             </button>
+            )}
+            {paymentCard?.submitEnabled !== false && (
             <button
               type="button"
               onClick={handleEnroll}
               disabled={submitting}
               className={`${primaryButtonClass} sm:flex-[2]`}
             >
-              {submitting ? "Submitting Payment..." : "Submit Payment"}
+              {submitting ? (paymentCard?.submittingLabel || "Submitting Payment...") : (paymentCard?.submitLabel || "Submit Payment")}
             </button>
+            )}
           </div>
         </div>
       );

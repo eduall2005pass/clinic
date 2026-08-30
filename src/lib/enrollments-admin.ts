@@ -121,10 +121,11 @@ function mapEnrollment(row: EnrollmentRow): AdminEnrollment {
   };
 }
 
-const SELECT_ENROLLMENTS = `
+const SELECT_BASE = `
   SELECT e.id, e.student_uid, s.student_id, s.full_name, s.email,
          e.course_id, e.course_name, e.course_type, e.course_kind,
-         e.fee, e.enrollment_status, e.enrollment_date, e.updated_at
+         e.fee, e.enrollment_status, e.enrollment_date, e.updated_at`;
+const FROM_CLAUSE = `
   FROM enrollments e
   LEFT JOIN students s ON s.uid = e.student_uid`;
 
@@ -141,6 +142,9 @@ const PAYMENT_JOIN = `
     WHERE ea2.student_uid = e.student_uid AND ea2.course_id = e.course_id
     ORDER BY ea2.created_at DESC LIMIT 1
   )`;
+
+// Back-compat alias used by older code paths (base select without payment join).
+const SELECT_ENROLLMENTS = `${SELECT_BASE}${FROM_CLAUSE}`;
 
 /** All enrollments with student info — supports search + status filter. */
 export async function fetchEnrollmentsAdmin(
@@ -173,13 +177,13 @@ export async function fetchEnrollmentsAdmin(
     try {
       // Preferred — includes payment + approval details (Step 3/6 migration applied).
       rows = await query<EnrollmentRow[]>(
-        `${SELECT_ENROLLMENTS}${PAYMENT_COLUMNS} ${PAYMENT_JOIN} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
+        `${SELECT_BASE}${PAYMENT_COLUMNS} ${FROM_CLAUSE}${PAYMENT_JOIN} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
         params,
       );
     } catch {
       // Payment columns not migrated yet — fall back to the base columns.
       rows = await query<EnrollmentRow[]>(
-        `${SELECT_ENROLLMENTS} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
+        `${SELECT_BASE} ${FROM_CLAUSE} ${whereClause} ORDER BY e.enrollment_date DESC LIMIT 500`,
         params,
       );
     }
@@ -499,14 +503,64 @@ export async function getEnrollmentSettings(): Promise<PaymentSettings> {
  *  table). Falls back to legacy `enrollment_settings` columns for databases
  *  where the manager has never been used yet. Any admin edit shows up here
  *  immediately — no caching between Admin Panel and students. */
-export async function getPaymentCard(): Promise<
-  {
-    bkashNumber: string | null;
-    nagadNumber: string | null;
-    couponEnabled: boolean;
-    instructions: string | null;
-  }
-> {
+export async function getPaymentCard(): Promise<{
+  bkashNumber: string | null;
+  nagadNumber: string | null;
+  couponEnabled: boolean;
+  instructions: string | null;
+  // Full config labels/placeholders/toggles for the student card UI
+  feeEnabled: boolean;
+  feeLabel: string;
+  discountLabel: string;
+  couponPlaceholder: string;
+  applyLabel: string;
+  payableEnabled: boolean;
+  payableLabel: string;
+  methodsLabel: string;
+  bkashLabel: string;
+  nagadLabel: string;
+  instructionsEnabled: boolean;
+  txEnabled: boolean;
+  txLabel: string;
+  txPlaceholder: string;
+  senderEnabled: boolean;
+  senderLabel: string;
+  senderPlaceholder: string;
+  pendingNoteEnabled: boolean;
+  pendingNote: string;
+  cancelEnabled: boolean;
+  cancelLabel: string;
+  submitEnabled: boolean;
+  submitLabel: string;
+  submittingLabel: string;
+}> {
+  const D = {
+    feeEnabled: true,
+    feeLabel: "Course Fee",
+    discountLabel: "Discount",
+    couponPlaceholder: "COUPON CODE",
+    applyLabel: "Apply",
+    payableEnabled: true,
+    payableLabel: "Payable Amount",
+    methodsLabel: "Payment Methods",
+    bkashLabel: "bKash",
+    nagadLabel: "Nagad",
+    instructionsEnabled: true,
+    txEnabled: true,
+    txLabel: "Transaction ID",
+    txPlaceholder: "e.g. 8N7DQK2XLM",
+    senderEnabled: true,
+    senderLabel: "Payment From Number",
+    senderPlaceholder: "01XXXXXXXXX",
+    pendingNoteEnabled: true,
+    pendingNote:
+      "Submit payment details — enrollment stays Pending Validation until admin verifies payment.",
+    cancelEnabled: true,
+    cancelLabel: "Cancel",
+    submitEnabled: true,
+    submitLabel: "Submit Payment",
+    submittingLabel: "Submitting Payment...",
+  };
   try {
     const card = await getManagedPaymentCard();
     if (
@@ -524,6 +578,30 @@ export async function getPaymentCard(): Promise<
         nagadNumber: card.nagadEnabled ? card.nagadNumber || null : null,
         couponEnabled: card.couponEnabled,
         instructions: instructions || null,
+        feeEnabled: card.feeEnabled,
+        feeLabel: card.feeLabel,
+        discountLabel: card.discountLabel,
+        couponPlaceholder: card.couponPlaceholder,
+        applyLabel: card.applyLabel,
+        payableEnabled: card.payableEnabled,
+        payableLabel: card.payableLabel,
+        methodsLabel: card.methodsLabel,
+        bkashLabel: card.bkashLabel,
+        nagadLabel: card.nagadLabel,
+        instructionsEnabled: card.instructionsEnabled,
+        txEnabled: card.txEnabled,
+        txLabel: card.txLabel,
+        txPlaceholder: card.txPlaceholder,
+        senderEnabled: card.senderEnabled,
+        senderLabel: card.senderLabel,
+        senderPlaceholder: card.senderPlaceholder,
+        pendingNoteEnabled: card.pendingNoteEnabled,
+        pendingNote: card.pendingNote,
+        cancelEnabled: card.cancelEnabled,
+        cancelLabel: card.cancelLabel,
+        submitEnabled: card.submitEnabled,
+        submitLabel: card.submitLabel,
+        submittingLabel: card.submittingLabel,
       };
     }
   } catch {
@@ -535,6 +613,7 @@ export async function getPaymentCard(): Promise<
     nagadNumber: settings.nagadNumber,
     couponEnabled: true,
     instructions: settings.paymentInstructions,
+    ...D,
   };
 }
 

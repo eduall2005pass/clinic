@@ -46,6 +46,14 @@ export function normalizeContentLayout(value: unknown): CourseContentLayout {
     : "auto";
 }
 
+export type CourseDetails = {
+  duration?: string;
+  description?: string;
+  teachers?: Array<{ name: string; designation: string; photoUrl?: string }>;
+  topics?: string[];
+  chapterOverview?: string[];
+};
+
 export type CatalogCourse = {
   slug: string;
   name: string;
@@ -70,9 +78,11 @@ export type CatalogCourse = {
   couponEnabled: boolean;
   featured: boolean;
   contentLayout: CourseContentLayout;
-  /** Derived counts (category-scoped reads only). */
+  /** Admin-entered totals (card display). */
   totalClasses?: number;
   totalExams?: number;
+  /** Extended course details (Course Details section). */
+  courseDetails?: CourseDetails;
   /** Mentors assigned to this course (single-course reads). */
   mentorIds?: string[];
 };
@@ -99,6 +109,9 @@ type CatalogCourseRow = {
   coupon_enabled: number | boolean;
   is_featured?: number | boolean | null;
   content_layout?: string | null;
+  total_classes?: string | number | null;
+  total_exams?: string | number | null;
+  course_details?: string | null;
 };
 
 function parseJsonArray(raw: string | null): string[] {
@@ -115,6 +128,15 @@ function toNumber(value: string | number | null): number {
   if (value === null) return 0;
   const parsed = Number(value);
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function parseJsonObject<T = unknown>(raw: string | null): T | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return undefined;
+  }
 }
 
 export function rowToCourse(row: CatalogCourseRow): CatalogCourse {
@@ -144,6 +166,9 @@ export function rowToCourse(row: CatalogCourseRow): CatalogCourse {
     couponEnabled: Boolean(row.coupon_enabled),
     contentLayout: normalizeContentLayout(row.content_layout),
     featured: Boolean(row.is_featured),
+    totalClasses: row.total_classes != null ? toNumber(row.total_classes) : undefined,
+    totalExams: row.total_exams != null ? toNumber(row.total_exams) : undefined,
+    courseDetails: parseJsonObject<CourseDetails>(row.course_details ?? null),
   };
 }
 
@@ -195,6 +220,25 @@ async function ensureTables(): Promise<void> {
   try {
     await exec(
       `ensureColumn("catalog_courses", "content_layout", "ENUM('auto','direct','paper','subject') NOT NULL DEFAULT 'auto' AFTER availability")`,
+    );
+  } catch {
+    // Best effort — column may already exist.
+  }
+  // Admin-entered class/exam counts for the course card.
+  try {
+    await exec(
+      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS total_classes INT NULL`,
+    );
+    await exec(
+      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS total_exams INT NULL`,
+    );
+  } catch {
+    // Best effort — columns may already exist.
+  }
+  // Extended course details JSON (duration, teachers, topics, chapter overview).
+  try {
+    await exec(
+      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS course_details JSON NULL`,
     );
   } catch {
     // Best effort — column may already exist.
@@ -467,8 +511,9 @@ export async function saveCatalogCourse(
        (slug, name, category, category_id, batch_id, image_url, short_description, description,
         teacher_name, teacher_photo_url, teacher_designation, duration,
         fee, discount_fee, features, overview_title, overview,
-        status, availability, coupon_enabled, is_featured, content_layout, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        status, availability, coupon_enabled, is_featured, content_layout,
+        total_classes, total_exams, course_details, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        name = VALUES(name), category = VALUES(category), category_id = VALUES(category_id),
        batch_id = VALUES(batch_id),
@@ -480,7 +525,9 @@ export async function saveCatalogCourse(
        overview_title = VALUES(overview_title), overview = VALUES(overview),
        status = VALUES(status), availability = VALUES(availability),
        coupon_enabled = VALUES(coupon_enabled), is_featured = VALUES(is_featured),
-       content_layout = VALUES(content_layout), updated_by = VALUES(updated_by)`,
+       content_layout = VALUES(content_layout),
+       total_classes = VALUES(total_classes), total_exams = VALUES(total_exams),
+       course_details = VALUES(course_details), updated_by = VALUES(updated_by)`,
     [
       slug,
       name,
@@ -504,6 +551,9 @@ export async function saveCatalogCourse(
       input.couponEnabled ? 1 : 0,
       input.featured ? 1 : 0,
       normalizeContentLayout(input.contentLayout),
+      input.totalClasses != null && input.totalClasses !== "" ? Math.max(0, Number(input.totalClasses) || 0) : null,
+      input.totalExams != null && input.totalExams !== "" ? Math.max(0, Number(input.totalExams) || 0) : null,
+      input.courseDetails ? JSON.stringify(input.courseDetails) : null,
       adminUid,
     ],
   );
@@ -550,6 +600,9 @@ export async function saveCatalogCourse(
       couponEnabled: Boolean(input.couponEnabled),
       featured: Boolean(input.featured),
       contentLayout: normalizeContentLayout(input.contentLayout),
+      totalClasses: input.totalClasses != null && input.totalClasses !== "" ? Math.max(0, Number(input.totalClasses) || 0) : undefined,
+      totalExams: input.totalExams != null && input.totalExams !== "" ? Math.max(0, Number(input.totalExams) || 0) : undefined,
+      courseDetails: (input.courseDetails as CourseDetails | undefined) ?? undefined,
       mentorIds: [],
     };
   }

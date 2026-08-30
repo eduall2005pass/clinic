@@ -18,6 +18,7 @@ import { MediaUploadField } from "@/components/admin/MediaUploadField";
 import {
   type CatalogCourseCategory,
   type CourseContentLayout,
+  type CourseDetails,
 } from "@/lib/courses-admin";
 
 export type CatalogCourse = {
@@ -42,6 +43,9 @@ export type CatalogCourse = {
   couponEnabled: boolean;
   featured: boolean;
   contentLayout: CourseContentLayout;
+  totalClasses?: number;
+  totalExams?: number;
+  courseDetails?: CourseDetails;
 };
 
 const EMPTY_FORM = {
@@ -62,6 +66,13 @@ const EMPTY_FORM = {
   couponEnabled: false,
   featured: false,
   contentLayout: "auto" as "auto" | "direct" | "paper" | "subject",
+  totalClasses: "",
+  totalExams: "",
+  courseDuration: "",
+  courseDescription: "",
+  courseTopics: "",
+  chapterOverview: "",
+  teachersJson: "[]",
 };
 
 type FormState = typeof EMPTY_FORM;
@@ -81,6 +92,7 @@ function defaultBatchFor(category: CatalogCourseCategory): string {
 }
 
 function toForm(course: CatalogCourse): FormState {
+  const details = course.courseDetails;
   return {
     slug: course.slug,
     name: course.name,
@@ -99,6 +111,13 @@ function toForm(course: CatalogCourse): FormState {
     couponEnabled: course.couponEnabled,
     featured: course.featured,
     contentLayout: course.contentLayout ?? "auto",
+    totalClasses: course.totalClasses != null ? String(course.totalClasses) : "",
+    totalExams: course.totalExams != null ? String(course.totalExams) : "",
+    courseDuration: details?.duration ?? "",
+    courseDescription: details?.description ?? "",
+    courseTopics: (details?.topics ?? []).join("\n"),
+    chapterOverview: (details?.chapterOverview ?? []).join("\n"),
+    teachersJson: JSON.stringify(details?.teachers ?? []),
   };
 }
 
@@ -210,6 +229,18 @@ export default function CourseManager({
     setBusy(true);
     setNotice(null);
     try {
+      let teachers: CourseDetails["teachers"] = [];
+      try {
+        teachers = JSON.parse(form.teachersJson || "[]") as CourseDetails["teachers"];
+      } catch { /* ignore */ }
+      if (!teachers) teachers = [];
+      const courseDetails: CourseDetails = {
+        duration: form.courseDuration.trim() || undefined,
+        description: form.courseDescription.trim() || undefined,
+        teachers: teachers.length > 0 ? teachers : undefined,
+        topics: form.courseTopics.split("\n").map((s) => s.trim()).filter(Boolean),
+        chapterOverview: form.chapterOverview.split("\n").map((s) => s.trim()).filter(Boolean),
+      };
       const response = await fetch("/api/admin/courses", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...gate.headers },
@@ -218,6 +249,9 @@ export default function CourseManager({
           fee: Number(form.fee) || 0,
           discountFee:
             form.discountFee.trim() === "" ? null : Number(form.discountFee),
+          totalClasses: form.totalClasses.trim() === "" ? null : Number(form.totalClasses),
+          totalExams: form.totalExams.trim() === "" ? null : Number(form.totalExams),
+          courseDetails,
         }),
       });
       const data = (await response.json().catch(() => null)) as {
@@ -426,19 +460,27 @@ export default function CourseManager({
               {editingSlug ? "Edit Course" : "New Course"}
             </h3>
 
+            {/* ── Course Card Information ── */}
+            <div className="mt-5 rounded-xl border border-primary-500/40 bg-primary-600/5 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary-600">
+                Course Card Information
+              </p>
+            </div>
+
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className={labelClass} htmlFor="cm-name">Name</label>
-                <input id="cm-name" className={inputClass} value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <label className={labelClass} htmlFor="cm-image">Course Banner</label>
+                <MediaUploadField
+                  id="cm-image"
+                  label=""
+                  value={form.image}
+                  onChange={(url) => setForm({ ...form, image: url })}
+                  directory="courses"
+                  preview
+                />
               </div>
               <div>
-                <label className={labelClass} htmlFor="cm-slug">Slug (lowercase-dash)</label>
-                <input id="cm-slug" className={inputClass} value={form.slug} disabled={Boolean(editingSlug)}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-category">Course type</label>
+                <label className={labelClass} htmlFor="cm-category">Course Category</label>
                 <select id="cm-category" className={inputClass} value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value as CatalogCourseCategory })}>
                   <option value="SSC Academic">SSC Academic</option>
@@ -448,7 +490,7 @@ export default function CourseManager({
                 </select>
               </div>
               <div>
-                <label className={labelClass} htmlFor="cm-batch">Batch</label>
+                <label className={labelClass} htmlFor="cm-batch">Course Batch</label>
                 <select id="cm-batch" className={inputClass} value={form.batchId}
                   onChange={(e) => setForm({ ...form, batchId: e.target.value })}>
                   <option value="hsc-28">HSC 28</option>
@@ -460,61 +502,36 @@ export default function CourseManager({
                 </select>
               </div>
               <div>
-                <label className={labelClass} htmlFor="cm-fee">Fee (৳)</label>
+                <label className={labelClass} htmlFor="cm-name">Course Name</label>
+                <input id="cm-name" className={inputClass} value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="cm-slug">Slug (auto-generated)</label>
+                <input id="cm-slug" className={inputClass} value={form.slug} disabled={Boolean(editingSlug)}
+                  onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="cm-total-classes">Total Classes</label>
+                <input id="cm-total-classes" type="number" min="0" className={inputClass} value={form.totalClasses}
+                  placeholder="e.g. 48"
+                  onChange={(e) => setForm({ ...form, totalClasses: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="cm-total-exams">Total Exams</label>
+                <input id="cm-total-exams" type="number" min="0" className={inputClass} value={form.totalExams}
+                  placeholder="e.g. 12"
+                  onChange={(e) => setForm({ ...form, totalExams: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="cm-fee">Original Course Fee (৳)</label>
                 <input id="cm-fee" type="number" min="0" className={inputClass} value={form.fee}
                   onChange={(e) => setForm({ ...form, fee: e.target.value })} />
               </div>
               <div>
-                <label className={labelClass} htmlFor="cm-discount">Discount fee (optional)</label>
+                <label className={labelClass} htmlFor="cm-discount">Discount Fee (optional, ৳)</label>
                 <input id="cm-discount" type="number" min="0" className={inputClass} value={form.discountFee}
                   onChange={(e) => setForm({ ...form, discountFee: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-teacher">Teacher name</label>
-                <input id="cm-teacher" className={inputClass} value={form.teacherName}
-                  onChange={(e) => setForm({ ...form, teacherName: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-designation">Designation</label>
-                <input id="cm-designation" className={inputClass} value={form.designation}
-                  onChange={(e) => setForm({ ...form, designation: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-duration">Duration</label>
-                <input id="cm-duration" className={inputClass} value={form.duration}
-                  onChange={(e) => setForm({ ...form, duration: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-layout">Content structure (student site)</label>
-                <select id="cm-layout" className={inputClass} value={form.contentLayout}
-                  onChange={(e) =>
-                    setForm({ ...form, contentLayout: e.target.value as FormState["contentLayout"] })
-                  }>
-                  <option value="auto">Auto (based on course type)</option>
-                  <option value="direct">Direct — Class / Exam / Materials cards</option>
-                  <option value="paper">Paper Selection (১ম / ২য় পত্র)</option>
-                  <option value="subject">Subject Selection (Medical Admission)</option>
-                </select>
-              </div>
-              <div>
-                <MediaUploadField
-                  id="cm-image"
-                  label="Course image"
-                  value={form.image}
-                  onChange={(url) => setForm({ ...form, image: url })}
-                  directory="courses"
-                  preview
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="cm-short">Short description</label>
-                <textarea id="cm-short" rows={2} className={inputClass} value={form.shortDescription}
-                  onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="cm-desc">Full description</label>
-                <textarea id="cm-desc" rows={4} className={inputClass} value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
               <div className="sm:col-span-2 flex flex-wrap items-center gap-6">
                 <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
@@ -530,8 +547,72 @@ export default function CourseManager({
                 <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                   <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.featured}
                     onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
-                  ★ Featured
+                  ★ Featured Course
                 </label>
+              </div>
+            </div>
+
+            {/* ── Course Details ── */}
+            <div className="mt-6 rounded-xl border border-primary-500/40 bg-primary-600/5 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary-600">
+                Course Details
+              </p>
+              <p className="mt-0.5 text-xs text-slate-500 admin-dark:text-slate-400">
+                Additional information shown on the course details page.
+              </p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass} htmlFor="cm-cd-duration">Course Duration</label>
+                <input id="cm-cd-duration" className={inputClass} value={form.courseDuration}
+                  placeholder="e.g. 6 months"
+                  onChange={(e) => setForm({ ...form, courseDuration: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="cm-layout">Content structure (student site)</label>
+                <select id="cm-layout" className={inputClass} value={form.contentLayout}
+                  onChange={(e) =>
+                    setForm({ ...form, contentLayout: e.target.value as FormState["contentLayout"] })
+                  }>
+                  <option value="auto">Auto (based on course type)</option>
+                  <option value="direct">Direct — Class / Exam / Materials cards</option>
+                  <option value="paper">Paper Selection (১ম / ২য় পত্র)</option>
+                  <option value="subject">Subject Selection (Medical Admission)</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="cm-teacher">Teacher name</label>
+                <input id="cm-teacher" className={inputClass} value={form.teacherName}
+                  onChange={(e) => setForm({ ...form, teacherName: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="cm-designation">Designation</label>
+                <input id="cm-designation" className={inputClass} value={form.designation}
+                  onChange={(e) => setForm({ ...form, designation: e.target.value })} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="cm-short">Short description</label>
+                <textarea id="cm-short" rows={2} className={inputClass} value={form.shortDescription}
+                  onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="cm-cd-desc">Course Description (detailed)</label>
+                <textarea id="cm-cd-desc" rows={4} className={inputClass} value={form.courseDescription}
+                  placeholder="Detailed description for the course details page..."
+                  onChange={(e) => setForm({ ...form, courseDescription: e.target.value })} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="cm-topics">Course Topics (one per line)</label>
+                <textarea id="cm-topics" rows={4} className={inputClass} value={form.courseTopics}
+                  placeholder={"What Will Be Taught:\nBiology fundamentals\nCell structure\nEvolution"}
+                  onChange={(e) => setForm({ ...form, courseTopics: e.target.value })} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="cm-overview">Chapter/Subject Overview (one per line)</label>
+                <textarea id="cm-overview" rows={4} className={inputClass} value={form.chapterOverview}
+                  placeholder={"Chapter 1: Introduction\nChapter 2: Cell Biology\nChapter 3: Genetics"}
+                  onChange={(e) => setForm({ ...form, chapterOverview: e.target.value })} />
               </div>
             </div>
 

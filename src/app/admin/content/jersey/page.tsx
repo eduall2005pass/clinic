@@ -13,7 +13,7 @@ import {
 } from "@/components/admin/admin-ui";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
 
-type Jersey = { id: string; name: string; note: string | null; image: string | null; link: string | null; price: number; isActive: boolean };
+type Jersey = { id: string; name: string; note: string | null; image: string | null; link: string | null; price: number; isActive: boolean; featured: boolean };
 
 type HomepageSection = {
   key: string;
@@ -126,6 +126,7 @@ export default function JerseyPage() {
           link: jersey.link ?? "",
           price: jersey.price,
           isActive: !jersey.isActive,
+          featured: jersey.featured,
         }),
       });
       const data = (await response.json().catch(() => null)) as { error?: string; jerseys?: Jersey[] } | null;
@@ -134,7 +135,37 @@ export default function JerseyPage() {
         return;
       }
       setJerseys(data?.jerseys ?? []);
-      setNotice({ kind: "success", text: `“${jersey.name}” ${jersey.isActive ? "disabled" : "enabled"}.` });
+      setNotice({ kind: "success", text: `"${jersey.name}" ${jersey.isActive ? "disabled" : "enabled"}.` });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleFeatured(jersey: Jersey) {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/jerseys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({
+          id: jersey.id,
+          name: jersey.name,
+          note: jersey.note ?? "",
+          image: jersey.image ?? "",
+          link: jersey.link ?? "",
+          price: jersey.price,
+          isActive: jersey.isActive,
+          featured: !jersey.featured,
+        }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string; jerseys?: Jersey[] } | null;
+      if (!response.ok) {
+        setNotice({ kind: "error", text: data?.error ?? "Failed to update." });
+        return;
+      }
+      setJerseys(data?.jerseys ?? []);
+      setNotice({ kind: "success", text: `"${jersey.name}" ${jersey.featured ? "removed from" : "added to"} slider.` });
     } finally {
       setBusy(false);
     }
@@ -274,7 +305,7 @@ export default function JerseyPage() {
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{jersey.name}</span>
               <span className="block truncate text-xs text-slate-500">
-                ৳ {jersey.price.toLocaleString("en-IN")}{jersey.note ? ` · ${jersey.note}` : ""}{!jersey.isActive ? " · hidden" : ""}
+                ৳ {jersey.price.toLocaleString("en-IN")}{jersey.note ? ` · ${jersey.note}` : ""}{!jersey.isActive ? " · hidden" : ""}{jersey.featured ? " · ★ featured" : ""}
               </span>
             </span>
             <span
@@ -286,6 +317,19 @@ export default function JerseyPage() {
             >
               {jersey.isActive ? "Active" : "Disabled"}
             </span>
+            <button
+              type="button"
+              disabled={busy}
+              aria-label={jersey.featured ? `Remove ${jersey.name} from slider` : `Add ${jersey.name} to slider`}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
+                jersey.featured
+                  ? "border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
+                  : "border-zinc-400/40 text-slate-500 hover:bg-zinc-500/10"
+              }`}
+              onClick={() => void toggleFeatured(jersey)}
+            >
+              {jersey.featured ? "★ Featured" : "Featured"}
+            </button>
             <button
               type="button"
               disabled={busy}

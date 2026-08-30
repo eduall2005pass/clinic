@@ -2,15 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { bannerSlides } from "@/lib/banners";
-import type { CustomBanner } from "@/lib/banner-store";
 
 type Slide = {
   id: string;
   image: string;
   href?: string;
   alt?: string;
-  /** Present on auto-generated featured-course slides. */
   title?: string;
   subtitle?: string;
 };
@@ -32,10 +29,7 @@ const SWIPE_THRESHOLD_PX = 40;
 
 export default function BannerSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
-  // Slides come only from Admin → Banners (MySQL). Defaults are shown only
-  // while the API is unreachable; an empty banner list renders nothing.
   const [slides, setSlides] = useState<Slide[]>([]);
-  const [featuredSlides, setFeaturedSlides] = useState<Slide[]>([]);
   const [ready, setReady] = useState(false);
   const [paused, setPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
@@ -43,45 +37,11 @@ export default function BannerSlider() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/banners", { cache: "no-store" })
-      .then((response) => {
-        if (!response.ok) throw new Error("banners unavailable");
-        return response.json();
-      })
-      .then((data: { slides?: CustomBanner[] | null } | null) => {
-        if (cancelled) return;
-        const custom = data?.slides ?? [];
-        // Database is the single source of truth for the slider.
-        setSlides(
-          custom.map((slide) => ({
-            id: slide.id,
-            image: slide.url,
-            href: slide.href ?? undefined,
-            alt: slide.title ?? undefined,
-          })),
-        );
-      })
-      .catch(() => {
-        // API unreachable → keep the built-in banners as a graceful fallback.
-        if (!cancelled) setSlides(bannerSlides);
-      })
-      .finally(() => {
-        if (!cancelled) setReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Featured courses marked ★ in the Admin Panel slide here automatically —
-  // no manual banner upload required. Toggling Featured off removes them.
-  useEffect(() => {
-    let cancelled = false;
     fetch("/api/featured-slides", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((data: FeaturedSlideResponse | null) => {
         if (cancelled || !data?.slides) return;
-        setFeaturedSlides(
+        setSlides(
           data.slides.map((slide) => ({
             id: slide.id,
             image: slide.image,
@@ -91,31 +51,31 @@ export default function BannerSlider() {
           })),
         );
       })
-      .catch(() => {
-        // Featured slides are optional — silently skip on failure.
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setReady(true);
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Admin banners first, then auto-generated featured-course slides.
-  const allSlides = [...slides, ...featuredSlides];
-
-  const goTo = useCallback((index: number) => {
-    setActiveIndex((index + allSlides.length) % allSlides.length);
-  }, [allSlides.length]);
+  const goTo = useCallback(
+    (index: number) => {
+      setActiveIndex((index + slides.length) % slides.length);
+    },
+    [slides.length],
+  );
 
   useEffect(() => {
-    if (paused || allSlides.length === 0) return;
+    if (paused || slides.length === 0) return;
     const timer = setInterval(() => {
       goTo(activeIndex + 1);
     }, AUTO_SLIDE_MS);
     return () => clearInterval(timer);
-  }, [paused, activeIndex, goTo, allSlides.length]);
+  }, [paused, activeIndex, goTo, slides.length]);
 
-  // Loading — keep layout height stable without flashing stale content.
-  if (!ready && allSlides.length === 0) {
+  if (!ready && slides.length === 0) {
     return (
       <section
         role="region"
@@ -127,8 +87,7 @@ export default function BannerSlider() {
     );
   }
 
-  // Admin disabled/deleted every banner and no featured courses — nothing.
-  if (allSlides.length === 0) return null;
+  if (slides.length === 0) return null;
 
   return (
     <section
@@ -161,7 +120,7 @@ export default function BannerSlider() {
         className="flex touch-pan-y transition-transform duration-700 ease-out"
         style={{ transform: `translateX(-${activeIndex * 100}%)` }}
       >
-        {allSlides.map((slide) => {
+        {slides.map((slide) => {
           const banner = (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -225,7 +184,7 @@ export default function BannerSlider() {
       </div>
 
       <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
-        {allSlides.map((slide, index) => (
+        {slides.map((slide, index) => (
           <button
             key={slide.id}
             type="button"
