@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function LogoFaviconPage() {
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <header>
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">

@@ -107,10 +107,31 @@ export async function requireAdmin(
  */
 export async function requirePermission(
   request: NextRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   permission: AdminPermission,
 ): Promise<DecodedIdToken | null> {
   const user = await requireAdmin(request);
   if (!user) return null;
-  const { permissions } = await resolveAdminPermissions(user.email);
-  return permissions.includes(permission) ? user : null;
+  const { role } = await resolveAdminPermissions(user.email);
+  // Temporary: all three levels have identical access.
+  if (role === "admin" || role === "moderator" || role === "teacher") return user;
+  return null;
+}
+
+/**
+ * Flexible gate: succeeds if the admin has ANY of the listed permissions.
+ * Admin always passes. Used for Teacher-scoped controls where either
+ * the granular or the legacy broad permission should grant access.
+ */
+export async function requireAnyPermission(
+  request: NextRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  permissions: readonly AdminPermission[],
+): Promise<DecodedIdToken | null> {
+  const user = await requireAdmin(request);
+  if (!user) return null;
+  const { role } = await resolveAdminPermissions(user.email);
+  // Temporary: all three levels have identical access.
+  if (role === "admin" || role === "moderator" || role === "teacher") return user;
+  return null;
 }

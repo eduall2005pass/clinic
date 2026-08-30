@@ -259,7 +259,7 @@ function PaperSelection({
 
       {entries.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
-          <p className="font-semibold text-heading">Content coming soon</p>
+          <p className="font-semibold text-heading">No course content available yet.</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
             No papers or chapters have been published for this subject yet.
           </p>
@@ -409,7 +409,7 @@ function CourseSubjectsContent({ slug }: { slug: string }) {
 
         {course.subjects.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
-            <p className="font-semibold text-heading">Content coming soon</p>
+            <p className="font-semibold text-heading">No course content available yet.</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
               This course has no content published yet. Please check back later.
             </p>
@@ -529,7 +529,7 @@ function SubjectSelection({
 
       {course.subjects.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
-          <p className="font-semibold text-heading">Content coming soon</p>
+          <p className="font-semibold text-heading">No course content available yet.</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
             This course has no subjects published yet. Please check back later.
           </p>
@@ -702,7 +702,7 @@ function SubjectPapersContent({
 
       {entries.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-dark-900/60 p-10 text-center">
-          <p className="font-semibold text-heading">Content coming soon</p>
+          <p className="font-semibold text-heading">No course content available yet.</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-neutral-400">
             No papers, segments or chapters have been published for this subject yet.
           </p>
@@ -775,15 +775,37 @@ function PaperChapterView({
   const { course, state, load, forbiddenKind } = useCourseLearning(slug);
   const subject = course ? findSubject(course, subjectId) : null;
   const { user } = useAuth();
-  // Per-card chapter selection — one independent selection per content card.
+  // Per-card chapter selection — one independent selection per content card (Class/Exam/Materials/Archive).
   const [classChapterId, setClassChapterId] = useState<string | null>(null);
   const [examChapterId, setExamChapterId] = useState<string | null>(null);
   const [materialChapterId, setMaterialChapterId] = useState<string | null>(null);
+  const [archiveChapterId, setArchiveChapterId] = useState<string | null>(null);
 
   const chapters = useMemo(() => {
     if (!subject) return [];
     return chaptersForPaper(subject, paperId);
   }, [subject, paperId]);
+
+  // Structural nodes must not disappear: keep chapters even when their
+  // content array is empty, as long as their contentType matches the card.
+  // Legacy mixed chapters (contentType='class' but with exams/materials) are
+  // also shown under the card where they have items.
+  const classChapters = useMemo(
+    () => chapters.filter((c) => (c.contentType ?? "class").toLowerCase() === "class" || c.classes.length > 0),
+    [chapters],
+  );
+  const examChapters = useMemo(
+    () => chapters.filter((c) => (c.contentType ?? "class").toLowerCase() === "exam" || c.exams.length > 0),
+    [chapters],
+  );
+  const materialChapters = useMemo(
+    () => chapters.filter((c) => (c.contentType ?? "class").toLowerCase() === "materials" || c.materials.length > 0),
+    [chapters],
+  );
+  const archiveChapters = useMemo(
+    () => chapters.filter((c) => (c.contentType ?? "").toLowerCase() === "archive"),
+    [chapters],
+  );
 
   if (state !== "ready" || !course || !subject) {
     if (state === "ready" && (!course || !subject)) {
@@ -827,14 +849,14 @@ function PaperChapterView({
         </p>
       </header>
 
-      {/* Exactly 3 cards — Class / Exam / Materials. Chapter is the last level. */}
+      {/* Exactly 4 cards — Class / Exam / Materials / Archive (order MUST be Class, Exam, Materials, Archive). Chapter is the last level. */}
       <div className="mt-8 space-y-6">
         <ContentCard
           title="Class"
           iconClass="bg-sky-500/15 text-sky-400"
           iconPath="M8 5v14l11-7z"
           filledIcon
-          chapters={chapters.filter((chapter) => chapter.classes.length > 0)}
+          chapters={classChapters}
           countKey="classes"
           selectedId={classChapterId}
           onSelect={(id) =>
@@ -884,7 +906,7 @@ function PaperChapterView({
           title="Exam"
           iconClass="bg-violet-500/15 text-violet-400"
           iconPath="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-          chapters={chapters.filter((chapter) => chapter.exams.length > 0)}
+          chapters={examChapters}
           countKey="exams"
           selectedId={examChapterId}
           onSelect={(id) =>
@@ -927,7 +949,7 @@ function PaperChapterView({
           title="Materials"
           iconClass="bg-emerald-500/15 text-emerald-400"
           iconPath="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
-          chapters={chapters.filter((chapter) => chapter.materials.length > 0)}
+          chapters={materialChapters}
           countKey="materials"
           selectedId={materialChapterId}
           onSelect={(id) =>
@@ -969,12 +991,65 @@ function PaperChapterView({
             </ul>
           )}
         </ContentCard>
+
+        <ContentCard
+          title="Archive"
+          iconClass="bg-amber-500/15 text-amber-400"
+          iconPath="M3 7h18M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M9 11h6"
+          chapters={archiveChapters}
+          countKey="archive"
+          selectedId={archiveChapterId}
+          onSelect={(id) =>
+            setArchiveChapterId((current) => (current === id ? null : id))
+          }
+        >
+          {(chapter) => {
+            const hasContent = chapter.classes.length > 0 || chapter.materials.length > 0 || chapter.exams.length > 0;
+            if (!hasContent) {
+              return (
+                <p className="rounded-xl border border-dashed border-ink/15 bg-dark-950/60 p-5 text-center text-sm text-neutral-400">
+                  No archived content available for this chapter yet.
+                </p>
+              );
+            }
+            return (
+              <ul className="space-y-2">
+                {chapter.classes.map((cls, index) => (
+                  <li key={`arch-${cls.id}`}>
+                    <Link
+                      href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/classes/${encodeURIComponent(cls.id)}`}
+                      onClick={() => recordRecentView(user, "class", cls.id)}
+                      className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-400">{index + 1}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">{cls.title}</span>
+                        <span className="text-[11px] text-neutral-500">Archived · Class</span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+                {chapter.materials.map((m, index) => (
+                  <li key={`arch-m-${m.id}`}>
+                    <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" onClick={() => recordRecentView(user, "material", String(m.id))} className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-400">{index + 1}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">{m.title}</span>
+                        <span className="text-[11px] text-neutral-500">Archived · {materialTypeLabels[m.materialType] ?? "Material"}</span>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            );
+          }}
+        </ContentCard>
       </div>
     </section>
   );
 }
 
-/** One of the three paper-content cards: title + clickable chapter buttons +
+/** One of the four paper-content cards: title + clickable chapter buttons +
  *  the selected chapter's ordered content list. */
 function ContentCard({
   title,
@@ -992,16 +1067,18 @@ function ContentCard({
   iconPath: string;
   filledIcon?: boolean;
   chapters: ChapterItem[];
-  countKey: "classes" | "exams" | "materials";
+  countKey: "classes" | "exams" | "materials" | "archive";
   selectedId: string | null;
   onSelect: (id: string) => void;
   children: (chapter: ChapterItem) => React.ReactNode;
 }) {
   const selected = chapters.find((chapter) => chapter.id === selectedId) ?? null;
-  const total = chapters.reduce(
-    (sum, chapter) => sum + chapter[countKey].length,
-    0,
-  );
+  const total = countKey === "archive"
+    ? chapters.length
+    : chapters.reduce(
+        (sum, chapter) => sum + (chapter[countKey as "classes" | "exams" | "materials"]?.length ?? 0),
+        0,
+      );
 
   return (
     <article className="rounded-2xl border border-ink/10 bg-dark-900 shadow-lg shadow-black/20">
@@ -1041,9 +1118,11 @@ function ContentCard({
                     }`}
                   >
                     {chapter.name}
-                    <span className="ml-1.5 text-xs opacity-70">
-                      {chapter[countKey].length}
-                    </span>
+                    {countKey !== "archive" && (
+                      <span className="ml-1.5 text-xs opacity-70">
+                        {(chapter[countKey as "classes" | "exams" | "materials"]?.length ?? 0)}
+                      </span>
+                    )}
                   </button>
                 );
               })}

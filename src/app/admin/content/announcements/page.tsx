@@ -25,7 +25,7 @@ function toLocalInput(iso: string | null): string {
 }
 
 const inputClass =
-  "w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60";
+  "w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60";
 const labelClass =
   "text-xs font-semibold uppercase tracking-wide text-neutral-500";
 
@@ -218,7 +218,7 @@ export default function AnnouncementsAdminPage() {
       </div>
 
       {editingId !== null && (
-        <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+        <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
           <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500">
             {editingId === "new" ? "New" : "Edit"} Announcement
           </h2>
@@ -300,7 +300,7 @@ export default function AnnouncementsAdminPage() {
               <button
                 type="button"
                 onClick={() => setEditingId(null)}
-                className="rounded-xl border border-ink/15 px-5 py-2.5 text-sm font-bold text-neutral-300 hover:border-primary-500/60"
+                className="rounded-xl border border-ink/15 px-5 py-2.5 text-sm font-bold text-neutral-300 hover:border-[#93c5fd]"
               >
                 Cancel
               </button>
@@ -320,7 +320,7 @@ export default function AnnouncementsAdminPage() {
           items.map((item) => (
             <div
               key={item.id}
-              className="flex flex-wrap items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-4 py-3"
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] px-4 py-3"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-heading">
@@ -358,7 +358,7 @@ export default function AnnouncementsAdminPage() {
               <button
                 type="button"
                 onClick={() => openEdit(item)}
-                className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-primary-500/60"
+                className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-[#93c5fd]"
               >
                 Edit
               </button>

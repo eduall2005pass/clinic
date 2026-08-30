@@ -152,23 +152,23 @@ export default function PublicExamResultDetailView({
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
-      <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-zinc-500">
-        <Link href="/admin/result-control" className="transition hover:text-primary-600">
+      <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+        <Link href="/admin/result-control" className="transition hover:text-[#1a3a78]">
           Result Control
         </Link>
         <span aria-hidden="true">→</span>
-        <Link href="/admin/result-control/public-exam" className="transition hover:text-primary-600">
+        <Link href="/admin/result-control/public-exam" className="transition hover:text-[#1a3a78]">
           Public Exam Result
         </Link>
         <span aria-hidden="true">→</span>
-        <span className="text-zinc-900 admin-dark:text-zinc-100">Details</span>
+        <span className="text-[#0b1e3a] admin-dark:text-zinc-100">Details</span>
       </nav>
 
       {/* Exam-level summary */}
       {exam && (
         <div className={`${cardClass} mt-4 p-5`}>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-extrabold text-zinc-900 admin-dark:text-zinc-50">
+            <h1 className="text-xl font-extrabold text-[#0b1e3a] admin-dark:text-white">
               {exam.title}
             </h1>
             {exam.categoryName && (
@@ -177,7 +177,7 @@ export default function PublicExamResultDetailView({
               </span>
             )}
           </div>
-          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-semibold text-zinc-500 sm:grid-cols-4">
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-semibold text-slate-500 sm:grid-cols-4">
             {[
               ["Total Participants", String(stats?.participants ?? 0)],
               ["Completed", String(results?.length ?? 0)],
@@ -199,7 +199,7 @@ export default function PublicExamResultDetailView({
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="text-[10px] uppercase tracking-wide">{label}</dt>
-                <dd className="text-sm text-zinc-900 admin-dark:text-zinc-200">{value}</dd>
+                <dd className="text-sm text-[#0b1e3a] admin-dark:text-zinc-200">{value}</dd>
               </div>
             ))}
           </dl>
@@ -216,19 +216,19 @@ export default function PublicExamResultDetailView({
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by name, student ID or email…"
-            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100"
+            className="w-full rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-3 py-2 text-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100"
           />
         </div>
       )}
 
       {results === null && !error && (
-        <p className={`${cardClass} mt-4 p-6 text-center text-sm text-zinc-500`}>
+        <p className={`${cardClass} mt-4 p-6 text-center text-sm text-slate-500`}>
           Loading…
         </p>
       )}
 
       {notFound && (
-        <p className={`${cardClass} mt-4 p-8 text-center text-sm text-zinc-500`}>
+        <p className={`${cardClass} mt-4 p-8 text-center text-sm text-slate-500`}>
           Exam not found — it may not be a Public Exam.
         </p>
       )}
@@ -243,7 +243,7 @@ export default function PublicExamResultDetailView({
       )}
 
       {results !== null && results.length === 0 && !error && (
-        <p className={`${cardClass} mt-4 p-8 text-center text-sm text-zinc-500`}>
+        <p className={`${cardClass} mt-4 p-8 text-center text-sm text-slate-500`}>
           No Participants Found
         </p>
       )}
@@ -260,17 +260,17 @@ export default function PublicExamResultDetailView({
                       ? "bg-zinc-500/15 text-zinc-600"
                       : row.rank === 3
                         ? "bg-orange-500/15 text-orange-600"
-                        : "bg-zinc-500/10 text-zinc-500"
+                        : "bg-zinc-500/10 text-slate-500"
                 }`}
                 title="Merit position"
               >
                 #{row.rank ?? "?"}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                <span className="block truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {row.studentName || row.studentUid}
                 </span>
-                <span className="block truncate text-xs text-zinc-500">
+                <span className="block truncate text-xs text-slate-500">
                   {[row.studentId, row.email].filter(Boolean).join(" · ") || row.studentUid}
                   {" · "}
                   {formatDate(row.submittedAt)}
@@ -310,21 +310,21 @@ export default function PublicExamResultDetailView({
         >
           <div className={`${cardClass} max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-b-none p-5 sm:rounded-2xl sm:p-6`}>
             <div className="flex items-start justify-between gap-3">
-              <h2 className="text-lg font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+              <h2 className="text-lg font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
                 Student Result
               </h2>
               <button
                 type="button"
                 onClick={() => setOpenStudent(null)}
                 aria-label="Close student result"
-                className="rounded-lg px-2 py-1 text-sm text-zinc-500 transition hover:bg-zinc-500/10 hover:text-zinc-900 admin-dark:hover:text-zinc-100"
+                className="rounded-lg px-2 py-1 text-sm text-slate-500 transition hover:bg-zinc-500/10 hover:text-[#0b1e3a] admin-dark:hover:text-zinc-100"
               >
                 ✕
               </button>
             </div>
 
             {detailLoading && (
-              <p className="mt-6 p-6 text-center text-sm text-zinc-500">Loading…</p>
+              <p className="mt-6 p-6 text-center text-sm text-slate-500">Loading…</p>
             )}
             {detailError && !detailLoading && (
               <div className="mt-6 p-6 text-center">
@@ -343,7 +343,7 @@ export default function PublicExamResultDetailView({
               <div className="mt-4">
                 {/* Student information */}
                 <section className="rounded-xl border border-neutral-200 p-4 admin-dark:border-zinc-700">
-                  <h3 className="text-xs font-extrabold uppercase tracking-wide text-zinc-500">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
                     Student Information
                   </h3>
                   <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
@@ -360,10 +360,10 @@ export default function PublicExamResultDetailView({
                       ],
                     ].map(([label, value]) => (
                       <div key={label}>
-                        <dt className="font-semibold uppercase tracking-wide text-[10px] text-zinc-500">
+                        <dt className="font-semibold uppercase tracking-wide text-[10px] text-slate-500">
                           {label}
                         </dt>
-                        <dd className="font-semibold text-zinc-900 admin-dark:text-zinc-200">{value}</dd>
+                        <dd className="font-semibold text-[#0b1e3a] admin-dark:text-zinc-200">{value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -371,7 +371,7 @@ export default function PublicExamResultDetailView({
 
                 {/* Marks & ranking */}
                 <section className="mt-4 rounded-xl border border-neutral-200 p-4 admin-dark:border-zinc-700">
-                  <h3 className="text-xs font-extrabold uppercase tracking-wide text-zinc-500">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
                     Marks &amp; Ranking
                   </h3>
                   <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-3">
@@ -408,10 +408,10 @@ export default function PublicExamResultDetailView({
                       ],
                     ].map(([label, value]) => (
                       <div key={label}>
-                        <dt className="font-semibold uppercase tracking-wide text-[10px] text-zinc-500">
+                        <dt className="font-semibold uppercase tracking-wide text-[10px] text-slate-500">
                           {label}
                         </dt>
-                        <dd className="font-semibold text-zinc-900 admin-dark:text-zinc-200">{value}</dd>
+                        <dd className="font-semibold text-[#0b1e3a] admin-dark:text-zinc-200">{value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -420,7 +420,7 @@ export default function PublicExamResultDetailView({
                 {/* Answer sheet */}
                 <section className="mt-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-extrabold uppercase tracking-wide text-zinc-500">
+                    <h3 className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
                       Answer Sheet ({detail.questions.length} questions)
                     </h3>
                   </div>
@@ -437,7 +437,7 @@ export default function PublicExamResultDetailView({
                         }`}
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                          <p className="text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                             Question {String(question.order).padStart(2, "0")}
                           </p>
                           <span
@@ -446,7 +446,7 @@ export default function PublicExamResultDetailView({
                                 ? "bg-emerald-500/10 text-emerald-600"
                                 : question.status === "wrong"
                                   ? "bg-red-500/10 text-red-500"
-                                  : "bg-zinc-500/10 text-zinc-500"
+                                  : "bg-zinc-500/10 text-slate-500"
                             }`}
                           >
                             {question.status}
@@ -482,21 +482,21 @@ export default function PublicExamResultDetailView({
                           ))}
                         </ul>
                         <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] font-semibold">
-                          <span className="text-zinc-500">
+                          <span className="text-slate-500">
                             Student Answer:{" "}
-                            <span className="text-zinc-900 admin-dark:text-zinc-200">
+                            <span className="text-[#0b1e3a] admin-dark:text-zinc-200">
                               {question.studentAnswer == null
                                 ? "Not Answered"
                                 : OPTION_LETTERS[question.studentAnswer] ?? question.studentAnswer + 1}
                             </span>
                           </span>
-                          <span className="text-zinc-500">
+                          <span className="text-slate-500">
                             Correct Answer:{" "}
-                            <span className="text-zinc-900 admin-dark:text-zinc-200">
+                            <span className="text-[#0b1e3a] admin-dark:text-zinc-200">
                               {OPTION_LETTERS[question.correctAnswer] ?? question.correctAnswer + 1}
                             </span>
                           </span>
-                          <span className="text-zinc-500">
+                          <span className="text-slate-500">
                             Marks:{" "}
                             <span
                               className={
@@ -504,7 +504,7 @@ export default function PublicExamResultDetailView({
                                   ? "text-emerald-600"
                                   : question.obtained < 0
                                     ? "text-red-500"
-                                    : "text-zinc-900 admin-dark:text-zinc-200"
+                                    : "text-[#0b1e3a] admin-dark:text-zinc-200"
                               }
                             >
                               {question.obtained > 0 ? "+" : ""}

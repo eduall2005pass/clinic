@@ -196,7 +196,7 @@ export default function SubjectQuestionsPage({
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <Link
         href="/admin/qa"
-        className="text-sm font-semibold text-neutral-400 hover:text-primary-400"
+        className="text-sm font-semibold text-neutral-400 hover:text-[#1a3a78]"
       >
         ← Q&A Control
       </Link>
@@ -248,7 +248,7 @@ export default function SubjectQuestionsPage({
                 className={`rounded-xl border px-4 py-2 text-xs font-bold transition ${
                   tab === key
                     ? "border-primary-500/60 bg-primary-600/15 text-primary-300"
-                    : "border-ink/10 bg-dark-950/60 text-neutral-400 hover:border-primary-500/40 hover:text-neutral-200"
+                    : "border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 text-neutral-400 hover:border-primary-500/40 hover:text-neutral-200"
                 }`}
               >
                 {label}
@@ -278,7 +278,7 @@ export default function SubjectQuestionsPage({
                 return (
                   <li
                     key={question.id}
-                    className="rounded-xl border border-ink/10 bg-dark-950/60 p-4"
+                    className="rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-4"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="min-w-0 flex-1 text-sm font-semibold text-heading">
@@ -356,7 +356,7 @@ export default function SubjectQuestionsPage({
                               ? "Edit the answer…"
                               : "Write a teacher answer…"
                           }
-                          className="mt-3 w-full resize-none rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+                          className="mt-3 w-full resize-none rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
                         />
                         <div className="mt-2 flex justify-end gap-2">
                           <button

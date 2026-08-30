@@ -206,7 +206,7 @@ export default function NotificationControlPage() {
             className={`rounded-2xl border p-4 text-left transition ${
               mode === item.key
                 ? "border-primary-500/60 bg-primary-600/10"
-                : "border-ink/10 bg-dark-900 hover:border-primary-500/40"
+                : "border-ink/10 bg-white admin-dark:bg-[#112544] hover:border-primary-500/40"
             }`}
           >
             <p className={`text-sm font-bold ${mode === item.key ? "text-primary-300" : "text-heading"}`}>
@@ -220,7 +220,7 @@ export default function NotificationControlPage() {
       </div>
 
       {/* Compose */}
-      <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
         <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500">
           {MODES.find((m) => m.key === mode)?.label} Notification
         </h2>
@@ -233,7 +233,7 @@ export default function NotificationControlPage() {
               maxLength={120}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Notification title…"
-              className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+              className="mt-1 w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
             />
           </label>
           {mode === "specific" && (
@@ -242,7 +242,7 @@ export default function NotificationControlPage() {
               <select
                 value={studentEmail}
                 onChange={(event) => setStudentEmail(event.target.value)}
-                className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+                className="mt-1 w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
               >
                 <option value="">Choose a student…</option>
                 {students.map((student) => (
@@ -261,7 +261,7 @@ export default function NotificationControlPage() {
               maxLength={500}
               onChange={(event) => setMessage(event.target.value)}
               placeholder="Write the notification message…"
-              className="mt-1 w-full resize-none rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+              className="mt-1 w-full resize-none rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
             />
           </label>
           <button
@@ -276,7 +276,7 @@ export default function NotificationControlPage() {
       </div>
 
       {/* Sent notifications list */}
-      <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+      <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
         <h2 className="text-lg font-bold text-heading">Sent Notifications</h2>
         {notifications === null ? (
           <AccessLoading label="Loading notifications…" />
@@ -289,7 +289,7 @@ export default function NotificationControlPage() {
             {notifications.map((notification) => (
               <li
                 key={notification.id}
-                className="flex items-start gap-3 rounded-xl border border-ink/10 bg-dark-950/60 px-4 py-3"
+                className="flex items-start gap-3 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-4 py-3"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-heading">

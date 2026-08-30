@@ -317,18 +317,18 @@ export default function HeroBannerManagementPage() {
   }
 
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
   const inputClass =
-    "mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-primary-500/60 focus:bg-white admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100 disabled:opacity-60";
+    "mt-1 w-full rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2 text-sm text-[#0b1e3a] outline-none transition placeholder:text-slate-400 focus:border-[#2f6bce]/60 focus:bg-white admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100 disabled:opacity-60";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Page header */}
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Hero / Banner
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Manage the homepage hero banner slider — add, edit, reorder, hide or
           delete banners. Changes go live immediately after saving.
         </p>
@@ -336,12 +336,12 @@ export default function HeroBannerManagementPage() {
 
       {/* Add banner */}
       <div className={`${cardClass} mt-6`}>
-        <h3 className="text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
           Add New Banner
         </h3>
         <div className="mt-4 grid gap-3">
           <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Image *</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Image *</span>
             <input
               ref={newFileRef}
               type="file"
@@ -352,7 +352,7 @@ export default function HeroBannerManagementPage() {
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Title</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Title</span>
               <input
                 type="text"
                 value={newTitle}
@@ -363,7 +363,7 @@ export default function HeroBannerManagementPage() {
               />
             </label>
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Link (optional)</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Link (optional)</span>
               <input
                 type="text"
                 value={newHref}
@@ -393,7 +393,7 @@ export default function HeroBannerManagementPage() {
           return (
             <li key={banner.id} className={`${cardClass} ${banner.isActive ? "" : "opacity-70"}`}>
               <div className="flex flex-wrap items-start gap-4">
-                <div className="relative h-20 w-36 shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 admin-dark:border-zinc-700 admin-dark:bg-zinc-800">
+                <div className="relative h-20 w-36 shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-[#f1f5f9] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]">
                   <Image
                     src={replaceFile ? URL.createObjectURL(replaceFile) : banner.url}
                     alt={banner.title || "Banner"}
@@ -404,10 +404,10 @@ export default function HeroBannerManagementPage() {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono text-[10px] text-zinc-400">{banner.id}</p>
+                  <p className="truncate font-mono text-[10px] text-slate-400">{banner.id}</p>
                   <div className="mt-2 grid gap-3 sm:grid-cols-2">
                     <label className="block">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Title</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Title</span>
                       <input
                         type="text"
                         value={banner.title}
@@ -419,7 +419,7 @@ export default function HeroBannerManagementPage() {
                       />
                     </label>
                     <label className="block">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Link</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Link</span>
                       <input
                         type="text"
                         value={banner.href}
@@ -441,7 +441,7 @@ export default function HeroBannerManagementPage() {
                     aria-label={`Move banner ${index + 1} up`}
                     onClick={() => moveBanner(index, -1)}
                     disabled={index === 0}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▲
                   </button>
@@ -450,7 +450,7 @@ export default function HeroBannerManagementPage() {
                     aria-label={`Move banner ${index + 1} down`}
                     onClick={() => moveBanner(index, 1)}
                     disabled={index === banners.length - 1}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▼
                   </button>
@@ -479,7 +479,7 @@ export default function HeroBannerManagementPage() {
 
               {/* Row actions */}
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3 admin-dark:border-zinc-800">
-                <label className="cursor-pointer rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300">
+                <label className="cursor-pointer rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300">
                   {replaceFile ? replaceFile.name : "Replace image"}
                   <input
                     ref={(el) => {
@@ -499,7 +499,7 @@ export default function HeroBannerManagementPage() {
                   type="button"
                   onClick={() => handleReplaceImage(banner)}
                   disabled={!replaceFile || busy}
-                  className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:bg-zinc-100 admin-dark:text-zinc-900 admin-dark:hover:bg-white"
+                  className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:bg-zinc-100 admin-dark:text-[#0b1e3a] admin-dark:hover:bg-white"
                 >
                   {busy ? "Working…" : "Upload Replacement"}
                 </button>

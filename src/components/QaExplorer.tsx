@@ -8,6 +8,9 @@ import type { SubjectStats } from "@/components/QaSubjectPicker";
 import QaQuestionItem from "@/components/QaQuestionItem";
 import QaAskForm, { type QaAskPayload } from "@/components/QaAskForm";
 import QaGuideline from "@/components/QaGuideline";
+import PermissionGuidanceCard, {
+  type PermissionGuidance,
+} from "@/components/auth/PermissionGuidanceCard";
 import { useAuth } from "@/lib/auth-context";
 
 export default function QaExplorer({
@@ -18,13 +21,23 @@ export default function QaExplorer({
   questions: QaQuestion[];
 }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const {
+    user,
+    access,
+    authLoading,
+    configured,
+    signInWithGoogle,
+  } = useAuth();
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(
     null
   );
   const [askOpen, setAskOpen] = useState(false);
   const [askOptions, setAskOptions] = useState<QaAskOptions | null>(null);
   const [askOptionsError, setAskOptionsError] = useState<string | null>(null);
+  const [askGuidance, setAskGuidance] = useState<PermissionGuidance | null>(
+    null
+  );
+  const [signingIn, setSigningIn] = useState(false);
 
   const subjectStats = useMemo(
     () =>
@@ -60,9 +73,63 @@ export default function QaExplorer({
       )
     : [];
 
-  // Load the ask-form dropdown data (categories / enrolled courses /
-  // subjects) fresh every time the form opens.
+  // Load the ask-form dropdown data — gated to paid enrollments.
+  // Everyone can VIEW questions/answers; only paid-enrolled students may ASK.
   const openAsk = async () => {
+    if (authLoading) return;
+    if (!access.hasPaidEnrollment) {
+      if (!user) {
+        const guidance: PermissionGuidance = configured
+          ? {
+              title: "Enrollment Required",
+              message:
+                "Asking questions is available only to students enrolled in a paid course. Please sign in and enroll in a paid course to ask questions.",
+              actionLabel: "View Paid Courses",
+              actionHref: "/courses?kind=paid",
+              secondaryLabel: signingIn ? "Please wait..." : "Continue with Google",
+              onAction: undefined,
+            }
+          : {
+              title: "Enrollment Required",
+              message:
+                "Asking questions is available only to students enrolled in a paid course. Please sign in and enroll in a paid course to ask questions.",
+              actionLabel: "View Paid Courses",
+              actionHref: "/courses?kind=paid",
+            };
+        // For guests with Firebase configured, offer Google sign-in as the
+        // primary action and keep View Courses as secondary.
+        if (configured && !user) {
+          guidance.actionLabel = signingIn ? "Please wait..." : "Continue with Google";
+          guidance.onAction = () => {
+            setSigningIn(true);
+            void signInWithGoogle()
+              .catch(() => undefined)
+              .finally(() => setSigningIn(false));
+          };
+          guidance.actionPending = signingIn;
+          guidance.secondaryLabel = "View Paid Courses";
+          guidance.secondaryHref = "/courses?kind=paid";
+        }
+        // Add close handler so the overlay can be dismissed.
+        setAskGuidance({
+          ...guidance,
+          onClose: () => setAskGuidance(null),
+        });
+      } else {
+        setAskGuidance({
+          title: "Paid Enrollment Required",
+          message:
+            "Asking questions is available only to students enrolled in a paid course. You can view all questions and answers, but you need an active paid course enrollment to ask a new question.",
+          actionLabel: "Explore Paid Courses",
+          actionHref: "/courses?kind=paid",
+          secondaryLabel: "View My Courses",
+          secondaryHref: "/dashboard/enrolled-courses",
+          onClose: () => setAskGuidance(null),
+        });
+      }
+      return;
+    }
+
     setAskOpen(true);
     setAskOptions(null);
     setAskOptionsError(null);
@@ -178,6 +245,10 @@ export default function QaExplorer({
           Ask a Question
         </button>
       </div>
+
+      {askGuidance && (
+        <PermissionGuidanceCard guidance={askGuidance} />
+      )}
 
       {askOpen && (
         <div className="mb-10">

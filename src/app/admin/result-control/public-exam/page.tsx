@@ -84,24 +84,24 @@ export default function PublicExamResultListPage() {
   return (
     <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <nav className="flex items-center gap-2 text-xs font-semibold text-zinc-500">
-          <Link href="/admin/result-control" className="transition hover:text-primary-600">
+        <nav className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <Link href="/admin/result-control" className="transition hover:text-[#1a3a78]">
             Result Control
           </Link>
           <span aria-hidden="true">→</span>
-          <span className="text-zinc-900 admin-dark:text-zinc-100">Public Exam Result</span>
+          <span className="text-[#0b1e3a] admin-dark:text-zinc-100">Public Exam Result</span>
         </nav>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Public Exam Result
         </h1>
-        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           All conducted public exams with their participants, merit lists and
           answer sheets.
         </p>
       </header>
 
       {exams === null && !error && (
-        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>
+        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-slate-500`}>
           Loading…
         </p>
       )}
@@ -116,7 +116,7 @@ export default function PublicExamResultListPage() {
       )}
 
       {exams !== null && exams.length === 0 && !error && (
-        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-zinc-500`}>
+        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-slate-500`}>
           No Public Exam Results Available
         </p>
       )}
@@ -128,7 +128,7 @@ export default function PublicExamResultListPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="truncate text-base font-bold text-zinc-900 admin-dark:text-zinc-100">
+                    <h2 className="truncate text-base font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                       {exam.title}
                     </h2>
                     {exam.categoryName && (
@@ -137,24 +137,24 @@ export default function PublicExamResultListPage() {
                       </span>
                     )}
                   </div>
-                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-semibold text-zinc-500 sm:grid-cols-4">
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-semibold text-slate-500 sm:grid-cols-4">
                     <div>
                       <dt className="uppercase tracking-wide text-[10px]">Participants</dt>
-                      <dd className="text-zinc-900 admin-dark:text-zinc-200">{exam.participants}</dd>
+                      <dd className="text-[#0b1e3a] admin-dark:text-zinc-200">{exam.participants}</dd>
                     </div>
                     <div>
                       <dt className="uppercase tracking-wide text-[10px]">Date</dt>
-                      <dd className="text-zinc-900 admin-dark:text-zinc-200">
+                      <dd className="text-[#0b1e3a] admin-dark:text-zinc-200">
                         {formatDate(exam.scheduledAt ?? exam.lastSubmittedAt)}
                       </dd>
                     </div>
                     <div>
                       <dt className="uppercase tracking-wide text-[10px]">Total Marks</dt>
-                      <dd className="text-zinc-900 admin-dark:text-zinc-200">{exam.totalMarks}</dd>
+                      <dd className="text-[#0b1e3a] admin-dark:text-zinc-200">{exam.totalMarks}</dd>
                     </div>
                     <div>
                       <dt className="uppercase tracking-wide text-[10px]">Duration</dt>
-                      <dd className="text-zinc-900 admin-dark:text-zinc-200">{exam.durationMinutes} min</dd>
+                      <dd className="text-[#0b1e3a] admin-dark:text-zinc-200">{exam.durationMinutes} min</dd>
                     </div>
                   </dl>
                 </div>

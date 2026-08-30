@@ -24,7 +24,7 @@ export type HeroSettings = {
 };
 
 export const DEFAULT_HERO_SETTINGS: HeroSettings = {
-  headline: "Learn Smarter. Prepare Better. Achieve Your Dream.",
+  headline: "Learn Smarter. Prepare Better.\nAchieve Your Dream.",
   description:
     "পড়াশোনা হোক আরও সহজ, প্রস্তুতি হোক আরও স্মার্ট। এইচএসসি একাডেমিক ও মেডিকেল অ্যাডমিশনের জন্য কোর্স, পরীক্ষা ও এক্সপার্ট সাপোর্ট—সবকিছু এখন এক জায়গায়।",
   buttonText: "Explore Courses",

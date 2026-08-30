@@ -215,13 +215,13 @@ export default function FaviconManager() {
   const displayUrl = previewUrl ?? (activeFaviconUrl ? cacheBustedFavicon(activeFaviconUrl, settings.faviconUpdatedAt) : null);
 
   return (
-    <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+    <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
       <h2 className="text-lg font-bold text-heading">Favicon</h2>
       <p className="mt-1 text-xs text-neutral-500">
         The small icon shown in the browser tab and bookmarks.
       </p>
 
-      <div className="mt-5 flex min-h-44 items-center justify-center rounded-xl bg-dark-850 p-6">
+      <div className="mt-5 flex min-h-44 items-center justify-center rounded-xl bg-[#f8fbff] admin-dark:bg-[#0f2547] p-6">
         {displayUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
@@ -276,7 +276,7 @@ export default function FaviconManager() {
         </div>
       </dl>
 
-      <label className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-ink/20 bg-dark-850 px-6 py-10 text-center transition hover:border-primary-500/50 hover:bg-primary-500/5">
+      <label className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-ink/20 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-6 py-10 text-center transition hover:border-primary-500/50 hover:bg-primary-500/5">
         <svg
           className="h-8 w-8 text-neutral-500"
           fill="none"

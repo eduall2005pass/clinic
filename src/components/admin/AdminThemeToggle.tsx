@@ -12,12 +12,12 @@ export default function AdminThemeToggle() {
       onClick={toggleTheme}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="relative flex h-10 w-[4.25rem] shrink-0 items-center rounded-xl border border-neutral-200 bg-neutral-50 p-1 transition-colors duration-300 hover:border-primary-500/60 admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:hover:border-primary-500/60"
+      className="relative flex h-10 w-[4.25rem] shrink-0 items-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] p-1 transition-colors duration-300 hover:border-[#93c5fd] admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:hover:border-[#2f5aa0]"
     >
-      {/* Sliding indicator */}
+      {/* Sliding indicator — navy */}
       <span
         aria-hidden
-        className={`absolute top-1 h-8 w-8 rounded-lg bg-primary-600 shadow-md shadow-primary-900/40 transition-all duration-300 ${
+        className={`absolute top-1 h-8 w-8 rounded-lg bg-[#1a3a78] shadow-md shadow-[#0b1e3a]/20 transition-all duration-300 admin-dark:bg-[#234e9f] ${
           isDark ? "left-[2.15rem]" : "left-1"
         }`}
       />
@@ -25,7 +25,7 @@ export default function AdminThemeToggle() {
       <span
         aria-hidden
         className={`relative z-10 flex h-8 w-8 items-center justify-center transition-colors duration-300 ${
-          isDark ? "text-zinc-500" : "text-white"
+          isDark ? "text-slate-400" : "text-white"
         }`}
       >
         <svg
@@ -52,7 +52,7 @@ export default function AdminThemeToggle() {
       <span
         aria-hidden
         className={`relative z-10 flex h-8 w-8 items-center justify-center transition-colors duration-300 ${
-          isDark ? "text-white" : "text-zinc-500"
+          isDark ? "text-white" : "text-slate-400"
         }`}
       >
         <svg

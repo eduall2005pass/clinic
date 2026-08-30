@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-/** Website-styled management card used across all 6 admin hub pages. */
+/** Premium Navy Smart Card — unified across all admin hubs */
 export function ManagementCard({
   href,
   title,
@@ -16,20 +16,20 @@ export function ManagementCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30 active:scale-[0.99] sm:p-6"
+      className="group flex flex-col rounded-2xl border border-[#dbeafe] bg-white p-5 shadow-sm shadow-[#0b1e3a]/5 transition-all duration-200 hover:-translate-y-1 hover:border-[#93c5fd] hover:shadow-md hover:shadow-[#0b1e3a]/10 active:scale-[0.99] sm:p-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:shadow-black/20 admin-dark:hover:border-[#2f5aa0]"
     >
       {icon && (
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-600/15 text-primary-400 transition group-hover:bg-primary-600 group-hover:text-white">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eff6ff] text-[#1a3a78] ring-1 ring-[#dbeafe] transition group-hover:bg-[#1a3a78] group-hover:text-white group-hover:ring-[#1a3a78] admin-dark:bg-[#0f2547] admin-dark:text-[#93c5fd] admin-dark:ring-[#1e3a65] admin-dark:group-hover:bg-[#234e9f] admin-dark:group-hover:text-white">
           {icon}
         </span>
       )}
-      <span className="mt-3 block text-base font-extrabold text-heading transition group-hover:text-primary-400">
+      <span className="mt-3 block text-base font-extrabold text-[#0b1e3a] transition group-hover:text-[#1a3a78] admin-dark:text-white admin-dark:group-hover:text-[#93c5fd]">
         {title}
       </span>
-      <span className="mt-1 line-clamp-2 flex-1 text-xs leading-relaxed text-neutral-400 sm:text-sm">
+      <span className="mt-1 line-clamp-2 flex-1 text-xs leading-relaxed text-slate-500 sm:text-sm admin-dark:text-[#8da0c0]">
         {description}
       </span>
-      <span className="mt-4 inline-flex items-center gap-1 self-start text-[11px] font-bold uppercase tracking-wide text-primary-400 transition group-hover:text-primary-300">
+      <span className="mt-4 inline-flex items-center gap-1 self-start text-[11px] font-bold uppercase tracking-wide text-[#234e9f] transition group-hover:text-[#1a3a78] admin-dark:text-[#93c5fd] admin-dark:group-hover:text-[#bfdbfe]">
         Manage <span aria-hidden="true">→</span>
       </span>
     </Link>
@@ -47,13 +47,13 @@ export function HubHeader({
 }) {
   return (
     <header>
-      <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
+      <p className="text-xs font-bold uppercase tracking-widest text-[#234e9f] admin-dark:text-[#93c5fd]">
         {eyebrow}
       </p>
-      <h1 className="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
+      <h1 className="mt-2 text-2xl font-extrabold text-[#0b1e3a] sm:text-3xl admin-dark:text-white">
         {title}
       </h1>
-      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-400">
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500 admin-dark:text-[#8da0c0]">
         {description}
       </p>
     </header>

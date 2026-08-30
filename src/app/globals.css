@@ -77,6 +77,18 @@ html[data-theme-transition="true"] *::after {
   --primary-800: #9b0610;
   --primary-900: #7f0710;
 
+  /* Admin Navy tokens (default light) */
+  --admin-bg: #f1f5f9;
+  --admin-bg-soft: #eef4ff;
+  --admin-card: #ffffff;
+  --admin-card-border: #dbeafe;
+  --admin-header: #ffffff;
+  --admin-header-border: #dbeafe;
+  --admin-sidebar: #0b1e3a;
+  --admin-sidebar-hover: #123060;
+  --admin-input-bg: #ffffff;
+  --admin-input-border: #cbd5e1;
+
   --secondary-50: #eff6ff;
   --secondary-100: #dbeafe;
   --secondary-200: #bfdbfe;
@@ -87,6 +99,79 @@ html[data-theme-transition="true"] *::after {
   --secondary-700: #1d4ed8;
   --secondary-800: #1e40af;
   --secondary-900: #1e3a8a;
+}
+
+/* ============ Admin Navy — isolated palette override ============ */
+/* Only inside the Admin Panel (any element with [data-admin-theme]) the primary becomes Navy.
+   Website stays red. */
+[data-admin-theme="light"] {
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #2f6bce;
+  --primary-600: #1a3a78;
+  --primary-700: #123060;
+  --primary-800: #0e244a;
+  --primary-900: #0b1e3a;
+  --secondary-50: #eff6ff;
+  --secondary-100: #dbeafe;
+  --secondary-200: #bfdbfe;
+  --secondary-300: #93c5fd;
+  --secondary-400: #60a5fa;
+  --secondary-500: #3b82f6;
+  --secondary-600: #2563eb;
+  --secondary-700: #1d4ed8;
+  --secondary-800: #1e40af;
+  --secondary-900: #1e3a8a;
+  --admin-bg: #f1f5f9;
+  --admin-bg-soft: #eef4ff;
+  --admin-card: #ffffff;
+  --admin-card-border: #dbeafe;
+  --admin-header: #ffffff;
+  --admin-header-border: #dbeafe;
+  --admin-sidebar: #0b1e3a;
+  --admin-sidebar-hover: #132a4f;
+  --admin-input-bg: #ffffff;
+  --admin-input-border: #cbd5e1;
+  --admin-text: #0f172a;
+  --admin-muted: #64748b;
+}
+
+[data-admin-theme="dark"] {
+  --primary-50: #12284d;
+  --primary-100: #1a3a78;
+  --primary-200: #234e9f;
+  --primary-300: #2f65c8;
+  --primary-400: #4a7ad6;
+  --primary-500: #5b88e6;
+  --primary-600: #3a5fad;
+  --primary-700: #2c4a8a;
+  --primary-800: #1e335f;
+  --primary-900: #0b1e3a;
+  --secondary-50: #132a4f;
+  --secondary-100: #1e3a65;
+  --secondary-200: #2f5aa0;
+  --secondary-300: #3d6fc0;
+  --secondary-400: #5b88e6;
+  --secondary-500: #60a5fa;
+  --secondary-600: #3b82f6;
+  --secondary-700: #2d5cc0;
+  --secondary-800: #1e3a8a;
+  --secondary-900: #172a5c;
+  --admin-bg: #0a162e;
+  --admin-bg-soft: #0f2040;
+  --admin-card: #112544;
+  --admin-card-border: #1e3a65;
+  --admin-header: #0f2547;
+  --admin-header-border: #1e3a65;
+  --admin-sidebar: #0b1e3a;
+  --admin-sidebar-hover: #132a4f;
+  --admin-input-bg: #0f2547;
+  --admin-input-border: #1e3a65;
+  --admin-text: #e0e8f8;
+  --admin-muted: #8da0c0;
 }
 
 @theme inline {
@@ -295,4 +380,41 @@ html {
 html,
 body {
   overflow-x: clip;
+}
+
+
+/* ============ Admin Navy Smart Design Language ============ */
+[data-admin-theme] {
+  color-scheme: light;
+}
+[data-admin-theme="dark"] {
+  color-scheme: dark;
+}
+/* Admin scrollbars - navy */
+[data-admin-theme] ::-webkit-scrollbar-track {
+  background: var(--admin-bg);
+}
+[data-admin-theme] ::-webkit-scrollbar-thumb {
+  background: #1e3a65;
+  border-color: var(--admin-bg);
+}
+/* Smart card hover elevation */
+.admin-card {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-card-border);
+  box-shadow: 0 1px 2px rgba(15, 37, 71, 0.06), 0 4px 12px rgba(15, 37, 71, 0.04);
+  border-radius: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.admin-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 4px 16px rgba(35, 78, 159, 0.12), 0 2px 8px rgba(15, 37, 71, 0.06);
+  transform: translateY(-2px);
+}
+[data-admin-theme="dark"] .admin-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+[data-admin-theme="dark"] .admin-card:hover {
+  border-color: #2f5aa0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }

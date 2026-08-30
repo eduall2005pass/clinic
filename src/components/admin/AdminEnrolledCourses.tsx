@@ -58,7 +58,7 @@ function LoadingView({ label }: { label: string }) {
   return (
     <section className="flex flex-col items-center px-4 py-24">
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
-      <p className="mt-4 text-sm font-semibold text-zinc-500 admin-dark:text-zinc-400">{label}</p>
+      <p className="mt-4 text-sm font-semibold text-slate-500 admin-dark:text-slate-400">{label}</p>
     </section>
   );
 }
@@ -115,7 +115,7 @@ function AdminBackLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1 text-sm font-semibold text-zinc-500 transition hover:text-primary-500 admin-dark:text-zinc-400 admin-dark:hover:text-primary-400"
+      className="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 transition hover:text-primary-500 admin-dark:text-slate-400 admin-dark:hover:text-[#1a3a78]"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -129,7 +129,7 @@ function AdminManageButton({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-zinc-600 shadow-sm transition hover:border-primary-500/50 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300 admin-dark:hover:text-primary-400"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-4 py-2 text-xs font-bold text-zinc-600 shadow-sm transition hover:border-primary-500/50 hover:text-[#1a3a78] admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300 admin-dark:hover:text-[#1a3a78]"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-3.5 w-3.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -178,8 +178,8 @@ export function AdminCourseCard({
   };
 }) {
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg shadow-black/5 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/10 admin-dark:border-zinc-800 admin-dark:bg-zinc-900 admin-dark:shadow-black/20">
-      <div className="aspect-video w-full overflow-hidden bg-neutral-100 admin-dark:bg-dark-800">
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 shadow-lg shadow-black/5 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/10 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:shadow-black/20">
+      <div className="aspect-video w-full overflow-hidden bg-[#f1f5f9] admin-dark:bg-dark-800">
         {course.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -206,35 +206,35 @@ export function AdminCourseCard({
             {course.courseKind === "paid" ? "Paid" : "Free"}
           </span>
           {course.category ? (
-            <span className="rounded-full border border-neutral-200 px-2.5 py-0.5 text-[11px] font-bold text-zinc-500 admin-dark:border-zinc-700 admin-dark:text-zinc-400">
+            <span className="rounded-full border border-neutral-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-500 admin-dark:border-zinc-700 admin-dark:text-slate-400">
               {course.category}
             </span>
           ) : null}
           {course.batchId ? (
-            <span className="rounded-full border border-neutral-200 px-2.5 py-0.5 text-[11px] font-bold uppercase text-zinc-500 admin-dark:border-zinc-700 admin-dark:text-zinc-400">
+            <span className="rounded-full border border-neutral-200 px-2.5 py-0.5 text-[11px] font-bold uppercase text-slate-500 admin-dark:border-zinc-700 admin-dark:text-slate-400">
               {course.batchId}
             </span>
           ) : null}
         </div>
 
-        <h2 className="mt-3 text-lg font-extrabold leading-snug text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="mt-3 text-lg font-extrabold leading-snug text-[#0b1e3a] admin-dark:text-white">
           {course.name}
         </h2>
 
         {/* Content stats — same slot where the student card shows progress */}
         <div className="mt-4">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 admin-dark:text-zinc-400">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500 admin-dark:text-slate-400">
             <span>Content</span>
             <span className="text-primary-500">{course.counts.classes} Classes</span>
           </div>
           <div className="mt-1.5 flex gap-1.5">
-            <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-bold text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400">
+            <span className="rounded-full bg-[#f1f5f9] px-2.5 py-1 text-[11px] font-bold text-slate-500 admin-dark:bg-[#132a4f] admin-dark:text-slate-400">
               {course.counts.classes} class{course.counts.classes === 1 ? "" : "es"}
             </span>
-            <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-bold text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400">
+            <span className="rounded-full bg-[#f1f5f9] px-2.5 py-1 text-[11px] font-bold text-slate-500 admin-dark:bg-[#132a4f] admin-dark:text-slate-400">
               {course.counts.exams} exam{course.counts.exams === 1 ? "" : "s"}
             </span>
-            <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-bold text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400">
+            <span className="rounded-full bg-[#f1f5f9] px-2.5 py-1 text-[11px] font-bold text-slate-500 admin-dark:bg-[#132a4f] admin-dark:text-slate-400">
               {course.counts.materials} material{course.counts.materials === 1 ? "" : "s"}
             </span>
           </div>
@@ -267,7 +267,7 @@ export function AdminCourseSubjectsView({ slug }: { slug: string }) {
       <AdminBackLink href="/admin/enrolled-courses" label="Enrolled Courses" />
 
       <header className="grid gap-6 md:grid-cols-[minmax(0,320px)_1fr]">
-        <div className="aspect-video w-full overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 admin-dark:border-zinc-800 admin-dark:bg-dark-800">
+        <div className="aspect-video w-full overflow-hidden rounded-2xl border border-neutral-200 bg-[#f1f5f9] admin-dark:border-zinc-800 admin-dark:bg-dark-800">
           {course.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={course.imageUrl} alt={course.name} className="h-full w-full object-cover" />
@@ -282,16 +282,16 @@ export function AdminCourseSubjectsView({ slug }: { slug: string }) {
             <span className="rounded-full border border-primary-500/40 px-2.5 py-1 text-xs font-bold text-primary-500 admin-dark:border-primary-500/40 admin-dark:text-primary-400">
               {course.courseKind === "paid" ? "Paid Course" : "Free Course"}
             </span>
-            <span className="rounded-full border border-neutral-200 px-2.5 py-1 text-xs font-bold text-zinc-500 admin-dark:border-zinc-700 admin-dark:text-zinc-300">
+            <span className="rounded-full border border-neutral-200 px-2.5 py-1 text-xs font-bold text-slate-500 admin-dark:border-zinc-700 admin-dark:text-zinc-300">
               {course.category}
             </span>
             {course.batchId ? (
-              <span className="rounded-full border border-neutral-200 px-2.5 py-1 text-xs font-bold uppercase text-zinc-500 admin-dark:border-zinc-700 admin-dark:text-zinc-300">
+              <span className="rounded-full border border-neutral-200 px-2.5 py-1 text-xs font-bold uppercase text-slate-500 admin-dark:border-zinc-700 admin-dark:text-zinc-300">
                 {course.batchId}
               </span>
             ) : null}
           </div>
-          <h1 className="mt-3 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50 sm:text-3xl">
+          <h1 className="mt-3 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-white sm:text-3xl">
             {course.name}
           </h1>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -303,15 +303,15 @@ export function AdminCourseSubjectsView({ slug }: { slug: string }) {
       </header>
 
       <div className="pt-2">
-        <h2 className="text-lg font-bold text-zinc-900 admin-dark:text-zinc-50">Subjects</h2>
-        <p className="mt-1 text-xs text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-lg font-bold text-[#0b1e3a] admin-dark:text-white">Subjects</h2>
+        <p className="mt-1 text-xs text-slate-500 admin-dark:text-slate-400">
           Choose a subject to see its papers / segments.
         </p>
 
         {course.subjects.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-dashed border-neutral-300 bg-white/60 p-10 text-center admin-dark:border-zinc-700 admin-dark:bg-zinc-900/60">
-            <p className="font-semibold text-zinc-900 admin-dark:text-zinc-50">No subjects yet</p>
-            <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500 admin-dark:text-zinc-400">
+          <div className="mt-6 rounded-2xl border border-dashed border-neutral-300 bg-white/60 p-10 text-center admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]/60">
+            <p className="font-semibold text-[#0b1e3a] admin-dark:text-white">No subjects yet</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500 admin-dark:text-slate-400">
               Assign subjects to this course to build its content tree.
             </p>
             <div className="mt-5 flex justify-center">
@@ -326,7 +326,7 @@ export function AdminCourseSubjectsView({ slug }: { slug: string }) {
                 <li key={subject.id}>
                   <Link
                     href={`/admin/enrolled-courses/${encodeURIComponent(slug)}/subjects/${encodeURIComponent(subject.id)}`}
-                    className="group flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg shadow-black/5 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/10 active:scale-[0.99] admin-dark:border-zinc-800 admin-dark:bg-zinc-900 admin-dark:shadow-black/20 sm:p-5"
+                    className="group flex items-center gap-4 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-4 shadow-lg shadow-black/5 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/10 active:scale-[0.99] admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:shadow-black/20 sm:p-5"
                   >
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600/15 text-primary-500 transition group-hover:bg-primary-600 group-hover:text-white">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
@@ -334,10 +334,10 @@ export function AdminCourseSubjectsView({ slug }: { slug: string }) {
                       </svg>
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-base font-extrabold text-zinc-900 transition group-hover:text-primary-500 admin-dark:text-zinc-50 admin-dark:group-hover:text-primary-400">
+                      <span className="block text-base font-extrabold text-[#0b1e3a] transition group-hover:text-primary-500 admin-dark:text-white admin-dark:group-hover:text-[#1a3a78]">
                         {subject.name}
                       </span>
-                      <span className="text-xs text-zinc-500 admin-dark:text-zinc-500">
+                      <span className="text-xs text-slate-500 admin-dark:text-slate-500">
                         {subject.papers.length} paper{subject.papers.length === 1 ? "" : "s"}
                         {" · "}
                         {subject.chapters.length} chapter{subject.chapters.length === 1 ? "" : "s"}
@@ -345,7 +345,7 @@ export function AdminCourseSubjectsView({ slug }: { slug: string }) {
                         {counts.classes} class{counts.classes === 1 ? "" : "es"}
                       </span>
                     </span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-[#1a3a78]">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
                     </svg>
                   </Link>
@@ -425,10 +425,10 @@ export function AdminSubjectPapersView({
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
             Paper / Segment
           </p>
-          <h1 className="mt-2 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50 sm:text-3xl">
+          <h1 className="mt-2 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-white sm:text-3xl">
             {subject.name}
           </h1>
-          <p className="mt-1 text-sm text-zinc-500 admin-dark:text-zinc-400">
+          <p className="mt-1 text-sm text-slate-500 admin-dark:text-slate-400">
             Select a paper or segment to open its classes, exams and materials.
           </p>
         </div>
@@ -436,9 +436,9 @@ export function AdminSubjectPapersView({
       </header>
 
       {entries.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 p-10 text-center admin-dark:border-zinc-700 admin-dark:bg-zinc-900/60">
-          <p className="font-semibold text-zinc-900 admin-dark:text-zinc-50">Nothing here yet</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 p-10 text-center admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]/60">
+          <p className="font-semibold text-[#0b1e3a] admin-dark:text-white">Nothing here yet</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-slate-500 admin-dark:text-slate-400">
             No papers, segments or chapters have been published for this subject yet.
           </p>
         </div>
@@ -450,28 +450,28 @@ export function AdminSubjectPapersView({
               <li key={entry.id}>
                 <Link
                   href={`${base}/papers/${encodeURIComponent(entry.id)}`}
-                  className="group flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg shadow-black/5 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/10 active:scale-[0.99] admin-dark:border-zinc-800 admin-dark:bg-zinc-900 admin-dark:shadow-black/20 sm:p-5"
+                  className="group flex items-center gap-4 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-4 shadow-lg shadow-black/5 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/10 active:scale-[0.99] admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:shadow-black/20 sm:p-5"
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[11px] font-bold uppercase tracking-wide text-zinc-400 admin-dark:text-zinc-500">
+                    <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-400 admin-dark:text-slate-500">
                       {entry.kindLabel}
                     </span>
-                    <span className="block truncate text-base font-extrabold text-zinc-900 transition group-hover:text-primary-500 admin-dark:text-zinc-50 admin-dark:group-hover:text-primary-400">
+                    <span className="block truncate text-base font-extrabold text-[#0b1e3a] transition group-hover:text-primary-500 admin-dark:text-white admin-dark:group-hover:text-[#1a3a78]">
                       {entry.name}
                     </span>
                     <span className="mt-1.5 flex flex-wrap gap-1.5">
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400">
+                      <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-slate-500 admin-dark:bg-[#132a4f] admin-dark:text-slate-400">
                         {counts.classes} class{counts.classes === 1 ? "" : "es"}
                       </span>
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400">
+                      <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-slate-500 admin-dark:bg-[#132a4f] admin-dark:text-slate-400">
                         {counts.exams} exam{counts.exams === 1 ? "" : "s"}
                       </span>
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400">
+                      <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-slate-500 admin-dark:bg-[#132a4f] admin-dark:text-slate-400">
                         {counts.materials} material{counts.materials === 1 ? "" : "s"}
                       </span>
                     </span>
                   </span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-[#1a3a78]">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
                   </svg>
                 </Link>
@@ -547,10 +547,10 @@ export function AdminPaperContentView({
         <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
           {paperName}
         </p>
-        <h1 className="mt-2 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50 sm:text-3xl">
+        <h1 className="mt-2 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-white sm:text-3xl">
           {subject.name}
         </h1>
-        <p className="mt-1 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1 text-sm text-slate-500 admin-dark:text-slate-400">
           Organized by chapter — pick a class, exam or material below.
         </p>
       </header>
@@ -577,14 +577,14 @@ export function AdminPaperContentView({
         return (
           <section
             key={item.key}
-            className="rounded-2xl border border-neutral-200 bg-white shadow-lg shadow-black/5 admin-dark:border-zinc-800 admin-dark:bg-zinc-900"
+            className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 shadow-lg shadow-black/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]"
           >
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-5 py-4 admin-dark:border-zinc-800">
               <div className="flex items-center gap-3">
-                <h2 className="text-lg font-extrabold text-zinc-900 admin-dark:text-zinc-50">
+                <h2 className="text-lg font-extrabold text-[#0b1e3a] admin-dark:text-white">
                   {item.label}
                 </h2>
-                <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-zinc-500 admin-dark:bg-zinc-800 admin-dark:text-zinc-400">
+                <span className="rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-semibold text-slate-500 admin-dark:bg-[#132a4f] admin-dark:text-slate-400">
                   {total} item{total === 1 ? "" : "s"}
                 </span>
               </div>
@@ -593,7 +593,7 @@ export function AdminPaperContentView({
 
             <div className="px-5 py-4">
               {typeChapters.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-neutral-300 p-5 text-center text-sm text-zinc-500 admin-dark:border-zinc-700 admin-dark:text-zinc-400">
+                <p className="rounded-xl border border-dashed border-neutral-300 p-5 text-center text-sm text-slate-500 admin-dark:border-zinc-700 admin-dark:text-slate-400">
                   No {item.label.toLowerCase()} published in this paper yet.
                 </p>
               ) : (
@@ -602,7 +602,7 @@ export function AdminPaperContentView({
                     <Link
                       key={chapter.id}
                       href={`${base}/papers/${encodeURIComponent(paperId)}/chapters/${encodeURIComponent(chapter.id)}?kind=${item.key}`}
-                      className="group rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 transition hover:border-primary-600/60 hover:text-primary-500 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-200"
+                      className="group rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-primary-600/60 hover:text-primary-500 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-200"
                     >
                       {chapter.name}
                       <span className="ml-1.5 text-xs font-semibold opacity-60">
@@ -616,7 +616,7 @@ export function AdminPaperContentView({
                   ))}
                 </div>
               )}
-              <p className="mt-3 text-xs text-zinc-500 admin-dark:text-zinc-400">
+              <p className="mt-3 text-xs text-slate-500 admin-dark:text-slate-400">
                 Click a chapter to open its dedicated page.
               </p>
             </div>
@@ -725,10 +725,10 @@ export function AdminChapterView({
         <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
           {kindLabel}
         </p>
-        <h1 className="mt-2 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50 sm:text-3xl">
+        <h1 className="mt-2 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-white sm:text-3xl">
           {chapter.name}
         </h1>
-        <p className="mt-1 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1 text-sm text-slate-500 admin-dark:text-slate-400">
           {items.length} item{items.length === 1 ? "" : "s"} — click any item to open its details.
         </p>
       </header>
@@ -738,9 +738,9 @@ export function AdminChapterView({
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 p-10 text-center admin-dark:border-zinc-700 admin-dark:bg-zinc-900/60">
-          <p className="font-semibold text-zinc-900 admin-dark:text-zinc-50">Nothing here yet</p>
-          <p className="mt-1 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 p-10 text-center admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]/60">
+          <p className="font-semibold text-[#0b1e3a] admin-dark:text-white">Nothing here yet</p>
+          <p className="mt-1 text-sm text-slate-500 admin-dark:text-slate-400">
             Content will appear here once added from the manager above.
           </p>
         </div>
@@ -752,18 +752,18 @@ export function AdminChapterView({
                 href={item.href}
                 target={item.external ? "_blank" : undefined}
                 rel={item.external ? "noopener noreferrer" : undefined}
-                className="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 transition hover:border-primary-600/50 hover:bg-neutral-50 admin-dark:border-zinc-800 admin-dark:bg-zinc-900 admin-dark:hover:bg-zinc-800/60"
+                className="group flex items-center gap-3 rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-4 py-3 transition hover:border-primary-600/50 hover:bg-[#f8fbff] admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:hover:bg-zinc-800/60"
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-600/15 text-xs font-extrabold text-primary-500">
                   {index + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-zinc-900 group-hover:text-primary-500 admin-dark:text-zinc-50 admin-dark:group-hover:text-primary-400">
+                  <span className="block truncate text-sm font-semibold text-[#0b1e3a] group-hover:text-primary-500 admin-dark:text-white admin-dark:group-hover:text-[#1a3a78]">
                     {item.title}
                   </span>
-                  <span className="text-[11px] text-zinc-500 admin-dark:text-zinc-500">{item.subtitle}</span>
+                  <span className="text-[11px] text-slate-500 admin-dark:text-slate-500">{item.subtitle}</span>
                 </span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-[#1a3a78]">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
                 </svg>
               </Link>
@@ -842,8 +842,8 @@ export function AdminContentView({
       <dl className="grid gap-3 sm:grid-cols-2">
         <DetailBox label="Type" value={subtitle} />
         <DetailBox label="Course" value={course.name} />
-        <div className="sm:col-span-2 rounded-xl border border-neutral-200 bg-white p-3 admin-dark:border-zinc-800 admin-dark:bg-zinc-900">
-          <dt className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">File</dt>
+        <div className="sm:col-span-2 rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+          <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">File</dt>
           <dd className="mt-1 break-all text-sm">
             <a href={material.fileUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-500 hover:underline">
               {material.fileUrl}
@@ -861,7 +861,7 @@ export function AdminContentView({
         <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
           Content Details · {subtitle}
         </p>
-        <h1 className="mt-2 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50 sm:text-3xl">
+        <h1 className="mt-2 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-white sm:text-3xl">
           {title}
         </h1>
       </header>
@@ -880,9 +880,9 @@ export function AdminContentView({
 
 function DetailBox({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-3 admin-dark:border-zinc-800 admin-dark:bg-zinc-900">
-      <dt className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">{label}</dt>
-      <dd className="mt-1 text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-50">{value}</dd>
+    <div className="rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</dt>
+      <dd className="mt-1 text-sm font-extrabold text-[#0b1e3a] admin-dark:text-white">{value}</dd>
     </div>
   );
 }
@@ -968,10 +968,10 @@ export function AdminClassView({
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
             {chapterTitle}
           </p>
-          <h1 className="mt-2 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-50">
+          <h1 className="mt-2 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-white">
             {cls.title}
           </h1>
-          <p className="mt-1 text-sm text-zinc-500 admin-dark:text-zinc-400">
+          <p className="mt-1 text-sm text-slate-500 admin-dark:text-slate-400">
             {cls.durationMinutes > 0 ? `${cls.durationMinutes} min` : "Class"}
           </p>
         </div>
@@ -1005,7 +1005,7 @@ export function AdminClassView({
           href={cls.noteUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-6 py-3 text-sm font-semibold text-zinc-700 transition hover:border-primary-500/60 hover:text-primary-500 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-200 admin-dark:hover:text-primary-400"
+          className="flex items-center justify-center gap-2 rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#93c5fd] hover:text-primary-500 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-200 admin-dark:hover:text-[#1a3a78]"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />

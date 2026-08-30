@@ -307,20 +307,20 @@ export default function CategoryCourseManager({
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
-      <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-zinc-500">
-        <Link href="/admin/course" className="transition hover:text-primary-600">
+      <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+        <Link href="/admin/course" className="transition hover:text-[#1a3a78]">
           Course Control
         </Link>
         <span aria-hidden="true">→</span>
-        <span className="text-zinc-900 admin-dark:text-zinc-100">{category.name}</span>
+        <span className="text-[#0b1e3a] admin-dark:text-zinc-100">{category.name}</span>
       </nav>
 
       <header className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
             {category.name} — Courses
           </h1>
-          <p className="mt-1 max-w-xl text-sm text-zinc-500 admin-dark:text-zinc-400">
+          <p className="mt-1 max-w-xl text-sm text-slate-500 admin-dark:text-slate-400">
             Only courses belonging to {category.name} are listed here.
           </p>
         </div>
@@ -372,7 +372,7 @@ export default function CategoryCourseManager({
 
       {loadError ? (
         <div className={`${cardClass} mt-5 p-8 text-center`}>
-          <p className="text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+          <p className="text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
             Could not load courses.
           </p>
           <button type="button" onClick={() => void load()} className={`${buttonPrimaryClass} mt-4`}>
@@ -380,12 +380,12 @@ export default function CategoryCourseManager({
           </button>
         </div>
       ) : courses === null ? (
-        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>
+        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-slate-500`}>
           Loading courses...
         </p>
       ) : filtered.length === 0 ? (
         <div className="mt-5">
-          <p className={`${cardClass} p-8 text-center text-sm text-zinc-500`}>
+          <p className={`${cardClass} p-8 text-center text-sm text-slate-500`}>
             No courses available in this category.
           </p>
           <button type="button" onClick={startCreate} className={`${buttonPrimaryClass} mt-4 w-full py-3`}>
@@ -406,7 +406,7 @@ export default function CategoryCourseManager({
                       className="h-16 w-24 shrink-0 rounded-lg border border-neutral-200 object-cover admin-dark:border-zinc-700"
                     />
                   ) : (
-                    <span className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-neutral-300 text-[10px] font-bold uppercase text-zinc-400 admin-dark:border-zinc-700">
+                    <span className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-neutral-300 text-[10px] font-bold uppercase text-slate-400 admin-dark:border-zinc-700">
                       No banner
                     </span>
                   )}
@@ -414,7 +414,7 @@ export default function CategoryCourseManager({
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href={`/admin/course/category/${encodeURIComponent(category.id)}/course/${encodeURIComponent(course.slug)}`}
-                        className="truncate text-base font-bold text-zinc-900 transition hover:text-primary-600 admin-dark:text-zinc-100"
+                        className="truncate text-base font-bold text-[#0b1e3a] transition hover:text-[#1a3a78] admin-dark:text-zinc-100"
                       >
                         {course.name}
                       </Link>
@@ -422,7 +422,7 @@ export default function CategoryCourseManager({
                         className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
                           course.status === "published"
                             ? "bg-emerald-500/10 text-emerald-600"
-                            : "bg-zinc-500/10 text-zinc-500"
+                            : "bg-zinc-500/10 text-slate-500"
                         }`}
                       >
                         {course.status}
@@ -438,7 +438,7 @@ export default function CategoryCourseManager({
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 text-xs font-semibold text-zinc-500">
+                    <p className="mt-1 text-xs font-semibold text-slate-500">
                       Batch {course.batchId.toUpperCase()} · Regular ৳{" "}
                       {course.fee.toLocaleString("en-IN")}
                       {course.discountFee != null &&
@@ -516,7 +516,7 @@ export default function CategoryCourseManager({
           aria-modal="true"
         >
           <div className={`${cardClass} max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-b-none p-5 sm:rounded-2xl sm:p-6`}>
-            <h3 className="text-lg font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+            <h3 className="text-lg font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
               {editingSlug ? "Edit Course" : "Add Course"}
             </h3>
 
@@ -525,7 +525,7 @@ export default function CategoryCourseManager({
               <p className="text-xs font-bold uppercase tracking-wide text-primary-600">
                 Category (locked)
               </p>
-              <p className="mt-0.5 text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+              <p className="mt-0.5 text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                 {category.name}
               </p>
             </div>
@@ -621,13 +621,13 @@ export default function CategoryCourseManager({
               <div className="sm:col-span-2">
                 <span className={labelClass}>Mentors (this course)</span>
                 {mentorOptions.length === 0 ? (
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-slate-500">
                     No mentors available — add them in Admin → Mentors first.
                   </p>
                 ) : (
                   <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
                     {mentorOptions.map((mentor) => (
-                      <label key={mentor.id} className="flex items-center gap-2 text-sm text-zinc-700 admin-dark:text-zinc-200">
+                      <label key={mentor.id} className="flex items-center gap-2 text-sm text-slate-700 admin-dark:text-zinc-200">
                         <input
                           type="checkbox"
                           checked={mentorIds.includes(mentor.id)}
@@ -647,17 +647,17 @@ export default function CategoryCourseManager({
               </div>
 
               <div className="sm:col-span-2 flex flex-wrap items-center gap-6">
-                <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                   <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.status === "published"}
                     onChange={(e) => setForm({ ...form, status: e.target.checked ? "published" : "unpublished" })} />
                   Published
                 </label>
-                <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                   <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.couponEnabled}
                     onChange={(e) => setForm({ ...form, couponEnabled: e.target.checked })} />
                   Coupon enabled
                 </label>
-                <label className="flex items-center gap-2 text-sm font-semibold text-zinc-700 admin-dark:text-zinc-200">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
                   <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.featured}
                     onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
                   ★ Featured

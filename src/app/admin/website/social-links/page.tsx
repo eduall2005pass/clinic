@@ -144,18 +144,18 @@ export default function SocialLinksManagementPage() {
   }
 
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
   const inputClass =
-    "mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-primary-500/60 focus:bg-white admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100";
+    "mt-1 w-full rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2 text-sm text-[#0b1e3a] outline-none transition placeholder:text-slate-400 focus:border-[#2f6bce]/60 focus:bg-white admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Page header */}
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Social Links
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Manage the social platform links shown in the website footer.
           Changes go live immediately after saving.
         </p>
@@ -175,7 +175,7 @@ export default function SocialLinksManagementPage() {
                   link.label.charAt(0)
                 )}
               </span>
-              <h3 className="min-w-0 flex-1 truncate text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+              <h3 className="min-w-0 flex-1 truncate text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
                 {link.label}
               </h3>
               <div className="flex shrink-0 items-center gap-1">
@@ -184,7 +184,7 @@ export default function SocialLinksManagementPage() {
                   aria-label={`Move ${link.label} up`}
                   onClick={() => moveLink(index, -1)}
                   disabled={index === 0}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                 >
                   ▲
                 </button>
@@ -193,7 +193,7 @@ export default function SocialLinksManagementPage() {
                   aria-label={`Move ${link.label} down`}
                   onClick={() => moveLink(index, 1)}
                   disabled={index === links.length - 1}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                 >
                   ▼
                 </button>
@@ -219,7 +219,7 @@ export default function SocialLinksManagementPage() {
             </div>
 
             <label className="mt-3 block">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">URL</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">URL</span>
               <input
                 type="url"
                 value={link.url ?? ""}

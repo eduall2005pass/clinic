@@ -158,13 +158,13 @@ export default function ThemeAppearancePage() {
   }
 
   const inputClass =
-    "mt-1 w-full rounded-xl border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60";
+    "mt-1 w-full rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60";
 
   const effectivePrimary = settings?.primaryColor || DEFAULT_PRIMARY;
   const effectiveSecondary = settings?.secondaryColor || DEFAULT_SECONDARY;
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <header>
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
@@ -187,7 +187,7 @@ export default function ThemeAppearancePage() {
         ) : (
           <>
             {/* Colors */}
-            <section className="mt-8 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+            <section className="mt-8 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">Colors</h2>
               <p className="mt-1 text-xs text-neutral-500">
                 Pick a base color — lighter and darker shades are generated
@@ -207,7 +207,7 @@ export default function ThemeAppearancePage() {
                         patch({ primaryColor: e.target.value.toLowerCase() })
                       }
                       aria-label="Primary color"
-                      className="h-11 w-14 cursor-pointer rounded-lg border border-ink/10 bg-dark-850 p-1"
+                      className="h-11 w-14 cursor-pointer rounded-lg border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] p-1"
                     />
                     <input
                       type="text"
@@ -245,7 +245,7 @@ export default function ThemeAppearancePage() {
                         patch({ secondaryColor: e.target.value.toLowerCase() })
                       }
                       aria-label="Secondary color"
-                      className="h-11 w-14 cursor-pointer rounded-lg border border-ink/10 bg-dark-850 p-1"
+                      className="h-11 w-14 cursor-pointer rounded-lg border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] p-1"
                     />
                     <input
                       type="text"
@@ -273,7 +273,7 @@ export default function ThemeAppearancePage() {
               </div>
 
               {/* Live preview strip */}
-              <div className="mt-6 flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-850 p-4">
+              <div className="mt-6 flex items-center gap-3 rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] p-4">
                 <span className="text-xs font-medium text-neutral-500">
                   Preview:
                 </span>
@@ -303,7 +303,7 @@ export default function ThemeAppearancePage() {
             </section>
 
             {/* Button style */}
-            <section className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+            <section className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">Button Style</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 {BUTTON_STYLE_OPTIONS.map((option) => (
@@ -312,7 +312,7 @@ export default function ThemeAppearancePage() {
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
                       settings.buttonStyle === option.value
                         ? "border-primary-500/60 bg-primary-600/10"
-                        : "border-ink/10 bg-dark-850 hover:border-primary-500/40"
+                        : "border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] hover:border-primary-500/40"
                     }`}
                   >
                     <input
@@ -336,7 +336,7 @@ export default function ThemeAppearancePage() {
             </section>
 
             {/* Border radius */}
-            <section className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+            <section className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">Border Radius</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-4">
                 {RADIUS_OPTIONS.map((option) => (
@@ -345,7 +345,7 @@ export default function ThemeAppearancePage() {
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
                       settings.borderRadius === option.value
                         ? "border-primary-500/60 bg-primary-600/10"
-                        : "border-ink/10 bg-dark-850 hover:border-primary-500/40"
+                        : "border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] hover:border-primary-500/40"
                     }`}
                   >
                     <input
@@ -369,7 +369,7 @@ export default function ThemeAppearancePage() {
             </section>
 
             {/* Light / Dark */}
-            <section className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+            <section className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">
                 Website Theme Mode
               </h2>
@@ -384,7 +384,7 @@ export default function ThemeAppearancePage() {
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
                       settings.themeMode === option.value
                         ? "border-primary-500/60 bg-primary-600/10"
-                        : "border-ink/10 bg-dark-850 hover:border-primary-500/40"
+                        : "border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] hover:border-primary-500/40"
                     }`}
                   >
                     <input

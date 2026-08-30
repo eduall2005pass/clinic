@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/lib/admin";
+import { requirePermission, requireAnyPermission } from "@/lib/admin";
 import { logAdminAction } from "@/lib/administration";
 import {
   fetchExams,
@@ -15,7 +15,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 /** Create or update an exam (including its answer key). */
 export async function POST(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
 /** Change display order: { order: [id, …] }. */
 export async function PUT(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -97,7 +97,7 @@ export async function PUT(request: NextRequest) {
 
 /** Quick publish/unpublish/close: { id, status }. */
 export async function PATCH(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -122,7 +122,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

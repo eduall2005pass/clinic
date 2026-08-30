@@ -2,7 +2,7 @@ export function SkeletonLine({ className = "" }: { className?: string }) {
   return (
     <div
       aria-hidden
-      className={`animate-pulse rounded-lg bg-neutral-200 admin-dark:bg-zinc-800 ${className}`}
+      className={`animate-pulse rounded-lg bg-[#e6eef8] admin-dark:bg-[#1e3a65] ${className}`}
     />
   );
 }
@@ -11,7 +11,7 @@ export function SkeletonCard({ className = "" }: { className?: string }) {
   return (
     <div
       aria-hidden
-      className={`rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm admin-dark:border-zinc-800 admin-dark:bg-zinc-900 ${className}`}
+      className={`rounded-2xl border border-[#dbeafe] bg-white p-6 shadow-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] ${className}`}
     >
       <SkeletonLine className="h-10 w-10 rounded-xl" />
       <SkeletonLine className="mt-5 h-4 w-2/3" />

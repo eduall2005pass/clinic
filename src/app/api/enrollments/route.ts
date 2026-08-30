@@ -83,7 +83,6 @@ export async function POST(request: NextRequest) {
     couponCode?: unknown;
     transactionId?: unknown;
     senderMobile?: unknown;
-    paidAmount?: unknown;
   } | null;
   const courseId = typeof body?.courseId === "string" ? body.courseId : "";
   const courseName =
@@ -97,7 +96,6 @@ export async function POST(request: NextRequest) {
     typeof body?.transactionId === "string" ? body.transactionId.trim() : "";
   const senderMobile =
     typeof body?.senderMobile === "string" ? body.senderMobile.trim() : "";
-  const paidAmountRaw = body?.paidAmount;
   if (!courseId) {
     return NextResponse.json(
       { error: "Missing course id." },
@@ -108,7 +106,6 @@ export async function POST(request: NextRequest) {
   // Coupons are always re-validated server-side — the client-side check is
   // cosmetic only and must never be trusted for pricing.
   let appliedCouponCode: string | null = null;
-  let paidAmount = NaN;
   let finalFee = fee;
   if (rawCouponCode && fee > 0) {
     const result = await validateCoupon(rawCouponCode);
@@ -181,18 +178,6 @@ export async function POST(request: NextRequest) {
     if (!transactionId || transactionId.length < 4 || transactionId.length > 64) {
       return NextResponse.json(
         { error: "A valid Transaction ID (4–64 characters) is required." },
-        { status: 400 },
-      );
-    }
-    paidAmount =
-      typeof paidAmountRaw === "number"
-        ? paidAmountRaw
-        : typeof paidAmountRaw === "string" && paidAmountRaw.trim() !== ""
-          ? Number(paidAmountRaw)
-          : NaN;
-    if (!Number.isFinite(paidAmount) || paidAmount <= 0 || paidAmount > 1_000_000) {
-      return NextResponse.json(
-        { error: "Enter a valid Paid Amount greater than 0." },
         { status: 400 },
       );
     }
@@ -309,7 +294,7 @@ export async function POST(request: NextRequest) {
           courseId,
           courseName,
           transactionId,
-          paidAmount: Number(paidAmount),
+          paidAmount: finalFee,
           senderMobile,
           couponCode: appliedCouponCode,
         });
@@ -329,7 +314,7 @@ export async function POST(request: NextRequest) {
         await exec(
           `UPDATE enrollments SET payment_transaction_id = ?, payment_amount = ?, payment_sender = ?
            WHERE student_uid = ? AND course_id = ?`,
-          [transactionId, Number(paidAmount), senderMobile, user.uid, courseId],
+          [transactionId, finalFee, senderMobile, user.uid, courseId],
         );
       } catch {
         // Migration pending — admin UI falls back gracefully.

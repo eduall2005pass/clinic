@@ -280,12 +280,12 @@ export default function CourseCategoryManager({
   }
 
   const inputClass =
-    "mt-1 w-full rounded-xl border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60";
+    "mt-1 w-full rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60";
   const iconButtonClass =
-    "flex h-8 w-8 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-primary-500/60 hover:text-heading disabled:cursor-not-allowed disabled:opacity-30";
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-[#93c5fd] hover:text-heading disabled:cursor-not-allowed disabled:opacity-30";
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
         <header>
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
@@ -306,7 +306,7 @@ export default function CourseCategoryManager({
         ) : (
           <>
             {/* Add form */}
-            <div className="mt-8 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+            <div className="mt-8 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">New Category</h2>
               {adding ? (
                 <div className="mt-5 grid gap-5 sm:grid-cols-2">
@@ -392,7 +392,7 @@ export default function CourseCategoryManager({
                   type="button"
                   onClick={() => setAdding(true)}
                   disabled={busy}
-                  className="mt-4 rounded-xl border border-ink/15 px-4 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-primary-500/60 hover:text-heading disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-4 rounded-xl border border-ink/15 px-4 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-[#93c5fd] hover:text-heading disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   + Add New Category
                 </button>
@@ -400,7 +400,7 @@ export default function CourseCategoryManager({
             </div>
 
             {/* Category list */}
-            <section className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6">
+            <section className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">Category List</h2>
               <p className="mt-1 text-xs text-neutral-500">
                 Use the checkbox to enable or disable a category, the arrows to
@@ -418,8 +418,8 @@ export default function CourseCategoryManager({
                       key={category.id}
                       className={`rounded-xl border px-4 py-3 transition ${
                         category.isActive
-                          ? "border-ink/10 bg-dark-850"
-                          : "border-dashed border-ink/15 bg-dark-900 opacity-60"
+                          ? "border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547]"
+                          : "border-dashed border-ink/15 bg-white admin-dark:bg-[#112544] opacity-60"
                       }`}
                     >
                       {editingId === category.id ? (

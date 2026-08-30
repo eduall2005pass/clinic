@@ -190,24 +190,20 @@ export async function recordAdminLogin(
 // ── Roles & permissions ──────────────────────────────────────────────────
 
 export const AVAILABLE_ROLES = [
-  "super-admin",
   "admin",
-  "content-manager",
-  "course-manager",
-  "exam-manager",
+  "moderator",
+  "teacher",
 ] as const;
 
 export type AdminRole = (typeof AVAILABLE_ROLES)[number];
 
 export const ROLE_LABELS: Record<AdminRole, string> = {
-  "super-admin": "Super Admin",
   admin: "Admin",
-  "content-manager": "Content Manager",
-  "course-manager": "Course Manager",
-  "exam-manager": "Exam Manager",
+  moderator: "Moderator",
+  teacher: "Teacher",
 };
 
-/** Permission categories enforced on every admin API write. */
+/** Permission categories enforced on every admin API write. Flexible matrix: role_permissions overrides defaults. */
 export const ALL_PERMISSIONS = [
   "manageContent",
   "manageCourses",
@@ -215,17 +211,67 @@ export const ALL_PERMISSIONS = [
   "manageStudents",
   "manageAdmins",
   "manageSystem",
+  // Teacher-scoped granular permissions (flexible, can be reconfigured per role)
+  "manageCourseContent",
+  "managePublicExam",
+  "manageQa",
+  "manageResults",
 ] as const;
 
 export type AdminPermission = (typeof ALL_PERMISSIONS)[number];
 
 const DEFAULT_PERMISSIONS_BY_ROLE: Record<AdminRole, readonly AdminPermission[]> = {
-  "super-admin": [...ALL_PERMISSIONS],
-  admin: ["manageContent", "manageCourses", "manageExams", "manageStudents"],
-  "content-manager": ["manageContent"],
-  "course-manager": ["manageCourses"],
-  "exam-manager": ["manageExams"],
+  // Temporary: all three levels have identical access (full permissions).
+  // Actual role-wise permissions will be defined later.
+  admin: [...ALL_PERMISSIONS],
+  moderator: [...ALL_PERMISSIONS],
+  teacher: [...ALL_PERMISSIONS],
 };
+
+/**
+ * Admin Panel control → required permissions.
+ * Each control lists the granular permission(s) that grant access; broader
+ * legacy permissions are accepted as fallback so Admin/Moderator keep their
+ * existing access while Teacher is scoped to exactly 4 controls.
+ * Flexible: role_permissions can reconfigure any of these per role at runtime.
+ */
+export const ADMIN_CONTROL_PERMISSIONS: Record<string, readonly AdminPermission[]> = {
+  "/admin/website-information": ["manageContent"],
+  "/admin/enrollment-control": ["manageStudents", "manageCourses"],
+  "/admin/home-control": ["manageContent"],
+  "/admin/course-control": ["manageCourses"],
+  "/admin/course-content-control": ["manageCourseContent", "manageCourses"],
+  "/admin/public-exam-control": ["managePublicExam", "manageExams"],
+  "/admin/qa-control": ["manageQa", "manageContent"],
+  "/admin/dashboard-control": ["manageSystem", "manageContent"],
+  "/admin/student-control": ["manageStudents"],
+  "/admin/result-control": ["manageResults", "manageExams"],
+  "/admin/notification-control": ["manageContent", "manageSystem"],
+  "/admin/admin-center": ["manageAdmins"],
+};
+
+export function hasControlAccess(
+  role: string | null | undefined,
+  permissions: string[],
+  href: string,
+): boolean {
+  // Temporary: all three levels have identical access.
+  if (role === "admin" || role === "moderator" || role === "teacher") return true;
+  const required = ADMIN_CONTROL_PERMISSIONS[href];
+  if (!required) return true; // unknown route → allow for non-restricted pages
+  return required.some((perm) => permissions.includes(perm));
+}
+
+/** Check if a permission set grants any of the required permissions (temporary: all roles pass). */
+export function hasAnyPermission(
+  role: string | null | undefined,
+  permissions: string[],
+  required: readonly string[],
+): boolean {
+  // Temporary: all three levels have identical access.
+  if (role === "admin" || role === "moderator" || role === "teacher") return true;
+  return required.some((perm) => permissions.includes(perm));
+}
 
 async function ensureRolesTable(): Promise<void> {
   if (ensureRolesTableReady) return;
@@ -252,38 +298,15 @@ async function ensureRolePermissionsTable(): Promise<void> {
 
 /** Configured permission set for a role; falls back to built-in defaults. */
 export async function fetchRolePermissions(): Promise<Record<string, string[]>> {
-  try {
-    await ensureRolePermissionsTable();
-    const rows = await query<{ role: string; permissions: string | null }[]>(
-      `SELECT role, permissions FROM role_permissions`,
-    );
-    const result: Record<string, string[]> = {};
-    for (const role of AVAILABLE_ROLES) {
-      result[role] = [...DEFAULT_PERMISSIONS_BY_ROLE[role]];
-    }
-    for (const row of rows) {
-      if (!(AVAILABLE_ROLES as readonly string[]).includes(row.role)) continue;
-      const parsed = parseJsonColumn<string[]>(row.permissions);
-      if (Array.isArray(parsed)) {
-        result[row.role] = parsed
-          .map(String)
-          .filter((permission): permission is AdminPermission =>
-            (ALL_PERMISSIONS as readonly string[]).includes(permission),
-          );
-      }
-    }
-    return result;
-  } catch {
-    // Table not migrated yet — built-in defaults only.
-    const result: Record<string, string[]> = {};
-    for (const role of AVAILABLE_ROLES) {
-      result[role] = [...DEFAULT_PERMISSIONS_BY_ROLE[role]];
-    }
-    return result;
+  // Temporary: all three levels have identical permissions (full access).
+  const result: Record<string, string[]> = {};
+  for (const role of AVAILABLE_ROLES) {
+    result[role] = [...ALL_PERMISSIONS];
   }
+  return result;
 }
 
-/** Bulk-save the configurable permission matrix (super-admin only). */
+/** Bulk-save the configurable permission matrix (Admin only). */
 export async function saveRolePermissions(
   input: Record<string, unknown>,
   adminUid: string,
@@ -313,7 +336,7 @@ export async function saveRolePermissions(
  * Resolve an admin's role and effective permissions.
  * Role assignment lives in `admin_roles` (email-keyed, defaults to
  * "admin"); the permission matrix comes from `role_permissions`.
- * Super-admins always hold every permission.
+ * Admin always holds every permission.
  */
 export async function resolveAdminPermissions(
   email: string | null | undefined,
@@ -330,19 +353,16 @@ export async function resolveAdminPermissions(
         `SELECT role FROM admin_roles WHERE email = ? LIMIT 1`,
         [email.trim().toLowerCase()],
       );
-      const role = rows[0]?.role as AdminRole | undefined;
-      if (role && (AVAILABLE_ROLES as readonly string[]).includes(role)) {
-        assignedRole = role;
+      const rawRole = String(rows[0]?.role ?? "").trim().toLowerCase();
+      if ((AVAILABLE_ROLES as readonly string[]).includes(rawRole)) {
+        assignedRole = rawRole as AdminRole;
+      } else if (rawRole === "super-admin") {
+        // Legacy super-admin migrated to Admin (full access).
+        assignedRole = "admin";
       }
     }
-    const matrix = await fetchRolePermissions();
-    const configured: AdminPermission[] =
-      assignedRole === "super-admin"
-        ? [...ALL_PERMISSIONS]
-        : ((matrix[assignedRole] ?? []) as AdminPermission[]).length > 0
-          ? (matrix[assignedRole] as AdminPermission[])
-          : [...DEFAULT_PERMISSIONS_BY_ROLE[assignedRole]];
-    return { role: assignedRole, permissions: configured };
+    // Temporary: all three levels have identical permissions (full access).
+    return { role: assignedRole, permissions: [...ALL_PERMISSIONS] };
   } catch {
     return fallback;
   }

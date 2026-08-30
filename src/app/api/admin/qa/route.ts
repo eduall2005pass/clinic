@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/lib/admin";
+import { requirePermission, requireAnyPermission } from "@/lib/admin";
 import { isMysqlConfigured } from "@/lib/mysql";
 import {
   fetchQaBrowseSubjects,
@@ -25,7 +25,7 @@ function slugify(value: string): string {
  *  given, returns only that subject (merged legacy + Course Control list)
  *  and its questions, optionally filtered server-side by ?status=. */
 export async function GET(request: NextRequest) {
-  const admin = await requirePermission(request, "manageContent");
+  const admin = await requireAnyPermission(request, ["manageContent", "manageQa"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
  *  - { action: "answer", questionId, content }
  */
 export async function POST(request: NextRequest) {
-  const admin = await requirePermission(request, "manageContent");
+  const admin = await requireAnyPermission(request, ["manageContent", "manageQa"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
  *          ?question=<id> removes one question.
  */
 export async function PUT(request: NextRequest) {
-  const admin = await requirePermission(request, "manageContent");
+  const admin = await requireAnyPermission(request, ["manageContent", "manageQa"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -190,7 +190,7 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requirePermission(request, "manageContent");
+  const admin = await requireAnyPermission(request, ["manageContent", "manageQa"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

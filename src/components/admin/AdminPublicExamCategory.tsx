@@ -112,11 +112,11 @@ export default function AdminPublicExamCategory({
   }
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-6xl px-4 pt-12 sm:px-6">
         <Link
           href="/admin/exams/public"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-400 transition hover:text-primary-400"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-400 transition hover:text-[#1a3a78]"
         >
           ← All Categories
         </Link>
@@ -146,7 +146,7 @@ export default function AdminPublicExamCategory({
               type="button"
               disabled={busy}
               onClick={() => void togglePublish(exam)}
-              className="flex-1 rounded-lg border border-ink/15 bg-dark-850 px-3 py-2 text-xs font-bold text-neutral-300 transition hover:border-primary-500/50 hover:text-heading disabled:opacity-50"
+              className="flex-1 rounded-lg border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2 text-xs font-bold text-neutral-300 transition hover:border-primary-500/50 hover:text-heading disabled:opacity-50"
             >
               {exam.published ? "Unpublish" : "Publish"}
             </button>

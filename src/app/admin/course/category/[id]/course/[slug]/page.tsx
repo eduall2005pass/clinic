@@ -17,11 +17,11 @@ export const dynamic = "force-dynamic";
 // Server component — replicate the admin-ui style tokens locally (that
 // module is "use client" and can't be imported here).
 const cardClass =
-  "rounded-2xl border border-neutral-200 bg-white shadow-sm transition-colors duration-300 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+  "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 shadow-sm transition-colors duration-300 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
 const buttonPrimaryClass =
   "rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-900/30 transition hover:bg-primary-700 active:scale-[0.98]";
 const buttonSecondaryClass =
-  "rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700 admin-dark:text-zinc-300";
+  "rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 admin-dark:text-zinc-300";
 
 type SubjectChapterRow = {
   subject_id: string;
@@ -93,25 +93,25 @@ export default async function AdminCourseDetailsPage({
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
-      <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-zinc-500">
-        <Link href="/admin/course" className="transition hover:text-primary-600">
+      <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+        <Link href="/admin/course" className="transition hover:text-[#1a3a78]">
           Course Control
         </Link>
         <span aria-hidden="true">→</span>
-        <Link href={categoryBase} className="transition hover:text-primary-600">
+        <Link href={categoryBase} className="transition hover:text-[#1a3a78]">
           {category.name}
         </Link>
         <span aria-hidden="true">→</span>
-        <span className="text-zinc-900 admin-dark:text-zinc-100">{course.name}</span>
+        <span className="text-[#0b1e3a] admin-dark:text-zinc-100">{course.name}</span>
       </nav>
 
       <div className={`${cardClass} mt-4 p-5`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-extrabold text-zinc-900 admin-dark:text-zinc-50">
+            <h1 className="text-xl font-extrabold text-[#0b1e3a] admin-dark:text-white">
               {course.name}
             </h1>
-            <p className="mt-1 text-xs font-semibold text-zinc-500">/{course.slug}</p>
+            <p className="mt-1 text-xs font-semibold text-slate-500">/{course.slug}</p>
           </div>
           <div className="flex shrink-0 gap-2">
             <Link href={`${categoryBase}?edit=${encodeURIComponent(course.slug)}`} className={buttonPrimaryClass}>
@@ -134,7 +134,7 @@ export default async function AdminCourseDetailsPage({
           />
         )}
 
-        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-semibold text-zinc-500 sm:grid-cols-4">
+        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-semibold text-slate-500 sm:grid-cols-4">
           {[
             ["Category", category.name],
             ["Batch", course.batchId.toUpperCase()],
@@ -154,22 +154,22 @@ export default async function AdminCourseDetailsPage({
           ].map(([label, value]) => (
             <div key={label}>
               <dt className="text-[10px] uppercase tracking-wide">{label}</dt>
-              <dd className="text-sm font-semibold text-zinc-900 admin-dark:text-zinc-200">{value}</dd>
+              <dd className="text-sm font-semibold text-[#0b1e3a] admin-dark:text-zinc-200">{value}</dd>
             </div>
           ))}
         </dl>
 
         {course.shortDescription && (
-          <p className="mt-4 text-sm leading-relaxed text-zinc-700 admin-dark:text-zinc-300">
+          <p className="mt-4 text-sm leading-relaxed text-slate-700 admin-dark:text-zinc-300">
             {course.shortDescription}
           </p>
         )}
         {course.description && (
           <div className="mt-3 border-t border-neutral-200 pt-3 admin-dark:border-zinc-700">
-            <h2 className="text-xs font-extrabold uppercase tracking-wide text-zinc-500">
+            <h2 className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
               Description
             </h2>
-            <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-zinc-700 admin-dark:text-zinc-300">
+            <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-700 admin-dark:text-zinc-300">
               {course.description}
             </p>
           </div>
@@ -179,7 +179,7 @@ export default async function AdminCourseDetailsPage({
       {/* Chapters / Topics — via the existing subject assignment structure. */}
       <div className={`${cardClass} mt-5 p-5`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-bold text-zinc-900 admin-dark:text-zinc-100">
+          <h2 className="text-lg font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
             Chapters / Topics
           </h2>
           <Link
@@ -190,7 +190,7 @@ export default async function AdminCourseDetailsPage({
           </Link>
         </div>
         {subjectsMap.size === 0 ? (
-          <p className="mt-3 rounded-xl border border-dashed border-neutral-300 px-4 py-6 text-center text-sm text-zinc-500 admin-dark:border-zinc-700">
+          <p className="mt-3 rounded-xl border border-dashed border-neutral-300 px-4 py-6 text-center text-sm text-slate-500 admin-dark:border-zinc-700">
             No subjects assigned to this course yet — assign subjects in Course
             Content Control to build its chapter/topic tree.
           </p>
@@ -198,7 +198,7 @@ export default async function AdminCourseDetailsPage({
           <ul className="mt-3 space-y-3">
             {[...subjectsMap.entries()].map(([subjectId, entry]) => (
               <li key={subjectId} className="rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
-                <p className="text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                <p className="text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {entry.name}
                 </p>
                 {entry.chapters.length > 0 ? (
@@ -208,7 +208,7 @@ export default async function AdminCourseDetailsPage({
                     ))}
                   </ol>
                 ) : (
-                  <p className="mt-1 text-[11px] text-zinc-500">No chapters yet.</p>
+                  <p className="mt-1 text-[11px] text-slate-500">No chapters yet.</p>
                 )}
               </li>
             ))}

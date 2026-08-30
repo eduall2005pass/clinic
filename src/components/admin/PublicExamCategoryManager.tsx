@@ -18,12 +18,12 @@ export default function PublicExamCategoryManager({
   const label = examCategoryLabel(category);
   return (
     <div>
-      <nav className="mx-auto flex max-w-4xl items-center gap-2 px-4 pt-6 text-xs font-semibold text-zinc-500 sm:px-6">
-        <Link href="/admin/public-exam" className="transition hover:text-primary-600">
+      <nav className="mx-auto flex max-w-4xl items-center gap-2 px-4 pt-6 text-xs font-semibold text-slate-500 sm:px-6">
+        <Link href="/admin/public-exam" className="transition hover:text-[#1a3a78]">
           Public Exam Control
         </Link>
         <span aria-hidden="true">→</span>
-        <span className="text-zinc-900 admin-dark:text-zinc-100">{label}</span>
+        <span className="text-[#0b1e3a] admin-dark:text-zinc-100">{label}</span>
       </nav>
       <ExamManager
         title={`${label} — Public Exams`}

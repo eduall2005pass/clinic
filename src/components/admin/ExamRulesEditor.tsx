@@ -141,10 +141,10 @@ export default function ExamRulesEditor({
     <div className="rounded-2xl border border-neutral-200 p-4 admin-dark:border-zinc-700 sm:col-span-2">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h4 className="text-sm font-extrabold uppercase tracking-wide text-zinc-900 admin-dark:text-zinc-100">
+          <h4 className="text-sm font-extrabold uppercase tracking-wide text-[#0b1e3a] admin-dark:text-zinc-100">
             Exam Rules
           </h4>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-xs text-slate-500">
             Shown to students on this exam&apos;s Rules Page only.
           </p>
         </div>
@@ -160,7 +160,7 @@ export default function ExamRulesEditor({
       </div>
 
       {rules === null && !loadError && (
-        <p className="mt-4 text-xs text-zinc-500">Loading rules…</p>
+        <p className="mt-4 text-xs text-slate-500">Loading rules…</p>
       )}
 
       {loadError && (
@@ -177,7 +177,7 @@ export default function ExamRulesEditor({
       )}
 
       {rules !== null && !loadError && rules.length === 0 && !showAdd && (
-        <p className="mt-4 rounded-xl border border-dashed border-neutral-200 p-4 text-center text-xs text-zinc-500 admin-dark:border-zinc-700">
+        <p className="mt-4 rounded-xl border border-dashed border-neutral-200 p-4 text-center text-xs text-slate-500 admin-dark:border-zinc-700">
           No Rules Added — the student Rules Page falls back to MediSpark&apos;s standard rules.
         </p>
       )}
@@ -191,11 +191,11 @@ export default function ExamRulesEditor({
             >
               <div className="min-w-0 flex-1">
                 {rule.title && (
-                  <p className="text-xs font-bold text-zinc-900 admin-dark:text-zinc-100">
+                  <p className="text-xs font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                     {index + 1}. {rule.title}
                   </p>
                 )}
-                <p className={`text-xs leading-relaxed text-zinc-500 admin-dark:text-zinc-400 ${rule.title ? "" : "font-bold"}`}>
+                <p className={`text-xs leading-relaxed text-slate-500 admin-dark:text-slate-400 ${rule.title ? "" : "font-bold"}`}>
                   {rule.title ? "" : `${index + 1}. `}
                   {rule.text}
                 </p>
@@ -207,14 +207,14 @@ export default function ExamRulesEditor({
                     disabled={busy || index === 0}
                     aria-label={`Move rule ${index + 1} up`}
                     onClick={() => void move(index, -1)}
-                    className="rounded border border-neutral-200 px-1.5 text-[10px] text-zinc-500 disabled:opacity-30 admin-dark:border-zinc-700"
+                    className="rounded border border-neutral-200 px-1.5 text-[10px] text-slate-500 disabled:opacity-30 admin-dark:border-zinc-700"
                   >↑</button>
                   <button
                     type="button"
                     disabled={busy || index === rules.length - 1}
                     aria-label={`Move rule ${index + 1} down`}
                     onClick={() => void move(index, 1)}
-                    className="rounded border border-neutral-200 px-1.5 text-[10px] text-zinc-500 disabled:opacity-30 admin-dark:border-zinc-700"
+                    className="rounded border border-neutral-200 px-1.5 text-[10px] text-slate-500 disabled:opacity-30 admin-dark:border-zinc-700"
                   >↓</button>
                 </span>
                 <button

@@ -143,7 +143,7 @@ export default function StudentActivityPage() {
           <button
             type="button"
             onClick={() => void load()}
-            className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-primary-500/60"
+            className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-[#93c5fd]"
           >
             Retry
           </button>
@@ -157,7 +157,7 @@ export default function StudentActivityPage() {
           {feed.map((item, index) => (
             <li
               key={`${item.kind}-${index}`}
-              className="flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-4 py-3"
+              className="flex items-center gap-3 rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] px-4 py-3"
             >
               <span
                 className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${

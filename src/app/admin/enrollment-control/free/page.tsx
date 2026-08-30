@@ -91,9 +91,9 @@ export default function FreeEnrollmentPage() {
       </p>
 
       {/* Auto Enrollment */}
-      <div className="mt-8 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mt-8 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
         <h2 className="text-lg font-bold text-heading">Auto Enrollment</h2>
-        <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-ink/10 bg-dark-950/60 p-4">
+        <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-4">
           <div>
             <p className="font-semibold text-heading">
               Auto Enrollment is{" "}

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: "Classes, exams and materials of a chapter, in order.",
 };
 
-const KINDS: ContentKind[] = ["classes", "exams", "materials"];
+const KINDS: ContentKind[] = ["classes", "exams", "materials", "archive"];
 
 export default async function ChapterContentPage({
   params,

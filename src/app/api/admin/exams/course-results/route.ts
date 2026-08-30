@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/lib/admin";
+import { requirePermission, requireAnyPermission } from "@/lib/admin";
 import { query, isMysqlConfigured } from "@/lib/mysql";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ type Row = {
  * assigned to a course: Exam Name · Total Mark · Obtained · Highest · Merit.
  */
 export async function GET(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "manageResults"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

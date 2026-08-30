@@ -66,7 +66,7 @@ export default function WebsiteSettingsPage() {
   }
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <header>
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
@@ -225,7 +225,7 @@ function HeroBannersSection() {
   }
 
   return (
-    <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+    <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
       <h2 className="text-lg font-bold text-heading">Hero Banners</h2>
       <p className="mt-1 text-xs text-neutral-500">
         Customize the full-width banner slider on the homepage. Each slide can
@@ -238,7 +238,7 @@ function HeroBannersSection() {
         {slides.map((slide) => (
           <div
             key={slide.id}
-            className="overflow-hidden rounded-2xl border border-ink/10 bg-dark-850"
+            className="overflow-hidden rounded-2xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547]"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 px-4 py-3">
               <p className="text-sm font-bold text-heading">
@@ -257,7 +257,7 @@ function HeroBannersSection() {
             </div>
 
             <div className="p-4">
-              <div className="overflow-hidden bg-dark-900">
+              <div className="overflow-hidden bg-white admin-dark:bg-[#112544]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={slide.image}
@@ -278,7 +278,7 @@ function HeroBannersSection() {
                       updateSlide(slide.id, { href: event.target.value })
                     }
                     placeholder="/courses/botany, /exam, /#our-success …"
-                    className="mt-1 w-full rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60"
+                    className="mt-1 w-full rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60"
                   />
                 </label>
 
@@ -323,7 +323,7 @@ function SlideUploader({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <label className="cursor-pointer rounded-xl border border-dashed border-ink/20 bg-dark-900 px-4 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-primary-500/50 hover:text-heading">
+      <label className="cursor-pointer rounded-xl border border-dashed border-ink/20 bg-white admin-dark:bg-[#112544] px-4 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-primary-500/50 hover:text-heading">
         {file ? file.name : "Choose banner image"}
         <input
           ref={inputRef}

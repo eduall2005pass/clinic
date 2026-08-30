@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/lib/admin";
+import { requirePermission, requireAnyPermission } from "@/lib/admin";
 import {
   fetchBatchFilterOptions,
   saveBatchFilterOptions,
@@ -16,7 +16,7 @@ function isScope(value: unknown): value is FilterScope {
 
 /** GET → saved batch filter options (admin view, includes defaults). */
 export async function GET(request: NextRequest) {
-  const admin = await requirePermission(request, "manageCourses");
+  const admin = await requireAnyPermission(request, ["manageCourses", "manageCourseContent"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
 /** PUT → save options for one scope: { scope, options: [{id,label},…] }. */
 export async function PUT(request: NextRequest) {
-  const admin = await requirePermission(request, "manageCourses");
+  const admin = await requireAnyPermission(request, ["manageCourses", "manageCourseContent"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

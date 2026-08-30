@@ -64,8 +64,8 @@ export default function CachePage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Cache</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Cache</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Clear application caches to serve fresh content. Database data is never deleted.
         </p>
       </header>
@@ -77,13 +77,13 @@ export default function CachePage() {
               <ZapIcon className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">{target.label}</span>
-              <span className="block text-xs text-zinc-500">{target.description}</span>
+              <span className="block text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{target.label}</span>
+              <span className="block text-xs text-slate-500">{target.description}</span>
             </span>
           </div>
         ))}
         {targets?.length === 0 && (
-          <p className="px-5 py-4 text-sm text-zinc-500">No clearable caches detected.</p>
+          <p className="px-5 py-4 text-sm text-slate-500">No clearable caches detected.</p>
         )}
       </div>
 
@@ -97,7 +97,7 @@ export default function CachePage() {
           {busy ? "Clearing…" : "Clear cache"}
         </button>
         {clearedAt && (
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-slate-400">
             Last cleared: {new Date(clearedAt).toLocaleString()}
           </span>
         )}

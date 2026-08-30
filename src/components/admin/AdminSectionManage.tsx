@@ -22,7 +22,7 @@ export default function AdminSectionManage({
       <Link
         href={href}
         title={`Manage ${label}`}
-        className="absolute right-3 top-3 z-40 inline-flex items-center gap-1.5 rounded-lg border border-primary-500/50 bg-dark-950/85 px-2.5 py-1 text-[11px] font-bold text-primary-400 opacity-0 shadow-lg shadow-black/30 backdrop-blur transition hover:border-primary-400 hover:text-primary-300 focus:opacity-100 group-hover:opacity-100 sm:right-5 sm:top-5"
+        className="absolute right-3 top-3 z-40 inline-flex items-center gap-1.5 rounded-lg border border-primary-500/50 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/85 px-2.5 py-1 text-[11px] font-bold text-primary-400 opacity-0 shadow-lg shadow-black/30 backdrop-blur transition hover:border-primary-400 hover:text-primary-300 focus:opacity-100 group-hover:opacity-100 sm:right-5 sm:top-5"
       >
         <svg
           viewBox="0 0 24 24"

@@ -113,11 +113,13 @@ function CoursesViewInner({
   categories,
   sscFilterOptions,
   hscFilterOptions,
+  counts,
 }: {
   courses: Course[];
   categories: CategoryRecord[];
   sscFilterOptions?: BatchFilterOption[];
   hscFilterOptions?: BatchFilterOption[];
+  counts?: Record<string, number>;
 }) {
   // DB-managed filters (Admin -> Course Control -> Filter) with built-in fallback.
   const optionsFor = (scope: "ssc" | "hsc") =>
@@ -196,14 +198,16 @@ function CoursesViewInner({
     );
   }
 
-  return <DefaultGrid categories={categories} />;
+  return <DefaultGrid categories={categories} counts={counts} />;
 }
 
 
 function DefaultGrid({
   categories,
+  counts,
 }: {
   categories: CategoryRecord[];
+  counts?: Record<string, number>;
 }) {
   return (
     <main className="flex-1 bg-dark-950">
@@ -231,6 +235,9 @@ function DefaultGrid({
               description={category.description ?? ""}
               image={category.imageUrl}
               icon={iconForSlug(category.slug)}
+              categoryId={category.id}
+              categorySlug={category.slug}
+              initialCount={counts?.[category.id] ?? 0}
             />
           ))}
         </div>
@@ -244,19 +251,22 @@ export default function CoursesView({
   categories,
   sscFilterOptions,
   hscFilterOptions,
+  counts,
 }: {
   courses: Course[];
   categories: CategoryRecord[];
   sscFilterOptions?: BatchFilterOption[];
   hscFilterOptions?: BatchFilterOption[];
+  counts?: Record<string, number>;
 }) {
   return (
-    <Suspense fallback={<DefaultGrid categories={categories} />}>
+    <Suspense fallback={<DefaultGrid categories={categories} counts={counts} />}>
       <CoursesViewInner
         courses={courses}
         categories={categories}
         sscFilterOptions={sscFilterOptions}
         hscFilterOptions={hscFilterOptions}
+        counts={counts}
       />
     </Suspense>
   );

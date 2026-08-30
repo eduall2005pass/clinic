@@ -7,12 +7,13 @@ import { useAuth } from "@/lib/auth-context";
 import { useAdminGate } from "@/components/admin/admin-ui";
 import { AccessLoading } from "@/components/auth/AccessGuard";
 import AdminToastProvider from "@/components/admin/AdminToastProvider";
-import ThemeToggle from "@/components/ThemeToggle";
+import { AdminThemeProvider, useAdminTheme } from "@/components/admin/AdminThemeProvider";
+import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
 
 /**
- * Website-styled Admin shell — same header/hamburger pattern as the Main
- * Website, with EXACTLY 6 navigation options. Every option opens a
- * dedicated management page that follows the matching website flow.
+ * Website-styled Admin shell — Premium Navy Blue Smart Theme
+ * Deep Navy sidebar/drawer, White/Light-Blue header, cohesive Smart Cards.
+ * Every option opens a dedicated management page — functionality unchanged.
  */
 const ADMIN_NAV = [
   { label: "Homepage", href: "/admin" },
@@ -30,15 +31,47 @@ const ADMIN_NAV = [
   { label: "Admin Center", href: "/admin/admin-center" },
 ] as const;
 
+// Flexible RBAC mapping — mirrors src/lib/administration.ts ADMIN_CONTROL_PERMISSIONS
+// Client-safe duplicate to avoid pulling server MySQL deps into the bundle.
+const ADMIN_CONTROL_PERMISSIONS: Record<string, readonly string[]> = {
+  "/admin/website-information": ["manageContent"],
+  "/admin/enrollment-control": ["manageStudents", "manageCourses"],
+  "/admin/home-control": ["manageContent"],
+  "/admin/course-control": ["manageCourses"],
+  "/admin/course-content-control": ["manageCourseContent", "manageCourses"],
+  "/admin/public-exam-control": ["managePublicExam", "manageExams"],
+  "/admin/qa-control": ["manageQa", "manageContent"],
+  "/admin/dashboard-control": ["manageSystem", "manageContent"],
+  "/admin/student-control": ["manageStudents"],
+  "/admin/result-control": ["manageResults", "manageExams"],
+  "/admin/notification-control": ["manageContent", "manageSystem"],
+  "/admin/admin-center": ["manageAdmins"],
+};
+
+function hasControlAccess(
+  role: string | null,
+  permissions: string[],
+  href: string,
+): boolean {
+  // Temporary: all three levels have identical access.
+  if (role === "admin" || role === "moderator" || role === "teacher") return true;
+  if (href === "/admin") return true;
+  const required = ADMIN_CONTROL_PERMISSIONS[href];
+  if (!required) return true;
+  return required.some((perm) => permissions.includes(perm));
+}
+
 export default function WebsiteAdminShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <AdminToastProvider>
-      <WebsiteAdminShellInner>{children}</WebsiteAdminShellInner>
-    </AdminToastProvider>
+    <AdminThemeProvider>
+      <AdminToastProvider>
+        <WebsiteAdminShellInner>{children}</WebsiteAdminShellInner>
+      </AdminToastProvider>
+    </AdminThemeProvider>
   );
 }
 
@@ -52,31 +85,52 @@ function WebsiteAdminShellInner({
   const gate = useAdminGate();
   const { user, logout: signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-
+  const { theme } = useAdminTheme();
 
   if (!gate.ready) {
     return gate.denied ? (
-      <main className="flex min-h-screen items-center justify-center bg-dark-950 px-4">
-        <div className="max-w-md rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center">
-          <p className="font-bold text-yellow-300">Administrators only</p>
-          <p className="mt-1 text-sm text-yellow-200/70">
+      <div data-admin-theme={theme} className="flex min-h-screen items-center justify-center bg-[#f1f5f9] px-4 admin-dark:bg-[#0a162e]">
+        <div className="max-w-md rounded-2xl border border-[#dbeafe] bg-white p-8 text-center shadow-lg admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+          <p className="font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Administrators only</p>
+          <p className="mt-1 text-sm text-slate-500 admin-dark:text-[#8da0c0]">
             The Admin Panel is restricted to authorized administrators.
           </p>
           <Link
             href="/"
-            className="mt-6 inline-block rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white transition hover:bg-primary-700"
+            className="mt-6 inline-block rounded-xl bg-[#1a3a78] px-6 py-3 font-semibold text-white shadow-md transition hover:bg-[#123060] admin-dark:bg-[#234e9f] admin-dark:hover:bg-[#1a3a78]"
           >
             Back to Website
           </Link>
         </div>
-      </main>
+      </div>
     ) : (
       <AccessLoading label="Checking administrator access…" />
     );
   }
 
+  const visibleNav = ADMIN_NAV.filter((item) =>
+    hasControlAccess(gate.role, gate.permissions, item.href),
+  );
+
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+
+  // Route-level RBAC: block direct navigation to controls the role cannot access
+  // Temporary: all three levels have identical access.
+  const isDeniedByRole = (() => {
+    if (gate.role === "admin" || gate.role === "moderator" || gate.role === "teacher") return false;
+    if (pathname === "/admin") return false;
+    // Longest prefix match among ADMIN_CONTROL_PERMISSIONS
+    let matched: string | null = null;
+    for (const href of Object.keys(ADMIN_CONTROL_PERMISSIONS)) {
+      if (pathname === href || pathname.startsWith(href + "/")) {
+        if (!matched || href.length > matched.length) matched = href;
+      }
+    }
+    if (!matched) return false;
+    const required = ADMIN_CONTROL_PERMISSIONS[matched];
+    return !required.some((perm) => gate.permissions.includes(perm));
+  })();
 
   async function handleLogout() {
     try {
@@ -95,18 +149,21 @@ function WebsiteAdminShellInner({
   }
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden bg-dark-950">
-      {/* Site-style sticky header */}
-      <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:gap-3">
+    <div
+      data-admin-theme={theme}
+      className="flex min-h-screen flex-col overflow-x-hidden bg-[#f1f5f9] admin-dark:bg-[#0a162e]"
+    >
+      {/* Premium Navy Header — clean white / light-blue surface */}
+      <header className="sticky top-0 z-50 border-b border-[#dbeafe] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/95">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 xl:gap-3">
           <div className="flex items-center gap-3">
-            {/* Hamburger — exactly 6 options inside */}
+            {/* Hamburger — opens left-side drawer on all screen sizes (laptop, tablet, mobile and desktop) */}
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-ink/10 bg-ink/5 text-neutral-300 transition hover:border-primary-500/50 hover:text-heading lg:hidden"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] focus:outline-none focus:ring-2 focus:ring-[#2f6bce]/20 admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
             >
               {menuOpen ? (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round">
@@ -118,27 +175,34 @@ function WebsiteAdminShellInner({
                 </svg>
               )}
             </button>
-            <Link href="/admin" aria-label="MediSpark Admin">
-              <span className="whitespace-nowrap text-base font-extrabold tracking-tight text-heading xl:text-lg">
-                Medi<span className="text-primary-500">Spark</span>
-                <span className="ml-2 rounded-md border border-primary-500/40 bg-primary-600/10 px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wider text-primary-400">
+            <Link href="/admin" aria-label="MediSpark Admin" className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0b1e3a] text-white shadow-md admin-dark:bg-[#234e9f]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M3 12h18" />
+                  <path d="M12 3a13.5 13.5 0 0 1 0 18a13.5 13.5 0 0 1 0-18Z" />
+                </svg>
+              </span>
+              <span className="whitespace-nowrap text-base font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white xl:text-lg">
+                Medi<span className="text-[#234e9f] admin-dark:text-[#93c5fd]">Spark</span>
+                <span className="ml-2 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wider text-[#1a3a78] admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd]">
                   Admin
                 </span>
               </span>
             </Link>
           </div>
 
-          {/* Desktop nav — exactly 6 options */}
-          <ul className="hidden items-center gap-1 lg:flex">
-            {ADMIN_NAV.map((item) => (
+          {/* Desktop nav — cohesive navy active highlight (xl+ only) */}
+          <ul className="hidden items-center gap-1 xl:flex">
+            {visibleNav.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   aria-current={isActive(item.href) ? "page" : undefined}
-                  className={`rounded-lg px-2.5 py-2 text-[13px] font-semibold transition xl:px-3.5 xl:text-sm ${
+                  className={`rounded-xl px-2.5 py-2 text-[13px] font-semibold transition xl:px-3 xl:text-sm ${
                     isActive(item.href)
-                      ? "bg-primary-600/15 text-primary-300"
-                      : "text-neutral-400 hover:text-heading"
+                      ? "bg-[#1a3a78] text-white shadow-md shadow-[#0b1e3a]/15 admin-dark:bg-[#234e9f] admin-dark:text-white"
+                      : "text-slate-600 hover:bg-[#eff6ff] hover:text-[#1a3a78] admin-dark:text-[#8da0c0] admin-dark:hover:bg-[#132a4f] admin-dark:hover:text-[#93c5fd]"
                   }`}
                 >
                   {item.label}
@@ -148,37 +212,77 @@ function WebsiteAdminShellInner({
           </ul>
 
           <div className="flex shrink-0 items-center gap-2">
-            <ThemeToggle />
+            <AdminThemeToggle />
             <Link
               href="/"
-              className="hidden whitespace-nowrap rounded-xl border border-ink/15 bg-ink/5 px-3 py-2 text-[13px] font-semibold text-heading transition hover:border-primary-500/60 sm:inline-block xl:px-3.5 xl:text-sm"
+              className="hidden whitespace-nowrap rounded-xl border border-[#dbeafe] bg-[#f8fbff] px-3 py-2 text-[13px] font-semibold text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] sm:inline-block xl:px-3.5 xl:text-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
             >
               View Website
             </Link>
             <button
               type="button"
               onClick={() => void handleLogout()}
-              className="whitespace-nowrap rounded-xl bg-primary-600 px-3 py-2 text-[13px] font-semibold text-white shadow-md shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] xl:px-3.5 xl:text-sm"
+              className="whitespace-nowrap rounded-xl bg-[#1a3a78] px-3 py-2 text-[13px] font-semibold text-white shadow-md shadow-[#0b1e3a]/20 transition hover:bg-[#123060] active:scale-[0.98] xl:px-3.5 xl:text-sm admin-dark:bg-[#234e9f] admin-dark:hover:bg-[#1a3a78]"
             >
               Logout
             </button>
           </div>
         </nav>
 
-        {/* Mobile drawer — exactly the same 6 options */}
-        {menuOpen && (
-          <div className="border-t border-ink/10 bg-dark-950 lg:hidden">
-            <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3">
-              {ADMIN_NAV.map((item) => (
+      </header>
+
+      {/* Left-side navigation drawer — rendered outside the sticky header so it can
+          cover the full viewport as a proper side drawer (parent backdrop-filter
+          would otherwise trap position:fixed). Slides in from the LEFT, part-width
+          only (280–340px), never full-screen. */}
+      <div
+        aria-hidden={!menuOpen}
+        className={`fixed inset-0 z-[60] ${menuOpen ? "" : "pointer-events-none"}`}
+      >
+        {/* Subtle overlay — keeps main page visible beside the drawer; click to close */}
+        <button
+          type="button"
+          aria-label="Close menu"
+          tabIndex={menuOpen ? 0 : -1}
+          onClick={() => setMenuOpen(false)}
+          className={`absolute inset-0 bg-black/30 backdrop-blur-[1px] transition-opacity duration-300 ${
+            menuOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        {/* Drawer panel — fixed width on desktop/tablet, wider-but-bounded on mobile */}
+        <aside
+          role="dialog"
+          aria-modal="false"
+          aria-label="Admin navigation"
+          className={`absolute left-0 top-0 z-10 flex h-full w-[85vw] max-w-[340px] flex-col overflow-y-auto border-r border-[#0f2a4d] bg-[#0b1e3a] shadow-2xl transition-transform duration-300 ease-out ${
+            menuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4">
+            <span className="text-sm font-extrabold tracking-tight text-white">Menu</span>
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setMenuOpen(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round">
+                <path d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <nav className="flex-1 px-3 py-4">
+            <ul className="space-y-1">
+              {visibleNav.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
                     onClick={() => setMenuOpen(false)}
                     aria-current={isActive(item.href) ? "page" : undefined}
-                    className={`block rounded-xl px-4 py-3 text-sm font-bold transition ${
+                    className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
                       isActive(item.href)
-                        ? "bg-primary-600/15 text-primary-300"
-                        : "text-neutral-300 hover:bg-ink/5 hover:text-heading"
+                        ? "bg-[#234e9f] text-white shadow-md"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white"
                     }`}
                   >
                     {item.label}
@@ -188,20 +292,41 @@ function WebsiteAdminShellInner({
               <li>
                 <Link
                   href="/"
-                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-neutral-400 hover:text-heading"
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#93c5fd] hover:bg-white/10 hover:text-white"
                 >
                   View Website →
                 </Link>
               </li>
             </ul>
+          </nav>
+        </aside>
+      </div>
+
+      <main className="flex-1">
+        {isDeniedByRole ? (
+          <div className="mx-auto max-w-lg px-4 py-16 text-center sm:px-6">
+            <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-8 admin-dark:border-yellow-500/20 admin-dark:bg-yellow-500/10">
+              <p className="text-lg font-extrabold text-yellow-700 admin-dark:text-yellow-300">Access denied for your role</p>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600 admin-dark:text-slate-400">
+                Your current role (<span className="font-bold capitalize">{gate.role ?? "unknown"}</span>) does not have permission to access{" "}
+                <span className="font-mono text-xs font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">{pathname}</span>. Teacher accounts are limited to Course Content, Public Exam, Q&A and Result controls.
+              </p>
+              <Link
+                href="/admin"
+                className="mt-6 inline-block rounded-xl bg-[#1a3a78] px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-[#123060] admin-dark:bg-[#234e9f]"
+              >
+                Back to Admin Home
+              </Link>
+            </div>
           </div>
+        ) : (
+          children
         )}
-      </header>
+      </main>
 
-      <main className="flex-1">{children}</main>
-
-      <footer className="border-t border-ink/10 bg-dark-950 px-4 py-6 text-center text-xs text-neutral-600 sm:px-6">
-        MediSpark Admin Panel — single source of truth for the live website.
+      <footer className="border-t border-[#dbeafe] bg-white px-4 py-6 text-center text-xs font-medium text-slate-500 sm:px-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#8da0c0]">
+        MediSpark Admin Panel — Premium Navy Smart Dashboard
       </footer>
     </div>
   );

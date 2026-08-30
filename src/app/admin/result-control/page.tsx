@@ -112,7 +112,7 @@ export default function ResultControlPage() {
       </p>
 
       {/* Public exam results */}
-      <div className="mt-8 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mt-8 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
         <h2 className="text-lg font-bold text-heading">Public Exam Result</h2>
         <p className="mt-1 text-xs text-neutral-400">
           All submitted public exam results with scores and answer sheets.
@@ -126,7 +126,7 @@ export default function ResultControlPage() {
       </div>
 
       {/* Course exam result flow */}
-      <div className="mt-6 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
         <h2 className="text-lg font-bold text-heading">Course Exam Result</h2>
         <p className="mt-1 text-xs text-neutral-500">
           Flow: Category → Course → Result Sheet
@@ -140,7 +140,7 @@ export default function ResultControlPage() {
             <select
               value={categoryId}
               onChange={(event) => selectCategory(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+              className="mt-1 w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
             >
               <option value="">Select a category…</option>
               {categories.map((category) => (
@@ -172,7 +172,7 @@ export default function ResultControlPage() {
                 value={courseSlug}
                 onChange={(event) => setCourseSlug(event.target.value)}
                 disabled={!categoryId || courses.length === 0}
-                className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-850 px-3 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60 disabled:opacity-50"
+                className="mt-1 w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60 disabled:opacity-50"
               >
                 <option value="">
                   {categoryId ? "Select a course…" : "Select a category first…"}

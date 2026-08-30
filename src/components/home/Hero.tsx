@@ -27,7 +27,14 @@ export default function Hero({
       <div className="relative mx-auto max-w-3xl px-4 pb-20 pt-10 text-center sm:px-6 sm:pb-28 sm:pt-16">
         <div className="animate-fade-up">
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-heading sm:text-5xl xl:text-6xl">
-            {hero.headline}
+            {hero.headline
+              .split("\n")
+              .filter((line) => line.trim().length > 0)
+              .map((line, index) => (
+                <span key={index} className="block">
+                  {line}
+                </span>
+              ))}
           </h1>
           {hero.description && (
             <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-neutral-400 whitespace-pre-line">

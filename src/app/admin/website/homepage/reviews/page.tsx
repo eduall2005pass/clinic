@@ -59,7 +59,7 @@ function Stars({
           className={`text-xl leading-none transition ${
             star <= value
               ? "text-primary-500"
-              : "text-zinc-300 admin-dark:text-zinc-700"
+              : "text-zinc-300 admin-dark:text-slate-700"
           } ${onChange && !disabled ? "hover:scale-110" : "cursor-default"}`}
         >
           ★
@@ -437,18 +437,18 @@ export default function ReviewsManagementPage() {
   }
 
   const cardClass =
-    "rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900";
+    "rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition-colors duration-300 sm:p-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]";
   const inputClass =
-    "mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-primary-500/60 focus:bg-white admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-100 disabled:opacity-60";
+    "mt-1 w-full rounded-xl border border-neutral-200 bg-[#f8fbff] px-3 py-2 text-sm text-[#0b1e3a] outline-none transition placeholder:text-slate-400 focus:border-[#2f6bce]/60 focus:bg-white admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100 disabled:opacity-60";
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Page header */}
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">
           Reviews Section
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           Add, edit, approve or hide student reviews shown on the homepage.
           Approved reviews go live immediately after saving.
         </p>
@@ -456,13 +456,13 @@ export default function ReviewsManagementPage() {
 
       {/* Add review */}
       <div className={`${cardClass} mt-6`}>
-        <h3 className="text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
           Add New Review
         </h3>
         <div className="mt-4 grid gap-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Student Name *</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Student Name *</span>
               <input
                 type="text"
                 value={addForm.studentName}
@@ -472,7 +472,7 @@ export default function ReviewsManagementPage() {
               />
             </label>
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Rating *</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Rating *</span>
               <div className="mt-2">
                 <Stars
                   value={addForm.rating}
@@ -482,7 +482,7 @@ export default function ReviewsManagementPage() {
             </label>
           </div>
           <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Review Text *</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Review Text *</span>
             <textarea
               value={addForm.text}
               rows={3}
@@ -493,7 +493,7 @@ export default function ReviewsManagementPage() {
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Course (optional)</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Course (optional)</span>
               <input
                 type="text"
                 value={addForm.courseName}
@@ -504,7 +504,7 @@ export default function ReviewsManagementPage() {
               />
             </label>
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Batch (optional)</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Batch (optional)</span>
               <input
                 type="text"
                 value={addForm.batchLabel}
@@ -516,7 +516,7 @@ export default function ReviewsManagementPage() {
             </label>
           </div>
           <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Student Photo</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Student Photo</span>
             <input
               ref={addPhotoRef}
               type="file"
@@ -547,14 +547,14 @@ export default function ReviewsManagementPage() {
 
       {/* Existing reviews */}
       <div className="mt-8 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
           All Reviews ({reviews.length})
         </h3>
         <button
           type="button"
           onClick={handleSaveOrder}
           disabled={saving}
-          className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:opacity-60 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+          className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:opacity-60 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
         >
           {saving ? "Saving…" : "Save Order"}
         </button>
@@ -563,7 +563,7 @@ export default function ReviewsManagementPage() {
       <ul className="mt-3 space-y-3">
         {reviews.length === 0 && (
           <li className={`${cardClass}`}>
-            <p className="py-4 text-center text-sm font-semibold text-zinc-500">
+            <p className="py-4 text-center text-sm font-semibold text-slate-500">
               No reviews yet. Add the first one above.
             </p>
           </li>
@@ -587,10 +587,10 @@ export default function ReviewsManagementPage() {
                   className="h-12 w-12 shrink-0 rounded-full border border-neutral-200 object-cover admin-dark:border-zinc-700"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                  <p className="truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                     {review.studentName}
                   </p>
-                  <p className="truncate text-xs text-zinc-500">
+                  <p className="truncate text-xs text-slate-500">
                     {[review.courseName, review.batchLabel].filter(Boolean).join(" · ") || "—"}
                   </p>
                 </div>
@@ -601,7 +601,7 @@ export default function ReviewsManagementPage() {
                     aria-label={`Move review ${index + 1} up`}
                     onClick={() => moveReview(index, -1)}
                     disabled={index === 0}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▲
                   </button>
@@ -610,7 +610,7 @@ export default function ReviewsManagementPage() {
                     aria-label={`Move review ${index + 1} down`}
                     onClick={() => moveReview(index, 1)}
                     disabled={index === reviews.length - 1}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-neutral-200 bg-white text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:bg-zinc-900 admin-dark:text-zinc-300"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 text-xs text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:cursor-not-allowed disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] admin-dark:text-zinc-300"
                   >
                     ▼
                   </button>
@@ -621,7 +621,7 @@ export default function ReviewsManagementPage() {
                     className={`ml-1 rounded-full border px-3 py-1 text-[11px] font-bold transition ${
                       review.isPublished
                         ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 admin-dark:text-emerald-400"
-                        : "border-zinc-300 bg-zinc-100 text-zinc-500 hover:bg-zinc-200 admin-dark:border-zinc-700 admin-dark:bg-zinc-800 admin-dark:text-zinc-400"
+                        : "border-zinc-300 bg-zinc-100 text-slate-500 hover:bg-zinc-200 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-slate-400"
                     }`}
                   >
                     {review.isPublished ? "Approved" : "Hidden"}
@@ -637,7 +637,7 @@ export default function ReviewsManagementPage() {
                 <div className="mt-3 grid gap-3">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="block">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Student Name</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Student Name</span>
                       <input
                         type="text"
                         value={draft.studentName ?? ""}
@@ -647,7 +647,7 @@ export default function ReviewsManagementPage() {
                       />
                     </label>
                     <label className="block">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Rating</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Rating</span>
                       <div className="mt-2">
                         <Stars
                           value={draft.rating ?? review.rating}
@@ -657,7 +657,7 @@ export default function ReviewsManagementPage() {
                     </label>
                   </div>
                   <label className="block">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Review Text</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Review Text</span>
                     <textarea
                       value={draft.text ?? ""}
                       rows={3}
@@ -668,7 +668,7 @@ export default function ReviewsManagementPage() {
                   </label>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="block">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Course</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Course</span>
                       <input
                         type="text"
                         value={draft.courseName ?? ""}
@@ -678,7 +678,7 @@ export default function ReviewsManagementPage() {
                       />
                     </label>
                     <label className="block">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Batch</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Batch</span>
                       <input
                         type="text"
                         value={draft.batchLabel ?? ""}
@@ -689,7 +689,7 @@ export default function ReviewsManagementPage() {
                     </label>
                   </div>
                   <label className="block">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Replace Photo</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Replace Photo</span>
                     <input
                       ref={(el) => {
                         editPhotoRefs.current[review.id] = el;
@@ -714,7 +714,7 @@ export default function ReviewsManagementPage() {
                     type="button"
                     onClick={() => startEdit(review)}
                     disabled={busy}
-                    className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-primary-600 disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
+                    className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-primary-500/50 hover:text-[#1a3a78] disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:text-zinc-300"
                   >
                     Edit
                   </button>
@@ -732,7 +732,7 @@ export default function ReviewsManagementPage() {
                       type="button"
                       onClick={() => setEditingId(null)}
                       disabled={busy}
-                      className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:bg-neutral-50 disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:text-zinc-300 admin-dark:hover:bg-zinc-800"
+                      className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:bg-[#f8fbff] disabled:opacity-40 admin-dark:border-zinc-700 admin-dark:text-zinc-300 admin-dark:hover:bg-zinc-800"
                     >
                       Cancel
                     </button>

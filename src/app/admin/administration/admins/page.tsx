@@ -25,27 +25,21 @@ type AdminAccount = {
 };
 
 const ROLES = [
-  "super-admin",
   "admin",
-  "content-manager",
-  "course-manager",
-  "exam-manager",
+  "moderator",
+  "teacher",
 ] as const;
 
 const ROLE_LABELS: Record<string, string> = {
-  "super-admin": "Super Admin",
   admin: "Admin",
-  "content-manager": "Content Manager",
-  "course-manager": "Course Manager",
-  "exam-manager": "Exam Manager",
+  moderator: "Moderator",
+  teacher: "Teacher",
 };
 
 const roleBadgeClass: Record<string, string> = {
-  "super-admin": "bg-violet-100 text-violet-800 admin-dark:bg-violet-500/15 admin-dark:text-violet-300",
   admin: "bg-sky-100 text-sky-800 admin-dark:bg-sky-500/15 admin-dark:text-sky-300",
-  "content-manager": "bg-emerald-100 text-emerald-800 admin-dark:bg-emerald-500/15 admin-dark:text-emerald-300",
-  "course-manager": "bg-indigo-100 text-indigo-800 admin-dark:bg-indigo-500/15 admin-dark:text-indigo-300",
-  "exam-manager": "bg-amber-100 text-amber-800 admin-dark:bg-amber-500/15 admin-dark:text-amber-300",
+  moderator: "bg-emerald-100 text-emerald-800 admin-dark:bg-emerald-500/15 admin-dark:text-emerald-300",
+  teacher: "bg-amber-100 text-amber-800 admin-dark:bg-amber-500/15 admin-dark:text-amber-300",
 };
 
 export default function AdminsPage() {
@@ -137,14 +131,14 @@ export default function AdminsPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Admin Management</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Admin Management</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           The Firebase account must already exist (signed in once). At least one authorized administrator must always remain.
         </p>
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">Add admin</h3>
+        <h3 className="text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">Add admin</h3>
         <form
           className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1fr_auto_auto]"
           onSubmit={(event) => {
@@ -177,7 +171,7 @@ export default function AdminsPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                    <span className="truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                       {admin.displayName ?? "—"}{isSelf && " (you)"}
                     </span>
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${roleBadgeClass[role]}`}>{ROLE_LABELS[role] ?? role}</span>
@@ -187,7 +181,7 @@ export default function AdminsPage() {
                       </span>
                     )}
                   </span>
-                  <span className="block truncate text-xs text-zinc-500">{admin.email}</span>
+                  <span className="block truncate text-xs text-slate-500">{admin.email}</span>
                 </span>
                 <label className="sr-only" htmlFor={`role-${admin.uid}`}>Role for {admin.email}</label>
                 <select

@@ -20,7 +20,7 @@ export default function AdminPlaceholder({
     <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       <AdminPageHeader title={title} description={description} />
 
-      <div className="mt-8 rounded-2xl border border-dashed border-neutral-300 bg-white p-8 transition-colors duration-300 sm:p-12 admin-dark:border-zinc-800 admin-dark:bg-zinc-900">
+      <div className="mt-8 rounded-2xl border border-dashed border-[#bfdbfe] bg-white p-8 shadow-sm shadow-[#0b1e3a]/5 transition-colors duration-300 sm:p-12 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
         <AdminEmptyState
           icon={Icon ? <Icon className="h-7 w-7" /> : undefined}
           title="Coming Soon"

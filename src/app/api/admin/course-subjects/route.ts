@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/lib/admin";
+import { requirePermission, requireAnyPermission } from "@/lib/admin";
 import { logAdminAction } from "@/lib/administration";
 import {
   deleteTaxonomyItem,
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 /** GET → { subjects: [{ id, name, isActive, assignedCourseSlugs }], courses: [{ slug, name }] }. */
 export async function GET(request: NextRequest) {
-  const admin = await requirePermission(request, "manageCourses");
+  const admin = await requireAnyPermission(request, ["manageCourses", "manageCourseContent"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
  * Handles create, rename, enable/disable and display order in one shot.
  */
 export async function PUT(request: NextRequest) {
-  const admin = await requirePermission(request, "manageCourses");
+  const admin = await requireAnyPermission(request, ["manageCourses", "manageCourseContent"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -78,7 +78,7 @@ export async function PUT(request: NextRequest) {
 
 /** PATCH — single-subject edit/assign: { id, name?, isActive?, assignedCourseSlugs? }. */
 export async function PATCH(request: NextRequest) {
-  const admin = await requirePermission(request, "manageCourses");
+  const admin = await requireAnyPermission(request, ["manageCourses", "manageCourseContent"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -104,7 +104,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const admin = await requirePermission(request, "manageCourses");
+  const admin = await requireAnyPermission(request, ["manageCourses", "manageCourseContent"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

@@ -36,26 +36,26 @@ export default function StoragePage() {
   return (
     <section className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Storage</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">MySQL uploads table usage.</p>
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Storage</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">MySQL uploads table usage.</p>
       </header>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         <div className={`${cardClass} p-5`}>
-          <p className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">Files</p>
-          <p className="mt-1 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Files</p>
+          <p className="mt-1 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
             {(storage?.files ?? 0).toLocaleString("en-IN")}
           </p>
         </div>
         <div className={`${cardClass} p-5`}>
-          <p className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">Total size</p>
-          <p className="mt-1 text-2xl font-extrabold text-zinc-900 admin-dark:text-zinc-100">
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Total size</p>
+          <p className="mt-1 text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
             {formatBytes(storage?.bytes ?? 0)}
           </p>
         </div>
       </div>
 
-      <p className={`${cardClass} mt-4 p-4 text-xs leading-relaxed text-zinc-500`}>
+      <p className={`${cardClass} mt-4 p-4 text-xs leading-relaxed text-slate-500`}>
         All uploads (logos, favicons, banners, course images, profile pictures) are stored as LONGBLOB rows in the
         MySQL `uploads` table and served through /api/files/[id]. Manage individual files from Content → Media Library.
       </p>

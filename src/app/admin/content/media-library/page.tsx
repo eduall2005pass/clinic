@@ -130,8 +130,8 @@ export default function MediaLibraryPage() {
     <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Media Library</h2>
-          <p className="mt-1.5 max-w-xl text-sm text-zinc-500 admin-dark:text-zinc-400">
+          <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Media Library</h2>
+          <p className="mt-1.5 max-w-xl text-sm text-slate-500 admin-dark:text-slate-400">
             Centralized library for every uploaded image — upload, search,
             copy URLs, inspect file information and delete unused files.
             Files live in MySQL and are served via /api/files/[id].
@@ -171,31 +171,31 @@ export default function MediaLibraryPage() {
       )}
 
       {media === null ? (
-        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>Loading…</p>
+        <p className={`${cardClass} mt-5 p-6 text-center text-sm text-slate-500`}>Loading…</p>
       ) : filtered.length === 0 ? (
-        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-zinc-500`}>No files found.</p>
+        <p className={`${cardClass} mt-5 p-8 text-center text-sm text-slate-500`}>No files found.</p>
       ) : (
         <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((item) => (
             <li key={item.id} className={`${cardClass} overflow-hidden`}>
               {item.mimeType.startsWith("image/") ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.url} alt={item.fileName} className="h-28 w-full bg-neutral-100 object-cover admin-dark:bg-zinc-800" />
+                <img src={item.url} alt={item.fileName} className="h-28 w-full bg-[#f1f5f9] object-cover admin-dark:bg-[#132a4f]" />
               ) : (
-                <div className="flex h-28 items-center justify-center bg-neutral-100 text-xs font-bold text-zinc-400 admin-dark:bg-zinc-800">
+                <div className="flex h-28 items-center justify-center bg-[#f1f5f9] text-xs font-bold text-slate-400 admin-dark:bg-[#132a4f]">
                   {item.mimeType.split("/")[1]?.toUpperCase() || "FILE"}
                 </div>
               )}
               <div className="p-3">
-                <p className="truncate text-xs font-bold text-zinc-900 admin-dark:text-zinc-100">{item.fileName}</p>
-                <p className="text-[10px] text-zinc-400">{formatBytes(item.size)} · {new Date(item.createdAt).toLocaleDateString()}</p>
+                <p className="truncate text-xs font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{item.fileName}</p>
+                <p className="text-[10px] text-slate-400">{formatBytes(item.size)} · {new Date(item.createdAt).toLocaleDateString()}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <button type="button" onClick={() => copyUrl(item.url)}
-                    className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700">
+                    className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700">
                     Copy URL
                   </button>
                   <button type="button" onClick={() => setInfoItem(item)}
-                    className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-zinc-500 transition hover:border-primary-500/60 hover:text-primary-600 admin-dark:border-zinc-700">
+                    className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700">
                     Info
                   </button>
                   <button type="button" onClick={() => void remove(item.id)}
@@ -213,10 +213,10 @@ export default function MediaLibraryPage() {
       {infoItem && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true">
           <div className={`${cardClass} w-full max-w-md p-5 sm:p-6`}>
-            <h3 className="text-base font-extrabold text-zinc-900 admin-dark:text-zinc-100">File Information</h3>
+            <h3 className="text-base font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">File Information</h3>
             {infoItem.mimeType.startsWith("image/") && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={infoItem.url} alt={infoItem.fileName} className="mt-3 max-h-48 w-full rounded-xl bg-neutral-100 object-contain admin-dark:bg-zinc-800" />
+              <img src={infoItem.url} alt={infoItem.fileName} className="mt-3 max-h-48 w-full rounded-xl bg-[#f1f5f9] object-contain admin-dark:bg-[#132a4f]" />
             )}
             <dl className="mt-4 space-y-2 text-xs">
               {[
@@ -228,8 +228,8 @@ export default function MediaLibraryPage() {
                 ["URL", infoItem.url],
               ].map(([label, value]) => (
                 <div key={label} className="flex gap-2">
-                  <dt className="w-20 shrink-0 font-bold uppercase tracking-wide text-zinc-400">{label}</dt>
-                  <dd className="min-w-0 break-all text-zinc-700 admin-dark:text-zinc-300">{value}</dd>
+                  <dt className="w-20 shrink-0 font-bold uppercase tracking-wide text-slate-400">{label}</dt>
+                  <dd className="min-w-0 break-all text-slate-700 admin-dark:text-zinc-300">{value}</dd>
                 </div>
               ))}
             </dl>

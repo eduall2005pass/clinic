@@ -46,10 +46,10 @@ function StatusCard({
   const unknown = state !== true && state !== false;
   return (
     <div className={`${cardClass} p-5`}>
-      <p className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">{label}</p>
+      <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{label}</p>
       <p
         className={`mt-1 flex items-center gap-2 text-lg font-extrabold ${
-          unknown ? "text-zinc-500" : online ? "text-emerald-600" : "text-red-500"
+          unknown ? "text-slate-500" : online ? "text-emerald-600" : "text-red-500"
         }`}
       >
         <span
@@ -59,7 +59,7 @@ function StatusCard({
         />
         {unknown ? "Unknown" : online ? "Operational" : "Down"}
       </p>
-      {detail && <div className="mt-1 text-xs leading-relaxed text-zinc-400">{detail}</div>}
+      {detail && <div className="mt-1 text-xs leading-relaxed text-slate-400">{detail}</div>}
     </div>
   );
 }
@@ -108,8 +108,8 @@ export default function StatusPage() {
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">System Status</h2>
-          <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Live health checks of the platform backend and services.</p>
+          <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">System Status</h2>
+          <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">Live health checks of the platform backend and services.</p>
         </div>
         <button type="button" onClick={() => void load()} disabled={refreshing} className={buttonSecondaryClass}>
           {refreshing ? "Checking…" : "↻ Refresh"}
@@ -171,11 +171,11 @@ export default function StatusPage() {
 
       {status && (
         <div className={`${cardClass} mt-4 divide-y divide-neutral-100 p-0 admin-dark:divide-zinc-800`}>
-          <p className="px-5 pt-4 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400">Database records</p>
+          <p className="px-5 pt-4 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Database records</p>
           {Object.entries(COUNT_LABELS).map(([key, label]) => (
             <div key={key} className="flex items-center justify-between px-5 py-3">
               <span className="text-sm font-semibold text-zinc-600 admin-dark:text-zinc-300">{label}</span>
-              <span className="text-sm font-extrabold tabular-nums text-zinc-900 admin-dark:text-zinc-100">
+              <span className="text-sm font-extrabold tabular-nums text-[#0b1e3a] admin-dark:text-zinc-100">
                 {(status.counts[key] ?? 0).toLocaleString("en-IN")}
               </span>
             </div>

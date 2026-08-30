@@ -65,7 +65,6 @@ export async function getEnrollment(
 /** Payment proof submitted with a paid-course enrollment (Step 4). */
 export type EnrollmentPayment = {
   transactionId: string;
-  paidAmount: number;
   senderMobile: string;
 };
 

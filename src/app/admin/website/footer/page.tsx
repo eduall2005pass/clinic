@@ -35,7 +35,7 @@ const EMPTY_FORM: FooterForm = {
 };
 
 const inputClass =
-  "mt-1 w-full rounded-xl border border-ink/10 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-primary-500/60";
+  "mt-1 w-full rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none transition placeholder:text-neutral-600 focus:border-[#2f6bce]/60";
 
 export default function FooterManagementPage() {
   const { user, authLoading } = useAuth();
@@ -201,7 +201,7 @@ export default function FooterManagementPage() {
   function toggleField(field: "showExplore" | "showPrograms" | "showContact", label: string, hint: string) {
     const value = form[field];
     return (
-      <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-ink/10 bg-dark-850 px-4 py-3.5">
+      <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-4 py-3.5">
         <span>
           <span className="block text-sm font-semibold text-heading">{label}</span>
           <span className="mt-0.5 block text-xs text-neutral-500">{hint}</span>
@@ -231,7 +231,7 @@ export default function FooterManagementPage() {
   }
 
   return (
-    <main className="flex-1 bg-dark-950">
+    <main className="flex-1 bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <header>
           <p className="text-xs font-bold uppercase tracking-widest text-primary-500">
@@ -247,7 +247,7 @@ export default function FooterManagementPage() {
 
         <div className="mt-8 space-y-6">
           {/* Description */}
-          <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+          <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
             <h2 className="text-lg font-bold text-heading">Footer Description</h2>
             <p className="mt-1 text-xs text-neutral-500">
               Short text shown under the logo in the footer.
@@ -266,7 +266,7 @@ export default function FooterManagementPage() {
           </section>
 
           {/* Contact information */}
-          <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+          <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
             <h2 className="text-lg font-bold text-heading">Contact Information</h2>
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
               <label className="block">
@@ -297,7 +297,7 @@ export default function FooterManagementPage() {
           </section>
 
           {/* Social links */}
-          <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+          <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
             <h2 className="text-lg font-bold text-heading">Social Links</h2>
             <div className="mt-6 grid gap-5">
               <label className="block">
@@ -328,7 +328,7 @@ export default function FooterManagementPage() {
           </section>
 
           {/* Footer links */}
-          <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+          <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
             <h2 className="text-lg font-bold text-heading">Footer Links</h2>
             <p className="mt-1 text-xs text-neutral-500">
               Links shown in the Explore column. If empty, the main navigation
@@ -337,7 +337,7 @@ export default function FooterManagementPage() {
 
             <div className="mt-5 space-y-3">
               {form.footerLinks.map((link, index) => (
-                <div key={index} className="flex flex-wrap items-end gap-2 rounded-xl border border-ink/10 bg-dark-850 p-3">
+                <div key={index} className="flex flex-wrap items-end gap-2 rounded-xl border border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] p-3">
                   <label className="block min-w-0 flex-[2]">
                     <span className="text-xs font-semibold text-neutral-500">Label</span>
                     <input
@@ -364,7 +364,7 @@ export default function FooterManagementPage() {
                       onClick={() => moveLink(index, -1)}
                       disabled={index === 0}
                       aria-label="Move up"
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-primary-500/60 hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-[#93c5fd] hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       ↑
                     </button>
@@ -373,7 +373,7 @@ export default function FooterManagementPage() {
                       onClick={() => moveLink(index, 1)}
                       disabled={index === form.footerLinks.length - 1}
                       aria-label="Move down"
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-primary-500/60 hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-ink/15 text-neutral-400 transition hover:border-[#93c5fd] hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       ↓
                     </button>
@@ -403,7 +403,7 @@ export default function FooterManagementPage() {
                       footerLinks: [...prev.footerLinks, { label: "", href: "" }],
                     }))
                   }
-                  className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-sm font-semibold text-heading transition hover:border-primary-500/60 hover:bg-ink/10"
+                  className="rounded-xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-sm font-semibold text-heading transition hover:border-[#93c5fd] hover:bg-ink/10"
                 >
                   + Add Link
                 </button>
@@ -412,7 +412,7 @@ export default function FooterManagementPage() {
           </section>
 
           {/* Copyright */}
-          <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+          <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
             <h2 className="text-lg font-bold text-heading">Copyright Text</h2>
             <p className="mt-1 text-xs text-neutral-500">
               Shown at the very bottom of the website. Leave empty to use the
@@ -432,7 +432,7 @@ export default function FooterManagementPage() {
           </section>
 
           {/* Visibility */}
-          <section className="rounded-2xl border border-ink/10 bg-dark-900 p-6">
+          <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
             <h2 className="text-lg font-bold text-heading">Section Visibility</h2>
             <p className="mt-1 text-xs text-neutral-500">
               Show or hide individual footer columns.

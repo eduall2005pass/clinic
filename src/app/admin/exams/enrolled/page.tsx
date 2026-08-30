@@ -57,12 +57,12 @@ function EnrolledStudentsPanel() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 pb-10 sm:px-6">
-      <h2 className="text-lg font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Students who took these exams</h2>
+      <h2 className="text-lg font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Students who took these exams</h2>
       <div className={`${cardClass} mt-3 p-4`}>
         <label htmlFor="enr-exam" className="sr-only">Filter by exam</label>
         <select id="enr-exam" value={examId}
           onChange={(event) => setExamId(event.target.value)}
-          className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm admin-dark:border-zinc-700 admin-dark:bg-zinc-800">
+          className="w-full rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-3 py-2 text-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]">
           <option value="">All exams</option>
           {exams.map((exam) => (
             <option key={exam.id} value={exam.id}>{exam.title}</option>
@@ -71,18 +71,18 @@ function EnrolledStudentsPanel() {
       </div>
 
       {enrollments === null ? (
-        <p className={`${cardClass} mt-4 p-6 text-center text-sm text-zinc-500`}>Loading…</p>
+        <p className={`${cardClass} mt-4 p-6 text-center text-sm text-slate-500`}>Loading…</p>
       ) : enrollments.length === 0 ? (
-        <p className={`${cardClass} mt-4 p-8 text-center text-sm text-zinc-500`}>No enrollments yet.</p>
+        <p className={`${cardClass} mt-4 p-8 text-center text-sm text-slate-500`}>No enrollments yet.</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {enrollments.map((item) => (
             <li key={item.id} className={`${cardClass} flex items-center gap-3 px-4 py-3`}>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+                <span className="block truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                   {item.studentName || item.studentUid}
                 </span>
-                <span className="block truncate text-xs text-zinc-500">
+                <span className="block truncate text-xs text-slate-500">
                   {exams.find((exam) => exam.id === item.examId)?.title ?? item.examId} ·{" "}
                   {new Date(item.enrolledAt).toLocaleString()}
                 </span>

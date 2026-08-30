@@ -83,16 +83,16 @@ export default function AnswerKeysPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Answer Keys</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Answer Keys</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">
           Per-question correct answers as JSON — keys are question numbers, values are option indexes (0 = A).
-          Example: <code className="rounded bg-zinc-100 px-1 admin-dark:bg-zinc-800">{`{"1": 2, "2": 0}`}</code>
+          Example: <code className="rounded bg-zinc-100 px-1 admin-dark:bg-[#132a4f]">{`{"1": 2, "2": 0}`}</code>
         </p>
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
         {(exams ?? []).length === 0 ? (
-          <p className="text-sm text-zinc-500">No exams yet.</p>
+          <p className="text-sm text-slate-500">No exams yet.</p>
         ) : (
           <>
             <div>

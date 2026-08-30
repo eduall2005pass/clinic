@@ -120,12 +120,12 @@ export default function NotificationsPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Notifications</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Broadcast notices to students or admins.</p>
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Notifications</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">Broadcast notices to students or admins.</p>
       </header>
 
       <div className={`${cardClass} mt-5 p-4 sm:p-5`}>
-        <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">
+        <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
           {form.id ? "Edit notification" : "New notification"}
         </h3>
         <form
@@ -163,18 +163,18 @@ export default function NotificationsPage() {
         {(items ?? []).map((item) => (
           <li key={item.id} className={`${cardClass} flex items-start gap-3 px-4 py-3`}>
             <span className="min-w-0 flex-1">
-              <span className={`block truncate text-sm font-bold ${item.isActive ? "text-zinc-900 admin-dark:text-zinc-100" : "text-zinc-400 line-through"}`}>
+              <span className={`block truncate text-sm font-bold ${item.isActive ? "text-[#0b1e3a] admin-dark:text-zinc-100" : "text-slate-400 line-through"}`}>
                 {item.title}
               </span>
-              <span className="block line-clamp-2 text-xs text-zinc-500">{item.message}</span>
-              <span className="mt-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+              <span className="block line-clamp-2 text-xs text-slate-500">{item.message}</span>
+              <span className="mt-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">
                 {item.audience} · {new Date(item.createdAt).toLocaleDateString()}
               </span>
             </span>
-            <button type="button" onClick={() => startEdit(item)} disabled={busy} className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-zinc-500 admin-dark:border-zinc-700">
+            <button type="button" onClick={() => startEdit(item)} disabled={busy} className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-slate-500 admin-dark:border-zinc-700">
               Edit
             </button>
-            <button type="button" onClick={() => void toggle(item)} disabled={busy} className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-zinc-500 admin-dark:border-zinc-700">
+            <button type="button" onClick={() => void toggle(item)} disabled={busy} className="rounded-lg border border-neutral-200 px-2 py-1 text-[10px] font-extrabold uppercase text-slate-500 admin-dark:border-zinc-700">
               {item.isActive ? "Hide" : "Show"}
             </button>
             <button type="button" disabled={busy} aria-label="Delete notification" className={buttonDangerClass}
@@ -182,7 +182,7 @@ export default function NotificationsPage() {
           </li>
         ))}
         {(items ?? []).length === 0 && items !== null && (
-          <li className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-zinc-500 admin-dark:border-zinc-700">
+          <li className="rounded-xl border border-dashed border-neutral-300 p-6 text-center text-xs font-semibold text-slate-500 admin-dark:border-zinc-700">
             No notifications yet.
           </li>
         )}

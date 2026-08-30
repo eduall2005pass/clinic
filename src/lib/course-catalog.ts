@@ -105,3 +105,83 @@ export async function getLiveFeaturedCourses(): Promise<Course[]> {
   const latest = publicCourses.filter((course) => course.batchId === latestBatch);
   return latest.length > 0 ? latest : publicCourses;
 }
+
+/**
+ * Course count per Course Control category — used by the 4 category cards
+ * on /courses. Counts ONLY published + available courses that belong to
+ * each category via category_id (fallback to category name for legacy rows).
+ * Returns 0 for categories with no available courses.
+ */
+export async function fetchCourseCategoryCounts(): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  try {
+    const { fetchActiveCourseCategories } = await import(
+      "@/lib/course-categories-store"
+    );
+    const categories = await fetchActiveCourseCategories();
+    for (const cat of categories) counts[cat.id] = 0;
+    // Also prepare slug → id map for fallback matching.
+    const slugToId = new Map<string, string>();
+    const nameTokenToId = new Map<string, string>();
+    for (const cat of categories) {
+      slugToId.set(cat.slug.toLowerCase(), cat.id);
+      nameTokenToId.set(cat.name.toLowerCase().replace(/[^a-z0-9]+/g, ""), cat.id);
+    }
+
+    // Use raw catalog rows to respect category_id linkage directly.
+    const { fetchCatalogCourses } = await import("@/lib/courses-admin");
+    let rows: Awaited<ReturnType<typeof fetchCatalogCourses>> = [];
+    try {
+      rows = await fetchCatalogCourses();
+    } catch {
+      rows = [];
+    }
+
+    // If DB has no rows, fall back to static catalog counts via name mapping.
+    if (rows.length === 0) {
+      const publicCourses = await getLivePublicCourses();
+      for (const course of publicCourses) {
+        const token = course.category.toLowerCase().replace(/[^a-z0-9]+/g, "");
+        // Try direct name token match, then slug prefix.
+        let targetId: string | undefined;
+        if (nameTokenToId.has(token)) targetId = nameTokenToId.get(token);
+        else {
+          for (const [slug, id] of slugToId) {
+            if (token.startsWith(slug) || slug.startsWith(token.slice(0, 3))) {
+              targetId = id;
+              break;
+            }
+          }
+        }
+        if (targetId && counts[targetId] !== undefined) counts[targetId] += 1;
+      }
+      return counts;
+    }
+
+    for (const row of rows) {
+      if (row.status !== "published") continue;
+      if (row.availability === "hidden") continue;
+      let targetId: string | null = row.categoryId ?? null;
+      if (targetId && counts[targetId] === undefined) {
+        // Stale id (category deleted) — try fallback via name.
+        targetId = null;
+      }
+      if (!targetId) {
+        const token = row.category.toLowerCase().replace(/[^a-z0-9]+/g, "");
+        if (nameTokenToId.has(token)) targetId = nameTokenToId.get(token)!;
+        else {
+          for (const [slug, id] of slugToId) {
+            if (token.startsWith(slug)) {
+              targetId = id;
+              break;
+            }
+          }
+        }
+      }
+      if (targetId && counts[targetId] !== undefined) counts[targetId] += 1;
+    }
+  } catch {
+    // On DB errors return zero counts — cards still render.
+  }
+  return counts;
+}

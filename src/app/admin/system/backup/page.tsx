@@ -139,8 +139,8 @@ export default function BackupPage() {
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">Backup</h2>
-          <p className="mt-1.5 max-w-xl text-sm text-zinc-500 admin-dark:text-zinc-400">
+          <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Backup</h2>
+          <p className="mt-1.5 max-w-xl text-sm text-slate-500 admin-dark:text-slate-400">
             Snapshots of the important database tables, stored securely in MySQL.
             Downloads and restores require system admin permission — database
             credentials are never exposed.
@@ -155,10 +155,10 @@ export default function BackupPage() {
         {(backups ?? []).map((backup) => (
           <li key={backup.id} className={`${cardClass} flex flex-wrap items-center gap-2 px-4 py-3`}>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-bold text-zinc-900 admin-dark:text-zinc-100">
+              <span className="block truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
                 {backup.fileName}
               </span>
-              <span className="block text-xs text-zinc-500">
+              <span className="block text-xs text-slate-500">
                 {new Date(backup.createdAt).toLocaleString()} · {formatSize(backup.size)}
               </span>
             </span>
@@ -188,7 +188,7 @@ export default function BackupPage() {
           </li>
         ))}
         {(backups ?? []).length === 0 && backups !== null && (
-          <li className={`${cardClass} p-8 text-center text-xs font-semibold text-zinc-500`}>
+          <li className={`${cardClass} p-8 text-center text-xs font-semibold text-slate-500`}>
             No backups yet. Create the first snapshot.
           </li>
         )}
@@ -196,15 +196,15 @@ export default function BackupPage() {
 
       {restoreSummary && (
         <div className={`${cardClass} mt-4 p-4`}>
-          <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-400">Last restore summary</h3>
-          <p className="mt-2 text-xs text-zinc-500">
+          <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">Last restore summary</h3>
+          <p className="mt-2 text-xs text-slate-500">
             Restored:{" "}
             {Object.entries(restoreSummary.tables ?? {})
               .map(([table, count]) => `${table} (${count})`)
               .join(", ") || "nothing"}
           </p>
           {(restoreSummary.skipped?.length ?? 0) > 0 && (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-slate-500">
               Skipped (missing or unchanged schema): {restoreSummary.skipped?.join(", ")}
             </p>
           )}

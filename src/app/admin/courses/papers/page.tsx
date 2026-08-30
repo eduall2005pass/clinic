@@ -260,7 +260,7 @@ function PapersManager({
 
       <ul className="mt-5 space-y-2.5">
         {papers.map((paper, index) => (
-          <li key={paper.id} className="rounded-xl border border-ink/10 bg-dark-950/60 p-3.5">
+          <li key={paper.id} className="rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 p-3.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-bold text-heading">{index + 1}. {paper.name}</span>
               <span className="rounded-full bg-ink/10 px-2 py-0.5 text-[10px] font-bold uppercase text-neutral-500">
@@ -304,7 +304,7 @@ function PapersManager({
                           });
                           if (ok) await reload();
                         }}
-                        className="rounded-lg border border-ink/15 bg-dark-850 px-2 py-1 text-xs text-heading"
+                        className="rounded-lg border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-2 py-1 text-xs text-heading"
                       >
                         <option value="">— Not assigned —</option>
                         {papers.map((option) => (
@@ -461,7 +461,7 @@ function MaterialsManager({
                 <li className="text-sm text-neutral-500">No materials for this chapter yet.</li>
               )}
               {materials.map((material, index) => (
-                <li key={material.id} className="flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-950/60 px-3.5 py-2.5">
+                <li key={material.id} className="flex items-center gap-3 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-3.5 py-2.5">
                   <span className="min-w-0 flex-1 truncate text-sm text-neutral-200">
                     {index + 1}. {material.title}{" "}
                     <span className="text-[10px] font-bold uppercase text-neutral-500">{material.materialType}</span>

@@ -1,4 +1,9 @@
-export type SocialPlatformKey = "facebook" | "youtube" | "telegram";
+export type SocialPlatformKey =
+  | "facebook"
+  | "youtube"
+  | "telegram"
+  | "instagram"
+  | "linkedin";
 
 export type SocialLink = {
   key: SocialPlatformKey;
@@ -14,6 +19,8 @@ export const SOCIAL_PLATFORMS: Array<{
   { key: "facebook", label: "Facebook" },
   { key: "youtube", label: "YouTube" },
   { key: "telegram", label: "Telegram" },
+  { key: "instagram", label: "Instagram" },
+  { key: "linkedin", label: "LinkedIn" },
 ];
 
 export function isSocialPlatformKey(key: string): key is SocialPlatformKey {

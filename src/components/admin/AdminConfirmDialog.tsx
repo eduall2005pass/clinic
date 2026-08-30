@@ -44,7 +44,7 @@ export default function AdminConfirmDialog({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="admin-confirm-title"
-        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-black/20 animate-fade-up admin-dark:border-zinc-700 admin-dark:bg-zinc-900"
+        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 shadow-2xl shadow-black/20 animate-fade-up admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]"
       >
         <div className="p-6">
           <span
@@ -70,12 +70,12 @@ export default function AdminConfirmDialog({
           </span>
           <h2
             id="admin-confirm-title"
-            className="mt-4 text-lg font-extrabold text-zinc-900 admin-dark:text-zinc-50"
+            className="mt-4 text-lg font-extrabold text-[#0b1e3a] admin-dark:text-white"
           >
             {title}
           </h2>
           {message && (
-            <p className="mt-2 text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+            <p className="mt-2 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
               {message}
             </p>
           )}
@@ -84,7 +84,7 @@ export default function AdminConfirmDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-bold text-zinc-600 transition hover:bg-neutral-50 admin-dark:border-zinc-700 admin-dark:text-zinc-300 admin-dark:hover:bg-zinc-800"
+            className="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-bold text-zinc-600 transition hover:bg-[#f8fbff] admin-dark:border-zinc-700 admin-dark:text-zinc-300 admin-dark:hover:bg-zinc-800"
           >
             {cancelLabel}
           </button>

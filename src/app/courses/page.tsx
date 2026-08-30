@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import CoursesView from "@/components/CoursesView";
-import { getLivePublicCourses } from "@/lib/course-catalog";
+import { fetchCourseCategoryCounts, getLivePublicCourses } from "@/lib/course-catalog";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
 import { fetchBatchFilterOptions } from "@/lib/course-filters";
 
@@ -15,11 +15,12 @@ export const metadata: Metadata = {
 };
 
 export default async function CoursesPage() {
-  const [courses, categories, sscOptions, hscOptions] = await Promise.all([
+  const [courses, categories, sscOptions, hscOptions, counts] = await Promise.all([
     getLivePublicCourses(),
     fetchActiveCourseCategories(),
     fetchBatchFilterOptions("ssc"),
     fetchBatchFilterOptions("hsc"),
+    fetchCourseCategoryCounts(),
   ]);
 
   return (
@@ -35,6 +36,7 @@ export default async function CoursesPage() {
       }))}
       sscFilterOptions={sscOptions}
       hscFilterOptions={hscOptions}
+      counts={counts}
     />
   );
 }

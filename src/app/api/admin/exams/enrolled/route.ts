@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/lib/admin";
+import { requirePermission, requireAnyPermission } from "@/lib/admin";
 import { fetchEnrollments } from "@/lib/exams-admin";
 
 export const dynamic = "force-dynamic";
 
 /** ?examId=... — students enrolled in an exam (or all exams). */
 export async function GET(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

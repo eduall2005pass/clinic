@@ -34,9 +34,9 @@ export default function AdminEmptyState({
           </svg>
         )}
       </span>
-      <h3 className="mt-5 text-lg font-bold text-zinc-900 admin-dark:text-zinc-50">{title}</h3>
+      <h3 className="mt-5 text-lg font-bold text-[#0b1e3a] admin-dark:text-white">{title}</h3>
       {description && (
-        <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500 admin-dark:text-zinc-400">
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
           {description}
         </p>
       )}

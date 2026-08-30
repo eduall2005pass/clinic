@@ -193,7 +193,7 @@ export default function AdminQaControlPage() {
       </div>
 
       {/* Add Subject */}
-      <div className="mt-8 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
+      <div className="mt-8 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6 shadow-lg shadow-black/20">
         <h2 className="text-lg font-bold text-heading">Subjects</h2>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <input
@@ -204,7 +204,7 @@ export default function AdminQaControlPage() {
               if (event.key === "Enter") void addSubject();
             }}
             placeholder="New subject name (e.g. Higher Math)"
-            className="w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60"
+            className="w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60"
           />
           <button
             type="button"
@@ -225,7 +225,7 @@ export default function AdminQaControlPage() {
             {subjects.map((subject) => (
               <li key={subject.id}>
                 {renamingId === subject.id ? (
-                  <span className="flex items-center gap-1.5 rounded-xl border border-primary-500/40 bg-dark-950/60 px-2.5 py-1.5">
+                  <span className="flex items-center gap-1.5 rounded-xl border border-primary-500/40 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-2.5 py-1.5">
                     <input
                       value={renameValue}
                       onChange={(event) => setRenameValue(event.target.value)}
@@ -251,7 +251,7 @@ export default function AdminQaControlPage() {
                     </button>
                   </span>
                 ) : (
-                  <span className="group inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-dark-950/60 px-3 py-1.5 text-xs font-semibold text-neutral-300 transition hover:border-primary-500/40">
+                  <span className="group inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-3 py-1.5 text-xs font-semibold text-neutral-300 transition hover:border-primary-500/40">
                     <Link
                       href={`/admin/qa/${encodeURIComponent(subject.id)}`}
                       className="hover:text-primary-300"
@@ -265,7 +265,7 @@ export default function AdminQaControlPage() {
                         setRenamingId(subject.id);
                         setRenameValue(subject.name);
                       }}
-                      className="text-[10px] text-neutral-500 hover:text-primary-400"
+                      className="text-[10px] text-neutral-500 hover:text-[#1a3a78]"
                     >
                       Edit
                     </button>

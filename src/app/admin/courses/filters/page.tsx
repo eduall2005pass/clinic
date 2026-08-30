@@ -8,7 +8,7 @@ type FilterOption = { id: string; label: string };
 type Scope = "ssc" | "hsc";
 
 const inputClass =
-  "w-full rounded-xl border border-ink/15 bg-dark-850 px-3.5 py-2.5 text-sm text-heading outline-none focus:border-primary-500/60";
+  "w-full rounded-xl border border-ink/15 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-3.5 py-2.5 text-sm text-heading outline-none focus:border-[#2f6bce]/60";
 
 /**
  * Admin → Courses → Filter Edit. Manages the batch filter pills shown on the
@@ -187,7 +187,7 @@ export default function CourseFiltersManager() {
             className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
               scope === item
                 ? "border-primary-500/60 bg-primary-600/10 text-primary-300"
-                : "border-ink/10 bg-dark-900 text-heading hover:border-primary-500/40"
+                : "border-ink/10 bg-white admin-dark:bg-[#112544] text-heading hover:border-primary-500/40"
             }`}
           >
             {item === "ssc" ? "SSC Pages" : "HSC / Admission Pages"}
@@ -201,7 +201,7 @@ export default function CourseFiltersManager() {
           <button
             type="button"
             onClick={() => void load()}
-            className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-primary-500/60"
+            className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading hover:border-[#93c5fd]"
           >
             Retry
           </button>
@@ -214,7 +214,7 @@ export default function CourseFiltersManager() {
             {current.map((option, index) => (
               <li
                 key={`${scope}-${index}`}
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 p-4"
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-4"
               >
                 <span className="w-24 shrink-0">
                   <label className="sr-only" htmlFor={`opt-id-${index}`}>Option id</label>
@@ -255,7 +255,7 @@ export default function CourseFiltersManager() {
               type="button"
               onClick={addOption}
               disabled={busy}
-              className="rounded-xl border border-ink/15 px-4 py-2 text-xs font-bold text-heading transition hover:border-primary-500/60"
+              className="rounded-xl border border-ink/15 px-4 py-2 text-xs font-bold text-heading transition hover:border-[#93c5fd]"
             >
               + Add Option
             </button>

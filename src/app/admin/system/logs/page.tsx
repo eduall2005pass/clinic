@@ -36,14 +36,14 @@ export default function SystemLogsPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <header>
-        <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 admin-dark:text-zinc-50">System Logs</h2>
-        <p className="mt-1.5 text-sm text-zinc-500 admin-dark:text-zinc-400">Latest 100 admin activity entries.</p>
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">System Logs</h2>
+        <p className="mt-1.5 text-sm text-slate-500 admin-dark:text-slate-400">Latest 100 admin activity entries.</p>
       </header>
 
       {logs === null ? (
-        <pre className={`${cardClass} mt-5 p-6 text-center text-sm text-zinc-500`}>Loading…</pre>
+        <pre className={`${cardClass} mt-5 p-6 text-center text-sm text-slate-500`}>Loading…</pre>
       ) : logs.length === 0 ? (
-        <pre className={`${cardClass} mt-5 p-8 text-center text-sm text-zinc-500`}>No log entries.</pre>
+        <pre className={`${cardClass} mt-5 p-8 text-center text-sm text-slate-500`}>No log entries.</pre>
       ) : (
         <pre className={`${cardClass} mt-5 max-h-[70vh] overflow-auto p-4 font-mono text-xs leading-relaxed text-zinc-600 admin-dark:text-zinc-300`}>
 {logs

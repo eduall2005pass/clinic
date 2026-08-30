@@ -14,6 +14,16 @@ export type ControlCourse = {
   totalApplications: number;
 };
 
+/** Custom event fired after an enrollment is accepted/rejected so every
+ *  pending indicator across the hierarchy refreshes immediately. */
+export const ENROLLMENT_CHANGED_EVENT = "medispark:enrollment-changed";
+
+export function notifyEnrollmentChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(ENROLLMENT_CHANGED_EVENT));
+  }
+}
+
 /** Live course list + per-course pending application counts (MySQL).
  *  Pass categoryId to get ONLY that Course Control category's courses. */
 export function useControlCourses(categoryId = "") {
@@ -43,13 +53,19 @@ export function useControlCourses(categoryId = "") {
     }
   }, [user, categoryId]);
 
-  // Refresh every 30s so a new application raises its badge automatically.
+  // Refresh every 30s so a new application raises its badge automatically,
+  // plus immediately after any accept/reject via the shared event.
   useEffect(() => {
     if (!user) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
     const interval = setInterval(() => void load(), 30_000);
-    return () => clearInterval(interval);
+    const onChanged = () => void load();
+    window.addEventListener(ENROLLMENT_CHANGED_EVENT, onChanged);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(ENROLLMENT_CHANGED_EVENT, onChanged);
+    };
   }, [user, load]);
 
   return { courses, error, loading, authLoading, reload: load };
@@ -66,7 +82,7 @@ export function ControlCourseCard({
   return (
     <Link
       href={`/admin/enrollment-control/course/${encodeURIComponent(course.slug)}?kind=${kind}`}
-      className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-4 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:p-5"
+      className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-4 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-primary-600/60 hover:shadow-primary-900/30 sm:p-5"
     >
       <span
         aria-hidden
@@ -75,7 +91,7 @@ export function ControlCourseCard({
         {kind === "paid" ? "💳" : "🆓"}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-extrabold text-heading transition group-hover:text-primary-400 sm:text-base">
+        <p className="truncate text-sm font-extrabold text-heading transition group-hover:text-[#1a3a78] sm:text-base">
           {course.name}
         </p>
         <p className="truncate text-[11px] text-neutral-500">
@@ -85,15 +101,64 @@ export function ControlCourseCard({
         </p>
       </div>
       {course.pendingCount > 0 ? (
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/15 px-2.5 py-1 text-xs font-bold text-red-400">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
-          {course.pendingCount} pending
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-400">
+          <span className="relative inline-flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_2px_rgba(52,211,153,0.6)]" />
+          </span>
+          {course.pendingCount} Pending
         </span>
       ) : (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="h-4 w-4 shrink-0 text-neutral-600">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-blue-500/40 bg-blue-500/15 px-2.5 py-1 text-xs font-bold text-blue-400">
+          <span className="relative inline-flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-40" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_2px_rgba(96,165,250,0.6)]" />
+          </span>
+          No Pending
+        </span>
       )}
     </Link>
+  );
+}
+
+/** Live aggregated pending counts — sum of every course's pendingCount.
+ *  Used by the parent levels (Free/Paid enrollment entries + Admin Home) so
+ *  the whole hierarchy glows whenever any higher level has pending work. */
+export function useEnrollmentPendingTotals() {
+  const { courses, loading } = useControlCourses();
+  const freePending = (courses ?? [])
+    .filter((course) => course.kind === "free")
+    .reduce((sum, course) => sum + course.pendingCount, 0);
+  const paidPending = (courses ?? [])
+    .filter((course) => course.kind === "paid")
+    .reduce((sum, course) => sum + course.pendingCount, 0);
+  return {
+    freePending,
+    paidPending,
+    totalPending: freePending + paidPending,
+    loading,
+  };
+}
+
+/** Small glowing "Pending" indicator badge for a parent-level card.
+ *  Renders nothing when there are no pending applications. */
+export function PendingIndicator({
+  count,
+  className = "",
+}: {
+  count: number;
+  className?: string;
+}) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className={`absolute flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300 shadow-[0_0_10px_2px_rgba(251,191,36,0.35)] ${className}`}
+    >
+      <span className="relative inline-flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-300 opacity-75" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-400" />
+      </span>
+      {count} Pending
+    </span>
   );
 }
