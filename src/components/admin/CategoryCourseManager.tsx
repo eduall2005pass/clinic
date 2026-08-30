@@ -16,7 +16,7 @@ import {
   type Notice,
 } from "@/components/admin/admin-ui";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
-import type { CatalogCourse } from "@/lib/courses-admin";
+import type { CatalogCourse, CourseDetails } from "@/lib/courses-admin";
 
 export type CategoryCourse = CatalogCourse & {
   totalClasses?: number;
@@ -44,6 +44,13 @@ const EMPTY_FORM = {
   couponEnabled: false,
   featured: false,
   contentLayout: "auto" as "auto" | "direct" | "paper" | "subject",
+  totalClasses: "",
+  totalExams: "",
+  courseDuration: "",
+  courseDescription: "",
+  courseTopics: "",
+  chapterOverview: "",
+  teachersJson: "[]",
 };
 
 type FormState = typeof EMPTY_FORM;
@@ -174,6 +181,7 @@ export default function CategoryCourseManager({
   }
 
   function openEdit(course: CategoryCourse) {
+    const details = course.courseDetails;
     setForm({
       slug: course.slug,
       name: course.name,
@@ -191,6 +199,13 @@ export default function CategoryCourseManager({
       couponEnabled: course.couponEnabled,
       featured: course.featured,
       contentLayout: course.contentLayout ?? "auto",
+      totalClasses: course.totalClasses != null ? String(course.totalClasses) : "",
+      totalExams: course.totalExams != null ? String(course.totalExams) : "",
+      courseDuration: details?.duration ?? "",
+      courseDescription: details?.description ?? "",
+      courseTopics: (details?.topics ?? []).join("\n"),
+      chapterOverview: (details?.chapterOverview ?? []).join("\n"),
+      teachersJson: JSON.stringify(details?.teachers ?? []),
     });
     setMentorIds(course.mentorIds ?? []);
     setEditingSlug(course.slug);
@@ -202,6 +217,18 @@ export default function CategoryCourseManager({
     setBusy(true);
     setNotice(null);
     try {
+      let teachers: CourseDetails["teachers"] = [];
+      try {
+        teachers = JSON.parse(form.teachersJson || "[]") as CourseDetails["teachers"];
+      } catch { /* ignore */ }
+      if (!teachers) teachers = [];
+      const courseDetails: CourseDetails = {
+        duration: form.courseDuration.trim() || undefined,
+        description: form.courseDescription.trim() || undefined,
+        teachers: teachers.length > 0 ? teachers : undefined,
+        topics: form.courseTopics.split("\n").map((s) => s.trim()).filter(Boolean),
+        chapterOverview: form.chapterOverview.split("\n").map((s) => s.trim()).filter(Boolean),
+      };
       const response = await fetch("/api/admin/courses", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...gate.headers },
@@ -213,6 +240,9 @@ export default function CategoryCourseManager({
           fee: Number(form.fee) || 0,
           discountFee:
             form.discountFee.trim() === "" ? null : Number(form.discountFee),
+          totalClasses: form.totalClasses.trim() === "" ? null : Number(form.totalClasses),
+          totalExams: form.totalExams.trim() === "" ? null : Number(form.totalExams),
+          courseDetails,
         }),
       });
       const data = (await response.json().catch(() => null)) as {
@@ -530,7 +560,39 @@ export default function CategoryCourseManager({
               </p>
             </div>
 
+            {/* ── Course Card Information ── */}
+            <div className="mt-5 rounded-xl border border-primary-500/40 bg-primary-600/5 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary-600">
+                Course Card Information
+              </p>
+            </div>
+
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass} htmlFor="ccm-image">Course Banner</label>
+                <MediaUploadField
+                  id="ccm-image"
+                  label=""
+                  value={form.image}
+                  onChange={(url) => setForm({ ...form, image: url })}
+                  directory="courses"
+                  preview
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="ccm-batch">Course Batch</label>
+                <select id="ccm-batch" className={inputClass} value={form.batchId}
+                  onChange={(e) => setForm({ ...form, batchId: e.target.value })}>
+                  <option value="hsc-29">HSC 29</option>
+                  <option value="hsc-28">HSC 28</option>
+                  <option value="hsc-27">HSC 27</option>
+                  <option value="hsc-26">HSC 26</option>
+                  <option value="ssc-29">SSC 29</option>
+                  <option value="ssc-28">SSC 28</option>
+                  <option value="ssc-27">SSC 27</option>
+                  <option value="ssc-26">SSC 26</option>
+                </select>
+              </div>
               <div>
                 <label className={labelClass} htmlFor="ccm-name">Course Name</label>
                 <input id="ccm-name" className={inputClass} value={form.name}
@@ -545,44 +607,62 @@ export default function CategoryCourseManager({
                   onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} />
               </div>
               <div>
-                <label className={labelClass} htmlFor="ccm-batch">Batch</label>
-                <select id="ccm-batch" className={inputClass} value={form.batchId}
-                  onChange={(e) => setForm({ ...form, batchId: e.target.value })}>
-                  <option value="hsc-29">HSC 29</option>
-                  <option value="hsc-28">HSC 28</option>
-                  <option value="hsc-27">HSC 27</option>
-                  <option value="hsc-26">HSC 26</option>
-                  <option value="ssc-29">SSC 29</option>
-                  <option value="ssc-28">SSC 28</option>
-                  <option value="ssc-27">SSC 27</option>
-                  <option value="ssc-26">SSC 26</option>
-                </select>
+                <label className={labelClass} htmlFor="ccm-total-classes">Total Classes</label>
+                <input id="ccm-total-classes" type="number" min="0" className={inputClass} value={form.totalClasses}
+                  placeholder="e.g. 48"
+                  onChange={(e) => setForm({ ...form, totalClasses: e.target.value })} />
               </div>
               <div>
-                <MediaUploadField
-                  id="ccm-image"
-                  label="Course Banner"
-                  value={form.image}
-                  onChange={(url) => setForm({ ...form, image: url })}
-                  directory="courses"
-                  preview
-                />
+                <label className={labelClass} htmlFor="ccm-total-exams">Total Exams</label>
+                <input id="ccm-total-exams" type="number" min="0" className={inputClass} value={form.totalExams}
+                  placeholder="e.g. 12"
+                  onChange={(e) => setForm({ ...form, totalExams: e.target.value })} />
               </div>
               <div>
-                <label className={labelClass} htmlFor="ccm-fee">Regular Fee (৳)</label>
+                <label className={labelClass} htmlFor="ccm-fee">Original Course Fee (৳)</label>
                 <input id="ccm-fee" type="number" min="0" className={inputClass} value={form.fee}
                   onChange={(e) => setForm({ ...form, fee: e.target.value })} />
               </div>
               <div>
-                <label className={labelClass} htmlFor="ccm-discount">Discount Fee (optional)</label>
+                <label className={labelClass} htmlFor="ccm-discount">Discount Fee (optional, ৳)</label>
                 <input id="ccm-discount" type="number" min="0" className={inputClass} value={form.discountFee}
                   onChange={(e) => setForm({ ...form, discountFee: e.target.value })} />
               </div>
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-6">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
+                  <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.status === "published"}
+                    onChange={(e) => setForm({ ...form, status: e.target.checked ? "published" : "unpublished" })} />
+                  Published
+                </label>
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
+                  <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.couponEnabled}
+                    onChange={(e) => setForm({ ...form, couponEnabled: e.target.checked })} />
+                  Coupon enabled
+                </label>
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
+                  <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.featured}
+                    onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
+                  ★ Featured Course
+                </label>
+              </div>
+            </div>
+
+            {/* ── Course Details ── */}
+            <div className="mt-6 rounded-xl border border-primary-500/40 bg-primary-600/5 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary-600">
+                Course Details
+              </p>
+              <p className="mt-0.5 text-xs text-slate-500 admin-dark:text-slate-400">
+                Additional information shown on the course details page.
+              </p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className={labelClass} htmlFor="ccm-duration">Course Duration</label>
-                <input id="ccm-duration" className={inputClass} value={form.duration}
+                <label className={labelClass} htmlFor="ccm-cd-duration">Course Duration</label>
+                <input id="ccm-cd-duration" className={inputClass} value={form.courseDuration}
                   placeholder="e.g. 6 months"
-                  onChange={(e) => setForm({ ...form, duration: e.target.value })} />
+                  onChange={(e) => setForm({ ...form, courseDuration: e.target.value })} />
               </div>
               <div>
                 <label className={labelClass} htmlFor="ccm-layout">Content structure (student site)</label>
@@ -612,9 +692,22 @@ export default function CategoryCourseManager({
                   onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} />
               </div>
               <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="ccm-desc">Full description</label>
-                <textarea id="ccm-desc" rows={4} className={inputClass} value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                <label className={labelClass} htmlFor="ccm-cd-desc">Course Description (detailed)</label>
+                <textarea id="ccm-cd-desc" rows={4} className={inputClass} value={form.courseDescription}
+                  placeholder="Detailed description for the course details page..."
+                  onChange={(e) => setForm({ ...form, courseDescription: e.target.value })} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="ccm-topics">Course Topics (one per line)</label>
+                <textarea id="ccm-topics" rows={4} className={inputClass} value={form.courseTopics}
+                  placeholder={"What Will Be Taught:\nBiology fundamentals\nCell structure\nEvolution"}
+                  onChange={(e) => setForm({ ...form, courseTopics: e.target.value })} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="ccm-overview">Chapter/Subject Overview (one per line)</label>
+                <textarea id="ccm-overview" rows={4} className={inputClass} value={form.chapterOverview}
+                  placeholder={"Chapter 1: Introduction\nChapter 2: Cell Biology\nChapter 3: Genetics"}
+                  onChange={(e) => setForm({ ...form, chapterOverview: e.target.value })} />
               </div>
 
               {/* Mentors assignment — specific to THIS course. */}
@@ -644,24 +737,6 @@ export default function CategoryCourseManager({
                     ))}
                   </div>
                 )}
-              </div>
-
-              <div className="sm:col-span-2 flex flex-wrap items-center gap-6">
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
-                  <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.status === "published"}
-                    onChange={(e) => setForm({ ...form, status: e.target.checked ? "published" : "unpublished" })} />
-                  Published
-                </label>
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
-                  <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.couponEnabled}
-                    onChange={(e) => setForm({ ...form, couponEnabled: e.target.checked })} />
-                  Coupon enabled
-                </label>
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 admin-dark:text-zinc-200">
-                  <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.featured}
-                    onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
-                  ★ Featured
-                </label>
               </div>
             </div>
 
