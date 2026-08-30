@@ -24,10 +24,14 @@ export async function GET(request: NextRequest) {
   } catch (e) {
     dbCheck = { error: String(e).slice(0,80) };
   }
+  const envProjectId = process.env.FIREBASE_PROJECT_ID || null;
+  const envNextProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || null;
   return NextResponse.json({
     hasAuth,
     firebaseUser: firebaseUser ? { uid: firebaseUser.uid, email: firebaseUser.email, email_verified: firebaseUser.email_verified } : null,
     firebaseError,
     dbCheck,
+    envProjectId,
+    envNextProjectId,
   });
 }
