@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/admin";
 import { logAdminAction } from "@/lib/administration";
 import { getPaymentCard, savePaymentCard } from "@/lib/payment-card";
+import { PAYMENT_CARD_MAX } from "@/lib/payment-card-config";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * PUT — save payment card configuration.
- * { bkashNumber, bkashEnabled, nagadNumber, nagadEnabled, couponEnabled, instructions, note }
+ * Accepts the full PaymentCardConfig with per-element enable/disable and labels.
  * At least one payment method must remain enabled with a number.
  */
 export async function PUT(request: NextRequest) {
@@ -37,17 +38,42 @@ export async function PUT(request: NextRequest) {
 
   const str = (value: unknown, max: number) =>
     typeof value === "string" ? value.trim().slice(0, max) : "";
+  const bool = (value: unknown, def = false) =>
+    typeof value === "boolean" ? value : def;
 
+  const M = PAYMENT_CARD_MAX;
   const config = {
-    bkashNumber: str(body.bkashNumber, 40),
-    nagadNumber: str(body.nagadNumber, 40),
-    bkashEnabled: body.bkashEnabled === true,
-    nagadEnabled: body.nagadEnabled === true,
-    // Coupon availability defaults ON; OFF only hides it from students —
-    // existing coupon data/configuration is never deleted.
-    couponEnabled: body.couponEnabled !== false,
-    instructions: str(body.instructions, 2000),
-    note: str(body.note, 1000),
+    bkashNumber: str(body.bkashNumber, M.bkashNumber),
+    nagadNumber: str(body.nagadNumber, M.nagadNumber),
+    bkashEnabled: bool(body.bkashEnabled, true),
+    nagadEnabled: bool(body.nagadEnabled, false),
+    couponEnabled: bool(body.couponEnabled, true),
+    instructions: str(body.instructions, M.instructions),
+    note: str(body.note, M.note),
+    feeEnabled: bool(body.feeEnabled, true),
+    feeLabel: str(body.feeLabel, M.feeLabel),
+    discountLabel: str(body.discountLabel, M.discountLabel),
+    couponPlaceholder: str(body.couponPlaceholder, M.couponPlaceholder),
+    applyLabel: str(body.applyLabel, M.applyLabel),
+    payableEnabled: bool(body.payableEnabled, true),
+    payableLabel: str(body.payableLabel, M.payableLabel),
+    methodsLabel: str(body.methodsLabel, M.methodsLabel),
+    bkashLabel: str(body.bkashLabel, M.bkashLabel),
+    nagadLabel: str(body.nagadLabel, M.nagadLabel),
+    instructionsEnabled: bool(body.instructionsEnabled, true),
+    txEnabled: bool(body.txEnabled, true),
+    txLabel: str(body.txLabel, M.txLabel),
+    txPlaceholder: str(body.txPlaceholder, M.txPlaceholder),
+    senderEnabled: bool(body.senderEnabled, true),
+    senderLabel: str(body.senderLabel, M.senderLabel),
+    senderPlaceholder: str(body.senderPlaceholder, M.senderPlaceholder),
+    pendingNoteEnabled: bool(body.pendingNoteEnabled, true),
+    pendingNote: str(body.pendingNote, M.pendingNote),
+    cancelEnabled: bool(body.cancelEnabled, true),
+    cancelLabel: str(body.cancelLabel, M.cancelLabel),
+    submitEnabled: bool(body.submitEnabled, true),
+    submitLabel: str(body.submitLabel, M.submitLabel),
+    submittingLabel: str(body.submittingLabel, M.submittingLabel),
   };
 
   if (!config.bkashEnabled && !config.nagadEnabled) {
