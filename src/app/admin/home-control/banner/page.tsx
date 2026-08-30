@@ -2,7 +2,7 @@ import Link from "next/link";
 import { fetchActiveFeaturedSlugs } from "@/lib/featured-courses";
 import { getLiveCourse } from "@/lib/course-catalog";
 import { fetchFeaturedPublicExams } from "@/lib/exams-admin";
-import { fetchActiveJerseys } from "@/lib/content-admin";
+import { fetchFeaturedJerseys } from "@/lib/content-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export default async function BannerControlPage() {
   const [slugs, exams, jerseys] = await Promise.all([
     fetchActiveFeaturedSlugs(),
     fetchFeaturedPublicExams(),
-    fetchActiveJerseys(),
+    fetchFeaturedJerseys(),
   ]);
   const courses = (
     await Promise.all(slugs.map((slug) => getLiveCourse(slug)))
@@ -109,11 +109,11 @@ export default async function BannerControlPage() {
         </ul>
       </div>
 
-      {/* Source 3 — Active Jerseys */}
+      {/* Source 3 — Featured Jerseys */}
       <div className={`${cardClass} mt-4`}>
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
-            3. Jerseys ({jerseys.length})
+            3. Featured Jerseys ({jerseys.length})
           </h3>
           <Link
             href="/admin/content/jersey"
@@ -130,12 +130,12 @@ export default async function BannerControlPage() {
                   {jersey.name}
                 </span>
                 <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  Active
+                  ★ Featured
                 </span>
               </li>
             ))
           ) : (
-            <li className="text-xs text-slate-500">No active jerseys yet.</li>
+            <li className="text-xs text-slate-500">No featured jerseys yet.</li>
           )}
         </ul>
       </div>

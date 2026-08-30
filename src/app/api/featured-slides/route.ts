@@ -3,6 +3,7 @@ import { fetchActiveFeaturedSlugs } from "@/lib/featured-courses";
 import { getLiveCourse } from "@/lib/course-catalog";
 import { getPayableFee, formatFee } from "@/lib/courses";
 import { fetchFeaturedPublicExams } from "@/lib/exams-admin";
+import { fetchFeaturedJerseys } from "@/lib/content-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +11,9 @@ export const dynamic = "force-dynamic";
  * Auto-generated slides for the hero sliding banner:
  *  1. courses marked ★ Featured in the Admin Panel,
  *  2. public exams marked ★ Featured in Public Exam Control.
+ *  3. jerseys marked ★ Featured in Jersey Control.
  * No manual banner upload needed — when the admin toggles Featured, these
- * appear/disappear automatically. The exam/course data stays the single
- * source of truth; nothing is duplicated into Home Control.
+ * appear/disappear automatically.
  */
 export async function GET() {
   const slugs = await fetchActiveFeaturedSlugs();
@@ -47,6 +48,21 @@ export async function GET() {
     slides.push(...examSlides);
   } catch {
     // Featured exams are optional — never break the banner API.
+  }
+
+  // Featured JERSEYS → homepage slider slides.
+  try {
+    const featuredJerseys = await fetchFeaturedJerseys();
+    const jerseySlides = featuredJerseys.map((jersey) => ({
+      id: `jersey-${jersey.id}`,
+      image: jersey.image || "/banners/jersey-of-medispark.svg",
+      href: jersey.link || "#jerseys",
+      title: jersey.name,
+      subtitle: jersey.price > 0 ? `৳${jersey.price}` : "Jersey",
+    }));
+    slides.push(...jerseySlides);
+  } catch {
+    // Featured jerseys are optional — never break the banner API.
   }
 
   return NextResponse.json(

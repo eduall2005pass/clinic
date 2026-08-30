@@ -21,6 +21,7 @@ export type JerseyItem = {
   link: string | null;
   price: number;
   isActive: boolean;
+  featured: boolean;
 };
 
 type NotificationRow = {
@@ -41,6 +42,7 @@ type JerseyRow = {
   link: string | null;
   price: string | number;
   is_active: number | boolean;
+  is_featured: number | boolean;
 };
 
 function toIso(value: Date | string): string {
@@ -216,12 +218,17 @@ async function ensureJerseysTable(): Promise<void> {
     link VARCHAR(1024) NULL,
     price DECIMAL(10,2) NOT NULL DEFAULT 0,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    is_featured TINYINT(1) NOT NULL DEFAULT 0,
     sort_order INT NOT NULL DEFAULT 0,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
-  // Older deployments created the table without the link column.
   try {
     await exec(`ALTER TABLE jerseys ADD COLUMN link VARCHAR(1024) NULL AFTER image_url`);
+  } catch {
+    // Column already exists — safe to ignore.
+  }
+  try {
+    await exec(`ALTER TABLE jerseys ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER is_active`);
   } catch {
     // Column already exists — safe to ignore.
   }
@@ -230,6 +237,11 @@ async function ensureJerseysTable(): Promise<void> {
 export async function fetchActiveJerseys(): Promise<JerseyItem[]> {
   const jerseys = await fetchJerseys();
   return jerseys.filter((jersey) => jersey.isActive && jersey.image);
+}
+
+export async function fetchFeaturedJerseys(): Promise<JerseyItem[]> {
+  const jerseys = await fetchActiveJerseys();
+  return jerseys.filter((jersey) => jersey.featured);
 }
 
 export async function fetchJerseys(): Promise<JerseyItem[]> {
@@ -246,6 +258,7 @@ export async function fetchJerseys(): Promise<JerseyItem[]> {
       link: row.link ?? null,
       price: Number(row.price) || 0,
       isActive: Boolean(row.is_active),
+      featured: Boolean(row.is_featured),
     }));
   } catch {
     return [];
@@ -263,10 +276,11 @@ export async function saveJersey(
       ? input.id.trim()
       : `jersey-${Date.now()}`;
   await exec(
-    `INSERT INTO jerseys (id, name, note, image_url, link, price, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO jerseys (id, name, note, image_url, link, price, is_active, is_featured)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE name = VALUES(name), note = VALUES(note),
-       image_url = VALUES(image_url), link = VALUES(link), price = VALUES(price), is_active = VALUES(is_active)`,
+       image_url = VALUES(image_url), link = VALUES(link), price = VALUES(price),
+       is_active = VALUES(is_active), is_featured = VALUES(is_featured)`,
     [
       id,
       name,
@@ -275,6 +289,7 @@ export async function saveJersey(
       typeof input.link === "string" && input.link.trim() ? input.link.trim() : null,
       Math.max(0, Number(input.price) || 0),
       input.isActive === false ? 0 : 1,
+      input.featured === true ? 1 : 0,
     ],
   );
   return fetchJerseys();
