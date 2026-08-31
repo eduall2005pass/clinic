@@ -504,7 +504,7 @@ export default function PaymentCardPage() {
 function PreviewCard({ config }: { config: PaymentCardConfig | null }) {
   if (!config) {
     return (
-      <div className="sticky top-24 rounded-2xl border border-primary-600/30 bg-gradient-to-br from-dark-900 via-dark-950 to-black p-6 shadow-xl shadow-black/40">
+      <div className="sticky top-24 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-xl shadow-black/40">
         <AccessLoading label="Loading preview…" />
       </div>
     );
@@ -515,143 +515,153 @@ function PreviewCard({ config }: { config: PaymentCardConfig | null }) {
   const hasMethods = hasBkash || hasNagad;
 
   return (
-    <div className="sticky top-24 rounded-2xl border border-primary-600/30 bg-gradient-to-br from-dark-900 via-dark-950 to-black p-6 shadow-xl shadow-black/40">
-      {/* Fee + Coupon */}
-      {config.feeEnabled && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-baseline gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                {config.feeLabel || "Course Fee"}
-              </p>
-              <p className="text-sm font-semibold text-neutral-300">৳1,500</p>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                {config.discountLabel || "Discount"}
-              </p>
-              <p className="text-sm font-semibold text-emerald-400">− ৳500</p>
-            </div>
-          </div>
-          {config.couponEnabled && (
-            <div className="w-full sm:max-w-[160px] lg:max-w-xs">
-              <div className="flex gap-2">
-                <div className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm text-heading placeholder:text-neutral-600">
-                  <span className="text-neutral-500">{config.couponPlaceholder || "COUPON CODE"}</span>
+    <div className="sticky top-24 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-xl shadow-black/40">
+      {/* Paid Course badge + course name — matches student card header */}
+      <span className="inline-block rounded-md border border-primary-500/40 bg-dark-950/80 px-2.5 py-1 text-xs font-bold text-primary-400">
+        Paid Course
+      </span>
+      <h3 className="mt-2 text-lg font-extrabold text-heading sm:text-xl">
+        Sample Course Name
+      </h3>
+
+      <div className="mt-4">
+        <div className="rounded-xl border border-ink/10 bg-dark-950 p-4">
+          {/* Fee + Coupon — compact responsive layout */}
+          {config.feeEnabled && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    {config.feeLabel || "Course Fee"}
+                  </p>
+                  <p className="text-sm font-semibold text-neutral-300">৳1,500</p>
                 </div>
-                <div className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-3 py-2 text-xs font-bold text-primary-300">
-                  {config.applyLabel || "Apply"}
+                <div className="flex items-baseline gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    {config.discountLabel || "Discount"}
+                  </p>
+                  <p className="text-sm font-semibold text-emerald-400">− ৳500</p>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Payable Amount */}
-      {config.payableEnabled && (
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-primary-500/30 bg-primary-600/10 px-4 py-3">
-          <p className="shrink-0 text-xs font-bold uppercase tracking-wide text-neutral-400">
-            {config.payableLabel || "Payable Amount"}
-          </p>
-          <p className="shrink-0 text-lg font-extrabold text-primary-400 sm:text-xl">৳1,000</p>
-        </div>
-      )}
-
-      {/* Payment Methods */}
-      {hasMethods && (
-        <div className="mt-3 rounded-xl border border-primary-500/20 bg-primary-600/5 p-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
-              {config.methodsLabel || "Payment Methods"}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {hasBkash && (
-                <div className="flex items-center gap-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-1.5">
-                  <span className="text-xs font-extrabold text-pink-300">{config.bkashLabel || "bKash"}</span>
-                  <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
-                    {config.bkashNumber}
-                  </span>
-                </div>
-              )}
-              {hasNagad && (
-                <div className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5">
-                  <span className="text-xs font-extrabold text-orange-300">{config.nagadLabel || "Nagad"}</span>
-                  <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
-                    {config.nagadNumber}
-                  </span>
+              {config.couponEnabled && (
+                <div className="w-full sm:max-w-[160px] lg:max-w-xs">
+                  <div className="flex gap-2">
+                    <div className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm text-heading">
+                      <span className="text-neutral-600">{config.couponPlaceholder || "COUPON CODE"}</span>
+                    </div>
+                    <div className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-3 py-2 text-xs font-bold text-primary-300">
+                      {config.applyLabel || "Apply"}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
+          )}
+
+          {/* Payable Amount */}
+          {config.payableEnabled && (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-primary-500/30 bg-primary-600/10 px-4 py-3">
+              <p className="shrink-0 text-xs font-bold uppercase tracking-wide text-neutral-400">
+                {config.payableLabel || "Payable Amount"}
+              </p>
+              <p className="shrink-0 text-lg font-extrabold text-primary-400 sm:text-xl">৳1,000</p>
+            </div>
+          )}
+
+          {/* Payment Methods — vertical rows matching student card */}
+          {hasMethods && (
+            <div className="mt-3 rounded-xl border border-primary-500/20 bg-primary-600/5 p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+                {config.methodsLabel || "Payment Methods"}
+              </p>
+              <div className="mt-2 space-y-2">
+                {hasBkash && (
+                  <div className="flex items-center gap-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-1.5">
+                    <span className="text-xs font-extrabold text-pink-300">{config.bkashLabel || "bKash"}</span>
+                    <span className="font-mono text-sm font-semibold text-heading truncate">
+                      {config.bkashNumber}
+                    </span>
+                  </div>
+                )}
+                {hasNagad && (
+                  <div className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5">
+                    <span className="text-xs font-extrabold text-orange-300">{config.nagadLabel || "Nagad"}</span>
+                    <span className="font-mono text-sm font-semibold text-heading truncate">
+                      {config.nagadNumber}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {config.instructionsEnabled !== false && (config.instructions || config.note) && (
+                <div className="mt-2">
+                  {config.instructions && (
+                    <p className="whitespace-pre-line text-xs leading-relaxed text-neutral-300">
+                      {config.instructions}
+                    </p>
+                  )}
+                  {config.note && (
+                    <p className="mt-2 whitespace-pre-line text-[11px] text-neutral-400">
+                      {config.note}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!hasMethods && (
+            <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-3">
+              <p className="text-xs text-red-400">No payment method enabled.</p>
+            </div>
+          )}
+
+          {/* Transaction ID + Payment From Number — 2-column grid */}
+          <div className="mt-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {config.txEnabled && (
+                <div>
+                  <label className="text-xs font-semibold text-neutral-400">
+                    {config.txLabel || "Transaction ID"}
+                  </label>
+                  <div className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm text-neutral-600">
+                    {config.txPlaceholder || "e.g. 8N7DQK2XLM"}
+                  </div>
+                </div>
+              )}
+              {config.senderEnabled && (
+                <div>
+                  <label className="text-xs font-semibold text-neutral-400">
+                    {config.senderLabel || "Payment From Number"}
+                  </label>
+                  <div className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm text-neutral-600">
+                    {config.senderPlaceholder || "01XXXXXXXXX"}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
 
-      {!hasMethods && (
-        <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-3">
-          <p className="text-xs text-red-400">No payment method enabled.</p>
-        </div>
-      )}
-
-      {/* Instructions */}
-      {config.instructionsEnabled && (config.instructions || config.note) && (
-        <div className="mt-3">
-          {config.instructions && (
-            <p className="whitespace-pre-line text-xs leading-relaxed text-neutral-300">
-              {config.instructions}
+          {/* Pending Note */}
+          {config.pendingNoteEnabled && config.pendingNote && (
+            <p className="mt-2 text-xs leading-relaxed text-neutral-400">
+              {config.pendingNote}
             </p>
           )}
-          {config.note && (
-            <p className="mt-2 whitespace-pre-line rounded-lg border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-3 py-2 text-[11px] text-neutral-400">
-              {config.note}
-            </p>
+        </div>
+
+        {/* Buttons — outside the card border, matching student layout */}
+        <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+          {config.cancelEnabled && (
+            <div className="w-full flex-1 rounded-xl border border-ink/15 bg-ink/5 px-6 py-3 text-center text-sm font-semibold text-heading sm:flex-1">
+              {config.cancelLabel || "Cancel"}
+            </div>
+          )}
+          {config.submitEnabled && (
+            <div className="w-full rounded-xl bg-primary-600 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-primary-900/40 sm:flex-[2]">
+              {config.submitLabel || "Submit Payment"}
+            </div>
           )}
         </div>
-      )}
-
-      {/* Transaction ID */}
-      {config.txEnabled && (
-        <div className="mt-3">
-          <label className="text-xs font-semibold text-neutral-400">
-            {config.txLabel || "Transaction ID"}
-          </label>
-          <div className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm text-neutral-500">
-            {config.txPlaceholder || "e.g. 8N7DQK2XLM"}
-          </div>
-        </div>
-      )}
-
-      {/* Payment From Number */}
-      {config.senderEnabled && (
-        <div className="mt-3">
-          <label className="text-xs font-semibold text-neutral-400">
-            {config.senderLabel || "Payment From Number"}
-          </label>
-          <div className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm text-neutral-500">
-            {config.senderPlaceholder || "01XXXXXXXXX"}
-          </div>
-        </div>
-      )}
-
-      {/* Pending Note */}
-      {config.pendingNoteEnabled && config.pendingNote && (
-        <p className="mt-3 text-xs leading-relaxed text-neutral-400">
-          {config.pendingNote}
-        </p>
-      )}
-
-      {/* Buttons */}
-      <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
-        {config.cancelEnabled && (
-          <div className="w-full flex-1 rounded-xl border border-ink/15 bg-ink/5 px-6 py-3 text-center text-sm font-semibold text-heading">
-            {config.cancelLabel || "Cancel"}
-          </div>
-        )}
-        {config.submitEnabled && (
-          <div className="w-full flex-[2] rounded-xl bg-primary-600 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-primary-900/40">
-            {config.submitLabel || "Submit Payment"}
-          </div>
-        )}
       </div>
     </div>
   );

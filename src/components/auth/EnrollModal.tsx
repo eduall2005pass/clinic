@@ -102,6 +102,7 @@ export default function EnrollModal({
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   // Step 4 — paid-course payment proof.
   const [transactionId, setTransactionId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"bkash" | "nagad">("bkash");
   // Final system-derived payable amount (built-in discount already inside
   // payableFee, plus any valid coupon on top). The student can never edit it.
   const finalAmount = appliedCoupon?.finalFee ?? payableFee;
@@ -182,7 +183,7 @@ export default function EnrollModal({
     if (submitting || !user || !profile) return;
 
     // Paid courses must submit complete, valid payment proof (Step 4).
-    let payment: { transactionId: string; senderMobile: string } | undefined;
+    let payment: { transactionId: string; senderMobile: string; paymentMethod: "bkash" | "nagad" } | undefined;
     if (isPaid) {
       const errors: Record<string, string> = {};
       const txn = transactionId.trim();
@@ -198,7 +199,7 @@ export default function EnrollModal({
         return;
       }
       setFieldErrors({});
-      payment = { transactionId: txn, senderMobile: mobile };
+      payment = { transactionId: txn, senderMobile: mobile, paymentMethod };
     } else {
       setFieldErrors({});
     }
@@ -545,37 +546,94 @@ export default function EnrollModal({
 
             {/* Payment card — live from MySQL (Admin → Enrollment Control →
                 Payment Card). Students pay to THESE numbers. Methods sit
-                side-by-side on wider screens. */}
+                vertically as separate rows. */}
             {paymentCard && (paymentCard.bkashNumber || paymentCard.nagadNumber) && (
               <div className="mt-3 rounded-xl border border-primary-500/20 bg-primary-600/5 p-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
-                    {paymentCard?.methodsLabel || "Payment Methods"}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {paymentCard.bkashNumber && (
-                      <div className="flex items-center gap-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-1.5">
-                        <span className="text-xs font-extrabold text-pink-300">{paymentCard?.bkashLabel || "bKash"}</span>
-                        <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
-                          {paymentCard.bkashNumber}
-                        </span>
-                      </div>
-                    )}
-                    {paymentCard.nagadNumber && (
-                      <div className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5">
-                        <span className="text-xs font-extrabold text-orange-300">{paymentCard?.nagadLabel || "Nagad"}</span>
-                        <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
-                          {paymentCard.nagadNumber}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+                  {paymentCard?.methodsLabel || "Payment Methods"}
+                </p>
+                <div className="mt-2 space-y-2">
+                  {paymentCard.bkashNumber && (
+                    <div className="flex items-center gap-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-1.5">
+                      <span className="text-xs font-extrabold text-pink-300">{paymentCard?.bkashLabel || "bKash"}</span>
+                      <span className="font-mono text-sm font-semibold text-heading truncate">
+                        {paymentCard.bkashNumber}
+                      </span>
+                    </div>
+                  )}
+                  {paymentCard.nagadNumber && (
+                    <div className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5">
+                      <span className="text-xs font-extrabold text-orange-300">{paymentCard?.nagadLabel || "Nagad"}</span>
+                      <span className="font-mono text-sm font-semibold text-heading truncate">
+                        {paymentCard.nagadNumber}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {paymentCard.instructionsEnabled !== false && paymentCard.instructions && (
                   <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-neutral-300">
                     {paymentCard.instructions}
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Payment Method Selection — bKash / Nagad */}
+            {paymentCard && (paymentCard.bkashNumber || paymentCard.nagadNumber) && (
+              <div className="mt-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-neutral-400 mb-2">
+                  Select Payment Method
+                </p>
+                <div className="grid gap-2">
+                  {paymentCard.bkashNumber && (
+                    <label
+                      className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition ${
+                        paymentMethod === "bkash"
+                          ? "border-pink-500/60 bg-pink-500/10"
+                          : "border-ink/15 bg-dark-900 hover:border-pink-500/30"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="bkash"
+                        checked={paymentMethod === "bkash"}
+                        onChange={() => setPaymentMethod("bkash")}
+                        className="h-4 w-4 accent-pink-500"
+                      />
+                      <div className="flex-1 flex items-center justify-between">
+                        <span className="text-sm font-bold text-pink-300">{paymentCard?.bkashLabel || "bKash"}</span>
+                        <span className="font-mono text-sm font-semibold text-heading bg-pink-500/10 border border-pink-500/20 rounded-lg px-3 py-1">
+                          {paymentCard.bkashNumber}
+                        </span>
+                      </div>
+                    </label>
+                  )}
+                  {paymentCard.nagadNumber && (
+                    <label
+                      className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition ${
+                        paymentMethod === "nagad"
+                          ? "border-orange-500/60 bg-orange-500/10"
+                          : "border-ink/15 bg-dark-900 hover:border-orange-500/30"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="nagad"
+                        checked={paymentMethod === "nagad"}
+                        onChange={() => setPaymentMethod("nagad")}
+                        className="h-4 w-4 accent-orange-500"
+                      />
+                      <div className="flex-1 flex items-center justify-between">
+                        <span className="text-sm font-bold text-orange-300">{paymentCard?.nagadLabel || "Nagad"}</span>
+                        <span className="font-mono text-sm font-semibold text-heading bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-1">
+                          {paymentCard.nagadNumber}
+                        </span>
+                      </div>
+                    </label>
+                  )}
+                </div>
               </div>
             )}
 
