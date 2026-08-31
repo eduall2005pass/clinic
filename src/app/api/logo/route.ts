@@ -11,7 +11,7 @@ import { ALLOWED_LOGO_EXTENSIONS, MAX_LOGO_FILE_SIZE } from "@/lib/logo";
 import { requirePermission } from "@/lib/admin";
 
 // Public content: edge-cached for fast loads (60s revalidation).
-export const revalidate = 60;
+export const revalidate = 300;
 
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",

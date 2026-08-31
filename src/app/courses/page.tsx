@@ -6,7 +6,7 @@ import { fetchBatchFilterOptions } from "@/lib/course-filters";
 
 // Cached at the edge; admin changes appear within 60s. Category/kind URL
 // filters are applied client-side (see CoursesView) so this stays static.
-export const revalidate = 60;
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Courses",

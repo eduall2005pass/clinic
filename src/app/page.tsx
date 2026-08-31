@@ -20,7 +20,7 @@ import type { ReactNode } from "react";
 // Always fetch live MySQL data (jerseys, sections, reviews, faqs) on each
 // request so Admin Panel changes appear immediately on the home page.
 // Cached at the edge; admin changes appear within 60s.
-export const revalidate = 60;
+export const revalidate = 300;
 
 function renderSection(section: HomepageSection) {
   const textProps = {

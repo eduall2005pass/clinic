@@ -5,7 +5,7 @@ import { fetchBatchFilterOptions } from "@/lib/course-filters";
 import { getLivePublicCourses } from "@/lib/course-catalog";
 
 // Cached at the edge; admin changes appear within 60s.
-export const revalidate = 60;
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Varsity Admission Courses",

@@ -14,7 +14,7 @@ import { getCourseKind } from "@/lib/enrollments";
 import CourseEnrollFlow from "@/components/auth/CourseEnrollFlow";
 
 // Cached at the edge; admin changes appear within 60s.
-export const revalidate = 60;
+export const revalidate = 300;
 
 type CourseDetailsParams = { params: Promise<{ slug: string }> };
 

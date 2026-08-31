@@ -3,7 +3,7 @@ import { requirePermission } from "@/lib/admin";
 import { fetchAllFaqs, fetchPublishedFaqs, saveFaqs } from "@/lib/faq-store";
 
 // Public content: edge-cached for fast loads (60s revalidation).
-export const revalidate = 60;
+export const revalidate = 300;
 
 export async function GET() {
   const faqs = await fetchPublishedFaqs();
