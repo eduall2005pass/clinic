@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
     couponCode?: unknown;
     transactionId?: unknown;
     senderMobile?: unknown;
+    paymentMethod?: unknown;
   } | null;
   const courseId = typeof body?.courseId === "string" ? body.courseId : "";
   const courseName =
@@ -96,6 +97,10 @@ export async function POST(request: NextRequest) {
     typeof body?.transactionId === "string" ? body.transactionId.trim() : "";
   const senderMobile =
     typeof body?.senderMobile === "string" ? body.senderMobile.trim() : "";
+  const paymentMethod =
+    body?.paymentMethod === "bkash" || body?.paymentMethod === "nagad"
+      ? body.paymentMethod
+      : null;
   if (!courseId) {
     return NextResponse.json(
       { error: "Missing course id." },
@@ -296,6 +301,7 @@ export async function POST(request: NextRequest) {
           transactionId,
           paidAmount: finalFee,
           senderMobile,
+          paymentMethod,
           couponCode: appliedCouponCode,
         });
       } catch {
@@ -312,9 +318,9 @@ export async function POST(request: NextRequest) {
       // databases where the Step 3 migration has not been applied yet.
       try {
         await exec(
-          `UPDATE enrollments SET payment_transaction_id = ?, payment_amount = ?, payment_sender = ?
+          `UPDATE enrollments SET payment_transaction_id = ?, payment_amount = ?, payment_sender = ?, payment_method = ?
            WHERE student_uid = ? AND course_id = ?`,
-          [transactionId, finalFee, senderMobile, user.uid, courseId],
+          [transactionId, finalFee, senderMobile, paymentMethod, user.uid, courseId],
         );
       } catch {
         // Migration pending — admin UI falls back gracefully.

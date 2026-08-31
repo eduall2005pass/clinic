@@ -23,6 +23,7 @@ export type AdminEnrollment = {
   paymentTransactionId: string | null;
   paymentAmount: number | null;
   paymentSender: string | null;
+  paymentMethod: "bkash" | "nagad" | null;
   /** Original course fee (before any built-in discount or coupon) from the catalog. */
   originalFee: number | null;
   /** Coupon code used, if any (from the latest enrollment application). */
@@ -59,6 +60,7 @@ type EnrollmentRow = {
   payment_transaction_id?: string | null;
   payment_amount?: string | number | null;
   payment_sender?: string | null;
+  payment_method?: "bkash" | "nagad" | null;
   approved_at?: Date | string | null;
   approved_by?: string | null;
   rejected_at?: Date | string | null;
@@ -109,6 +111,7 @@ function mapEnrollment(row: EnrollmentRow): AdminEnrollment {
         ? null
         : toNumber(row.payment_amount) || null,
     paymentSender: row.payment_sender ?? null,
+    paymentMethod: row.payment_method ?? null,
     originalFee: course && course.fee > 0 ? course.fee : (toNumber(row.fee) || null),
     couponCode: row.coupon_code ?? null,
     paymentDate: parseTime(row.payment_created_at ?? null),
@@ -129,7 +132,7 @@ const FROM_CLAUSE = `
 
 /** Payment columns (Step 3 + Step 6 migration) — absent on databases not yet migrated. */
 const PAYMENT_COLUMNS = `,
-         e.payment_transaction_id, e.payment_amount, e.payment_sender,
+         e.payment_transaction_id, e.payment_amount, e.payment_sender, e.payment_method,
          e.approved_at, e.approved_by, e.rejected_at, e.rejected_by,
          ea.coupon_code, ea.created_at AS payment_created_at`;
 
