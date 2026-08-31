@@ -434,6 +434,8 @@ export default function EnrollModal({
       // Coupon visibility is admin-controlled (Enrollment Control → Payment
       // Card → Coupon Availability). Defaults to visible while loading.
       const couponVisible = paymentCard ? paymentCard.couponEnabled : true;
+      const hasBkash = Boolean(paymentCard?.bkashNumber);
+      const hasNagad = Boolean(paymentCard?.nagadNumber);
       return (
         <div className="mt-4">
           {isCancelled && (
@@ -441,88 +443,12 @@ export default function EnrollModal({
               Your previous enrollment was cancelled. You can request a new one.
             </p>
           )}
+
           <div className="rounded-xl border border-ink/10 bg-dark-950 p-4">
-            {/* Fee + Coupon — compact responsive layout */}
-            {paymentCard?.feeEnabled !== false && (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-              {/* Fixed fee breakdown — Course Fee → Discount → Payable.
-                  Fully system-derived; the student can never edit the amount. */}
-              <div className="space-y-1.5">
-                <div className="flex items-baseline gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    {paymentCard?.feeLabel || "Course Fee"}
-                  </p>
-                  <p className="text-sm font-semibold text-neutral-300">
-                    {formatFee(course.fee)}
-                  </p>
-                </div>
-                {(appliedCoupon &&
-                  appliedCoupon.finalFee < payableFee) ||
-                (payableFee < course.fee) ? (
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                      {paymentCard?.discountLabel || "Discount"}
-                    </p>
-                    <p className="text-sm font-semibold text-emerald-400">
-                      − {formatFee(finalAmount < course.fee ? course.fee - finalAmount : course.fee - payableFee)}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
 
-              {/* Coupon code — hidden when admin sets availability OFF */}
-              {couponVisible && (
-                <div className="w-full sm:max-w-[160px] lg:max-w-xs">
-                  <div className="flex gap-2">
-                    <input
-                      id="enroll-coupon"
-                      type="text"
-                      value={couponInput}
-                      onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
-                      placeholder={paymentCard?.couponPlaceholder || "COUPON CODE"}
-                      disabled={Boolean(appliedCoupon)}
-                      className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 disabled:opacity-60"
-                    />
-                    {appliedCoupon ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAppliedCoupon(null);
-                          setCouponInput("");
-                          setCouponError(null);
-                        }}
-                        className="shrink-0 rounded-xl border border-ink/15 bg-ink/5 px-3 py-2 text-xs font-bold text-heading transition hover:border-primary-500/60"
-                      >
-                        Remove
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void handleApplyCoupon()}
-                        disabled={checkingCoupon || !couponInput.trim()}
-                        className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-3 py-2 text-xs font-bold text-primary-300 transition hover:bg-primary-600/20 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {checkingCoupon ? "Checking…" : (paymentCard?.applyLabel || "Apply")}
-                      </button>
-                    )}
-                  </div>
-                  {appliedCoupon && (
-                    <p className="mt-1 text-xs font-semibold text-emerald-400">
-                      Coupon {appliedCoupon.code} applied — you pay{" "}
-                      {formatFee(appliedCoupon.finalFee)}.
-                    </p>
-                  )}
-                  {couponError && (
-                    <p className="mt-1 text-xs font-semibold text-red-400">{couponError}</p>
-                  )}
-                </div>
-              )}
-            </div>
-            )}
-
-            {/* Fixed Payable Amount — compact horizontal box */}
+            {/* Payable Amount */}
             {paymentCard?.payableEnabled !== false && (
-            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-primary-500/30 bg-primary-600/10 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-primary-500/30 bg-primary-600/10 px-4 py-3">
               <p className="shrink-0 text-xs font-bold uppercase tracking-wide text-neutral-400">
                 {paymentCard?.payableLabel || "Payable Amount"}
               </p>
@@ -537,57 +463,71 @@ export default function EnrollModal({
                     </span>
                   </>
                 )}
-                <p className="shrink-0 text-lg font-extrabold text-primary-400 sm:text-xl">
+                <p className="shrink-0 text-xl font-extrabold text-primary-400 sm:text-2xl">
                   {formatFee(finalAmount)}
                 </p>
               </div>
             </div>
             )}
 
-            {/* Payment card — live from MySQL (Admin → Enrollment Control →
-                Payment Card). Students pay to THESE numbers. Methods sit
-                vertically as separate rows. */}
-            {paymentCard && (paymentCard.bkashNumber || paymentCard.nagadNumber) && (
-              <div className="mt-3 rounded-xl border border-primary-500/20 bg-primary-600/5 p-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
-                  {paymentCard?.methodsLabel || "Payment Methods"}
-                </p>
-                <div className="mt-2 space-y-2">
-                  {paymentCard.bkashNumber && (
-                    <div className="flex items-center gap-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-1.5">
-                      <span className="text-xs font-extrabold text-pink-300">{paymentCard?.bkashLabel || "bKash"}</span>
-                      <span className="font-mono text-sm font-semibold text-heading truncate">
-                        {paymentCard.bkashNumber}
-                      </span>
-                    </div>
-                  )}
-                  {paymentCard.nagadNumber && (
-                    <div className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5">
-                      <span className="text-xs font-extrabold text-orange-300">{paymentCard?.nagadLabel || "Nagad"}</span>
-                      <span className="font-mono text-sm font-semibold text-heading truncate">
-                        {paymentCard.nagadNumber}
-                      </span>
-                    </div>
+            {/* Coupon Code */}
+            {couponVisible && (
+              <div className="mt-3">
+                <div className="flex gap-2">
+                  <input
+                    id="enroll-coupon"
+                    type="text"
+                    value={couponInput}
+                    onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                    placeholder={paymentCard?.couponPlaceholder || "COUPON CODE"}
+                    disabled={Boolean(appliedCoupon)}
+                    className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3 py-2.5 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 disabled:opacity-60"
+                  />
+                  {appliedCoupon ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppliedCoupon(null);
+                        setCouponInput("");
+                        setCouponError(null);
+                      }}
+                      className="shrink-0 rounded-xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-xs font-bold text-heading transition hover:border-primary-500/60"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void handleApplyCoupon()}
+                      disabled={checkingCoupon || !couponInput.trim()}
+                      className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-4 py-2.5 text-xs font-bold text-primary-300 transition hover:bg-primary-600/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {checkingCoupon ? "Checking…" : (paymentCard?.applyLabel || "Apply")}
+                    </button>
                   )}
                 </div>
-                {paymentCard.instructionsEnabled !== false && paymentCard.instructions && (
-                  <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-neutral-300">
-                    {paymentCard.instructions}
+                {appliedCoupon && (
+                  <p className="mt-1 text-xs font-semibold text-emerald-400">
+                    Coupon {appliedCoupon.code} applied — you pay{" "}
+                    {formatFee(appliedCoupon.finalFee)}.
                   </p>
+                )}
+                {couponError && (
+                  <p className="mt-1 text-xs font-semibold text-red-400">{couponError}</p>
                 )}
               </div>
             )}
 
-            {/* Payment Method Selection — bKash / Nagad */}
-            {paymentCard && (paymentCard.bkashNumber || paymentCard.nagadNumber) && (
-              <div className="mt-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-neutral-400 mb-2">
-                  Select Payment Method
+            {/* Payment Method — selectable radio buttons with logos */}
+            {paymentCard && (hasBkash || hasNagad) && (
+              <div className="mt-4">
+                <p className="mb-2.5 text-xs font-bold uppercase tracking-wide text-neutral-400">
+                  Payment Method
                 </p>
                 <div className="grid gap-2">
-                  {paymentCard.bkashNumber && (
+                  {hasBkash && (
                     <label
-                      className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition ${
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
                         paymentMethod === "bkash"
                           ? "border-pink-500/60 bg-pink-500/10"
                           : "border-ink/15 bg-dark-900 hover:border-pink-500/30"
@@ -601,17 +541,22 @@ export default function EnrollModal({
                         onChange={() => setPaymentMethod("bkash")}
                         className="h-4 w-4 accent-pink-500"
                       />
-                      <div className="flex-1 flex items-center justify-between">
+                      {/* bKash logo */}
+                      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none">
+                        <rect width="24" height="24" rx="4" fill="#E2136E" opacity="0.15" />
+                        <text x="4" y="16" fontSize="9" fontWeight="bold" fill="#E2136E">b</text>
+                      </svg>
+                      <div className="flex-1">
                         <span className="text-sm font-bold text-pink-300">{paymentCard?.bkashLabel || "bKash"}</span>
-                        <span className="font-mono text-sm font-semibold text-heading bg-pink-500/10 border border-pink-500/20 rounded-lg px-3 py-1">
-                          {paymentCard.bkashNumber}
-                        </span>
                       </div>
+                      <span className="rounded-lg border border-pink-500/20 bg-pink-500/10 px-3 py-1 font-mono text-sm font-bold text-heading">
+                        {paymentCard.bkashNumber}
+                      </span>
                     </label>
                   )}
-                  {paymentCard.nagadNumber && (
+                  {hasNagad && (
                     <label
-                      className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition ${
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
                         paymentMethod === "nagad"
                           ? "border-orange-500/60 bg-orange-500/10"
                           : "border-ink/15 bg-dark-900 hover:border-orange-500/30"
@@ -625,19 +570,29 @@ export default function EnrollModal({
                         onChange={() => setPaymentMethod("nagad")}
                         className="h-4 w-4 accent-orange-500"
                       />
-                      <div className="flex-1 flex items-center justify-between">
+                      {/* Nagad logo */}
+                      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none">
+                        <rect width="24" height="24" rx="4" fill="#F6921E" opacity="0.15" />
+                        <text x="4" y="16" fontSize="9" fontWeight="bold" fill="#F6921E">N</text>
+                      </svg>
+                      <div className="flex-1">
                         <span className="text-sm font-bold text-orange-300">{paymentCard?.nagadLabel || "Nagad"}</span>
-                        <span className="font-mono text-sm font-semibold text-heading bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-1">
-                          {paymentCard.nagadNumber}
-                        </span>
                       </div>
+                      <span className="rounded-lg border border-orange-500/20 bg-orange-500/10 px-3 py-1 font-mono text-sm font-bold text-heading">
+                        {paymentCard.nagadNumber}
+                      </span>
                     </label>
                   )}
                 </div>
+                {paymentCard.instructionsEnabled !== false && paymentCard.instructions && (
+                  <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-neutral-300">
+                    {paymentCard.instructions}
+                  </p>
+                )}
               </div>
             )}
 
-            {/* Payment proof — always horizontal, even on mobile */}
+            {/* Payment proof — always horizontal, matching admin preview */}
             <div className="mt-3 flex gap-2">
                 {paymentCard?.txEnabled !== false && (
                 <div className="min-w-0 flex-1">
@@ -686,7 +641,7 @@ export default function EnrollModal({
                     }`}
                   />
                   {fieldErrors.senderMobile && (
-                    <p className="mt-1 text-xs font-semibold text-red-400">
+                    <p className="mt-1 text-[10px] font-semibold text-red-400 sm:text-xs">
                       {fieldErrors.senderMobile}
                     </p>
                   )}
@@ -695,17 +650,20 @@ export default function EnrollModal({
             </div>
 
             {paymentCard?.pendingNoteEnabled !== false && paymentCard?.pendingNote && (
-            <p className="mt-2 text-xs leading-relaxed text-neutral-400">
+            <p className="mt-3 text-xs leading-relaxed text-neutral-400">
               {paymentCard.pendingNote}
             </p>
             )}
           </div>
+
           {error && (
             <p className="mt-4 rounded-xl border border-primary-500/30 bg-primary-500/10 p-3 text-center text-sm text-primary-300">
               {error}
             </p>
           )}
-          <div className="mt-5 flex gap-2">
+
+          {/* Action Buttons — always horizontal, matching admin preview */}
+          <div className="mt-4 flex gap-2">
             {paymentCard?.cancelEnabled !== false && (
             <button
               type="button"
@@ -811,10 +769,18 @@ return (
             </button>
 
             <div className="pr-6">
-              <span className="inline-block rounded-md border border-primary-500/40 bg-dark-950/80 px-2.5 py-1 text-xs font-bold text-primary-400">
-                {isPaid ? "Paid Course" : "Free Course"}
-              </span>
-              <h2 className="mt-2 text-lg sm:text-xl font-extrabold text-heading">{course.name}</h2>
+              <div className="flex items-start gap-2.5">
+                <svg className="mt-0.5 h-5 w-5 shrink-0 text-primary-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <rect x="4" y="11" width="16" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+                <div>
+                  <h3 className="text-lg font-extrabold text-heading sm:text-xl">{isPaid ? "Paid Course" : "Free Course"}</h3>
+                  <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">
+                    {isPaid ? "You must have to pay for enrolled in this course" : "This course is free."}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {renderContent()}
