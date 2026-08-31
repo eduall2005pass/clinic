@@ -204,9 +204,7 @@ async function ensureTables(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   // Databases created before the featured flag need the column added.
   try {
-    await exec(
-      `ensureColumn("catalog_courses", "is_featured", "TINYINT(1) NOT NULL DEFAULT 0")`,
-    );
+    await ensureColumn("catalog_courses", "is_featured", "`is_featured` TINYINT(1) NOT NULL DEFAULT 0");
   } catch {
     // Best effort — column may already exist.
   }
@@ -218,11 +216,16 @@ async function ensureTables(): Promise<void> {
   }
   // Course-wise content structure (direct / paper / subject selection).
   try {
-    await exec(
-      `ensureColumn("catalog_courses", "content_layout", "ENUM('auto','direct','paper','subject') NOT NULL DEFAULT 'auto' AFTER availability")`,
-    );
+    await ensureColumn("catalog_courses", "content_layout", "`content_layout` ENUM('auto','direct','paper','subject') NOT NULL DEFAULT 'auto' AFTER availability");
   } catch {
     // Best effort — column may already exist.
+  }
+  try {
+    await ensureColumn("catalog_courses", "total_classes", "`total_classes` INT NULL");
+    await ensureColumn("catalog_courses", "total_exams", "`total_exams` INT NULL");
+    await ensureColumn("catalog_courses", "course_details", "`course_details` JSON NULL");
+  } catch {
+    // Best effort.
   }
   // Admin-entered class/exam counts for the course card.
   try {
