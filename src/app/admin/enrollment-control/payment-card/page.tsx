@@ -39,12 +39,17 @@ export default function PaymentCardPage() {
         headers: { Authorization: `Bearer ${await user.getIdToken()}` },
         cache: "no-store",
       });
-      if (res.ok) setConfig((await res.json()) as PaymentCardConfig);
-      else setConfig({ ...DEFAULT_PAYMENT_CARD });
+      if (res.ok) {
+        setConfig((await res.json()) as PaymentCardConfig);
+      } else {
+        setConfig({ ...DEFAULT_PAYMENT_CARD });
+        toast.showToast("error", "Could not load saved payment card. Showing defaults.");
+      }
     } catch {
       setConfig({ ...DEFAULT_PAYMENT_CARD });
+      toast.showToast("error", "Network error — could not load payment card.");
     }
-  }, [user]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (!user) return;
@@ -70,20 +75,31 @@ export default function PaymentCardPage() {
     if (!config || saving || !user) return;
     setSaving(true);
     try {
+      const token = await user.getIdToken();
       const res = await fetch("/api/admin/enrollment-control/payment-card", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${await user.getIdToken()}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(config),
       });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        toast.showToast("error", data?.error ?? "Failed to save.");
+        toast.showToast("error", data?.error ?? "Failed to save payment card.");
         return;
       }
-      toast.showToast("success", "Payment Card saved.");
+      // Re-fetch from DB to confirm persistence and sync UI with persisted data.
+      const reloadRes = await fetch("/api/admin/enrollment-control/payment-card", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (reloadRes.ok) {
+        setConfig((await reloadRes.json()) as PaymentCardConfig);
+      }
+      toast.showToast("success", "Payment Card saved successfully.");
+    } catch {
+      toast.showToast("error", "Network error — could not save payment card.");
     } finally {
       setSaving(false);
     }
@@ -656,15 +672,15 @@ function PreviewCard({ config }: { config: PaymentCardConfig | null }) {
         )}
       </div>
 
-      {/* ═══ Row 6 — Action Buttons ═══ */}
-      <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+      {/* ═══ Row 6 — Action Buttons (always horizontal) ═══ */}
+      <div className="mt-4 flex gap-2">
         {config.cancelEnabled !== false && (
-          <div className="w-full flex-1 rounded-xl border border-ink/15 bg-ink/5 px-6 py-3 text-center text-sm font-semibold text-heading sm:flex-1">
+          <div className="shrink-0 rounded-xl border border-ink/15 bg-ink/5 px-3 py-2 text-center text-xs font-semibold text-heading sm:px-6 sm:py-3 sm:text-sm">
             {config.cancelLabel || "Cancel"}
           </div>
         )}
         {config.submitEnabled !== false && (
-          <div className="w-full rounded-xl bg-primary-600 px-6 py-3 text-center text-sm font-bold text-white shadow-lg shadow-primary-900/40 sm:flex-[2]">
+          <div className="min-w-0 flex-1 rounded-xl bg-primary-600 px-3 py-2 text-center text-xs font-bold text-white shadow-lg shadow-primary-900/40 sm:px-6 sm:py-3 sm:text-sm">
             {config.submitLabel || "Submit Payment"}
           </div>
         )}

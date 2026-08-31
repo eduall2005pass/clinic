@@ -202,6 +202,7 @@ export async function savePaymentCard(
        submit_enabled=VALUES(submit_enabled), submit_label=VALUES(submit_label),
        submitting_label=VALUES(submitting_label), updated_by=VALUES(updated_by)`,
     [
+      "default",
       s(config.bkashNumber, 40),
       b(config.bkashEnabled),
       s(config.nagadNumber, 40),
