@@ -552,6 +552,25 @@ function toNum(value: string | number | null | undefined): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+/**
+ * Check if a student has any prior submitted result for this exam.
+ * Used by the Timer Selection page to determine first vs second timer.
+ */
+export async function hasPriorExamAttempt(
+  examId: string,
+  uid: string,
+): Promise<boolean> {
+  try {
+    const rows = await query<{ n: number }[]>(
+      `SELECT COUNT(*) AS n FROM exam_results WHERE exam_id = ? AND student_uid = ?`,
+      [examId, uid],
+    );
+    return (rows[0]?.n ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function getExamForTaking(
   examId: string,
   uid?: string,

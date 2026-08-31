@@ -17,16 +17,38 @@ const statusMeta: Record<
       "bg-primary-600 text-white shadow-md shadow-primary-600/50 ring-1 ring-primary-400/60",
     dot: "bg-white animate-pulse",
   },
+  Available: {
+    label: "AVAILABLE",
+    badge:
+      "bg-emerald-600 text-white shadow-md shadow-emerald-600/50 ring-1 ring-emerald-400/60",
+    dot: "bg-white animate-pulse",
+  },
   Upcoming: {
     label: "UPCOMING",
     badge:
       "bg-primary-500/10 text-primary-300 border border-primary-500/30",
     dot: "bg-primary-400",
   },
-  Closed: {
+  Completed: {
     label: "COMPLETED",
     badge: "bg-dark-800 text-neutral-400 border border-ink/10",
     dot: "bg-neutral-500",
+  },
+  Expired: {
+    label: "EXPIRED",
+    badge: "bg-red-500/10 text-red-400 border border-red-500/30",
+    dot: "bg-red-400",
+  },
+  Inactive: {
+    label: "INACTIVE",
+    badge: "bg-dark-800 text-neutral-500 border border-ink/10",
+    dot: "bg-neutral-600",
+  },
+  Unpublished: {
+    label: "DRAFT",
+    badge:
+      "bg-yellow-500/10 text-yellow-300 border border-yellow-500/30",
+    dot: "bg-yellow-400",
   },
 };
 
@@ -74,19 +96,25 @@ const categoryMeta: Record<
 
 const actionMeta: Record<ExamStatus, { label: string }> = {
   Live: { label: "Start Now" },
+  Available: { label: "Start Now" },
   Upcoming: { label: "View Details" },
-  Closed: { label: "View Result" },
+  Completed: { label: "View Result" },
+  Expired: { label: "View Details" },
+  Inactive: { label: "Not Available" },
+  Unpublished: { label: "View Details" },
 };
 
 function dateInfo(exam: PublicExam): string {
   if (!exam.examDate) return "";
   const prefix =
-    exam.status === "Live"
+    exam.status === "Live" || exam.status === "Available"
       ? "Started"
-      : exam.status === "Closed"
+      : exam.status === "Completed" || exam.status === "Expired"
         ? "Ended"
         : "Scheduled";
-  return exam.examTime ? `${prefix} ${exam.examDate} · ${exam.examTime}` : `${prefix} ${exam.examDate}`;
+  return exam.examTime
+    ? `${prefix} ${exam.examDate} · ${exam.examTime}`
+    : `${prefix} ${exam.examDate}`;
 }
 
 export default function ExamCard({
@@ -107,11 +135,17 @@ export default function ExamCard({
   const category = categorizeExam(exam);
   const CategoryIcon = categoryMeta[category].icon;
   const isLive = exam.status === "Live";
+  const isAvailable = exam.status === "Available";
+  const canStart = isLive || isAvailable;
+  const isInactive = exam.status === "Inactive";
+  const isUnpublished = exam.status === "Unpublished";
   const href = detailsHref ?? `/exam/${exam.id}`;
 
-  const cardClasses = isLive
+  const cardClasses = canStart
     ? "border-primary-600/60 ring-1 ring-primary-600/40 shadow-xl shadow-primary-900/40 hover:border-primary-500 hover:shadow-primary-800/50"
-    : "border-ink/10 shadow-lg shadow-black/20 hover:border-primary-600/50";
+    : exam.status === "Upcoming"
+      ? "border-primary-500/30 shadow-lg shadow-black/20 hover:border-primary-600/50"
+      : "border-ink/10 shadow-lg shadow-black/20 hover:border-primary-600/50";
 
   const buttonClasses =
     "w-full rounded-xl px-4 py-3 text-sm font-bold transition active:scale-[0.98]";
@@ -189,14 +223,15 @@ export default function ExamCard({
         <div className="mt-auto pt-5">
           <p className="mb-3 flex items-center justify-between text-xs font-medium text-neutral-500">
             <span>{dateInfo(exam) || "Schedule to be announced."}</span>
-            {isLive && (
+            {canStart && (
               <span className="font-bold text-primary-400">Running now</span>
             )}
           </p>
 
-          {isLive && !detailsHref ? (
+          {canStart && !detailsHref ? (
             <StartExamButton
               exam={exam}
+              disabled={isInactive || isUnpublished}
               className={`${buttonClasses} flex items-center justify-center gap-2 bg-primary-600 text-white shadow-md shadow-primary-900/50 hover:bg-primary-500`}
             >
               {action.label}
@@ -208,7 +243,9 @@ export default function ExamCard({
               className={`${buttonClasses} flex items-center justify-center gap-2 ${
                 exam.status === "Upcoming"
                   ? "border border-primary-600/50 bg-primary-600/10 text-primary-300 hover:bg-primary-600/20"
-                  : "border border-ink/10 bg-dark-850 text-neutral-300 hover:border-ink/20 hover:text-heading"
+                  : isInactive || isUnpublished
+                    ? "border border-ink/10 bg-dark-850 text-neutral-500 cursor-not-allowed"
+                    : "border border-ink/10 bg-dark-850 text-neutral-300 hover:border-ink/20 hover:text-heading"
               }`}
             >
               {action.label}

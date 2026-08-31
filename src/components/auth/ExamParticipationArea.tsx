@@ -74,10 +74,13 @@ function formatDuration(seconds: number): string {
 export default function ExamParticipationArea({
   examId,
   autoBegin = false,
+  timerType = "first",
 }: {
   examId: string;
-  /** True when the student already accepted the rules (Start Now flow). */
+  /** True when the student already accepted the Exam Rules (Start Now flow). */
   autoBegin?: boolean;
+  /** First or second timer — affects grading penalty. */
+  timerType?: "first" | "second";
 }) {
   const examHref = `/exam/${examId}`;
   const loginHref = `/login?next=${encodeURIComponent(examHref)}`;
@@ -129,7 +132,7 @@ export default function ExamParticipationArea({
     try {
       const authToken = await user.getIdToken();
       const response = await fetch(
-        `/api/exams/${encodeURIComponent(examId)}?start=1`,
+        `/api/exams/${encodeURIComponent(examId)}?start=1&timer=${timerType}`,
         {
           headers: authToken
             ? { Authorization: `Bearer ${authToken}` }
@@ -151,7 +154,7 @@ export default function ExamParticipationArea({
     } finally {
       setBeginning(false);
     }
-  }, [beginning, begun, exam, examId, user, activateSession]);
+  }, [beginning, begun, exam, examId, user, activateSession, timerType]);
 
   // Load the exam meta + sanitized questions first (no answers, no attempt).
   useEffect(() => {
@@ -182,7 +185,7 @@ export default function ExamParticipationArea({
           try {
             const authToken = await user.getIdToken();
             const startResponse = await fetch(
-              `/api/exams/${encodeURIComponent(examId)}?start=1`,
+              `/api/exams/${encodeURIComponent(examId)}?start=1&timer=${timerType}`,
               {
                 headers: authToken
                   ? { Authorization: `Bearer ${authToken}` }
@@ -213,7 +216,7 @@ export default function ExamParticipationArea({
     return () => {
       cancelled = true;
     };
-  }, [authLoading, profileLoading, user, examId, autoBegin, activateSession]);
+  }, [authLoading, profileLoading, user, examId, autoBegin, activateSession, timerType]);
 
   const submit = useCallback(async () => {
     if (submittedRef.current || !user) return;

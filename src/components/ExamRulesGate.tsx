@@ -128,7 +128,7 @@ export default function ExamRulesGate({ examId }: { examId: string }) {
             <button
               type="button"
               disabled={!agreed}
-              onClick={() => router.push(`/exam/${examId}?begin=1`)}
+              onClick={() => router.push(`/exam/${examId}/timer`)}
               title={agreed ? undefined : "Tick the agreement box first"}
               className="rounded-xl bg-primary-600 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:border disabled:border-ink/10 disabled:bg-dark-800 disabled:text-neutral-500 disabled:shadow-none"
             >

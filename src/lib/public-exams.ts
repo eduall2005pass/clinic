@@ -12,7 +12,14 @@ export function negativeMarksFor(courseType: string): number {
   return courseType === "Admission" ? NEGATIVE_MARKS_PER_WRONG : 0;
 }
 
-export type ExamStatus = "Upcoming" | "Live" | "Closed";
+export type ExamStatus =
+  | "Upcoming"
+  | "Live"
+  | "Available"
+  | "Completed"
+  | "Expired"
+  | "Inactive"
+  | "Unpublished";
 
 export type CourseType = "Academic" | "Admission";
 
@@ -33,10 +40,22 @@ export type PublicExam = {
   durationMinutes: number;
   /** Negative marks per wrong answer (0 = no negative marking). */
   negativeMarks: number;
+  /** Per-exam negative marking toggle (admin-controlled). */
+  negativeEnabled: boolean;
+  /** Per-exam negative marks per wrong answer. */
+  negativePerWrong: number;
+  /** Scheduled start time (ISO string). */
+  scheduledAt: string | null;
+  /** Scheduled end time (ISO string). */
+  endsAt: string | null;
   examDate: string;
   examTime: string;
   status: ExamStatus;
   published: boolean;
+  /** Second timer enabled for this exam (repeat attempt penalty). */
+  secondTimerEnabled: boolean;
+  /** Second timer deduction marks. */
+  secondTimerDeduction: number;
   eligibility: Eligibility;
 };
 
@@ -146,16 +165,21 @@ export function formatExamTime(iso: string): string {
 }
 
 export function deriveStatus(exam: Exam): ExamStatus {
-  if (exam.status === "closed") return "Closed";
+  if (exam.status === "draft") return "Unpublished";
+  if (exam.status === "closed") return "Completed";
   const now = Date.now();
-  const startsAt = exam.scheduledAt ? new Date(exam.scheduledAt).getTime() : null;
+  const startsAt = exam.scheduledAt
+    ? new Date(exam.scheduledAt).getTime()
+    : null;
   const endsAt = exam.endsAt ? new Date(exam.endsAt).getTime() : null;
-  // Before the start time → Upcoming; after the end time (when set) → Closed.
+  // Before the scheduled start time → Upcoming.
   if (startsAt !== null && !Number.isNaN(startsAt) && startsAt > now) {
     return "Upcoming";
   }
+  // Past the end time (when set) → Expired.
   if (endsAt !== null && !Number.isNaN(endsAt) && endsAt < now) {
-    return "Closed";
+    return "Expired";
   }
+  // Within the window or no window set → Live (students can start).
   return "Live";
 }

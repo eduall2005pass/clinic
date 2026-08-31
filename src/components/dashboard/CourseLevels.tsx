@@ -914,7 +914,7 @@ function PaperChapterView({
               {chapter.exams.map((exam, index) => (
                 <li key={exam.id}>
                   <Link
-                    href="/exam"
+                    href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/exams/${encodeURIComponent(exam.id)}`}
                     onClick={() => recordRecentView(user, "exam", exam.id)}
                     className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
                   >
