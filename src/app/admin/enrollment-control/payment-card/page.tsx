@@ -52,26 +52,6 @@ export default function PaymentCardPage() {
     void loadConfig();
   }, [user, loadConfig]);
 
-  useEffect(() => {
-    if (!user) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadEnrollments();
-  }, [user, loadEnrollments]);
-
-  // Live refresh — new enrollment submissions appear without manual reload.
-  useEffect(() => {
-    if (!user || tab !== "overview") return;
-    const id = window.setInterval(() => void loadEnrollments(), 12_000);
-    const onVis = () => {
-      if (document.visibilityState === "visible") void loadEnrollments();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, [user, tab, loadEnrollments]);
-
   function patch(fields: Partial<PaymentCardConfig>) {
     setConfig((prev) => (prev ? { ...prev, ...fields } : prev));
   }
