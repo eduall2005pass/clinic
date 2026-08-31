@@ -117,9 +117,14 @@ function toStringOrNull(value: unknown): string | null {
 }
 
 function toLayout(value: unknown): CourseContentLayout {
-  return value === "direct" || value === "paper" || value === "subject"
-    ? value
-    : "auto";
+  const v = String(value ?? "").trim().toLowerCase();
+  // New flow values.
+  if (v === "flow-1" || v === "flow-2" || v === "flow-3") return v;
+  // Backward compatibility: map old values.
+  if (v === "direct") return "flow-1";
+  if (v === "paper") return "flow-2";
+  if (v === "subject") return "flow-3";
+  return "flow-1";
 }
 
 async function loadProgress(
@@ -167,7 +172,7 @@ export function usesDirectCourseContent(
   name?: string | null,
   slug?: string | null,
 ): boolean {
-  return isDirectContent("auto", name, slug);
+  return isDirectContent("flow-1", name, slug);
 }
 
 // ── Enrolled course list ──────────────────────────────────────────────────

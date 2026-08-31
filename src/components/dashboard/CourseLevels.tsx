@@ -338,11 +338,7 @@ function CourseSubjectsContent({ slug }: { slug: string }) {
     isDirectContent(layout, course.name, course.slug);
   const useSubjectSelection =
     !direct &&
-    (layout === "subject" ||
-      // Auto: multi-subject Medical Admission opens the icon grid directly.
-      (layout === "auto" &&
-        course.category === "Medical Admission" &&
-        course.subjects.length > 1));
+    layout === "flow-3";
 
   if (direct) {
     return <DirectContentView slug={slug} />;
