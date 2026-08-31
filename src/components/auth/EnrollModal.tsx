@@ -637,14 +637,13 @@ export default function EnrollModal({
               </div>
             )}
 
-            {/* Payment proof — compact responsive grid (only Transaction ID + Sender Mobile) */}
-            <div className="mt-3">
-              <div className="grid gap-2 sm:grid-cols-2">
+            {/* Payment proof — always horizontal, even on mobile */}
+            <div className="mt-3 flex gap-2">
                 {paymentCard?.txEnabled !== false && (
-                <div>
+                <div className="min-w-0 flex-1">
                   <label
                     htmlFor="enroll-txn"
-                    className="text-xs font-semibold text-neutral-400"
+                    className="text-[11px] font-semibold text-neutral-400 sm:text-xs"
                   >
                     {paymentCard?.txLabel || "Transaction ID"}
                   </label>
@@ -655,24 +654,24 @@ export default function EnrollModal({
                     onChange={(event) => setTransactionId(event.target.value)}
                     placeholder={paymentCard?.txPlaceholder || "e.g. 8N7DQK2XLM"}
                     autoComplete="off"
-                    className={`mt-1 w-full rounded-xl border bg-dark-900 px-3 py-2 text-sm uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
+                    className={`mt-1 w-full truncate rounded-xl border bg-dark-900 px-2 py-2 text-xs uppercase tracking-wide text-heading placeholder:normal-case placeholder:tracking-normal placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 sm:px-3 sm:py-2.5 sm:text-sm ${
                       fieldErrors.transactionId ? "border-red-500/60" : "border-ink/15"
                     }`}
                   />
                   {fieldErrors.transactionId && (
-                    <p className="mt-1 text-xs font-semibold text-red-400">
+                    <p className="mt-1 text-[10px] font-semibold text-red-400 sm:text-xs">
                       {fieldErrors.transactionId}
                     </p>
                   )}
                 </div>
                 )}
                 {paymentCard?.senderEnabled !== false && (
-                <div>
+                <div className="min-w-0 flex-1">
                   <label
                     htmlFor="enroll-mobile"
-                    className="text-xs font-semibold text-neutral-400"
+                    className="text-[11px] font-semibold text-neutral-400 sm:text-xs"
                   >
-                    {paymentCard?.senderLabel || "Payment From Number"}
+                    {paymentCard?.senderLabel || "Payment Number"}
                   </label>
                   <input
                     id="enroll-mobile"
@@ -682,7 +681,7 @@ export default function EnrollModal({
                     onChange={(event) => setSenderMobile(event.target.value)}
                     placeholder={paymentCard?.senderPlaceholder || "01XXXXXXXXX"}
                     maxLength={11}
-                    className={`mt-1 w-full rounded-xl border bg-dark-900 px-3 py-2 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 ${
+                    className={`mt-1 w-full truncate rounded-xl border bg-dark-900 px-2 py-2 text-xs text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70 sm:px-3 sm:py-2.5 sm:text-sm ${
                       fieldErrors.senderMobile ? "border-red-500/60" : "border-ink/15"
                     }`}
                   />
@@ -693,7 +692,6 @@ export default function EnrollModal({
                   )}
                 </div>
                 )}
-              </div>
             </div>
 
             {paymentCard?.pendingNoteEnabled !== false && paymentCard?.pendingNote && (

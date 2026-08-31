@@ -624,24 +624,24 @@ function PreviewCard({ config }: { config: PaymentCardConfig | null }) {
           </div>
         )}
 
-        {/* ═══ Row 5 — Payment Information ═══ */}
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {/* ═══ Row 5 — Payment Information (always horizontal) ═══ */}
+        <div className="mt-3 flex gap-2">
           {config.txEnabled !== false && (
-            <div>
-              <label className="text-xs font-semibold text-neutral-400">
+            <div className="min-w-0 flex-1">
+              <label className="text-[11px] font-semibold text-neutral-400 sm:text-xs">
                 {config.txLabel || "Transaction ID"}
               </label>
-              <div className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-900 px-3 py-2.5 text-sm text-neutral-600">
+              <div className="mt-1 w-full truncate rounded-xl border border-ink/15 bg-dark-900 px-2 py-2 text-xs text-neutral-600 sm:px-3 sm:py-2.5 sm:text-sm">
                 {config.txPlaceholder || "e.g. 8N7DQK2XLM"}
               </div>
             </div>
           )}
           {config.senderEnabled !== false && (
-            <div>
-              <label className="text-xs font-semibold text-neutral-400">
+            <div className="min-w-0 flex-1">
+              <label className="text-[11px] font-semibold text-neutral-400 sm:text-xs">
                 {config.senderLabel || "Payment Number"}
               </label>
-              <div className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-900 px-3 py-2.5 text-sm text-neutral-600">
+              <div className="mt-1 w-full truncate rounded-xl border border-ink/15 bg-dark-900 px-2 py-2 text-xs text-neutral-600 sm:px-3 sm:py-2.5 sm:text-sm">
                 {config.senderPlaceholder || "01XXXXXXXXX"}
               </div>
             </div>
