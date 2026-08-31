@@ -39,12 +39,17 @@ export default function PaymentCardPage() {
         headers: { Authorization: `Bearer ${await user.getIdToken()}` },
         cache: "no-store",
       });
-      if (res.ok) setConfig((await res.json()) as PaymentCardConfig);
-      else setConfig({ ...DEFAULT_PAYMENT_CARD });
+      if (res.ok) {
+        setConfig((await res.json()) as PaymentCardConfig);
+      } else {
+        setConfig({ ...DEFAULT_PAYMENT_CARD });
+        toast.showToast("error", "Could not load saved payment card. Showing defaults.");
+      }
     } catch {
       setConfig({ ...DEFAULT_PAYMENT_CARD });
+      toast.showToast("error", "Network error — could not load payment card.");
     }
-  }, [user]);
+  }, [user, toast]);
 
   useEffect(() => {
     if (!user) return;
@@ -70,20 +75,31 @@ export default function PaymentCardPage() {
     if (!config || saving || !user) return;
     setSaving(true);
     try {
+      const token = await user.getIdToken();
       const res = await fetch("/api/admin/enrollment-control/payment-card", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${await user.getIdToken()}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(config),
       });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        toast.showToast("error", data?.error ?? "Failed to save.");
+        toast.showToast("error", data?.error ?? "Failed to save payment card.");
         return;
       }
-      toast.showToast("success", "Payment Card saved.");
+      // Re-fetch from DB to confirm persistence and sync UI with persisted data.
+      const reloadRes = await fetch("/api/admin/enrollment-control/payment-card", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (reloadRes.ok) {
+        setConfig((await reloadRes.json()) as PaymentCardConfig);
+      }
+      toast.showToast("success", "Payment Card saved successfully.");
+    } catch {
+      toast.showToast("error", "Network error — could not save payment card.");
     } finally {
       setSaving(false);
     }
@@ -498,13 +514,15 @@ export default function PaymentCardPage() {
 
 /* ────────────────────────────────────────────────────────────────────────────
    Live Preview — mirrors the student EnrollModal payment card exactly.
-   Same layout, same spacing, same fields, same buttons, same styling.
+   6-row layout: Header → Payable → Coupon → Payment Method → Info → Buttons
    ──────────────────────────────────────────────────────────────────────────── */
 
 function PreviewCard({ config }: { config: PaymentCardConfig | null }) {
+  const [previewMethod, setPreviewMethod] = useState<"bkash" | "nagad">("bkash");
+
   if (!config) {
     return (
-      <div className="sticky top-24 rounded-2xl border border-primary-600/30 bg-gradient-to-br from-dark-900 via-dark-950 to-black p-6 shadow-xl shadow-black/40">
+      <div className="sticky top-24 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-xl shadow-black/40">
         <AccessLoading label="Loading preview…" />
       </div>
     );
@@ -515,140 +533,154 @@ function PreviewCard({ config }: { config: PaymentCardConfig | null }) {
   const hasMethods = hasBkash || hasNagad;
 
   return (
-    <div className="sticky top-24 rounded-2xl border border-primary-600/30 bg-gradient-to-br from-dark-900 via-dark-950 to-black p-6 shadow-xl shadow-black/40">
-      {/* Fee + Coupon */}
-      {config.feeEnabled && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-baseline gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                {config.feeLabel || "Course Fee"}
-              </p>
-              <p className="text-sm font-semibold text-neutral-300">৳1,500</p>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                {config.discountLabel || "Discount"}
-              </p>
-              <p className="text-sm font-semibold text-emerald-400">− ৳500</p>
+    <div className="sticky top-24 rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-xl shadow-black/40 sm:p-6">
+
+      {/* ═══ Row 1 — Paid Course Header ═══ */}
+      <div className="flex items-start gap-2.5">
+        <svg className="mt-0.5 h-5 w-5 shrink-0 text-primary-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <rect x="4" y="11" width="16" height="10" rx="2" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+        <div>
+          <h3 className="text-lg font-extrabold text-heading sm:text-xl">Paid Course</h3>
+          <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">
+            You must have to pay for enrolled in this course
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-ink/10 bg-dark-950 p-4">
+
+        {/* ═══ Row 2 — Payable Amount ═══ */}
+        {config.payableEnabled !== false && (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-primary-500/30 bg-primary-600/10 px-4 py-3">
+            <p className="shrink-0 text-xs font-bold uppercase tracking-wide text-neutral-400">
+              {config.payableLabel || "Payable Amount"}
+            </p>
+            <p className="shrink-0 text-xl font-extrabold text-primary-400 sm:text-2xl">৳1,500</p>
+          </div>
+        )}
+
+        {/* ═══ Row 3 — Coupon Code ═══ */}
+        {config.couponEnabled && (
+          <div className="mt-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder={config.couponPlaceholder || "Enter a coupon code"}
+                className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3 py-2.5 text-sm text-heading placeholder:text-neutral-600 outline-none transition focus:border-primary-500/70"
+              />
+              <div className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-4 py-2.5 text-xs font-bold text-primary-300">
+                {config.applyLabel || "Apply"}
+              </div>
             </div>
           </div>
-          {config.couponEnabled && (
-            <div className="w-full sm:max-w-[160px] lg:max-w-xs">
-              <div className="flex gap-2">
-                <div className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm text-heading placeholder:text-neutral-600">
-                  <span className="text-neutral-500">{config.couponPlaceholder || "COUPON CODE"}</span>
-                </div>
-                <div className="shrink-0 rounded-xl border border-primary-500/40 bg-primary-600/10 px-3 py-2 text-xs font-bold text-primary-300">
-                  {config.applyLabel || "Apply"}
-                </div>
+        )}
+
+        {/* ═══ Row 4 — Payment Method ═══ */}
+        {hasMethods && (
+          <div className="mt-4">
+            <p className="mb-2.5 text-xs font-bold uppercase tracking-wide text-neutral-400">
+              Payment Method
+            </p>
+            <div className="grid gap-2">
+              {hasBkash && (
+                <label
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                    previewMethod === "bkash"
+                      ? "border-pink-500/60 bg-pink-500/10"
+                      : "border-ink/15 bg-dark-900 hover:border-pink-500/30"
+                  }`}
+                  onClick={() => setPreviewMethod("bkash")}
+                >
+                  <input type="radio" name="previewMethod" value="bkash" checked={previewMethod === "bkash"} onChange={() => setPreviewMethod("bkash")} className="h-4 w-4 accent-pink-500" />
+                  {/* bKash logo — small 20x20 SVG */}
+                  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none">
+                    <rect width="24" height="24" rx="4" fill="#E2136E" opacity="0.15" />
+                    <text x="4" y="16" fontSize="9" fontWeight="bold" fill="#E2136E">b</text>
+                  </svg>
+                  <div className="flex-1">
+                    <span className="text-sm font-bold text-pink-300">{config.bkashLabel || "bKash"}</span>
+                  </div>
+                  <span className="rounded-lg border border-pink-500/20 bg-pink-500/10 px-3 py-1 font-mono text-sm font-bold text-heading">
+                    {config.bkashNumber}
+                  </span>
+                </label>
+              )}
+              {hasNagad && (
+                <label
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                    previewMethod === "nagad"
+                      ? "border-orange-500/60 bg-orange-500/10"
+                      : "border-ink/15 bg-dark-900 hover:border-orange-500/30"
+                  }`}
+                  onClick={() => setPreviewMethod("nagad")}
+                >
+                  <input type="radio" name="previewMethod" value="nagad" checked={previewMethod === "nagad"} onChange={() => setPreviewMethod("nagad")} className="h-4 w-4 accent-orange-500" />
+                  {/* Nagad logo — small 20x20 SVG */}
+                  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none">
+                    <rect width="24" height="24" rx="4" fill="#F6921E" opacity="0.15" />
+                    <text x="4" y="16" fontSize="9" fontWeight="bold" fill="#F6921E">N</text>
+                  </svg>
+                  <div className="flex-1">
+                    <span className="text-sm font-bold text-orange-300">{config.nagadLabel || "Nagad"}</span>
+                  </div>
+                  <span className="rounded-lg border border-orange-500/20 bg-orange-500/10 px-3 py-1 font-mono text-sm font-bold text-heading">
+                    {config.nagadNumber}
+                  </span>
+                </label>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!hasMethods && (
+          <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-3">
+            <p className="text-xs text-red-400">No payment method enabled.</p>
+          </div>
+        )}
+
+        {/* ═══ Row 5 — Payment Information (always horizontal) ═══ */}
+        <div className="mt-3 flex gap-2">
+          {config.txEnabled !== false && (
+            <div className="min-w-0 flex-1">
+              <label className="text-[11px] font-semibold text-neutral-400 sm:text-xs">
+                {config.txLabel || "Transaction ID"}
+              </label>
+              <div className="mt-1 w-full truncate rounded-xl border border-ink/15 bg-dark-900 px-2 py-2 text-xs text-neutral-600 sm:px-3 sm:py-2.5 sm:text-sm">
+                {config.txPlaceholder || "e.g. 8N7DQK2XLM"}
+              </div>
+            </div>
+          )}
+          {config.senderEnabled !== false && (
+            <div className="min-w-0 flex-1">
+              <label className="text-[11px] font-semibold text-neutral-400 sm:text-xs">
+                {config.senderLabel || "Payment Number"}
+              </label>
+              <div className="mt-1 w-full truncate rounded-xl border border-ink/15 bg-dark-900 px-2 py-2 text-xs text-neutral-600 sm:px-3 sm:py-2.5 sm:text-sm">
+                {config.senderPlaceholder || "01XXXXXXXXX"}
               </div>
             </div>
           )}
         </div>
-      )}
 
-      {/* Payable Amount */}
-      {config.payableEnabled && (
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-primary-500/30 bg-primary-600/10 px-4 py-3">
-          <p className="shrink-0 text-xs font-bold uppercase tracking-wide text-neutral-400">
-            {config.payableLabel || "Payable Amount"}
+        {/* Pending Note */}
+        {config.pendingNoteEnabled && config.pendingNote && (
+          <p className="mt-3 text-xs leading-relaxed text-neutral-400">
+            {config.pendingNote}
           </p>
-          <p className="shrink-0 text-lg font-extrabold text-primary-400 sm:text-xl">৳1,000</p>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Payment Methods */}
-      {hasMethods && (
-        <div className="mt-3 rounded-xl border border-primary-500/20 bg-primary-600/5 p-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-neutral-400">
-              {config.methodsLabel || "Payment Methods"}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {hasBkash && (
-                <div className="flex items-center gap-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-3 py-1.5">
-                  <span className="text-xs font-extrabold text-pink-300">{config.bkashLabel || "bKash"}</span>
-                  <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
-                    {config.bkashNumber}
-                  </span>
-                </div>
-              )}
-              {hasNagad && (
-                <div className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5">
-                  <span className="text-xs font-extrabold text-orange-300">{config.nagadLabel || "Nagad"}</span>
-                  <span className="font-mono text-sm font-semibold text-heading truncate max-w-[120px] sm:max-w-xs">
-                    {config.nagadNumber}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!hasMethods && (
-        <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-3">
-          <p className="text-xs text-red-400">No payment method enabled.</p>
-        </div>
-      )}
-
-      {/* Instructions */}
-      {config.instructionsEnabled && (config.instructions || config.note) && (
-        <div className="mt-3">
-          {config.instructions && (
-            <p className="whitespace-pre-line text-xs leading-relaxed text-neutral-300">
-              {config.instructions}
-            </p>
-          )}
-          {config.note && (
-            <p className="mt-2 whitespace-pre-line rounded-lg border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-3 py-2 text-[11px] text-neutral-400">
-              {config.note}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Transaction ID */}
-      {config.txEnabled && (
-        <div className="mt-3">
-          <label className="text-xs font-semibold text-neutral-400">
-            {config.txLabel || "Transaction ID"}
-          </label>
-          <div className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm text-neutral-500">
-            {config.txPlaceholder || "e.g. 8N7DQK2XLM"}
-          </div>
-        </div>
-      )}
-
-      {/* Payment From Number */}
-      {config.senderEnabled && (
-        <div className="mt-3">
-          <label className="text-xs font-semibold text-neutral-400">
-            {config.senderLabel || "Payment From Number"}
-          </label>
-          <div className="mt-1 w-full rounded-xl border border-ink/15 bg-dark-900 px-3 py-2 text-sm text-neutral-500">
-            {config.senderPlaceholder || "01XXXXXXXXX"}
-          </div>
-        </div>
-      )}
-
-      {/* Pending Note */}
-      {config.pendingNoteEnabled && config.pendingNote && (
-        <p className="mt-3 text-xs leading-relaxed text-neutral-400">
-          {config.pendingNote}
-        </p>
-      )}
-
-      {/* Buttons */}
-      <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
-        {config.cancelEnabled && (
-          <div className="w-full flex-1 rounded-xl border border-ink/15 bg-ink/5 px-6 py-3 text-center text-sm font-semibold text-heading">
+      {/* ═══ Row 6 — Action Buttons (always horizontal) ═══ */}
+      <div className="mt-4 flex gap-2">
+        {config.cancelEnabled !== false && (
+          <div className="shrink-0 rounded-xl border border-ink/15 bg-ink/5 px-3 py-2 text-center text-xs font-semibold text-heading sm:px-6 sm:py-3 sm:text-sm">
             {config.cancelLabel || "Cancel"}
           </div>
         )}
-        {config.submitEnabled && (
-          <div className="w-full flex-[2] rounded-xl bg-primary-600 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-primary-900/40">
+        {config.submitEnabled !== false && (
+          <div className="min-w-0 flex-1 rounded-xl bg-primary-600 px-3 py-2 text-center text-xs font-bold text-white shadow-lg shadow-primary-900/40 sm:px-6 sm:py-3 sm:text-sm">
             {config.submitLabel || "Submit Payment"}
           </div>
         )}

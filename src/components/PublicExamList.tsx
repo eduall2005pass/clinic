@@ -11,14 +11,24 @@ import {
 
 const examSections: { key: PublicExam["status"]; label: string }[] = [
   { key: "Live", label: "Live Exams" },
+  { key: "Available", label: "Available Exams" },
   { key: "Upcoming", label: "Upcoming Exams" },
-  { key: "Closed", label: "Previous Exams" },
+  { key: "Completed", label: "Previous Exams" },
+  { key: "Expired", label: "Expired Exams" },
 ];
 
 type CategoryGroups = Record<PublicExam["status"], PublicExam[]>;
 
 function emptyGroups(): CategoryGroups {
-  return { Live: [], Upcoming: [], Closed: [] };
+  return {
+    Live: [],
+    Available: [],
+    Upcoming: [],
+    Completed: [],
+    Expired: [],
+    Inactive: [],
+    Unpublished: [],
+  };
 }
 
 export default function PublicExamList({
@@ -143,7 +153,7 @@ export default function PublicExamList({
         {examCategories.map((category) => {
           const groups = grouped.get(category.key) ?? emptyGroups();
           const categoryTotal =
-            groups.Live.length + groups.Upcoming.length + groups.Closed.length;
+            groups.Live.length + groups.Upcoming.length + groups.Completed.length;
 
           return (
             <div key={category.key}>

@@ -9,6 +9,7 @@ let ensureResultTablesReady = false;
 // per-question correct answers for published answer keys.
 
 export type ExamKind = "public" | "practice" | "enrolled";
+export type ExamType = "public" | "course";
 export type ExamStatus = "draft" | "published" | "closed";
 
 export const EXAM_KINDS: ExamKind[] = ["public", "practice", "enrolled"];
@@ -50,6 +51,12 @@ export type Exam = {
   sortOrder: number;
   /** Public Exam Control category (synced from Course Control categories). */
   categoryId?: string | null;
+  /** Public Exam = PUBLIC, Course Exam = COURSE (access-control layer). */
+  examType: ExamType;
+  /** Soft-disable flag — inactive exams are hidden from students. */
+  active: boolean;
+  /** Per-exam attempt limit (0 = use global default). */
+  attemptLimit: number;
 };
 
 export type ExamQuestion = {
@@ -98,6 +105,7 @@ type ExamRow = {
   description: string | null;
   banner_url: string | null;
   kind: string;
+  type: string;
   batch_id: string;
   subject: string;
   course_type: string;
@@ -108,8 +116,10 @@ type ExamRow = {
   negative_per_wrong?: string | number;
   second_timer_enabled?: number | boolean;
   second_timer_deduction?: string | number;
+  attempt_limit?: number | null;
   question_count: number;
   status: string;
+  active?: number | boolean;
   featured?: number | boolean;
   scheduled_at: Date | string | null;
   ends_at?: Date | string | null;
@@ -160,6 +170,7 @@ function rowToExam(row: ExamRow): Exam {
         : row.kind === "enrolled"
           ? "enrolled"
           : "public",
+    examType: row.type === "course" ? "course" : "public",
     batchId: row.batch_id ?? "",
     subject: row.subject ?? "",
     courseType: row.course_type === "Admission" ? "Admission" : "Academic",
@@ -168,8 +179,7 @@ function rowToExam(row: ExamRow): Exam {
     negativeMarks: toNumber(row.negative_marks),
     negativeEnabled:
       row.negative_enabled === undefined
-        ? // Rows read before the column existed keep the legacy behaviour.
-          row.course_type === "Admission"
+        ? row.course_type === "Admission"
         : Boolean(row.negative_enabled),
     negativePerWrong:
       row.negative_per_wrong === undefined || row.negative_per_wrong === null
@@ -181,6 +191,7 @@ function rowToExam(row: ExamRow): Exam {
       row.second_timer_deduction === null
         ? 5
         : toNumber(row.second_timer_deduction as string | number),
+    attemptLimit: row.attempt_limit != null ? Number(row.attempt_limit) : 0,
     questionCount: row.question_count ?? 0,
     status:
       row.status === "published"
@@ -188,6 +199,7 @@ function rowToExam(row: ExamRow): Exam {
         : row.status === "closed"
           ? "closed"
           : "draft",
+    active: row.active === undefined ? true : Boolean(row.active),
     featured: Boolean(row.featured),
     scheduledAt: toIso(row.scheduled_at),
     endsAt: toIso(row.ends_at),
@@ -298,11 +310,56 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — column may already exist.
   }
+  // ── Exam architecture: type, active, attempt_limit ──
+  try {
+    await ensureColumn("exams", "type", "`type` ENUM('public','course') NOT NULL DEFAULT 'public' AFTER kind");
+  } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await exec(`UPDATE exams SET type = 'course' WHERE kind = 'enrolled'`);
+    await exec(`UPDATE exams SET type = 'public' WHERE kind IN ('public','practice')`);
+  } catch {
+    // Best effort — type column may not exist yet.
+  }
+  try {
+    await ensureColumn("exams", "active", "`active` TINYINT(1) NOT NULL DEFAULT 1 AFTER featured");
+  } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await ensureColumn("exams", "attempt_limit", "`attempt_limit` INT NOT NULL DEFAULT 0 AFTER second_timer_deduction");
+  } catch {
+    // Best effort — column may already exist.
+  }
   // Preserve legacy behaviour: Admission exams always had −0.25 per wrong.
   try {
     await exec(`UPDATE exams SET negative_enabled = 1 WHERE course_type = 'Admission' AND negative_enabled = 0`);
   } catch {
     // Best effort — column may not exist yet (apply the SQL migration).
+  }
+  // ── Exam categories (Public Exam Control) ──
+  await exec(`CREATE TABLE IF NOT EXISTS exam_categories (
+    id VARCHAR(64) NOT NULL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(191) NOT NULL,
+    description TEXT NULL,
+    icon VARCHAR(32) NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY exam_categories_slug_unique (slug)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // Seed default public exam categories.
+  try {
+    await exec(`INSERT IGNORE INTO exam_categories (id, name, slug, icon, sort_order) VALUES
+      ('ssc-academic', 'SSC Academic Exam', 'ssc-academic-exam', '📚', 1),
+      ('hsc-academic', 'HSC Academic Exam', 'hsc-academic-exam', '🎓', 2),
+      ('medical-admission', 'Medical Admission Exam', 'medical-admission-exam', '🏥', 3),
+      ('varsity-admission', 'University Admission Exam', 'varsity-admission-exam', '🏛️', 4)`);
+  } catch {
+    // Best effort — categories may already exist.
   }
   await exec(`CREATE TABLE IF NOT EXISTS exam_courses (
     exam_id VARCHAR(64) NOT NULL,
@@ -321,12 +378,71 @@ async function ensureTables(): Promise<void> {
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // ── Normalized question options ──
+  await exec(`CREATE TABLE IF NOT EXISTS exam_question_options (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    question_id BIGINT UNSIGNED NOT NULL,
+    option_index INT NOT NULL,
+    option_text TEXT NOT NULL,
+    is_correct TINYINT(1) NOT NULL DEFAULT 0,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_eqo_question (question_id),
+    KEY idx_eqo_correct (question_id, is_correct),
+    CONSTRAINT fk_eqo_question FOREIGN KEY (question_id)
+      REFERENCES exam_questions(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // ── Exam sessions (heartbeat, device, IP tracking) ──
+  await exec(`CREATE TABLE IF NOT EXISTS exam_sessions (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    exam_id VARCHAR(64) NOT NULL,
+    student_uid VARCHAR(191) NOT NULL,
+    session_token VARCHAR(64) NOT NULL,
+    status ENUM('active','terminated','expired') NOT NULL DEFAULT 'active',
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_heartbeat TIMESTAMP NULL,
+    ended_at TIMESTAMP NULL,
+    UNIQUE KEY exam_sessions_token_unique (session_token),
+    KEY idx_exam_sessions_exam_student (exam_id, student_uid),
+    KEY idx_exam_sessions_status (status),
+    KEY idx_exam_sessions_started (started_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // ── Exam rankings (pre-computed for fast leaderboard) ──
+  await exec(`CREATE TABLE IF NOT EXISTS exam_rankings (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    exam_id VARCHAR(64) NOT NULL,
+    student_uid VARCHAR(191) NOT NULL,
+    student_name VARCHAR(255) NOT NULL DEFAULT '',
+    student_id VARCHAR(32) NULL,
+    score DECIMAL(6,2) NOT NULL DEFAULT 0,
+    total_marks DECIMAL(6,2) NOT NULL DEFAULT 0,
+    time_taken_seconds INT NULL,
+    merit_position INT NULL,
+    submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY exam_rankings_exam_student (exam_id, student_uid),
+    KEY idx_exam_rankings_exam_score (exam_id, score DESC, time_taken_seconds ASC),
+    KEY idx_exam_rankings_position (exam_id, merit_position)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // ── Historical scoring snapshot on exam_results ──
+  try {
+    await ensureColumn("exam_results", "snapshot_marks", "`snapshot_marks` DECIMAL(6,2) NULL");
+    await ensureColumn("exam_results", "snapshot_negative_per_wrong", "`snapshot_negative_per_wrong` DECIMAL(4,2) NULL");
+    await ensureColumn("exam_results", "snapshot_second_timer_deduction", "`snapshot_second_timer_deduction` DECIMAL(6,2) NULL");
+    await ensureColumn("exam_results", "snapshot_duration_minutes", "`snapshot_duration_minutes` INT NULL");
+    await ensureColumn("exam_results", "snapshot_negative_enabled", "`snapshot_negative_enabled` TINYINT(1) NULL");
+    await ensureColumn("exam_results", "snapshot_second_timer_enabled", "`snapshot_second_timer_enabled` TINYINT(1) NULL");
+  } catch {
+    // Best effort — columns may already exist.
+  }
 }
 
-const EXAM_COLUMNS = `id, title, description, banner_url, kind, batch_id,
+const EXAM_COLUMNS = `id, title, description, banner_url, kind, type, batch_id,
   subject, chapter_id, sort_order, course_type, duration_minutes,
   total_marks, negative_marks, negative_enabled, negative_per_wrong,
-  second_timer_enabled, second_timer_deduction, question_count, status,
+  second_timer_enabled, second_timer_deduction, attempt_limit,
+  question_count, status, active,
   featured, scheduled_at, ends_at, answer_key, category_id`;
 
 // ── Exams CRUD ───────────────────────────────────────────────────────────
@@ -432,6 +548,12 @@ export async function saveExam(
       ? Math.min(9999, secondTimerDeductionRaw)
       : 5;
   const featured = input.featured === true;
+  // Per-exam type (public/course) — access-control layer.
+  const examType: ExamType = input.examType === "course" ? "course" : "public";
+  // Soft-disable flag.
+  const active = input.active !== false;
+  // Per-exam attempt limit (0 = use global default).
+  const attemptLimit = Math.max(0, Number(input.attemptLimit) || 0);
   // Keep the admin's explicit order; new exams without one go to the end.
   let sortOrder = Math.max(0, Number(input.sortOrder) || 0);
   if (!sortOrder && !id) {
@@ -448,10 +570,10 @@ export async function saveExam(
   const isNew = existing.length === 0;
   await exec(
     `INSERT INTO exams (${EXAM_COLUMNS}, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE title = VALUES(title), description = VALUES(description),
        banner_url = VALUES(banner_url),
-       kind = VALUES(kind), batch_id = VALUES(batch_id),
+       kind = VALUES(kind), type = VALUES(type), batch_id = VALUES(batch_id),
        subject = VALUES(subject), chapter_id = VALUES(chapter_id), sort_order = VALUES(sort_order),
        category_id = VALUES(category_id),
        course_type = VALUES(course_type),
@@ -461,7 +583,9 @@ export async function saveExam(
        negative_per_wrong = VALUES(negative_per_wrong),
        second_timer_enabled = VALUES(second_timer_enabled),
        second_timer_deduction = VALUES(second_timer_deduction),
+       attempt_limit = VALUES(attempt_limit),
        question_count = VALUES(question_count), status = VALUES(status),
+       active = VALUES(active),
        featured = VALUES(featured),
        scheduled_at = VALUES(scheduled_at), ends_at = VALUES(ends_at),
        answer_key = VALUES(answer_key), created_by = VALUES(created_by)`,
@@ -471,6 +595,7 @@ export async function saveExam(
       asString(input.description) || null,
       asString(input.bannerUrl) || null,
       kind,
+      examType,
       asString(input.batchId),
       asString(input.subject),
       chapterId,
@@ -484,10 +609,12 @@ export async function saveExam(
       negativePerWrong,
       secondTimerEnabled ? 1 : 0,
       secondTimerDeduction,
+      attemptLimit,
       totals[0]?.count ?? 0,
       ["draft", "published", "closed"].includes(String(input.status))
         ? String(input.status)
         : "draft",
+      active ? 1 : 0,
       featured ? 1 : 0,
       scheduledAt,
       endsAt,

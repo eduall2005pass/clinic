@@ -22,6 +22,7 @@ export type EnrollmentApplication = {
   transactionId: string;
   paidAmount: number;
   senderMobile: string;
+  paymentMethod: "bkash" | "nagad" | null;
   applicationStatus: string;
   couponCode: string | null;
   createdAt: string;
@@ -38,6 +39,7 @@ type ApplicationRow = {
   transaction_id: string;
   paid_amount: string | number;
   sender_mobile: string;
+  payment_method: "bkash" | "nagad" | null;
   application_status: string;
   coupon_code: string | null;
   created_at: Date | string;
@@ -55,6 +57,7 @@ function mapApplication(row: ApplicationRow): EnrollmentApplication {
     transactionId: row.transaction_id,
     paidAmount: Number(row.paid_amount),
     senderMobile: row.sender_mobile,
+    paymentMethod: row.payment_method ?? null,
     applicationStatus: row.application_status,
     couponCode: row.coupon_code ?? null,
     createdAt: new Date(row.created_at).toISOString(),
@@ -74,6 +77,7 @@ async function ensureTable(): Promise<void> {
       transaction_id VARCHAR(64) NOT NULL,
       paid_amount DECIMAL(10,2) NOT NULL,
       sender_mobile VARCHAR(32) NOT NULL,
+      payment_method VARCHAR(16) NULL,
       application_status VARCHAR(32) NOT NULL DEFAULT 'pending_validation',
       coupon_code VARCHAR(64) NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -82,6 +86,21 @@ async function ensureTable(): Promise<void> {
       KEY idx_enrollment_applications_student_course (student_uid, course_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   );
+  // Best-effort migration: add payment_method column if missing.
+  try {
+    const columns = await query<{ COLUMN_NAME: string }[]>(
+      `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'enrollment_applications'
+         AND COLUMN_NAME = 'payment_method'`,
+    );
+    if (columns.length === 0) {
+      await exec(
+        "ALTER TABLE enrollment_applications ADD COLUMN payment_method VARCHAR(16) NULL",
+      );
+    }
+  } catch {
+    // Column may already exist or migration applied out-of-band.
+  }
 }
 
 export async function findApplicationByTransaction(
@@ -119,14 +138,15 @@ export async function createEnrollmentApplication(input: {
   transactionId: string;
   paidAmount: number;
   senderMobile: string;
+  paymentMethod?: "bkash" | "nagad" | null;
   couponCode?: string | null;
 }): Promise<EnrollmentApplication> {
   await ensureTable();
   const result = await exec(
     `INSERT INTO enrollment_applications
       (student_uid, student_id, student_email, course_id, course_name,
-       transaction_id, paid_amount, sender_mobile, application_status, coupon_code)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       transaction_id, paid_amount, sender_mobile, payment_method, application_status, coupon_code)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.studentUid,
       input.studentId,
@@ -136,6 +156,7 @@ export async function createEnrollmentApplication(input: {
       input.transactionId,
       input.paidAmount,
       input.senderMobile,
+      input.paymentMethod ?? null,
       APPLICATION_PENDING,
       input.couponCode ?? null,
     ],

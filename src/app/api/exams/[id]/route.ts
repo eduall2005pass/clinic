@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFirebaseUser } from "@/lib/auth-api";
 import { getExamForTaking } from "@/lib/exam-taking";
+import { fetchExamPageById } from "@/lib/public-exams-server";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/exams/[id] — exam meta + sanitized questions (no answers). */
+/**
+ * GET /api/exams/[id] — exam meta + sanitized questions (no answers).
+ *
+ * Server-side access validation:
+ * 1. Authentication required
+ * 2. Exam must exist and be published
+ * 3. Exam must be active (Live or Available status)
+ * 4. Current time must be within the allowed exam window
+ * 5. Attempt limit is enforced by the Common Exam Engine
+ * 6. Enrolled exams require course enrollment (checked by getExamForTaking)
+ */
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
@@ -15,9 +26,53 @@ export async function GET(
   }
 
   const { id } = await context.params;
+
   // The attempt (timer + answer storage) begins only with ?start=1 — i.e.
   // after the student accepts the exam rules on the client.
   const startAttempt = request.nextUrl.searchParams.get("start") === "1";
+  const timerType = request.nextUrl.searchParams.get("timer") ?? "first";
+
+  // Server-side access validation before creating an attempt.
+  if (startAttempt) {
+    const examMeta = await fetchExamPageById(id);
+    if (!examMeta) {
+      return NextResponse.json(
+        { error: "Exam not found." },
+        { status: 404 },
+      );
+    }
+
+    // Exam must be published and active.
+    if (!examMeta.published) {
+      return NextResponse.json(
+        { error: "This exam is not published yet." },
+        { status: 403 },
+      );
+    }
+
+    if (examMeta.status === "Inactive" || examMeta.status === "Unpublished") {
+      return NextResponse.json(
+        { error: "This exam is not active." },
+        { status: 403 },
+      );
+    }
+
+    if (examMeta.status === "Completed" || examMeta.status === "Expired") {
+      return NextResponse.json(
+        { error: "This exam has ended. You can no longer start it." },
+        { status: 403 },
+      );
+    }
+
+    // Timer type validation — must be "first" or "second".
+    if (timerType !== "first" && timerType !== "second") {
+      return NextResponse.json(
+        { error: "Invalid timer type. Must be 'first' or 'second'." },
+        { status: 400 },
+      );
+    }
+  }
+
   const payload = await getExamForTaking(
     id,
     user.uid,

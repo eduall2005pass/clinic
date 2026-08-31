@@ -29,9 +29,7 @@ export type CatalogCourse = {
   image: string | null;
   shortDescription: string | null;
   description: string | null;
-  teacherName: string;
   teacherPhoto: string | null;
-  designation: string;
   duration: string;
   fee: number;
   discountFee: number | null;
@@ -56,8 +54,6 @@ const EMPTY_FORM = {
   image: "",
   shortDescription: "",
   description: "",
-  teacherName: "",
-  designation: "",
   duration: "",
   fee: "0",
   discountFee: "",
@@ -65,7 +61,7 @@ const EMPTY_FORM = {
   status: "unpublished" as "published" | "unpublished",
   couponEnabled: false,
   featured: false,
-  contentLayout: "auto" as "auto" | "direct" | "paper" | "subject",
+  contentLayout: "flow-1" as "flow-1" | "flow-2" | "flow-3",
   totalClasses: "",
   totalExams: "",
   courseDuration: "",
@@ -101,8 +97,6 @@ function toForm(course: CatalogCourse): FormState {
     image: course.image ?? "",
     shortDescription: course.shortDescription ?? "",
     description: course.description ?? "",
-    teacherName: course.teacherName,
-    designation: course.designation,
     duration: course.duration,
     fee: String(course.fee),
     discountFee: course.discountFee == null ? "" : String(course.discountFee),
@@ -110,7 +104,9 @@ function toForm(course: CatalogCourse): FormState {
     status: course.status,
     couponEnabled: course.couponEnabled,
     featured: course.featured,
-    contentLayout: course.contentLayout ?? "auto",
+    contentLayout: (course.contentLayout === "flow-1" || course.contentLayout === "flow-2" || course.contentLayout === "flow-3"
+      ? course.contentLayout
+      : course.contentLayout === "paper" ? "flow-2" : course.contentLayout === "subject" ? "flow-3" : "flow-1"),
     totalClasses: course.totalClasses != null ? String(course.totalClasses) : "",
     totalExams: course.totalExams != null ? String(course.totalExams) : "",
     courseDuration: details?.duration ?? "",
@@ -569,27 +565,148 @@ export default function CourseManager({
                   placeholder="e.g. 6 months"
                   onChange={(e) => setForm({ ...form, courseDuration: e.target.value })} />
               </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-layout">Content structure (student site)</label>
-                <select id="cm-layout" className={inputClass} value={form.contentLayout}
-                  onChange={(e) =>
-                    setForm({ ...form, contentLayout: e.target.value as FormState["contentLayout"] })
-                  }>
-                  <option value="auto">Auto (based on course type)</option>
-                  <option value="direct">Direct — Class / Exam / Materials cards</option>
-                  <option value="paper">Paper Selection (১ম / ২য় পত্র)</option>
-                  <option value="subject">Subject Selection (Medical Admission)</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-teacher">Teacher name</label>
-                <input id="cm-teacher" className={inputClass} value={form.teacherName}
-                  onChange={(e) => setForm({ ...form, teacherName: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-designation">Designation</label>
-                <input id="cm-designation" className={inputClass} value={form.designation}
-                  onChange={(e) => setForm({ ...form, designation: e.target.value })} />
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Select Course Content Flow *</label>
+                <p className="mb-3 text-xs text-neutral-500">
+                  Choose how content is organized for students. This cannot be changed later without affecting existing content.
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {/* Flow 1 — Direct */}
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, contentLayout: "flow-1" })}
+                    className={`group relative flex flex-col items-start rounded-xl border p-4 text-left transition ${
+                      form.contentLayout === "flow-1"
+                        ? "border-primary-500/60 bg-primary-600/10 shadow-md shadow-primary-900/20"
+                        : "border-ink/15 bg-dark-900 hover:border-primary-500/30"
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span className={`text-sm font-bold ${form.contentLayout === "flow-1" ? "text-primary-300" : "text-heading"}`}>
+                        Flow 1
+                      </span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        form.contentLayout === "flow-1"
+                          ? "bg-primary-500/20 text-primary-300"
+                          : "bg-ink/10 text-neutral-500"
+                      }`}>
+                        Direct
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-neutral-400">Basic/simple subject-based course</p>
+                    {/* Hierarchy preview */}
+                    <div className="mt-3 w-full rounded-lg border border-ink/10 bg-dark-950 p-2.5">
+                      <div className="flex flex-col gap-1 text-[10px]">
+                        <div className="rounded bg-primary-500/15 px-2 py-1 text-center font-bold text-primary-300">Course</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Class / Exam / Materials / Archive</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Chapter</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Content</div>
+                      </div>
+                    </div>
+                    {form.contentLayout === "flow-1" && (
+                      <div className="absolute right-2 top-2">
+                        <svg className="h-5 w-5 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Flow 2 — Paper */}
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, contentLayout: "flow-2" })}
+                    className={`group relative flex flex-col items-start rounded-xl border p-4 text-left transition ${
+                      form.contentLayout === "flow-2"
+                        ? "border-primary-500/60 bg-primary-600/10 shadow-md shadow-primary-900/20"
+                        : "border-ink/15 bg-dark-900 hover:border-primary-500/30"
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span className={`text-sm font-bold ${form.contentLayout === "flow-2" ? "text-primary-300" : "text-heading"}`}>
+                        Flow 2
+                      </span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        form.contentLayout === "flow-2"
+                          ? "bg-primary-500/20 text-primary-300"
+                          : "bg-ink/10 text-neutral-500"
+                      }`}>
+                        Paper
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-neutral-400">Paper-based course (1st/2nd Paper)</p>
+                    {/* Hierarchy preview */}
+                    <div className="mt-3 w-full rounded-lg border border-ink/10 bg-dark-950 p-2.5">
+                      <div className="flex flex-col gap-1 text-[10px]">
+                        <div className="rounded bg-primary-500/15 px-2 py-1 text-center font-bold text-primary-300">Course</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">1st Paper / 2nd Paper</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Class / Exam / Materials / Archive</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Chapter</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Content</div>
+                      </div>
+                    </div>
+                    {form.contentLayout === "flow-2" && (
+                      <div className="absolute right-2 top-2">
+                        <svg className="h-5 w-5 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Flow 3 — Subject */}
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, contentLayout: "flow-3" })}
+                    className={`group relative flex flex-col items-start rounded-xl border p-4 text-left transition ${
+                      form.contentLayout === "flow-3"
+                        ? "border-primary-500/60 bg-primary-600/10 shadow-md shadow-primary-900/20"
+                        : "border-ink/15 bg-dark-900 hover:border-primary-500/30"
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span className={`text-sm font-bold ${form.contentLayout === "flow-3" ? "text-primary-300" : "text-heading"}`}>
+                        Flow 3
+                      </span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        form.contentLayout === "flow-3"
+                          ? "bg-primary-500/20 text-primary-300"
+                          : "bg-ink/10 text-neutral-500"
+                      }`}>
+                        Subject
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-neutral-400">Multi-subject course (Medical Admission)</p>
+                    {/* Hierarchy preview */}
+                    <div className="mt-3 w-full rounded-lg border border-ink/10 bg-dark-950 p-2.5">
+                      <div className="flex flex-col gap-1 text-[10px]">
+                        <div className="rounded bg-primary-500/15 px-2 py-1 text-center font-bold text-primary-300">Course</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Subject</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Class / Exam / Materials / Archive</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Chapter</div>
+                        <div className="ml-2 text-center text-neutral-600">↓</div>
+                        <div className="rounded bg-ink/10 px-2 py-1 text-center font-semibold text-neutral-300">Content</div>
+                      </div>
+                    </div>
+                    {form.contentLayout === "flow-3" && (
+                      <div className="absolute right-2 top-2">
+                        <svg className="h-5 w-5 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="cm-short">Short description</label>

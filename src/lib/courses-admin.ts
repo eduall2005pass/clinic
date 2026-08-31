@@ -30,20 +30,67 @@ export function normalizeCatalogCategory(value: unknown): CatalogCourseCategory 
     : "HSC Academic";
 }
 
-/** Which content structure the student site opens for this course. */
-export type CourseContentLayout = "auto" | "direct" | "paper" | "subject";
+/**
+ * Course Content Flow — defines the content hierarchy for each course.
+ *
+ * Flow 1 (Direct):  Course → Class / Exam / Materials / Archive → Chapter → Content
+ * Flow 2 (Paper):   Course → 1st Paper / 2nd Paper → Class / Exam / Materials / Archive → Chapter → Content
+ * Flow 3 (Subject): Course → Subject → Class / Exam / Materials / Archive → Chapter → Content
+ *
+ * Backward-compatible: old values 'auto'/'direct'/'paper'/'subject' are
+ * mapped to the corresponding flow on read.
+ */
+export type CourseContentLayout = "flow-1" | "flow-2" | "flow-3";
 
-const COURSE_CONTENT_LAYOUTS: CourseContentLayout[] = [
-  "auto",
-  "direct",
-  "paper",
-  "subject",
+/** Flow metadata for display and hierarchy preview. */
+export type FlowMeta = {
+  id: CourseContentLayout;
+  label: string;
+  description: string;
+  hierarchy: string[];
+};
+
+export const CONTENT_FLOWS: FlowMeta[] = [
+  {
+    id: "flow-1",
+    label: "Flow 1 — Direct",
+    description: "Basic/simple subject-based course structure. No paper or subject grouping.",
+    hierarchy: ["Course", "Class / Exam / Materials / Archive", "Chapter", "Content"],
+  },
+  {
+    id: "flow-2",
+    label: "Flow 2 — Paper",
+    description: "Paper-based course with 1st Paper / 2nd Paper grouping.",
+    hierarchy: ["Course", "1st Paper / 2nd Paper", "Class / Exam / Materials / Archive", "Chapter", "Content"],
+  },
+  {
+    id: "flow-3",
+    label: "Flow 3 — Subject",
+    description: "Multi-subject course like Medical Admission with subject-level grouping.",
+    hierarchy: ["Course", "Subject", "Class / Exam / Materials / Archive", "Chapter", "Content"],
+  },
 ];
 
+/** Map legacy content_layout values to the new flow system. */
+function normalizeContentLayoutRaw(value: unknown): CourseContentLayout {
+  const v = String(value ?? "").trim().toLowerCase();
+  // Direct mapping for new values.
+  if (v === "flow-1" || v === "flow-2" || v === "flow-3") return v;
+  // Backward compatibility: map old values.
+  if (v === "direct") return "flow-1";
+  if (v === "paper") return "flow-2";
+  if (v === "subject") return "flow-3";
+  // 'auto' or unknown → default to flow-1.
+  return "flow-1";
+}
+
 export function normalizeContentLayout(value: unknown): CourseContentLayout {
-  return (COURSE_CONTENT_LAYOUTS as string[]).includes(value as string)
-    ? (value as CourseContentLayout)
-    : "auto";
+  return normalizeContentLayoutRaw(value);
+}
+
+/** Legacy alias — some imports still reference this name. */
+export function getFlowMeta(flow: CourseContentLayout): FlowMeta {
+  return CONTENT_FLOWS.find((f) => f.id === flow) ?? CONTENT_FLOWS[0];
 }
 
 export type CourseDetails = {
@@ -214,9 +261,11 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — column may already exist.
   }
-  // Course-wise content structure (direct / paper / subject selection).
+  // Course-wise content structure (flow-1 / flow-2 / flow-3 selection).
+  // Widens the ENUM to accept both old and new values during migration,
+  // then narrows to only the new flow values once legacy rows are converted.
   try {
-    await ensureColumn("catalog_courses", "content_layout", "`content_layout` ENUM('auto','direct','paper','subject') NOT NULL DEFAULT 'auto' AFTER availability");
+    await ensureColumn("catalog_courses", "content_layout", "`content_layout` ENUM('auto','direct','paper','subject','flow-1','flow-2','flow-3') NOT NULL DEFAULT 'auto' AFTER availability");
   } catch {
     // Best effort — column may already exist.
   }
@@ -226,23 +275,31 @@ async function ensureTables(): Promise<void> {
     await ensureColumn("catalog_courses", "course_details", "`course_details` JSON NULL");
   } catch {
     // Best effort.
+
+    // Best effort — column may already exist.
+  }
+  // Migrate legacy values to the new flow system.
+  try {
+    await exec(`UPDATE catalog_courses SET content_layout = 'flow-1' WHERE content_layout IN ('auto','direct')`);
+    await exec(`UPDATE catalog_courses SET content_layout = 'flow-2' WHERE content_layout = 'paper'`);
+    await exec(`UPDATE catalog_courses SET content_layout = 'flow-3' WHERE content_layout = 'subject'`);
+    // Narrow the ENUM to only flow values.
+    await exec(
+      `ALTER TABLE catalog_courses MODIFY COLUMN content_layout ENUM('flow-1','flow-2','flow-3') NOT NULL DEFAULT 'flow-1'`,
+    );
+  } catch {
+    // Best effort — migration may have already run.
   }
   // Admin-entered class/exam counts for the course card.
   try {
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS total_classes INT NULL`,
-    );
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS total_exams INT NULL`,
-    );
+    await ensureColumn("catalog_courses", "total_classes", "`total_classes` INT NULL");
+    await ensureColumn("catalog_courses", "total_exams", "`total_exams` INT NULL");
   } catch {
     // Best effort — columns may already exist.
   }
   // Extended course details JSON (duration, teachers, topics, chapter overview).
   try {
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS course_details JSON NULL`,
-    );
+    await ensureColumn("catalog_courses", "course_details", "`course_details` JSON NULL");
   } catch {
     // Best effort — column may already exist.
   }

@@ -166,32 +166,8 @@ export default async function CourseDetailsPage({
 
         {/* ── Course Details (extended information) ── */}
         <div className="mt-8 grid gap-8 lg:grid-cols-5">
-          {/* Left column — teacher + description */}
+          {/* Left column — description */}
           <div className="lg:col-span-3">
-            {/* Teacher / Mentor Card */}
-            <div className="flex items-center gap-4 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-ink/10 bg-dark-800">
-                <Image
-                  src={course.teacherPhoto}
-                  alt={course.teacherName}
-                  width={64}
-                  height={64}
-                  className="rounded-2xl"
-                />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Teacher / Mentor
-                </p>
-                <p className="mt-0.5 truncate text-lg font-bold text-heading">
-                  {course.teacherName}
-                </p>
-                <p className="truncate text-sm text-primary-400">
-                  {course.designation}
-                </p>
-              </div>
-            </div>
-
             {/* Additional teachers from courseDetails */}
             {details?.teachers && details.teachers.length > 0 && (
               <div className="mt-4 rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20">

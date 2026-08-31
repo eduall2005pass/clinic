@@ -66,6 +66,7 @@ export async function getEnrollment(
 export type EnrollmentPayment = {
   transactionId: string;
   senderMobile: string;
+  paymentMethod: "bkash" | "nagad";
 };
 
 /**

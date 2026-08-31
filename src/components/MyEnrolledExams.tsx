@@ -20,6 +20,12 @@ type MyExam = {
 
 function toPublicExam(exam: MyExam): PublicExam {
   const scheduledIso = exam.scheduledAt ?? "";
+  const isAdmission = exam.courseType === "Admission";
+  const neg = exam.negativeMarks !== undefined
+    ? Math.max(0, Number(exam.negativeMarks) || 0)
+    : isAdmission
+      ? 0.25
+      : 0;
   return {
     id: exam.id,
     name: exam.title,
@@ -29,13 +35,11 @@ function toPublicExam(exam: MyExam): PublicExam {
     totalMarks: exam.totalMarks,
     totalQuestions: Math.max(0, Number(exam.questionCount) || 0),
     durationMinutes: exam.durationMinutes,
-    // Same rule the grader applies (−0.25 for Admission, none otherwise).
-    negativeMarks:
-      exam.negativeMarks !== undefined
-        ? Math.max(0, Number(exam.negativeMarks) || 0)
-        : exam.courseType === "Admission"
-          ? 0.25
-          : 0,
+    negativeMarks: neg,
+    negativeEnabled: neg > 0,
+    negativePerWrong: neg,
+    scheduledAt: exam.scheduledAt ?? null,
+    endsAt: null,
     examDate: scheduledIso.slice(0, 10),
     examTime: scheduledIso
       ? new Date(scheduledIso).toLocaleTimeString("en-US", {
@@ -46,6 +50,8 @@ function toPublicExam(exam: MyExam): PublicExam {
       : "",
     status: exam.status,
     published: true,
+    secondTimerEnabled: false,
+    secondTimerDeduction: 0,
     eligibility: { mode: "all", rules: [] },
   };
 }

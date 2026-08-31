@@ -18,6 +18,10 @@ export function examToPublic(exam: Exam): PublicExam {
     exam.scheduledAt && !Number.isNaN(new Date(exam.scheduledAt).getTime())
       ? exam.scheduledAt
       : null;
+  const endsAtIso =
+    exam.endsAt && !Number.isNaN(new Date(exam.endsAt).getTime())
+      ? exam.endsAt
+      : null;
   return {
     id: exam.id,
     name: exam.title,
@@ -30,10 +34,16 @@ export function examToPublic(exam: Exam): PublicExam {
     totalQuestions: Math.max(0, Number(exam.questionCount) || 0),
     durationMinutes: exam.durationMinutes,
     negativeMarks: negativeMarksFor(exam.courseType),
+    negativeEnabled: exam.negativeEnabled,
+    negativePerWrong: exam.negativePerWrong,
+    scheduledAt: scheduledIso,
+    endsAt: endsAtIso,
     examDate: scheduledIso ? scheduledIso.slice(0, 10) : "",
     examTime: scheduledIso ? formatExamTime(scheduledIso) : "",
     status: deriveStatus(exam),
     published: exam.status !== "draft",
+    secondTimerEnabled: exam.secondTimerEnabled,
+    secondTimerDeduction: exam.secondTimerDeduction,
     eligibility: { mode: "all", rules: [] },
   };
 }
