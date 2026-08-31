@@ -34,8 +34,6 @@ const EMPTY_FORM = {
   image: "",
   shortDescription: "",
   description: "",
-  teacherName: "",
-  designation: "",
   duration: "",
   fee: "0",
   discountFee: "",
@@ -189,8 +187,6 @@ export default function CategoryCourseManager({
       image: course.image ?? "",
       shortDescription: course.shortDescription ?? "",
       description: course.description ?? "",
-      teacherName: course.teacherName,
-      designation: course.designation,
       duration: course.duration,
       fee: String(course.fee),
       discountFee: course.discountFee == null ? "" : String(course.discountFee),
@@ -675,16 +671,6 @@ export default function CategoryCourseManager({
                   <option value="paper">Paper Selection (১ম / ২য় পত্র)</option>
                   <option value="subject">Subject Selection (Medical Admission)</option>
                 </select>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ccm-teacher">Teacher name</label>
-                <input id="ccm-teacher" className={inputClass} value={form.teacherName}
-                  onChange={(e) => setForm({ ...form, teacherName: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ccm-designation">Designation</label>
-                <input id="ccm-designation" className={inputClass} value={form.designation}
-                  onChange={(e) => setForm({ ...form, designation: e.target.value })} />
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="ccm-short">Short description</label>

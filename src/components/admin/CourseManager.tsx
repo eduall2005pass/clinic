@@ -29,9 +29,7 @@ export type CatalogCourse = {
   image: string | null;
   shortDescription: string | null;
   description: string | null;
-  teacherName: string;
   teacherPhoto: string | null;
-  designation: string;
   duration: string;
   fee: number;
   discountFee: number | null;
@@ -56,8 +54,6 @@ const EMPTY_FORM = {
   image: "",
   shortDescription: "",
   description: "",
-  teacherName: "",
-  designation: "",
   duration: "",
   fee: "0",
   discountFee: "",
@@ -101,8 +97,6 @@ function toForm(course: CatalogCourse): FormState {
     image: course.image ?? "",
     shortDescription: course.shortDescription ?? "",
     description: course.description ?? "",
-    teacherName: course.teacherName,
-    designation: course.designation,
     duration: course.duration,
     fee: String(course.fee),
     discountFee: course.discountFee == null ? "" : String(course.discountFee),
@@ -580,16 +574,6 @@ export default function CourseManager({
                   <option value="paper">Paper Selection (১ম / ২য় পত্র)</option>
                   <option value="subject">Subject Selection (Medical Admission)</option>
                 </select>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-teacher">Teacher name</label>
-                <input id="cm-teacher" className={inputClass} value={form.teacherName}
-                  onChange={(e) => setForm({ ...form, teacherName: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="cm-designation">Designation</label>
-                <input id="cm-designation" className={inputClass} value={form.designation}
-                  onChange={(e) => setForm({ ...form, designation: e.target.value })} />
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="cm-short">Short description</label>
