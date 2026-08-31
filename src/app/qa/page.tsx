@@ -8,12 +8,7 @@ export const metadata: Metadata = {
     "MediSpark Q&A — select a subject, view community questions and teacher answers, and ask your own questions.",
 };
 
-/**
- * Q&A is publicly viewable — every visitor can browse subjects, questions
- * and answers. Only the Ask-a-Question action is gated to paid enrollments.
- * Subjects/questions load live from MySQL so admin changes appear instantly.
- */
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function QaPage() {
   const [dbSubjects, questions] = await Promise.all([
