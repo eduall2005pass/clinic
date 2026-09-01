@@ -3,9 +3,11 @@ import { requirePermission, requireAnyPermission } from "@/lib/admin";
 import { logAdminAction } from "@/lib/administration";
 import {
   attachBankQuestion,
-  fetchQuestions,
-  saveQuestion,
   deleteQuestion,
+  duplicateQuestion,
+  fetchQuestions,
+  reorderQuestions,
+  saveQuestion,
 } from "@/lib/exams-admin";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +39,21 @@ export async function POST(request: NextRequest) {
   if (!body) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
+  // Duplicate a question within same exam: { duplicateId: number }
+  if (body.duplicateId !== undefined) {
+    const dupId = Number(body.duplicateId);
+    if (!Number.isInteger(dupId) || dupId <= 0) {
+      return NextResponse.json({ error: "Invalid duplicateId." }, { status: 400 });
+    }
+    try {
+      const questions = await duplicateQuestion(dupId);
+      await logAdminAction(admin, "question.duplicate", `id=${dupId}`, request);
+      return NextResponse.json({ questions });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to duplicate question.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
   try {
     await saveQuestion(body);
     await logAdminAction(admin, "question.save", String(body.subject ?? ""), request);
@@ -44,6 +61,28 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save the question.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
+  if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const body = (await request.json().catch(() => null)) as { examId?: unknown; order?: unknown } | null;
+  const examIdRaw = typeof body?.examId === "string" ? body.examId.trim() : "";
+  const examId = examIdRaw === "bank" ? null : examIdRaw || null;
+  // Allow null for bank reorder as well (examId may be null or omitted)
+  if (!Array.isArray(body?.order)) {
+    return NextResponse.json({ error: "Invalid order payload." }, { status: 400 });
+  }
+  const ids = (body.order as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  if (ids.length === 0) return NextResponse.json({ error: "No valid ids." }, { status: 400 });
+  try {
+    const questions = await reorderQuestions(examId, ids);
+    await logAdminAction(admin, "question.reorder", `exam=${examId ?? "bank"} count=${ids.length}`, request);
+    return NextResponse.json({ questions });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to reorder.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

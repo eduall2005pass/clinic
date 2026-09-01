@@ -16,9 +16,14 @@ import type {
 
 type Stats = {
   participants: number;
+  completed: number;
+  autoSubmitted: number;
+  firstTimers: number;
+  secondTimers: number;
   highestMark: number | null;
   lowestMark: number | null;
   averageMark: number | null;
+  averageTimeSeconds: number | null;
 };
 
 function formatClock(seconds: number | null | undefined): string {
@@ -26,6 +31,14 @@ function formatClock(seconds: number | null | undefined): string {
   const minutes = Math.floor(seconds / 60);
   const rest = Math.floor(seconds % 60);
   return `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
+}
+
+function formatDurationDetailed(seconds: number | null | undefined): string {
+  if (seconds == null) return "—";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
 }
 
 function formatDate(iso: string | null): string {
@@ -44,10 +57,19 @@ function formatDate(iso: string | null): string {
 
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
+type SortField = "rank" | "marks" | "time";
+type TimerFilter = "all" | "first" | "second";
+type SubmissionFilter = "all" | "manual" | "auto";
+
 /**
  * Admin → Result Control → Public Exam Result → <examId>.
  * Ranking-first participant list for exactly ONE public exam, with a
  * complete per-student result modal and question-by-question answer sheet.
+ * Now includes full per-exam summary (Total Participants, Completed,
+ * Auto Submitted, First/Second Timers, Highest/Lowest/Average Marks,
+ * Average Time) and a filterable/sortable student table (search/sort by
+ * name, ID, rank, marks, time + timer type & submission type filters)
+ * matching MASTER PROMPT §§42-43.
  */
 export default function PublicExamResultDetailView({
   examId,
@@ -61,6 +83,10 @@ export default function PublicExamResultDetailView({
   const [error, setError] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [search, setSearch] = useState("");
+  const [sortField, setSortField] = useState<SortField>("rank");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [timerFilter, setTimerFilter] = useState<TimerFilter>("all");
+  const [submissionFilter, setSubmissionFilter] = useState<SubmissionFilter>("all");
   const [openStudent, setOpenStudent] = useState<string | null>(null);
   const [detail, setDetail] = useState<PublicExamStudentResult | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -125,17 +151,44 @@ export default function PublicExamResultDetailView({
     [gate.headers, examId],
   );
 
-  // Search keeps the stored ranking order — it only filters, never re-sorts.
   const visible = useMemo(() => {
     if (!results) return [];
+    let filtered = [...results];
     const term = search.trim().toLowerCase();
-    if (!term) return results;
-    return results.filter((row) =>
-      [row.studentName, row.studentId, row.email, row.studentUid]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(term)),
-    );
-  }, [results, search]);
+    if (term) {
+      filtered = filtered.filter((row) =>
+        [row.studentName, row.studentId, row.email, row.studentUid]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(term)),
+      );
+    }
+    if (timerFilter !== "all") {
+      filtered = filtered.filter((row) =>
+        timerFilter === "first" ? !row.isSecondTimer : row.isSecondTimer,
+      );
+    }
+    if (submissionFilter !== "all") {
+      filtered = filtered.filter((row) => row.submissionType === submissionFilter);
+    }
+    // Sorting — preserves stored ranking order for rank, otherwise sorts by marks/time.
+    filtered.sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "rank") {
+        const ra = a.rank ?? 999999;
+        const rb = b.rank ?? 999999;
+        cmp = ra - rb;
+      } else if (sortField === "marks") {
+        cmp = a.obtained - b.obtained;
+      } else if (sortField === "time") {
+        const ta = a.timeTakenSeconds ?? 2147483647;
+        const tb = b.timeTakenSeconds ?? 2147483647;
+        cmp = ta - tb;
+      }
+      return sortOrder === "asc" ? cmp : -cmp;
+    });
+    // For rank asc is natural (1,2,3); for marks desc is more useful — default rank asc.
+    return filtered;
+  }, [results, search, timerFilter, submissionFilter, sortField, sortOrder]);
 
   if (!gate.ready) {
     return gate.denied ? (
@@ -151,7 +204,7 @@ export default function PublicExamResultDetailView({
   }
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
         <Link href="/admin/result-control" className="transition hover:text-[#1a3a78]">
           Result Control
@@ -164,7 +217,7 @@ export default function PublicExamResultDetailView({
         <span className="text-[#0b1e3a] admin-dark:text-zinc-100">Details</span>
       </nav>
 
-      {/* Exam-level summary */}
+      {/* Exam-level summary — MASTER PROMPT §42 */}
       {exam && (
         <div className={`${cardClass} mt-4 p-5`}>
           <div className="flex flex-wrap items-center gap-2">
@@ -177,23 +230,18 @@ export default function PublicExamResultDetailView({
               </span>
             )}
           </div>
-          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-semibold text-slate-500 sm:grid-cols-4">
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-semibold text-slate-500 sm:grid-cols-4 lg:grid-cols-4">
             {[
               ["Total Participants", String(stats?.participants ?? 0)],
-              ["Completed", String(results?.length ?? 0)],
+              ["Completed", String(stats?.completed ?? results?.length ?? 0)],
+              ["Auto Submitted", String(stats?.autoSubmitted ?? 0)],
+              ["First Timers", String(stats?.firstTimers ?? 0)],
+              ["Second Timers", String(stats?.secondTimers ?? 0)],
+              ["Highest Marks", stats?.highestMark == null ? "—" : String(stats.highestMark)],
+              ["Lowest Marks", stats?.lowestMark == null ? "—" : String(stats.lowestMark)],
+              ["Average Marks", stats?.averageMark == null ? "—" : String(stats.averageMark)],
+              ["Average Time", stats?.averageTimeSeconds == null ? "—" : formatDurationDetailed(stats.averageTimeSeconds)],
               ["Total Marks", String(exam.totalMarks)],
-              [
-                "Average Marks",
-                stats?.averageMark == null ? "—" : String(stats.averageMark),
-              ],
-              [
-                "Highest Marks",
-                stats?.highestMark == null ? "—" : String(stats.highestMark),
-              ],
-              [
-                "Lowest Marks",
-                stats?.lowestMark == null ? "—" : String(stats.lowestMark),
-              ],
               ["Exam Date", formatDate(exam.scheduledAt)],
               ["Duration", `${exam.durationMinutes} min`],
             ].map(([label, value]) => (
@@ -206,18 +254,71 @@ export default function PublicExamResultDetailView({
         </div>
       )}
 
-      {/* Search — filtering only; ranking order is preserved. */}
+      {/* Filters — MASTER PROMPT §43: search, rank/marks/time sort, timer & submission filters */}
       {results !== null && results.length > 0 && (
-        <div className={`${cardClass} mt-4 p-3`}>
-          <label htmlFor="res-search" className="sr-only">Search participants</label>
-          <input
-            id="res-search"
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by name, student ID or email…"
-            className="w-full rounded-xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 px-3 py-2 text-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100"
-          />
+        <div className={`${cardClass} mt-4 p-3 sm:p-4`}>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="block">
+              <span className="text-[11px] font-extrabold uppercase tracking-wide text-slate-500">Search</span>
+              <input
+                id="res-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Name, student ID or email…"
+                className="mt-1 w-full rounded-xl border border-[#dbeafe] bg-white px-3 py-2 text-sm shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-extrabold uppercase tracking-wide text-slate-500">Sort by</span>
+              <div className="mt-1 flex gap-2">
+                <select
+                  value={sortField}
+                  onChange={(event) => setSortField(event.target.value as SortField)}
+                  className="flex-1 rounded-xl border border-[#dbeafe] bg-white px-2 py-2 text-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]"
+                >
+                  <option value="rank">Rank</option>
+                  <option value="marks">Marks</option>
+                  <option value="time">Time</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setSortOrder((v) => (v === "asc" ? "desc" : "asc"))}
+                  className={`${buttonSecondaryClass} shrink-0`}
+                  aria-label="Toggle sort order"
+                >
+                  {sortOrder === "asc" ? "↑" : "↓"}
+                </button>
+              </div>
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-extrabold uppercase tracking-wide text-slate-500">Timer type</span>
+              <select
+                value={timerFilter}
+                onChange={(event) => setTimerFilter(event.target.value as TimerFilter)}
+                className="mt-1 w-full rounded-xl border border-[#dbeafe] bg-white px-3 py-2 text-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]"
+              >
+                <option value="all">All timers</option>
+                <option value="first">First timer</option>
+                <option value="second">Second timer</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-extrabold uppercase tracking-wide text-slate-500">Submission</span>
+              <select
+                value={submissionFilter}
+                onChange={(event) => setSubmissionFilter(event.target.value as SubmissionFilter)}
+                className="mt-1 w-full rounded-xl border border-[#dbeafe] bg-white px-3 py-2 text-sm admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]"
+              >
+                <option value="all">All submissions</option>
+                <option value="manual">Manual submit</option>
+                <option value="auto">Auto submitted</option>
+              </select>
+            </label>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">
+            Showing {visible.length} of {results.length} participants · Sorted by {sortField} ({sortOrder})
+          </p>
         </div>
       )}
 
@@ -249,56 +350,92 @@ export default function PublicExamResultDetailView({
       )}
 
       {visible.length > 0 && (
-        <ul className="mt-4 space-y-2">
-          {visible.map((row) => (
-            <li key={row.resultId} className={`${cardClass} flex flex-wrap items-center gap-3 px-4 py-3`}>
-              <span
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${
-                  row.rank === 1
-                    ? "bg-amber-400/20 text-amber-600"
-                    : row.rank === 2
-                      ? "bg-zinc-500/15 text-zinc-600"
-                      : row.rank === 3
-                        ? "bg-orange-500/15 text-orange-600"
-                        : "bg-zinc-500/10 text-slate-500"
-                }`}
-                title="Merit position"
-              >
-                #{row.rank ?? "?"}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
-                  {row.studentName || row.studentUid}
-                </span>
-                <span className="block truncate text-xs text-slate-500">
-                  {[row.studentId, row.email].filter(Boolean).join(" · ") || row.studentUid}
-                  {" · "}
-                  {formatDate(row.submittedAt)}
-                  {row.timeTakenSeconds != null && ` · ⏱ ${formatClock(row.timeTakenSeconds)}`}
-                </span>
-              </span>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-extrabold ${
-                  row.totalMarks > 0 && row.obtained / row.totalMarks >= 0.6
-                    ? "bg-emerald-500/10 text-emerald-600"
-                    : "bg-red-500/10 text-red-500"
-                }`}
-              >
-                {row.obtained}/{row.totalMarks}
-              </span>
-              <button
-                type="button"
-                onClick={() => void openDetail(row.studentUid)}
-                className={buttonSecondaryClass}
-              >
-                View Details
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4 overflow-x-auto">
+          <ul className="space-y-2 min-w-[640px] sm:min-w-0">
+            {visible.map((row) => (
+              <li key={row.resultId} className={`${cardClass} flex flex-col gap-3 px-4 py-3 sm:gap-3`}>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${
+                      row.rank === 1
+                        ? "bg-amber-400/20 text-amber-600"
+                        : row.rank === 2
+                          ? "bg-zinc-500/15 text-zinc-600"
+                          : row.rank === 3
+                            ? "bg-orange-500/15 text-orange-600"
+                            : "bg-zinc-500/10 text-slate-500"
+                    }`}
+                    title="Merit position"
+                  >
+                    #{row.rank ?? "?"}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-[#0b1e3a] admin-dark:text-zinc-100">
+                      {row.studentName || row.studentUid}
+                    </span>
+                    <span className="block truncate text-xs text-slate-500">
+                      {[row.studentId, row.email].filter(Boolean).join(" · ") || row.studentUid}
+                      {" · "}
+                      {formatDate(row.submittedAt)}
+                      {row.timeTakenSeconds != null && ` · ⏱ ${formatClock(row.timeTakenSeconds)}`}
+                    </span>
+                  </span>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-extrabold ${
+                      row.totalMarks > 0 && row.obtained / row.totalMarks >= 0.6
+                        ? "bg-emerald-500/10 text-emerald-600"
+                        : "bg-red-500/10 text-red-500"
+                    }`}
+                  >
+                    {row.obtained}/{row.totalMarks}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void openDetail(row.studentUid)}
+                    className={buttonSecondaryClass}
+                  >
+                    View Answer Sheet
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-700">
+                    ✓ {row.correctCount >= 0 ? row.correctCount : "?"} Correct
+                  </span>
+                  <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-red-600">
+                    ✕ {row.wrongCount >= 0 ? row.wrongCount : "?"} Wrong
+                  </span>
+                  <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-slate-600">
+                    ○ {row.unansweredCount >= 0 ? row.unansweredCount : "?"} Unanswered
+                  </span>
+                  {row.negativeDeduction > 0 && (
+                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-red-600">
+                      Negative −{row.negativeDeduction}
+                    </span>
+                  )}
+                  {row.timerPenalty > 0 && (
+                    <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-orange-600">
+                      2nd Timer −{row.timerPenalty}
+                    </span>
+                  )}
+                  <span className={`rounded-full px-2 py-0.5 ${row.isSecondTimer ? "bg-orange-500/10 text-orange-600" : "bg-sky-500/10 text-sky-600"}`}>
+                    {row.isSecondTimer ? "Second Timer" : "First Timer"}
+                  </span>
+                  <span className={`rounded-full px-2 py-0.5 ${row.submissionType === "auto" ? "bg-amber-500/10 text-amber-700" : "bg-zinc-500/10 text-slate-600"}`}>
+                    {row.submissionType === "auto" ? "Auto Submitted" : "Manual Submit"}
+                  </span>
+                  {row.timeTakenSeconds != null && (
+                    <span className="rounded-full bg-primary-600/10 px-2 py-0.5 text-primary-600">
+                      Time {formatDurationDetailed(row.timeTakenSeconds)}
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
-      {/* Student result modal */}
+      {/* Student result modal — answer sheet with per-question breakdown */}
       {openStudent && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6"
@@ -308,10 +445,10 @@ export default function PublicExamResultDetailView({
             if (event.target === event.currentTarget) setOpenStudent(null);
           }}
         >
-          <div className={`${cardClass} max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-b-none p-5 sm:rounded-2xl sm:p-6`}>
+          <div className={`${cardClass} max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-b-none p-5 sm:rounded-2xl sm:p-6`}>
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-lg font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">
-                Student Result
+                Student Answer Sheet
               </h2>
               <button
                 type="button"
@@ -369,7 +506,7 @@ export default function PublicExamResultDetailView({
                   </dl>
                 </section>
 
-                {/* Marks & ranking */}
+                {/* Marks & ranking — MASTER PROMPT §18 components */}
                 <section className="mt-4 rounded-xl border border-neutral-200 p-4 admin-dark:border-zinc-700">
                   <h3 className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
                     Marks &amp; Ranking
@@ -379,16 +516,14 @@ export default function PublicExamResultDetailView({
                       ["Exam", detail.examTitle],
                       ["Category", detail.categoryName ?? "—"],
                       ["Total Marks", String(detail.totalMarks)],
-                      ["Obtained (Raw)", String(detail.rawMarks)],
-                      [
-                        "Correct",
-                        String(detail.correctCount),
-                      ],
-                      ["Wrong", String(detail.wrongCount)],
+                      ["Total Questions", String(detail.questions.length)],
+                      ["Correct Answers", String(detail.correctCount)],
+                      ["Wrong Answers", String(detail.wrongCount)],
                       ["Unanswered", String(detail.unansweredCount)],
+                      ["Correct Marks", String(detail.rawMarks)],
                       [
                         `Negative Marking${detail.negativeEnabled ? ` (−${detail.negativePerWrong}/wrong)` : ""}`,
-                        `−${detail.negativeDeduction}`,
+                        detail.negativeDeduction > 0 ? `−${detail.negativeDeduction}` : "0",
                       ],
                       [
                         detail.secondTimerEnabled
@@ -398,14 +533,15 @@ export default function PublicExamResultDetailView({
                       ],
                       ["Final Marks", String(detail.finalMarks)],
                       ["Time Taken", formatClock(detail.timeTakenSeconds)],
-                      ["Start Time", formatDate(detail.startedAt)],
                       ["Submission Time", formatDate(detail.submittedAt)],
+                      ["Start Time", formatDate(detail.startedAt)],
                       [
-                        "Attempt Status",
+                        "Submission Status",
                         detail.attemptStatus === "submitted"
                           ? "Completed"
                           : detail.attemptStatus ?? "Completed",
                       ],
+                      ["Merit Position", detail.rank == null ? "—" : `#${detail.rank}`],
                     ].map(([label, value]) => (
                       <div key={label}>
                         <dt className="font-semibold uppercase tracking-wide text-[10px] text-slate-500">
@@ -417,7 +553,7 @@ export default function PublicExamResultDetailView({
                   </dl>
                 </section>
 
-                {/* Answer sheet */}
+                {/* Answer sheet — MASTER PROMPT §22: question text, student answer, correct answer, marks, negative marks, explanation, status */}
                 <section className="mt-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
@@ -449,7 +585,7 @@ export default function PublicExamResultDetailView({
                                   : "bg-zinc-500/10 text-slate-500"
                             }`}
                           >
-                            {question.status}
+                            {question.status} · {question.obtained > 0 ? `+${question.obtained}` : question.obtained} marks
                           </span>
                         </div>
                         <p className="mt-1.5 text-sm leading-relaxed text-zinc-800 admin-dark:text-zinc-200">
@@ -481,7 +617,7 @@ export default function PublicExamResultDetailView({
                             </li>
                           ))}
                         </ul>
-                        <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] font-semibold">
+                        <div className="mt-2 grid grid-cols-1 gap-2 text-[11px] font-semibold sm:grid-cols-3">
                           <span className="text-slate-500">
                             Student Answer:{" "}
                             <span className="text-[#0b1e3a] admin-dark:text-zinc-200">
@@ -509,9 +645,15 @@ export default function PublicExamResultDetailView({
                             >
                               {question.obtained > 0 ? "+" : ""}
                               {question.obtained}
+                              {question.status === "wrong" && detail.negativeEnabled ? ` (negative −${detail.negativePerWrong})` : ""}
                             </span>
                           </span>
                         </div>
+                        {question.explanation && (
+                          <div className="mt-2 rounded-lg bg-sky-500/10 px-3 py-2 text-xs leading-relaxed text-sky-800 admin-dark:text-sky-200">
+                            <span className="font-extrabold">Explanation: </span>{question.explanation}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ol>

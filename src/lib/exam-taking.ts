@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { exec, parseJsonColumn, query } from "@/lib/mysql";
+import { exec, parseJsonColumn, query, withTransaction } from "@/lib/mysql";
 import { fetchExams, hasEnrolledExamAccess, type Exam } from "@/lib/exams-admin";
+import type { RowDataPacket } from "mysql2/promise";
 
 // Student-facing exam taking. MediSpark exam rules enforced here:
 //  - answers are stored server-side and locked after the first selection
@@ -21,6 +22,7 @@ export type TakingExam = {
   durationMinutes: number;
   totalMarks: number;
   negativeMarks: number;
+  startedAt: string | null;
 };
 
 /** MediSpark rule: negative marking only for Medical Admission exams. */
@@ -67,6 +69,7 @@ export type SubmissionOutcome = {
   /** Best score achieved by any student on this exam. */
   highestMark?: number | null;
   examName?: string;
+  autoSubmitted?: boolean;
 };
 
 type ResultDetail = {
@@ -96,23 +99,29 @@ async function highestMarkFor(examId: string): Promise<number | null> {
  * Merit positions for every result of an exam. Ranking: higher score first;
  * on equal marks the student who took less time ranks higher; still tied,
  * the earlier submission wins.
+ * Uses idx_exam_results_ranking (exam_id, score, time_taken_seconds, submitted_at)
+ * and caps to 5000 rows per run to bound work for large exams.
  */
 async function updateMeritPositions(examId: string): Promise<void> {
   try {
-    const ranked = await query<{ id: number }[]>(
-      `SELECT id FROM exam_results
-       WHERE exam_id = ?
-       ORDER BY score DESC,
-                COALESCE(time_taken_seconds, 2147483647) ASC,
-                submitted_at ASC`,
-      [examId],
-    );
-    for (const [index, row] of ranked.entries()) {
-      await exec(`UPDATE exam_results SET merit_position = ? WHERE id = ?`, [
-        index + 1,
-        row.id,
-      ]);
-    }
+    await withTransaction(async (connection) => {
+      const [rows] = await connection.execute<RowDataPacket[]>(
+        `SELECT id FROM exam_results
+         WHERE exam_id = ?
+         ORDER BY score DESC,
+                  COALESCE(time_taken_seconds, 2147483647) ASC,
+                  submitted_at ASC
+         LIMIT 5000`,
+        [examId],
+      );
+      const ranked = rows as unknown as { id: number }[];
+      for (const [index, row] of ranked.entries()) {
+        await connection.execute(`UPDATE exam_results SET merit_position = ? WHERE id = ?`, [
+          index + 1,
+          row.id,
+        ]);
+      }
+    });
   } catch {
     // Merit computation is best-effort; the stored result stays valid.
   }
@@ -127,6 +136,7 @@ type GradingQuestionRow = {
 type AttemptRow = {
   session_token: string;
   status: string;
+  started_at?: Date | string | null;
 };
 
 function isLivePublished(exam: Exam): boolean {
@@ -174,6 +184,26 @@ async function startExamAttempt(
   studentName: string,
 ): Promise<string> {
   await ensureAttemptTables();
+  // Max attempts enforcement: check exam_settings.maxAttempts if the table exists
+  try {
+    const settingsRows = await query<{ max_attempts: number | string | null }[]>(
+      `SELECT max_attempts FROM exam_settings WHERE id = 'active' LIMIT 1`,
+    );
+    const raw = settingsRows[0]?.max_attempts;
+    const maxAttempts = raw !== null && raw !== undefined ? Number(raw) : null;
+    if (maxAttempts !== null && Number.isFinite(maxAttempts) && maxAttempts > 0) {
+      const countRows = await query<{ n: number }[]>(
+        `SELECT COUNT(*) AS n FROM exam_results WHERE exam_id = ? AND student_uid = ?`,
+        [examId, uid],
+      );
+      if ((countRows[0]?.n ?? 0) >= maxAttempts) {
+        throw new Error(`Maximum attempts (${maxAttempts}) reached for this exam.`);
+      }
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("Maximum attempts")) throw e;
+    // If exam_settings missing or query fails, ignore and allow attempt.
+  }
   const existing = await query<AttemptRow[]>(
     `SELECT session_token, status FROM exam_attempts WHERE exam_id = ? AND student_uid = ? LIMIT 1`,
     [examId, uid],
@@ -183,10 +213,11 @@ async function startExamAttempt(
     await finalizeAttempt(examId, uid, studentName, {});
   }
   const token = randomUUID();
+  // Ensure started_at reflects the new start time
   await exec(
-    `INSERT INTO exam_attempts (exam_id, student_uid, session_token, status)
-     VALUES (?, ?, ?, 'active')
-     ON DUPLICATE KEY UPDATE session_token = VALUES(session_token), status = 'active'`,
+    `INSERT INTO exam_attempts (exam_id, student_uid, session_token, status, started_at)
+     VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP)
+     ON DUPLICATE KEY UPDATE session_token = VALUES(session_token), status = 'active', started_at = CURRENT_TIMESTAMP`,
     [examId, uid, token],
   );
   // Fresh session — clear any leftover answers.
@@ -214,10 +245,11 @@ export async function saveExamAnswer(
   accepted: boolean;
   terminated?: boolean;
   outcome?: SubmissionOutcome;
+  autoSubmitted?: boolean;
 }> {
   await ensureAttemptTables();
   const attempts = await query<AttemptRow[]>(
-    `SELECT session_token, status FROM exam_attempts WHERE exam_id = ? AND student_uid = ? LIMIT 1`,
+    `SELECT session_token, status, started_at FROM exam_attempts WHERE exam_id = ? AND student_uid = ? LIMIT 1`,
     [examId, uid],
   );
   const attempt = attempts[0];
@@ -227,6 +259,29 @@ export async function saveExamAnswer(
   if (attempt.session_token !== token) {
     const outcome = await latestOutcome(examId, uid);
     return { accepted: false, terminated: true, outcome: outcome ?? undefined };
+  }
+  // Server-side expiry check
+  try {
+    const exams = await fetchExams();
+    const found = exams.find((e) => e.id === examId);
+    if (found && attempt.started_at) {
+      const startedMs = new Date(attempt.started_at as unknown as string).getTime();
+      if (!Number.isNaN(startedMs)) {
+        const elapsedSec = (Date.now() - startedMs) / 1000;
+        if (elapsedSec > found.durationMinutes * 60 + 60) {
+          const outcome = await finalizeAttempt(examId, uid, studentName, {});
+          if (outcome) {
+            return {
+              accepted: false,
+              outcome: { ...outcome, autoSubmitted: true },
+              autoSubmitted: true,
+            };
+          }
+        }
+      }
+    }
+  } catch {
+    // On error, fall through to normal handling
   }
   try {
     await exec(
@@ -581,6 +636,8 @@ export async function getExamForTaking(
   exam: TakingExam;
   questions: TakingQuestion[];
   sessionToken: string | null;
+  secondsLeft: number | null;
+  startedAt: string | null;
 } | null> {
   const exams = await fetchExams();
   const found = exams.find((exam) => exam.id === examId);
@@ -611,6 +668,63 @@ export async function getExamForTaking(
     }
   }
 
+  let secondsLeft: number | null = null;
+  let startedAt: string | null = null;
+  let sessionToken: string | null = null;
+
+  if (uid) {
+    try {
+      await ensureAttemptTables();
+      if (startAttempt && questions.length > 0) {
+        sessionToken = await startExamAttempt(examId, uid, studentName || "Student");
+        // Newly started attempt — timer is full duration
+        secondsLeft = found.durationMinutes * 60;
+        // Fetch the actual started_at that was just written
+        try {
+          const rows = await query<{ started_at: Date | string | null }[]>(
+            `SELECT started_at FROM exam_attempts WHERE exam_id = ? AND student_uid = ? LIMIT 1`,
+            [examId, uid],
+          );
+          const raw = rows[0]?.started_at;
+          if (raw) {
+            const d = raw instanceof Date ? raw : new Date(raw as string);
+            if (!Number.isNaN(d.getTime())) startedAt = d.toISOString();
+            else startedAt = new Date().toISOString();
+            // Recompute secondsLeft from server clock for accuracy
+            const elapsedSec = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+            secondsLeft = Math.max(0, found.durationMinutes * 60 - elapsedSec);
+          } else {
+            startedAt = new Date().toISOString();
+          }
+        } catch {
+          startedAt = new Date().toISOString();
+        }
+      } else {
+        const attemptRows = await query<AttemptRow[]>(
+          `SELECT session_token, status, started_at FROM exam_attempts WHERE exam_id = ? AND student_uid = ? LIMIT 1`,
+          [examId, uid],
+        );
+        const attempt = attemptRows[0];
+        if (attempt?.status === "active" && attempt.started_at) {
+          const raw = attempt.started_at as unknown as string | Date;
+          const d = raw instanceof Date ? raw : new Date(raw as string);
+          if (!Number.isNaN(d.getTime())) {
+            startedAt = d.toISOString();
+            const elapsedSec = Math.floor((Date.now() - d.getTime()) / 1000);
+            secondsLeft = Math.max(0, found.durationMinutes * 60 - elapsedSec);
+            sessionToken = attempt.session_token ?? null;
+          }
+        } else if (attempt?.status === "active") {
+          // active but missing timestamp — fallback to full duration
+          secondsLeft = found.durationMinutes * 60;
+          sessionToken = attempt.session_token ?? null;
+        }
+      }
+    } catch {
+      // On DB errors, fall back to default (null timer)
+    }
+  }
+
   return {
     exam: {
       id: found.id,
@@ -622,14 +736,12 @@ export async function getExamForTaking(
       totalMarks: questions.reduce((sum, item) => sum + item.marks, 0),
       // Per-exam Admin setting — 0 when negative marking is OFF.
       negativeMarks: negativePerWrongFor(found),
+      startedAt,
     },
     questions,
-    // The attempt (and its timer) starts only when the student accepts the
-    // rules — a rules preview must not consume exam time or lock answers.
-    sessionToken:
-      uid && startAttempt && questions.length > 0
-        ? await startExamAttempt(examId, uid, studentName || "Student")
-        : null,
+    sessionToken,
+    secondsLeft,
+    startedAt,
   };
 }
 
@@ -652,11 +764,29 @@ export async function submitExamAttempt(
   // Already submitted (double-submit / auto-submit race / terminated by
   // another device) → return the stored result instead of re-grading.
   const attempts = await query<AttemptRow[]>(
-    `SELECT session_token, status FROM exam_attempts WHERE exam_id = ? AND student_uid = ? LIMIT 1`,
+    `SELECT session_token, status, started_at FROM exam_attempts WHERE exam_id = ? AND student_uid = ? LIMIT 1`,
     [examId, uid],
   );
   if (attempts[0]?.status === "submitted") {
     return latestOutcome(examId, uid);
+  }
+
+  // Server-side expiry check
+  if (attempts[0]?.status === "active" && attempts[0]?.started_at) {
+    try {
+      const startedMs = new Date(attempts[0].started_at as unknown as string).getTime();
+      if (!Number.isNaN(startedMs)) {
+        const elapsedSec = (Date.now() - startedMs) / 1000;
+        if (elapsedSec > found.durationMinutes * 60 + 60) {
+          const outcome = await finalizeAttempt(examId, uid, studentName, {});
+          if (outcome) return { ...outcome, autoSubmitted: true };
+          const latest = await latestOutcome(examId, uid);
+          if (latest) return { ...latest, autoSubmitted: true };
+        }
+      }
+    } catch {
+      // Ignore expiry check errors and proceed to normal finalize
+    }
   }
 
   return finalizeAttempt(examId, uid, studentName, answers);
@@ -672,6 +802,7 @@ export type AnswerScriptQuestion = {
   correctIndex: number;
   /** Marks obtained for this question — negative on wrong answers. */
   obtained: number;
+  explanation: string | null;
 };
 
 export type ExamResultScript = {
@@ -734,9 +865,10 @@ export async function getExamResultScript(
     options: string;
     marks: string | number;
     correct_index: number;
+    explanation: string | null;
   }[]>(
-    `SELECT id, question, options, marks, correct_index FROM exam_questions
-     WHERE exam_id = ? AND is_active = 1 ORDER BY id ASC`,
+    `SELECT id, question, options, marks, correct_index, explanation FROM exam_questions
+      WHERE exam_id = ? AND is_active = 1 ORDER BY id ASC`,
     [examId],
   );
   const byId = new Map<number, {
@@ -744,6 +876,7 @@ export async function getExamResultScript(
     options: string[];
     marks: number;
     correctIndex: number;
+    explanation: string | null;
   }>();
   for (const row of questionRows) {
     const parsed = parseJsonColumn<unknown[]>(row.options);
@@ -753,6 +886,7 @@ export async function getExamResultScript(
         options: parsed.map(String),
         marks: Number(row.marks) || 1,
         correctIndex: Number(row.correct_index) || 0,
+        explanation: row.explanation ?? null,
       });
     }
   }
@@ -775,6 +909,7 @@ export async function getExamResultScript(
       chosenIndex: detail.chosenIndex,
       correctIndex: detail.correctIndex,
       obtained: Number(detail.obtained) || 0,
+      explanation: meta.explanation,
     });
   }
   for (const [key, meta] of byId.entries()) {
@@ -794,6 +929,7 @@ export async function getExamResultScript(
           : chosen === meta.correctIndex
             ? meta.marks
             : 0, // Legacy rows lack per-question deductions; totals stay authoritative.
+      explanation: meta.explanation,
     });
   }
   questions.sort((a, b) => a.questionId - b.questionId);

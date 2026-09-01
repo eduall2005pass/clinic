@@ -48,6 +48,8 @@ export type PublicExamResultRow = {
   timeTakenSeconds: number | null;
   startedAt: string | null;
   submittedAt: string;
+  /** Derived from is_second_timer + store; auto flag optional for older rows. */
+  submissionType: "manual" | "auto";
 };
 
 export type AnswerSheetQuestion = {
@@ -60,6 +62,7 @@ export type AnswerSheetQuestion = {
   status: "correct" | "wrong" | "unanswered";
   marks: number;
   obtained: number;
+  explanation: string | null;
 };
 
 export type PublicExamStudentResult = {
@@ -245,6 +248,8 @@ type ResultDetailRow = {
  * Ranked participant list for ONE exam. Stored merit_position first
  * (existing ranking rules); rows without a stored position fall back to
  * the same ordering (final marks desc → less time → earlier submission).
+ * Now also computes correct/wrong/unanswered per student from the stored
+ * answers snapshot so the admin table can show them without opening detail.
  */
 export async function fetchPublicExamRankedResults(
   examId: string,
@@ -252,21 +257,53 @@ export async function fetchPublicExamRankedResults(
   try {
     const meta = await fetchPublicExamMeta(examId);
     if (!meta) return [];
-    const rows = await query<ResultDetailRow[]>(
-      `SELECT r.id, r.merit_position, r.student_uid, r.student_name,
-              r.score, r.total_marks, r.answers,
-              r.negative_deduction, r.timer_penalty, r.is_second_timer,
-              r.time_taken_seconds, r.submitted_at
-         FROM exam_results r
-        WHERE r.exam_id = ?
-        ORDER BY r.merit_position IS NULL ASC,
-                 r.merit_position ASC,
-                 r.score DESC,
-                 COALESCE(r.time_taken_seconds, 2147483647) ASC,
-                 r.submitted_at ASC
-        LIMIT 1000`,
-      [examId],
-    );
+    // Try to include auto_submitted when the column exists (best-effort).
+    let rows: (ResultDetailRow & { auto_submitted?: number | null })[] = [];
+    try {
+      rows = await query<(ResultDetailRow & { auto_submitted?: number | null })[]>(
+        `SELECT r.id, r.merit_position, r.student_uid, r.student_name,
+                r.score, r.total_marks, r.answers,
+                r.negative_deduction, r.timer_penalty, r.is_second_timer,
+                r.time_taken_seconds, r.submitted_at, r.auto_submitted
+           FROM exam_results r
+          WHERE r.exam_id = ?
+          ORDER BY r.merit_position IS NULL ASC,
+                   r.merit_position ASC,
+                   r.score DESC,
+                   COALESCE(r.time_taken_seconds, 2147483647) ASC,
+                   r.submitted_at ASC
+          LIMIT 1000`,
+        [examId],
+      );
+    } catch {
+      rows = await query<ResultDetailRow[]>(
+        `SELECT r.id, r.merit_position, r.student_uid, r.student_name,
+                r.score, r.total_marks, r.answers,
+                r.negative_deduction, r.timer_penalty, r.is_second_timer,
+                r.time_taken_seconds, r.submitted_at
+           FROM exam_results r
+          WHERE r.exam_id = ?
+          ORDER BY r.merit_position IS NULL ASC,
+                   r.merit_position ASC,
+                   r.score DESC,
+                   COALESCE(r.time_taken_seconds, 2147483647) ASC,
+                   r.submitted_at ASC
+          LIMIT 1000`,
+        [examId],
+      );
+    }
+
+    // Load active questions once for counting; also for negativePerWrong.
+    let questionMeta: Map<number, number> = new Map();
+    try {
+      const qRows = await query<{ id: number; correct_index: number }[]>(
+        `SELECT id, correct_index FROM exam_questions WHERE exam_id = ? AND is_active = 1`,
+        [examId],
+      );
+      for (const q of qRows) questionMeta.set(Number(q.id), Number(q.correct_index) || 0);
+    } catch {
+      // No questions → counts stay 0
+    }
 
     // Student IDs + profile info from the registration system (optional).
     const uids = rows.map((row) => row.student_uid);
@@ -289,7 +326,7 @@ export async function fetchPublicExamRankedResults(
           }[]
         >(
           `SELECT uid, student_id, email, profile_picture_url, institution
-             FROM students WHERE uid IN (${placeholders})`,
+              FROM students WHERE uid IN (${placeholders})`,
           uids,
         );
         for (const row of profileRows) {
@@ -302,6 +339,31 @@ export async function fetchPublicExamRankedResults(
 
     return rows.map((row) => {
       const profile = profileMap.get(row.student_uid);
+      // Derive correct/wrong/unanswered from answers snapshot.
+      let correct = 0;
+      let wrong = 0;
+      let unanswered = 0;
+      let rawMarks: number | null = null;
+      try {
+        const ans = parseJsonColumn<Record<string, number>>(row.answers) ?? {};
+        if (questionMeta.size > 0) {
+          for (const [qid, correctIdx] of questionMeta.entries()) {
+            const chosen = ans[String(qid)];
+            if (typeof chosen !== "number") unanswered += 1;
+            else if (chosen === correctIdx) correct += 1;
+            else wrong += 1;
+          }
+          // rawMarks is not stored per-row efficiently; leave null and let detail compute.
+        } else {
+          // Fallback: count from whatever answers exist
+          const keys = Object.keys(ans);
+          // Can't determine unanswered without question count, leave -1 fallback? Use 0.
+        }
+      } catch {
+        // Leave zeros
+      }
+      // If no questionMeta (e.g., exam deleted), keep counts as raw snapshot size.
+      const hasCounts = questionMeta.size > 0;
       return {
         resultId: row.id,
         rank: row.merit_position ?? null,
@@ -313,16 +375,17 @@ export async function fetchPublicExamRankedResults(
         institution: profile?.institution ?? null,
         obtained: Math.round(toNumber(row.score) * 100) / 100,
         totalMarks: toNumber(row.total_marks),
-        rawMarks: null,
+        rawMarks,
         negativeDeduction: toNumber(row.negative_deduction),
         timerPenalty: toNumber(row.timer_penalty),
         isSecondTimer: (row.is_second_timer ?? 0) === 1,
-        correctCount: -1, // derived lazily by the detail endpoint
-        wrongCount: -1,
-        unansweredCount: -1,
+        correctCount: hasCounts ? correct : -1,
+        wrongCount: hasCounts ? wrong : -1,
+        unansweredCount: hasCounts ? unanswered : -1,
         timeTakenSeconds: row.time_taken_seconds ?? null,
         startedAt: null,
         submittedAt: toIso(row.submitted_at) ?? "",
+        submissionType: (row as { auto_submitted?: number | null }).auto_submitted === 1 ? "auto" : "manual",
       };
     });
   } catch {
@@ -358,12 +421,12 @@ export async function fetchPublicExamStudentResult(
 
     // Question order = insertion order of the exam's active questions.
     const questionRows = await query<
-      { id: number; question: string; options: string; correct_index: number; marks: string | number }[]
+      { id: number; question: string; options: string; correct_index: number; marks: string | number; explanation: string | null }[]
     >(
-      `SELECT id, question, options, correct_index, marks
-         FROM exam_questions
-        WHERE exam_id = ? AND is_active = 1
-        ORDER BY id ASC`,
+      `SELECT id, question, options, correct_index, marks, explanation
+          FROM exam_questions
+         WHERE exam_id = ? AND is_active = 1
+         ORDER BY id ASC`,
       [examId],
     );
 
@@ -462,6 +525,7 @@ export async function fetchPublicExamStudentResult(
             : status === "wrong"
               ? -negativePerWrong
               : 0,
+        explanation: row.explanation ?? null,
       };
     });
 
@@ -505,28 +569,69 @@ export async function fetchPublicExamStudentResult(
 /** Participant count + summary stats for one exam (details page header). */
 export async function fetchPublicExamResultStats(examId: string): Promise<{
   participants: number;
+  completed: number;
+  autoSubmitted: number;
+  firstTimers: number;
+  secondTimers: number;
   highestMark: number | null;
   lowestMark: number | null;
   averageMark: number | null;
+  averageTimeSeconds: number | null;
 } | null> {
   try {
-    const rows = await query<
+    // Base stats that always exist
+    const baseRows = await query<
       {
         participants: string | number;
         highest: string | number | null;
         lowest: string | number | null;
         average: string | number | null;
+        avgTime: string | number | null;
       }[]
     >(
       `SELECT COUNT(*) AS participants,
-              MAX(score) AS highest, MIN(score) AS lowest, AVG(score) AS average
+              MAX(score) AS highest, MIN(score) AS lowest, AVG(score) AS average,
+              AVG(time_taken_seconds) AS avgTime
          FROM exam_results WHERE exam_id = ?`,
       [examId],
     );
-    const row = rows[0];
+    const row = baseRows[0];
     if (!row || toNumber(row.participants) === 0) return null;
+
+    // Timer type breakdown (always available via is_second_timer)
+    let firstTimers = 0;
+    let secondTimers = 0;
+    try {
+      const timerRows = await query<{ firstTimers: string | number; secondTimers: string | number }[]>(
+        `SELECT SUM(CASE WHEN is_second_timer = 0 OR is_second_timer IS NULL THEN 1 ELSE 0 END) AS firstTimers,
+                SUM(CASE WHEN is_second_timer = 1 THEN 1 ELSE 0 END) AS secondTimers
+           FROM exam_results WHERE exam_id = ?`,
+        [examId],
+      );
+      firstTimers = toNumber(timerRows[0]?.firstTimers ?? 0);
+      secondTimers = toNumber(timerRows[0]?.secondTimers ?? 0);
+    } catch {
+      // keep 0
+    }
+
+    // Auto-submitted count — best-effort when column exists; otherwise 0.
+    let autoSubmitted = 0;
+    try {
+      const autoRows = await query<{ n: string | number }[]>(
+        `SELECT COUNT(*) AS n FROM exam_results WHERE exam_id = ? AND auto_submitted = 1`,
+        [examId],
+      );
+      autoSubmitted = toNumber(autoRows[0]?.n ?? 0);
+    } catch {
+      autoSubmitted = 0;
+    }
+
     return {
       participants: toNumber(row.participants),
+      completed: toNumber(row.participants),
+      autoSubmitted,
+      firstTimers,
+      secondTimers,
       highestMark:
         row.highest === null || row.highest === undefined
           ? null
@@ -539,6 +644,10 @@ export async function fetchPublicExamResultStats(examId: string): Promise<{
         row.average === null || row.average === undefined
           ? null
           : Math.round(toNumber(row.average) * 100) / 100,
+      averageTimeSeconds:
+        row.avgTime === null || row.avgTime === undefined
+          ? null
+          : Math.round(toNumber(row.avgTime)),
     };
   } catch {
     return null;

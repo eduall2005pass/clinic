@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildDefaultExamRules, fetchExamRules } from "@/lib/exam-rules";
-import { fetchPublicExamById } from "@/lib/public-exams-server";
+import { fetchExamPageById } from "@/lib/public-exams-server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const exam = await fetchPublicExamById(id);
+  const exam = await fetchExamPageById(id);
   if (!exam) {
     return NextResponse.json(
       { error: "Exam not found or not available." },
