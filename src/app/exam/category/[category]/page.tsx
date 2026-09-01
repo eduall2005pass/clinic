@@ -12,7 +12,7 @@ import {
   resolveExamCategoryId,
 } from "@/lib/public-exams-server";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const categoryMeta: Record<
   ExamCategory,
