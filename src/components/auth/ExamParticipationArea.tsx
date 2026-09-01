@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 import {
@@ -74,8 +75,8 @@ function formatDuration(seconds: number): string {
 
 export default function ExamParticipationArea({
   examId,
-  autoBegin = false,
-  timerType = "first",
+  autoBegin: propAutoBegin,
+  timerType: propTimerType,
 }: {
   examId: string;
   /** True when the student already accepted the Exam Rules (Start Now flow). */
@@ -83,6 +84,9 @@ export default function ExamParticipationArea({
   /** First or second timer — affects grading penalty. */
   timerType?: "first" | "second";
 }) {
+  const searchParams = useSearchParams();
+  const autoBegin = propAutoBegin ?? searchParams.get("begin") === "1";
+  const timerType = propTimerType ?? (searchParams.get("timer") === "second" ? "second" : "first");
   const examHref = `/exam/${examId}`;
   const loginHref = `/login?next=${encodeURIComponent(examHref)}`;
   const { user, profile, authLoading, profileLoading } = useAuth();

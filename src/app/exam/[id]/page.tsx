@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 import { fetchExamPageById } from "@/lib/public-exams-server";
 import { categoryLabels, type ExamCategory } from "@/lib/public-exams";
 import ExamParticipationArea from "@/components/auth/ExamParticipationArea";
@@ -10,7 +11,6 @@ export const revalidate = 300;
 
 type ExamPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ begin?: string; timer?: string }>;
 };
 
 export async function generateMetadata({
@@ -29,12 +29,8 @@ export async function generateMetadata({
   };
 }
 
-export default async function ExamDetailPage({
-  params,
-  searchParams,
-}: ExamPageProps) {
+export default async function ExamDetailPage({ params }: ExamPageProps) {
   const { id } = await params;
-  const { begin, timer } = await searchParams;
   const exam = await fetchExamPageById(id);
 
   if (!exam) {
@@ -98,13 +94,9 @@ export default async function ExamDetailPage({
         <ExamDetailInfo exam={exam} />
 
         <div className="mt-8">
-          {/* begin=1 + timer param → the student already accepted the Exam
-              Rules and selected their timer type, so start immediately. */}
-          <ExamParticipationArea
-            examId={exam.id}
-            autoBegin={begin === "1"}
-            timerType={timer === "second" ? "second" : "first"}
-          />
+          <Suspense fallback={null}>
+            <ExamParticipationArea examId={exam.id} />
+          </Suspense>
         </div>
       </section>
     </main>
