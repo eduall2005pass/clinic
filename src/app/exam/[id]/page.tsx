@@ -6,7 +6,7 @@ import { categoryLabels, type ExamCategory } from "@/lib/public-exams";
 import ExamParticipationArea from "@/components/auth/ExamParticipationArea";
 import ExamDetailInfo from "@/components/ExamDetailInfo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type ExamPageProps = {
   params: Promise<{ id: string }>;
