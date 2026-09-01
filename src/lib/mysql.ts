@@ -30,11 +30,12 @@ export function getMysqlPool(): mysql.Pool | null {
       // warm Vercel instance holds its own pool, so keep per-instance usage
       // small and release idle connections quickly or bursts exhaust the
       // server ("Too many connections" breaks saves mid-request).
-      connectionLimit: 2,
-      maxIdle: 1,
-      idleTimeout: 10_000,
+      connectionLimit: 5,
+      maxIdle: 2,
+      idleTimeout: 15_000,
       connectTimeout: 10000,
       waitForConnections: true,
+      queueLimit: 50,
       // Azure Database for MySQL enforces TLS connections.
       ssl:
         process.env.MYSQL_SSL === "false"

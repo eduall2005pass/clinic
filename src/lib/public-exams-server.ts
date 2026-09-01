@@ -107,15 +107,15 @@ export async function fetchPublicExamById(
  * Exam detail page loader — includes enrolled-kind exams so their /exam/[id]
  * page renders. Actual access (course enrollment) is enforced server-side by
  * /api/exams/[id] when the student tries to participate.
+ * Uses single-row fetch to avoid N+1 live-totals cost on rules page.
  */
 export async function fetchExamPageById(
   id: string,
 ): Promise<PublicExam | null> {
-  const exams = await fetchExams();
-  const found = exams.find(
-    (exam) => exam.id === id && exam.status !== "draft",
-  );
-  return found ? toPublicExam(found) : null;
+  const { fetchExamById } = await import("@/lib/exams-admin");
+  const found = await fetchExamById(id);
+  if (!found || found.status === "draft") return null;
+  return toPublicExam(found);
 }
 
 /**

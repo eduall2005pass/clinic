@@ -1,6 +1,9 @@
 import { exec, parseJsonColumn, query } from "@/lib/mysql";
 import { seedDefaultExamRules } from "@/lib/exam-rules";
 
+let examsCache: { data: Exam[]; at: number } | null = null;
+const EXAMS_CACHE_TTL = 30_000;
+
 // Admin Panel → Exams. Exams, question bank, enrollments, results and
 // settings all live in MySQL. `exam_questions.exam_id = NULL` marks a
 // bank-only question; the `answer_key` JSON column on `exams` stores
@@ -389,6 +392,10 @@ async function applyLiveTotals(exams: Exam[]): Promise<Exam[]> {
 }
 
 export async function fetchExams(kind?: ExamKind): Promise<Exam[]> {
+  const now = Date.now();
+  if (!kind && examsCache && now - examsCache.at < EXAMS_CACHE_TTL) {
+    return examsCache.data;
+  }
   try {
     await ensureTables();
     const rows = kind
@@ -403,9 +410,28 @@ export async function fetchExams(kind?: ExamKind): Promise<Exam[]> {
       exam.courseIds = assignments?.get(exam.id) ?? [];
       return exam;
     });
-    return await applyLiveTotals(exams);
+    const withTotals = await applyLiveTotals(exams);
+    if (!kind) examsCache = { data: withTotals, at: now };
+    return withTotals;
   } catch {
     return [];
+  }
+}
+
+export async function fetchExamById(id: string): Promise<Exam | null> {
+  try {
+    await ensureTables();
+    const rows = await query<ExamRow[]>(`SELECT ${EXAM_COLUMNS} FROM exams WHERE id = ? LIMIT 1`, [id]);
+    if (!rows[0]) return null;
+    const exam = rowToExam(rows[0]);
+    if (exam.kind === "enrolled") {
+      const assignments = await fetchCourseAssignments();
+      exam.courseIds = assignments.get(exam.id) ?? [];
+    }
+    const [withTotals] = await applyLiveTotals([exam]);
+    return withTotals ?? exam;
+  } catch {
+    return null;
   }
 }
 
