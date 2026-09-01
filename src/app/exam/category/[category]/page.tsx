@@ -14,6 +14,10 @@ import {
 
 export const revalidate = 300;
 
+export async function generateStaticParams() {
+  return examCategories.map((item) => ({ category: item.key }));
+}
+
 const categoryMeta: Record<
   ExamCategory,
   { description: string }

@@ -1,5 +1,6 @@
 import { exec, parseJsonColumn, query, ensureColumn } from "@/lib/mysql";
 import { seedDefaultExamRules } from "@/lib/exam-rules";
+import { unstable_cache } from "next/cache";
 
 let ensureSettingsTableReady = false;
 let ensureResultTablesReady = false;
