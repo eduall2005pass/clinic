@@ -338,9 +338,9 @@ function CourseSubjectsContent({ slug }: { slug: string }) {
     isDirectContent(layout, course.name, course.slug);
   const useSubjectSelection =
     !direct &&
-    (layout === "subject" ||
+    ((layout as string) === "subject" ||
       // Auto: multi-subject Medical Admission opens the icon grid directly.
-      (layout === "auto" &&
+      ((layout as string) === "auto" &&
         course.category === "Medical Admission" &&
         course.subjects.length > 1));
 

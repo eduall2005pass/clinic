@@ -23,6 +23,8 @@ function toPublicExam(exam: Exam): PublicExam {
     exam.scheduledAt && !Number.isNaN(new Date(exam.scheduledAt).getTime())
       ? exam.scheduledAt
       : null;
+  const endsAtIso =
+    exam.endsAt && !Number.isNaN(new Date(exam.endsAt).getTime()) ? exam.endsAt : null;
   const rules: Eligibility["rules"] = [];
   if (batch) rules.push({ target: "hscBatch", batch });
   rules.push({ target: exam.courseType === "Admission" ? "admission" : "academic" });
@@ -42,6 +44,12 @@ function toPublicExam(exam: Exam): PublicExam {
     durationMinutes: exam.durationMinutes,
     // Same rule the grader applies — rules shown must match grading exactly.
     negativeMarks: negativePerWrongFor(exam),
+    negativeEnabled: exam.negativeEnabled ?? false,
+    negativePerWrong: exam.negativePerWrong ?? 0.25,
+    scheduledAt: scheduledIso,
+    endsAt: endsAtIso,
+    secondTimerEnabled: exam.secondTimerEnabled ?? false,
+    secondTimerDeduction: exam.secondTimerDeduction ?? 3,
     examDate: scheduledIso ? scheduledIso.slice(0, 10) : "",
     examTime: scheduledIso ? formatExamTime(scheduledIso) : "",
     status: deriveStatus(exam),
