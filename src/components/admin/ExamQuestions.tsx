@@ -49,6 +49,7 @@ export default function ExamQuestions({
     explanation: "",
     marks: "1",
   });
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,14 +57,14 @@ export default function ExamQuestions({
     try {
       const response = await fetch(
         `/api/admin/exams/questions?examId=${encodeURIComponent(exam.id)}`,
-        { cache: "no-store" },
+        { cache: "no-store", headers: authHeaders },
       );
       const data = (await response.json()) as { questions?: ExamQuestion[] };
       setQuestions(data.questions ?? []);
     } catch {
       setQuestions([]);
     }
-  }, [exam.id]);
+  }, [exam.id, authHeaders]);
 
   // Reusable bank questions (same subject first) available to attach.
   const loadBank = useCallback(async () => {
@@ -71,13 +72,13 @@ export default function ExamQuestions({
       const query = exam.subject
         ? `?examId=bank&subject=${encodeURIComponent(exam.subject)}`
         : "?examId=bank";
-      const response = await fetch(`/api/admin/exams/questions${query}`, { cache: "no-store" });
+      const response = await fetch(`/api/admin/exams/questions${query}`, { cache: "no-store", headers: authHeaders });
       const data = (await response.json()) as { questions?: ExamQuestion[] };
       setBankQuestions(data.questions ?? []);
     } catch {
       setBankQuestions([]);
     }
-  }, [exam.subject]);
+  }, [exam.subject, authHeaders]);
 
   useEffect(() => {
     void Promise.resolve().then(load);
@@ -86,15 +87,36 @@ export default function ExamQuestions({
 
   async function addQuestion() {
     setError(null);
+    // Client-side validation mirroring server rules
+    if (!form.question.trim() || form.question.trim().length < 3) {
+      setError("Question text is required (at least 3 characters).");
+      return;
+    }
+    const nonEmpty = form.options.filter((o) => o.trim().length > 0);
+    if (nonEmpty.length < 2) {
+      setError("At least two non-empty options are required.");
+      return;
+    }
+    if (form.correctIndex < 0 || form.correctIndex >= form.options.length || !form.options[form.correctIndex]?.trim()) {
+      setError("Select a valid correct answer.");
+      return;
+    }
+    const marksNum = Number(form.marks);
+    if (!Number.isFinite(marksNum) || marksNum < 0.5) {
+      setError("Marks must be at least 0.5.");
+      return;
+    }
     setBusy(true);
     try {
       const response = await fetch("/api/admin/exams/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
+          ...(editingId ? { id: editingId } : {}),
           ...form,
           examId: exam.id,
-          marks: Number(form.marks) || 1,
+          marks: marksNum,
+          // Preserve order when editing; new gets auto order
         }),
       });
       const data = (await response.json().catch(() => null)) as {
@@ -112,7 +134,72 @@ export default function ExamQuestions({
         explanation: "",
         marks: form.marks,
       });
+      setEditingId(null);
       await load();
+      onChanged?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(q: ExamQuestion) {
+    if (q.id === null) return;
+    setEditingId(q.id);
+    setForm({
+      subject: q.subject,
+      question: q.question,
+      options: q.options.length >= 2 ? [...q.options] : [...q.options, ...EMPTY_OPTIONS.slice(q.options.length)],
+      correctIndex: q.correctIndex,
+      explanation: q.explanation ?? "",
+      marks: String(q.marks),
+    });
+    setError(null);
+  }
+
+  async function duplicateQuestion(id: number | null) {
+    if (id === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/exams/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ duplicateId: id }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string; questions?: ExamQuestion[] } | null;
+      if (!response.ok) {
+        setError(data?.error ?? "Failed to duplicate.");
+        return;
+      }
+      if (data?.questions) setQuestions(data.questions);
+      else await load();
+      onChanged?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function moveQuestion(index: number, direction: -1 | 1) {
+    if (!questions) return;
+    const target = index + direction;
+    if (target < 0 || target >= questions.length) return;
+    const next = [...questions];
+    [next[index], next[target]] = [next[target], next[index]];
+    const ids = next.map((q) => q.id).filter((id): id is number => id !== null);
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/exams/questions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ examId: exam.id, order: ids }),
+      });
+      const data = (await response.json().catch(() => null)) as { questions?: ExamQuestion[]; error?: string } | null;
+      if (!response.ok) {
+        setError(data?.error ?? "Failed to reorder.");
+        return;
+      }
+      if (data?.questions) setQuestions(data.questions);
+      else await load();
       onChanged?.();
     } finally {
       setBusy(false);
@@ -182,7 +269,7 @@ export default function ExamQuestions({
 
         {/* Add-question (MCQ maker) form */}
         <h4 className="mt-5 text-sm font-extrabold uppercase tracking-wider text-slate-400">
-          Add MCQ
+          {editingId ? "Edit MCQ" : "Add MCQ"}
         </h4>
         <form
           className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]"
@@ -269,8 +356,22 @@ export default function ExamQuestions({
           ) : null}
           <div className="sm:col-span-2 flex flex-wrap gap-3">
             <button type="submit" disabled={busy} className={buttonPrimaryClass}>
-              {busy ? "Saving…" : "+ Add Question"}
+              {busy ? "Saving…" : editingId ? "Update Question" : "+ Add Question"}
             </button>
+            {editingId && (
+              <button
+                type="button"
+                disabled={busy}
+                className={buttonSecondaryClass}
+                onClick={() => {
+                  setEditingId(null);
+                  setForm({ subject: exam.subject || "", question: "", options: EMPTY_OPTIONS, correctIndex: 0, explanation: "", marks: "1" });
+                  setError(null);
+                }}
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
               disabled={busy}
@@ -317,21 +418,30 @@ export default function ExamQuestions({
 
         {/* Existing questions */}
         <ul className="mt-6 space-y-3 border-t border-neutral-200 pt-5 admin-dark:border-zinc-800">
-          {(questions ?? []).map((question) => (
+          {(questions ?? []).map((question, idx) => (
             <li key={question.id} className={`${cardClass} p-4`}>
               <div className="flex items-start justify-between gap-3">
                 <p className="min-w-0 flex-1 text-sm font-semibold text-[#0b1e3a] admin-dark:text-zinc-100">
+                  <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary-600/10 text-xs font-extrabold text-primary-600">{idx + 1}</span>
                   {question.question}
                 </p>
-                <button
-                  type="button"
-                  disabled={busy}
-                  aria-label="Delete question"
-                  className={buttonDangerClass}
-                  onClick={() => void removeQuestion(question.id)}
-                >
-                  ✕
-                </button>
+                <span className="flex shrink-0 items-center gap-1">
+                  <span className="flex flex-col gap-0.5">
+                    <button type="button" disabled={busy || idx === 0} aria-label="Move up" onClick={() => void moveQuestion(idx, -1)} className="rounded border border-neutral-200 px-1.5 text-[10px] disabled:opacity-30">↑</button>
+                    <button type="button" disabled={busy || idx === (questions?.length ?? 0) - 1} aria-label="Move down" onClick={() => void moveQuestion(idx, 1)} className="rounded border border-neutral-200 px-1.5 text-[10px] disabled:opacity-30">↓</button>
+                  </span>
+                  <button type="button" disabled={busy} className={buttonSecondaryClass} onClick={() => startEdit(question)}>Edit</button>
+                  <button type="button" disabled={busy} className={buttonSecondaryClass} onClick={() => void duplicateQuestion(question.id)}>Duplicate</button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-label="Delete question"
+                    className={buttonDangerClass}
+                    onClick={() => void removeQuestion(question.id)}
+                  >
+                    ✕
+                  </button>
+                </span>
               </div>
               <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                 {question.options.map((option, index) => (

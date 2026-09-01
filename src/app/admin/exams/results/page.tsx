@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
 import {
   useAdminGate,
@@ -30,9 +31,16 @@ function formatTime(seconds: number | null | undefined): string {
 
 export default function ResultsPage() {
   const gate = useAdminGate();
+  const searchParams = useSearchParams();
   const [exams, setExams] = useState<Exam[]>([]);
-  const [examId, setExamId] = useState("");
+  const [examId, setExamId] = useState(() => searchParams.get("examId") ?? "");
   const [results, setResults] = useState<Result[] | null>(null);
+
+  useEffect(() => {
+    const param = searchParams.get("examId");
+    if (param && param !== examId) setExamId(param);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- init from URL only
+  }, [searchParams]);
 
   const loadResults = useCallback(async (id: string) => {
     setResults(null);

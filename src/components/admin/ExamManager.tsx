@@ -15,6 +15,7 @@ import {
 } from "@/components/admin/admin-ui";
 import ExamQuestions from "@/components/admin/ExamQuestions";
 import ExamRulesEditor from "@/components/admin/ExamRulesEditor";
+import Link from "next/link";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
 import { examCategoryLabel } from "@/lib/public-exams";
 
@@ -52,6 +53,9 @@ export type Exam = {
 /** When set, the manager is scoped to one Course Control category. */
 export type FixedCategory = { id: string; name: string };
 
+/** When set, the manager is scoped to one chapter/subject context. */
+export type FixedChapter = { id: string; name: string };
+
 const EMPTY = {
   id: "",
   title: "",
@@ -82,6 +86,7 @@ export default function ExamManager({
   kindFilter,
   allowEnrolled = false,
   fixedCategory,
+  fixedChapter,
 }: {
   title: string;
   description: string;
@@ -91,6 +96,8 @@ export default function ExamManager({
   allowEnrolled?: boolean;
   /** Public Exam Control mode — only this category's public exams. */
   fixedCategory?: FixedCategory;
+  /** Course Content Control mode — only this chapter's exams. */
+  fixedChapter?: FixedChapter;
 }) {
   const gate = useAdminGate();
   const [exams, setExams] = useState<Exam[] | null>(null);
@@ -116,6 +123,11 @@ export default function ExamManager({
         // Database/API-level isolation — only this category's public exams.
         params.set("kind", "public");
         params.set("categoryId", fixedCategory.id);
+        if (fixedChapter) params.set("chapterId", fixedChapter.id);
+      } else if (fixedChapter) {
+        params.set("chapterId", fixedChapter.id);
+        const kinds = Array.isArray(kindFilter) ? kindFilter : kindFilter ? [kindFilter] : [];
+        if (kinds.length > 0) params.set("kind", kinds.join(","));
       } else {
         const kinds = Array.isArray(kindFilter) ? kindFilter : kindFilter ? [kindFilter] : [];
         if (kinds.length > 0) params.set("kind", kinds.join(","));
@@ -132,7 +144,7 @@ export default function ExamManager({
       setLoadError(true);
       setExams([]);
     }
-  }, [kindFilter, fixedCategory, gate.headers]);
+  }, [kindFilter, fixedCategory, fixedChapter, gate.headers]);
 
   useEffect(() => {
     if (gate.ready) void Promise.resolve().then(load);
@@ -202,7 +214,7 @@ export default function ExamManager({
       kind: exam.kind,
       batchId: exam.batchId || "hsc-28",
       subject: exam.subject,
-      chapterId: exam.chapterId ?? "",
+      chapterId: fixedChapter ? fixedChapter.id : (exam.chapterId ?? ""),
       courseType: exam.courseType,
       durationMinutes: String(exam.durationMinutes),
       negativeMarks: String(exam.negativeMarks),
@@ -237,6 +249,7 @@ export default function ExamManager({
       setNotice({ kind: "error", text: "Select a category for this public exam." });
       return;
     }
+    const chapterId = fixedChapter ? fixedChapter.id : form.chapterId;
     setBusy(true);
     setNotice(null);
     try {
@@ -246,6 +259,7 @@ export default function ExamManager({
         body: JSON.stringify({
           ...form,
           ...(editingSortOrder !== null ? { sortOrder: editingSortOrder } : {}),
+          chapterId,
           courseIds: form.kind === "enrolled" ? courseIds : [],
           categoryId,
           bannerUrl: form.bannerUrl,
@@ -334,7 +348,53 @@ export default function ExamManager({
     }
   }
 
-  async function remove(id: string, name: string) {    if (!window.confirm(`Delete “${name}” with its questions, enrollments and results?`)) return;
+  async function duplicate(id: string) {
+    if (!window.confirm("Duplicate this exam with its questions and rules?")) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/exams/duplicate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({ id }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string; exam?: Exam } | null;
+      if (!response.ok) {
+        setNotice({ kind: "error", text: data?.error ?? "Failed to duplicate." });
+        return;
+      }
+      await load();
+      setNotice({ kind: "success", text: `“${data?.exam?.title ?? id}” duplicated.` });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleArchive(exam: Exam) {
+    const isArchived = exam.status === "closed";
+    if (!window.confirm(isArchived ? `Unarchive “${exam.title}”?` : `Archive “${exam.title}”? Archived exams become closed and hidden from students.`)) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/exams/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify({ id: exam.id, archived: !isArchived }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setNotice({ kind: "error", text: data?.error ?? "Failed to update." });
+        return;
+      }
+      await load();
+      setNotice({ kind: "success", text: isArchived ? `“${exam.title}” unarchived.` : `“${exam.title}” archived.` });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id: string, name: string) {
+    if (!window.confirm(`Delete “${name}” with its questions, enrollments and results? This cannot be undone.`)) return;
     setBusy(true);
     try {
       const response = await fetch("/api/admin/exams", {
@@ -453,7 +513,7 @@ export default function ExamManager({
                     </p>
                   )}
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div className="flex shrink-0 flex-wrap gap-2">
                   <span className="flex flex-col gap-1">
                     <button
                       type="button"
@@ -473,6 +533,13 @@ export default function ExamManager({
                   <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonSecondaryClass}>
                     Questions ({exam.questionCount})
                   </button>
+                  <button type="button" onClick={() => startEdit(exam)} className={buttonSecondaryClass}>Edit</button>
+                  <Link
+                    href={exam.kind === "public" ? `/admin/result-control/public-exam/${encodeURIComponent(exam.id)}` : `/admin/exams/results?examId=${encodeURIComponent(exam.id)}`}
+                    className={buttonSecondaryClass}
+                  >
+                    View Result
+                  </Link>
                   {exam.kind === "public" && (
                     <button
                       type="button"
@@ -487,12 +554,29 @@ export default function ExamManager({
                   <button
                     type="button"
                     disabled={busy}
+                    onClick={() => void duplicate(exam.id)}
+                    className={buttonSecondaryClass}
+                    title="Duplicate exam with questions and rules"
+                  >
+                    Duplicate
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void toggleArchive(exam)}
+                    className={buttonSecondaryClass}
+                    title={exam.status === "closed" ? "Unarchive exam" : "Archive exam"}
+                  >
+                    {exam.status === "closed" ? "Unarchive" : "Archive"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
                     onClick={() => void toggleStatus(exam)}
                     className={buttonSecondaryClass}
                   >
                     {exam.status === "published" ? "Unpublish" : "Publish"}
                   </button>
-                  <button type="button" onClick={() => startEdit(exam)} className={buttonSecondaryClass}>Edit</button>
                   <button type="button" onClick={() => void remove(exam.id, exam.title)} disabled={busy}
                     aria-label={`Delete ${exam.title}`} className={buttonDangerClass}>✕</button>
                 </div>
@@ -502,8 +586,8 @@ export default function ExamManager({
         </ul>
       )}
 
-      {/* Public Exam Control: [+ Add Exam] sits at the end of the list. */}
-      {fixedCategory && (
+      {/* Public Exam Control / Course Content Control: [+ Add Exam] sits at the end of the list. */}
+      {(fixedCategory || fixedChapter) && (
         <div className="mt-5">
           <button type="button" onClick={startCreate} className={`${buttonPrimaryClass} w-full py-3`}>
             + Add Exam
@@ -647,13 +731,20 @@ export default function ExamManager({
               </div>
               <div>
                 <label className={labelClass} htmlFor="ex-chapter">Chapter (course content)</label>
-                <select id="ex-chapter" className={inputClass} value={form.chapterId}
-                  onChange={(event) => setForm({ ...form, chapterId: event.target.value })}>
-                  <option value="">None</option>
-                  {chapterOptions.map((chapter) => (
-                    <option key={chapter.id} value={chapter.id}>{chapter.name}</option>
-                  ))}
-                </select>
+                {fixedChapter ? (
+                  <>
+                    <input id="ex-chapter" className={inputClass} value={fixedChapter.name} disabled />
+                    <p className="mt-1 text-[11px] text-slate-500">Fixed to this chapter — auto-assigned.</p>
+                  </>
+                ) : (
+                  <select id="ex-chapter" className={inputClass} value={form.chapterId}
+                    onChange={(event) => setForm({ ...form, chapterId: event.target.value })}>
+                    <option value="">None</option>
+                    {chapterOptions.map((chapter) => (
+                      <option key={chapter.id} value={chapter.id}>{chapter.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
                 <label className={labelClass} htmlFor="ex-duration">Duration (minutes)</label>

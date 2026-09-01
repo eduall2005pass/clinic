@@ -16,8 +16,15 @@ function contentLink(
   subject?: string,
   paper?: string,
 ): { href: string; label: string } {
-  if (ctype === "exam") {
-    return { href: "/admin/exams/enrolled", label: "Open Exams" };
+  if (ctype === "exam" && slug) {
+    const qs = new URLSearchParams();
+    if (subject) qs.set("subject", subject);
+    if (paper) qs.set("paper", paper);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return {
+      href: `/admin/course-content-control/course/${encodeURIComponent(slug)}/exam/${encodeURIComponent(chapterId)}${suffix}`,
+      label: "Manage Exams",
+    };
   }
   if (ctype === "materials") {
     return { href: "/admin/courses/papers", label: "Open Materials" };

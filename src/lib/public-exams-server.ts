@@ -12,20 +12,16 @@ import {
   examCategories,
   examCategorySlugs,
   formatExamTime,
-  negativeMarksFor,
   type ExamCategory,
   type PublicExam,
 } from "@/lib/public-exams";
+import { negativePerWrongFor } from "@/lib/exam-taking";
 
 function toPublicExam(exam: Exam): PublicExam {
   const batch = batchLabel(exam.batchId);
   const scheduledIso =
     exam.scheduledAt && !Number.isNaN(new Date(exam.scheduledAt).getTime())
       ? exam.scheduledAt
-      : null;
-  const endsAtIso =
-    exam.endsAt && !Number.isNaN(new Date(exam.endsAt).getTime())
-      ? exam.endsAt
       : null;
   const rules: Eligibility["rules"] = [];
   if (batch) rules.push({ target: "hscBatch", batch });
@@ -41,19 +37,15 @@ function toPublicExam(exam: Exam): PublicExam {
     courseType: exam.courseType,
     subject: exam.subject,
     totalMarks: exam.totalMarks,
+    // Question count as configured by the admin (0 = unknown/not set yet).
     totalQuestions: Math.max(0, Number(exam.questionCount) || 0),
     durationMinutes: exam.durationMinutes,
-    negativeMarks: negativeMarksFor(exam.courseType),
-    negativeEnabled: exam.negativeEnabled,
-    negativePerWrong: exam.negativePerWrong,
-    scheduledAt: scheduledIso,
-    endsAt: endsAtIso,
+    // Same rule the grader applies — rules shown must match grading exactly.
+    negativeMarks: negativePerWrongFor(exam),
     examDate: scheduledIso ? scheduledIso.slice(0, 10) : "",
     examTime: scheduledIso ? formatExamTime(scheduledIso) : "",
     status: deriveStatus(exam),
     published: true,
-    secondTimerEnabled: exam.secondTimerEnabled,
-    secondTimerDeduction: exam.secondTimerDeduction,
     eligibility: { mode: "all", rules },
   };
 }
@@ -168,8 +160,8 @@ export async function fetchLiveExamCounts(): Promise<
       let key: ExamCategory | undefined;
       if (exam.categoryId && idToKey.has(exam.categoryId)) {
         key = idToKey.get(exam.categoryId);
-      } else if (!exam.categoryId) {
-        // Legacy exam without category_id — infer via heuristic.
+      } else {
+        // Legacy exam without category_id — infer via heuristic (same 4 categories as resolveExamCategoryId).
         try {
           key = categorizeExam(exam);
         } catch {

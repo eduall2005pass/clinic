@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission } from "@/lib/admin";
+import { requireAnyPermission, requirePermission } from "@/lib/admin";
 import { logAdminAction } from "@/lib/administration";
 import {
   deleteExamRule,
@@ -16,7 +16,7 @@ function unauthorized() {
 
 /** GET ?examId=… — rules of one specific exam (strictly exam-scoped). */
 export async function GET(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) return unauthorized();
   const examId = request.nextUrl.searchParams.get("examId")?.trim() ?? "";
   if (!/^[a-z0-9-]{2,64}$/.test(examId)) {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
 /** POST — add or edit a rule. Body: { examId, id?, title, text }. */
 export async function POST(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) return unauthorized();
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) {
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
 /** PUT — reorder within one exam. Body: { examId, order: [id, …] }. */
 export async function PUT(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) return unauthorized();
   const body = (await request.json().catch(() => null)) as
     | { examId?: unknown; order?: unknown }
@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest) {
 
 /** DELETE — body: { examId, id }. */
 export async function DELETE(request: NextRequest) {
-  const admin = await requirePermission(request, "manageExams");
+  const admin = await requireAnyPermission(request, ["manageExams", "managePublicExam"]);
   if (!admin) return unauthorized();
   const body = (await request.json().catch(() => null)) as
     | { examId?: unknown; id?: unknown }

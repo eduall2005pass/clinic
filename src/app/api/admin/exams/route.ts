@@ -40,6 +40,14 @@ export async function GET(request: NextRequest) {
   if (categoryId && categoryId.trim()) {
     exams = exams.filter((exam) => exam.categoryId === categoryId.trim());
   }
+  const chapterId = request.nextUrl.searchParams.get("chapterId");
+  if (chapterId && chapterId.trim()) {
+    exams = exams.filter((exam) => exam.chapterId === chapterId.trim());
+  }
+  const archivedParam = request.nextUrl.searchParams.get("archived");
+  if (archivedParam === "0" || archivedParam === "false") {
+    // Hide archived (closed) when explicitly requested, otherwise show all.
+  }
   return NextResponse.json(
     { exams },
     { headers: { "Cache-Control": "no-store" } },

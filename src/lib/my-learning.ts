@@ -1332,7 +1332,7 @@ export async function getRecentlyViewed(
         itemId: row.item_id,
         title: row.title,
         subtitle: `${row.duration_minutes > 0 ? row.duration_minutes + " min · " : ""}${row.total_marks > 0 ? row.total_marks + " marks · " : ""}${row.course_name ?? "Exam"}`,
-        href: "/exam",
+        href: `/exam/${encodeURIComponent(row.item_id)}/rules`,
         external: false,
         viewedAt: toIso(row.viewed_at),
       });

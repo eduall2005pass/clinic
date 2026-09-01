@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading, AccessMessage } from "@/components/auth/AccessGuard";
+import ExamManager from "@/components/admin/ExamManager";
 import {
   useAdminGate,
   noticeClass,
@@ -90,6 +91,7 @@ export default function ChapterClassesPage({
   const decodedSlug = decodeURIComponent(slug);
   const decodedChapterId = decodeURIComponent(chapterId);
   const isClass = ctype === "class";
+  const isExam = ctype === "exam";
 
   const backChaptersHref =
     `/admin/course-content-control/course/${encodeURIComponent(slug)}/${encodeURIComponent(ctype)}` +
@@ -152,15 +154,15 @@ export default function ChapterClassesPage({
     );
   }
 
-  if (!isClass) {
+  if (!isClass && !isExam) {
     return (
       <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
         <Link href={backChaptersHref} className="text-sm font-semibold text-neutral-400 hover:text-[#1a3a78]">
           ← Back
         </Link>
         <div className="mt-6 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center">
-          <p className="font-bold text-yellow-300">This view is for Class only</p>
-          <p className="mt-1 text-sm text-yellow-200/70">Chapter class management is only available when ctype is &quot;class&quot;.</p>
+          <p className="font-bold text-yellow-300">This view is for Class / Exam only</p>
+          <p className="mt-1 text-sm text-yellow-200/70">Chapter content management is only available when ctype is &quot;class&quot; or &quot;exam&quot;.</p>
         </div>
       </section>
     );
@@ -281,6 +283,40 @@ export default function ChapterClassesPage({
   }
 
   const previewThumb = youtubeThumbnail(form.videoUrl);
+
+  // Course Exam branch — reuse the same ExamManager but scoped to this chapter
+  if (isExam) {
+    return (
+      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+        <Link href={backChaptersHref} className="text-sm font-semibold text-slate-500 hover:text-[#1a3a78] admin-dark:text-slate-400">
+          ← Back to Chapters
+        </Link>
+        <header className="mt-3">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#234e9f] admin-dark:text-[#93c5fd]">
+            {decodedSlug.replace(/-/g, " ")} → {chapter.name}
+          </p>
+          <h1 className="mt-1 break-words text-2xl font-extrabold text-[#0b1e3a] admin-dark:text-white">
+            {chapter.name} — Exams
+          </h1>
+          <p className="mt-1 text-sm text-slate-500 admin-dark:text-slate-400">
+            Course → Exam → Chapter specific. Add/Edit/Delete/Publish exams, manage Questions, Rules and View Results per chapter (Course Exam Control).
+          </p>
+        </header>
+        <div className="mt-6">
+          <ExamManager
+            title={`${chapter.name} — Chapter Exams`}
+            description={`Exams attached to “${chapter.name}” (chapter ${decodedChapterId}). Publish to make them visible to enrolled students, manage Questions and Rules per exam, view Results.`}
+            kindFilter="enrolled"
+            allowEnrolled
+            fixedChapter={{ id: decodedChapterId, name: chapter.name }}
+          />
+        </div>
+        <p className="mt-6 rounded-xl border border-dashed border-[#bfdbfe] bg-[#f8fbff]/70 px-4 py-3 text-center text-xs leading-relaxed text-slate-500 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]/60 admin-dark:text-slate-400">
+          Hierarchy: {decodedSlug} → exam → {chapter.name} → Exams. Stored in <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] admin-dark:bg-[#0f2547]">exams</code> linked via <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] admin-dark:bg-[#0f2547]">chapter_id</code> → <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] admin-dark:bg-[#0f2547]">course_chapters</code>.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
