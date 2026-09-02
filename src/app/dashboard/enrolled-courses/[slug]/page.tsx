@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { CourseSubjectsView } from "@/components/dashboard/CourseLevels";
+import { Flow4CourseView } from "@/components/dashboard/Flow4Student";
 
 export const metadata: Metadata = {
-  title: "Course | My Enrolled Courses",
-  description: "Your enrolled course content on MediSpark.",
+  title: "Course Content | My Enrolled Courses",
+  description: "Your enrolled course content — Course → Subject → Chapter → Content.",
 };
 
 export default async function EnrolledCoursePage({
@@ -14,7 +14,7 @@ export default async function EnrolledCoursePage({
   const { slug } = await params;
   return (
     <main className="flex-1 bg-dark-950">
-      <CourseSubjectsView slug={decodeURIComponent(slug)} />
+      <Flow4CourseView slug={decodeURIComponent(slug)} />
     </main>
   );
 }

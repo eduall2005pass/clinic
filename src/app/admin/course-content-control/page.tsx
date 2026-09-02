@@ -5,22 +5,27 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
 
-type Cat = { id: string; name: string };
+type Course = { slug: string; name: string; category?: string };
 
-/** Level 1 — read-only category navigation (managed in Course Control). */
+// Flow 4: Course Content Control directly mirrors Course Control —
+// every course created in Course Control automatically appears here.
 export default function ContentControlPage() {
   const { user, authLoading } = useAuth();
-  const [categories, setCategories] = useState<Cat[] | null>(null);
+  const [courses, setCourses] = useState<Course[] | null>(null);
   const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
     setError(false);
     try {
-      const res = await fetch("/api/course-categories", { cache: "no-store" });
+      const token = await user.getIdToken();
+      const res = await fetch("/api/admin/courses", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error("failed");
-      const data = (await res.json()) as { categories?: Cat[] };
-      setCategories(Array.isArray(data.categories) ? data.categories : []);
+      const data = (await res.json()) as { courses?: Course[] };
+      setCourses(Array.isArray(data.courses) ? data.courses : []);
     } catch {
       setError(true);
     }
@@ -32,18 +37,21 @@ export default function ContentControlPage() {
     void load();
   }, [authLoading, user, load]);
 
-  if (authLoading || categories === null)
+  if (authLoading || courses === null)
     return <AccessLoading label="Loading Course Content Control…" />;
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-extrabold text-heading">Course Content Control</h1>
       <p className="mt-1 text-sm text-neutral-400">
-        Categories are synced from Course Control (read-only here).
+        Flow 4 — Course → Subject → Chapter → Content. Courses are synced from Course Control automatically.
+      </p>
+      <p className="mt-1 text-xs text-neutral-500">
+        Hierarchy: <span className="font-bold text-primary-400">Course → Subject → Chapter → Content</span>
       </p>
       {error && (
         <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-6 text-center">
-          <p className="text-sm text-red-400">Could not load categories.</p>
+          <p className="text-sm text-red-400">Could not load courses.</p>
           <button
             type="button"
             onClick={() => void load()}
@@ -53,21 +61,24 @@ export default function ContentControlPage() {
           </button>
         </div>
       )}
-      {!error && categories.length === 0 && (
+      {!error && courses.length === 0 && (
         <p className="mt-6 rounded-xl border border-dashed border-ink/15 px-4 py-8 text-center text-sm text-neutral-500">
-          No categories found.
+          No courses found. Create a course in Course Control — it will appear here automatically.
         </p>
       )}
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        {categories.map((category) => (
+        {courses?.map((course) => (
           <Link
-            key={category.id}
-            href={`/admin/course-content-control/category/${encodeURIComponent(category.id)}`}
+            key={course.slug}
+            href={`/admin/course-content-control/course/${encodeURIComponent(course.slug)}`}
             className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-5 shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:border-primary-600/60"
           >
-            <span aria-hidden className="text-xl">📚</span>
-            <span className="flex-1 break-words font-extrabold text-heading group-hover:text-[#1a3a78]">
-              {category.name}
+            <span aria-hidden className="text-xl">📘</span>
+            <span className="flex-1 min-w-0">
+              <span className="block break-words font-extrabold text-heading group-hover:text-[#1a3a78]">
+                {course.name}
+              </span>
+              {course.category && <span className="text-xs text-neutral-500">{course.category}</span>}
             </span>
           </Link>
         ))}

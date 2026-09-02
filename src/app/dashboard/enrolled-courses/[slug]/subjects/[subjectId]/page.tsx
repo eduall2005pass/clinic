@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { SubjectPapersView } from "@/components/dashboard/CourseLevels";
+import { Flow4SubjectView } from "@/components/dashboard/Flow4Student";
 
 export const metadata: Metadata = {
   title: "Subject | My Enrolled Courses",
-  description: "Papers, segments and chapters of your enrolled subject.",
+  description: "Chapters of your enrolled subject — Course → Subject → Chapter → Content.",
 };
 
 export default async function SubjectPage({
@@ -14,7 +14,7 @@ export default async function SubjectPage({
   const { slug, subjectId } = await params;
   return (
     <main className="flex-1 bg-dark-950">
-      <SubjectPapersView
+      <Flow4SubjectView
         slug={decodeURIComponent(slug)}
         subjectId={decodeURIComponent(subjectId)}
       />
