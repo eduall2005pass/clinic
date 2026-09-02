@@ -1,5 +1,6 @@
 import { exec, query } from "@/lib/mysql";
 import { saveFile, removeFile, isLocalUpload } from "@/lib/storage";
+import { unstable_cache } from "next/cache";
 
 let courseCategoriesReady = false;
 export const COURSE_CATEGORIES_STORAGE_DIR = "course-categories";
@@ -162,7 +163,7 @@ export async function fetchAllCourseCategories(): Promise<CourseCategory[]> {
 }
 
 /** Active categories in order — used by the live website and course system. */
-export async function fetchActiveCourseCategories(): Promise<CourseCategory[]> {
+export const fetchActiveCourseCategories = unstable_cache(async (): Promise<CourseCategory[]> => {
   try {
     await ensureSchema();
     const rows = await query<CourseCategoryRow[]>(
@@ -183,7 +184,7 @@ export async function fetchActiveCourseCategories(): Promise<CourseCategory[]> {
   } catch {
     return DEFAULT_COURSE_CATEGORIES;
   }
-}
+}, ['activeCourseCategories'], { revalidate: 30, tags: ['course-categories'] });
 
 export async function createCourseCategory(input: {
   name: string;

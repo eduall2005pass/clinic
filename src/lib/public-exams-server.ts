@@ -4,6 +4,7 @@ import {
   type Exam,
 } from "@/lib/exams-admin";
 import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
+import { unstable_cache } from "next/cache";
 import type { Eligibility } from "@/lib/eligibility";
 import {
   batchLabel,
@@ -65,16 +66,14 @@ function toPublicExam(exam: Exam): PublicExam {
  * Pass categoryId to get ONLY one Public Exam Control category's exams
  * (SQL-level WHERE category_id = ? — same records as the Admin Panel).
  */
-export async function fetchPublicExams(
-  options: { categoryId?: string } = {},
-): Promise<PublicExam[]> {
+export const fetchPublicExams = unstable_cache(async (options: { categoryId?: string } = {}): Promise<PublicExam[]> => {
   const exams = options.categoryId
     ? await fetchPublishedPublicExams(options.categoryId)
     : await fetchExams().then((all) =>
         all.filter((exam) => exam.status !== "draft" && exam.kind !== "enrolled"),
       );
   return exams.map(toPublicExam);
-}
+}, ['publicExams'], { revalidate: 30, tags: ['exams'] });
 
 /**
  * Resolve a website category URL key (ssc-academic …) to its real Public
@@ -140,9 +139,7 @@ export async function fetchAdminPublicExams(): Promise<PublicExam[]> {
  * category_id. Falls back to heuristic categorizeExam for legacy exams that
  * have no category_id. Returns 0 for categories with no live exams.
  */
-export async function fetchLiveExamCounts(): Promise<
-  Record<ExamCategory, number>
-> {
+export const fetchLiveExamCounts = unstable_cache(async (): Promise<Record<ExamCategory, number>> => {
   const counts = {} as Record<ExamCategory, number>;
   for (const category of examCategories) counts[category.key] = 0;
 
@@ -182,4 +179,4 @@ export async function fetchLiveExamCounts(): Promise<
     // On DB errors return zero counts — cards still render.
   }
   return counts;
-}
+}, ['liveExamCounts'], { revalidate: 30, tags: ['exams'] });
