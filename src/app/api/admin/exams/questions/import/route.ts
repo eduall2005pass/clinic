@@ -4,10 +4,10 @@ import { requireAnyPermission } from "@/lib/admin";
 export const dynamic = "force-dynamic";
 
 /**
- * Import from Image — Highlight-based MCQ detection.
- * Accepts multipart images, detects ONLY highlighted questions via AI/OCR,
- * extracts question text + options, ignores correct answer/explanation/metadata.
- * Highlighted = Import, Non-highlighted = Ignore. Highlight is selection marker only.
+ * Import from Image — Exact Source Language Detection + Optional English Conversion.
+ * Accepts multipart images, detects ALL readable questions exactly as they appear
+ * (preserves Bengali/English/mixed), extracts ONLY question + options.
+ * No automatic translation during detection. Optional Convert to English when explicitly enabled.
  */
 
 type DetectedQuestion = {
@@ -15,98 +15,92 @@ type DetectedQuestion = {
   options: string[];
 };
 
-const MOCK_POOL_EN: DetectedQuestion[] = [
+// Exact source detection — preserves original language/mixed as it appears in image
+// Examples include Bengali, English, and mixed Bengali-English with scientific terms
+const MOCK_POOL_EXACT: DetectedQuestion[] = [
+  {
+    question: "মানবদেহে Oxygen transport করে কোনটি?",
+    options: ["হিমোগ্লোবিন", "Plasma", "RBC", "White Blood Cell"],
+  },
+  {
+    question: "মানবদেহের স্বাভাবিক তাপমাত্রা কত?",
+    options: ["৩৭° সেলসিয়াস", "৩৫° সেলসিয়াস", "৩৯° সেলসিয়াস", "৪০° সেলসিয়াস"],
+  },
   {
     question: "What is the functional unit of the kidney?",
     options: ["Nephron", "Neuron", "Alveolus", "Glomerulus"],
+  },
+  {
+    question: "কোষের শক্তিঘর কোনটি? (Mitochondria)",
+    options: ["মাইটোকন্ড্রিয়া", "Nucleus", "Ribosome", "Chloroplast"],
   },
   {
     question: "Which hormone regulates blood glucose level?",
     options: ["Insulin", "Thyroxine", "Adrenaline", "Estrogen"],
   },
   {
-    question: "What is the powerhouse of the cell?",
-    options: ["Mitochondria", "Nucleus", "Ribosome", "Chloroplast"],
+    question: "রক্তে pH এর মান কত?",
+    options: ["৭.৪", "৬.৮", "৮.২", "৫.৫"],
   },
   {
-    question: "Which blood group is universal donor?",
-    options: ["O negative", "AB positive", "A positive", "B negative"],
-  },
-  {
-    question: "What is the pH of human blood?",
-    options: ["7.4", "6.8", "8.2", "5.5"],
-  },
-  {
-    question: "Which vitamin is synthesized in skin by sunlight?",
+    question: "সূর্যের আলোতে ত্বকে কোন Vitamin তৈরি হয়?",
     options: ["Vitamin D", "Vitamin A", "Vitamin C", "Vitamin K"],
   },
   {
-    question: "What is the largest organ in human body?",
-    options: ["Skin", "Liver", "Brain", "Heart"],
-  },
-  {
-    question: "Which part of brain controls balance?",
+    question: "Which part of brain controls balance and posture?",
     options: ["Cerebellum", "Cerebrum", "Medulla", "Hypothalamus"],
   },
 ];
 
-// Bengali pool — proper Bangla Unicode, preserves scientific/medical terminology
-const MOCK_POOL_BN: DetectedQuestion[] = [
+// English converted version — when Convert to English is ON, translate Bengali portions to English
+const MOCK_POOL_EN_CONVERTED: DetectedQuestion[] = [
   {
-    question: "মানবদেহের স্বাভাবিক তাপমাত্রা কত?",
-    options: ["৩৭° সেলসিয়াস", "৩৫° সেলসিয়াস", "৩৯° সেলসিয়াস", "৪০° সেলসিয়াস"],
+    question: "Which carries oxygen in the human body?",
+    options: ["Hemoglobin", "Plasma", "RBC", "White Blood Cell"],
   },
   {
-    question: "কিডনির কার্যকরী একক কী?",
-    options: ["নেফ্রন", "নিউরন", "অ্যালভিওলাস", "গ্লোমেরুলাস"],
+    question: "What is the normal temperature of the human body?",
+    options: ["37° Celsius", "35° Celsius", "39° Celsius", "40° Celsius"],
   },
   {
-    question: "রক্তে গ্লুকোজের মাত্রা নিয়ন্ত্রণ করে কোন হরমোন?",
-    options: ["ইনসুলিন", "থাইরক্সিন", "অ্যাড্রেনালিন", "ইস্ট্রোজেন"],
+    question: "What is the functional unit of the kidney?",
+    options: ["Nephron", "Neuron", "Alveolus", "Glomerulus"],
   },
   {
-    question: "কোষের শক্তিঘর কোনটি?",
-    options: ["মাইটোকন্ড্রিয়া", "নিউক্লিয়াস", "রাইবোসোম", "ক্লোরোপ্লাস্ট"],
+    question: "Which is the powerhouse of the cell? (Mitochondria)",
+    options: ["Mitochondria", "Nucleus", "Ribosome", "Chloroplast"],
   },
   {
-    question: "কোন রক্তের গ্রুপ সর্বজনীন দাতা?",
-    options: ["O নেগেটিভ", "AB পজিটিভ", "A পজিটিভ", "B নেগেটিভ"],
+    question: "Which hormone regulates blood glucose level?",
+    options: ["Insulin", "Thyroxine", "Adrenaline", "Estrogen"],
   },
   {
-    question: "মানব রক্তের pH কত?",
-    options: ["৭.৪", "৬.৮", "৮.২", "৫.৫"],
+    question: "What is the pH value of blood?",
+    options: ["7.4", "6.8", "8.2", "5.5"],
   },
   {
-    question: "সূর্যের আলোতে ত্বকে কোন ভিটামিন তৈরি হয়?",
-    options: ["ভিটামিন D", "ভিটামিন A", "ভিটামিন C", "ভিটামিন K"],
+    question: "Which vitamin is synthesized in the skin by sunlight?",
+    options: ["Vitamin D", "Vitamin A", "Vitamin C", "Vitamin K"],
   },
   {
-    question: "মানবদেহের সবচেয়ে বড় অঙ্গ কোনটি?",
-    options: ["ত্বক", "লিভার", "মস্তিষ্ক", "হৃদপিণ্ড"],
+    question: "Which part of brain controls balance and posture?",
+    options: ["Cerebellum", "Cerebrum", "Medulla", "Hypothalamus"],
   },
 ];
 
-function detectHighlightedCount(file: File, index: number): number {
-  // Mock highlight-based detection: single image may contain 40-50 questions,
-  // but only highlighted are counted. We simulate by file size/name heuristic.
-  // For demo, return 3-7 per image based on file properties to show 30 detected if multiple images.
-  const base = file.name.length % 5 + 3; // 3-7
-  // If filename contains "highlight" we treat as highlighted selection, else still mock
-  // Add variation per index
-  return Math.min(10, base + (index % 3));
+function detectAllCount(file: File, index: number): number {
+  // Detect ALL readable questions in image (no highlight filter) — exact source language
+  const base = (file.name.length % 4) + 4; // 4-7 per image for demo
+  return Math.min(12, base + (index % 2));
 }
 
-function buildDetectedSet(totalHighlighted: number, language: "bn" | "en"): DetectedQuestion[] {
-  const pool = language === "bn" ? MOCK_POOL_BN : MOCK_POOL_EN;
+function buildDetectedSet(totalCount: number, convertToEnglish: boolean): DetectedQuestion[] {
+  const pool = convertToEnglish ? MOCK_POOL_EN_CONVERTED : MOCK_POOL_EXACT;
   const result: DetectedQuestion[] = [];
-  for (let i = 0; i < totalHighlighted; i += 1) {
+  for (let i = 0; i < totalCount; i += 1) {
     const template = pool[i % pool.length];
-    // Add variation to question text to avoid duplicates
-    const suffix = totalHighlighted > pool.length ? ` (Set ${Math.floor(i / pool.length) + 1})` : "";
-    // Preserve Bengali punctuation and Unicode correctly
-    const q = template.question.includes("?") || template.question.includes("؟") || template.question.includes("?")
-      ? template.question.replace("?", `${suffix}?`).replace("？", `${suffix}？`)
-      : template.question + suffix;
+    const suffix = totalCount > pool.length ? ` (Set ${Math.floor(i / pool.length) + 1})` : "";
+    const q = template.question.includes("?") ? template.question.replace("?", `${suffix}?`) : template.question + suffix;
     result.push({
       question: q,
       options: [...template.options],
@@ -148,50 +142,49 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Simulate AI/OCR highlight-based detection
-  // In production, this would call Vision OCR + highlight color segmentation (yellow #FFFF00 HSV)
-  // and extract question text + options via LLM layout analysis.
-  let totalHighlighted = 0;
-  const perImage: Array<{ name: string; totalInImage: number; highlighted: number }> = [];
+  // Detect ALL readable questions exactly as they appear (no highlight filter, no auto-translation)
+  // In production, this would call Vision OCR + layout analysis to preserve original language/mixed exactly.
+  let totalDetected = 0;
+  const perImage: Array<{ name: string; totalInImage: number; detected: number }> = [];
   files.forEach((file, idx) => {
-    // Mock total in image 40-50, highlighted subset
-    const totalInImage = 40 + (file.size % 11); // 40-50
-    const highlighted = detectHighlightedCount(file, idx);
-    // For demo, if file name hints at "50" we return 30 highlighted as spec example
-    let finalHighlighted = highlighted;
-    if (file.name.toLowerCase().includes("50") || files.length === 1) {
-      // Spec example: 50 in image, 30 highlighted -> show 30 detected
-      // To honor highlight-based, we ensure highlighted < totalInImage
-      finalHighlighted = Math.min(highlighted * 5, 30); // scale to ~30 for demo
-      if (finalHighlighted < 3) finalHighlighted = 3;
-      if (finalHighlighted > totalInImage) finalHighlighted = Math.min(30, totalInImage - 5);
+    const count = detectAllCount(file, idx);
+    // For demo, scale single image to ~30 as spec example for bulk (but now ALL, not highlighted)
+    let finalCount = count;
+    if (files.length === 1) {
+      finalCount = Math.min(count * 4, 30);
+      if (finalCount < 3) finalCount = 3;
     }
-    totalHighlighted += finalHighlighted;
-    perImage.push({ name: file.name, totalInImage, highlighted: finalHighlighted });
+    totalDetected += finalCount;
+    perImage.push({ name: file.name, totalInImage: finalCount, detected: finalCount });
   });
 
-  // Language selector — strict AI instruction, default বাংলা
+  // Optional Convert to English — OFF by default, only when explicitly enabled
+  const rawConvert = formData.get("convertToEnglish");
+  const convertToEnglish = rawConvert === "true" || rawConvert === "1" || rawConvert === "on";
+  // Also support legacy language param for backward compatibility (if language=en, treat as convert)
   const rawLang = formData.get("language");
-  const language: "bn" | "en" = rawLang === "en" || rawLang === "english" || rawLang === "English" ? "en" : "bn";
+  const legacyConvert = rawLang === "en" || rawLang === "english";
+  const shouldConvert = convertToEnglish || legacyConvert;
 
   // Cap to avoid overload, but allow up to 50 per request
-  totalHighlighted = Math.min(50, Math.max(1, totalHighlighted));
+  totalDetected = Math.min(50, Math.max(1, totalDetected));
 
-  const detected = buildDetectedSet(totalHighlighted, language);
+  const detected = buildDetectedSet(totalDetected, shouldConvert);
 
   // Do NOT auto-extract correct answer, explanation, subject, marks, etc.
   // Return only question + options; correct answer to be selected manually in review.
-  // Language is strict AI instruction: bn -> Bengali Unicode, en -> English
+  // Priority: STEP 1 detect exactly, STEP 2 preserve original/mixed, STEP 3 no auto-translate, STEP 4 only convert when enabled.
   return NextResponse.json(
     {
       detected,
       meta: {
         imagesProcessed: files.length,
         perImage,
-        totalHighlighted,
-        language,
-        languageLabel: language === "bn" ? "বাংলা" : "English",
-        message: `${totalHighlighted} Questions Detected — highlighted only, non-highlighted ignored (${language === "bn" ? "বাংলা" : "English"})`,
+        totalDetected,
+        convertToEnglish: shouldConvert,
+        message: shouldConvert
+          ? `${totalDetected} Questions Detected — converted to English`
+          : `${totalDetected} Questions Detected`,
       },
     },
     { headers: { "Cache-Control": "no-store" } },
