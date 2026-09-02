@@ -42,29 +42,36 @@ export default async function AdminCourseControlPage() {
           No active categories found. Create one first.
         </p>
       ) : (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {categories.map((category) => (
-            <div
+            <Link
               key={category.id}
-              className="group flex flex-col rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#93c5fd] hover:shadow-md admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]"
+              href={`/admin/course/category/${encodeURIComponent(category.id)}`}
+              className="group relative flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-primary-600/60 hover:shadow-primary-900/30 active:scale-[0.99]"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-600/10 text-xl">
-                {iconForSlug(category.slug)}
-              </span>
-              <h2 className="mt-3 font-bold leading-snug text-[#0b1e3a] admin-dark:text-zinc-100">
-                {category.name}
-              </h2>
-              <p className="mt-1 line-clamp-3 flex-1 text-xs leading-relaxed text-slate-500">
+              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary-600/10 blur-3xl transition duration-300 group-hover:bg-primary-600/20" />
+              <div className="pointer-events-none absolute inset-0 bg-medical-dots opacity-30" />
+              <div className="relative flex items-center gap-4">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-600/15 text-primary-500 transition duration-300 group-hover:bg-primary-600 group-hover:text-heading group-hover:shadow-md group-hover:shadow-primary-900/50">
+                  <span className="text-xl">{iconForSlug(category.slug)}</span>
+                </span>
+                <h2 className="text-lg font-extrabold leading-snug text-heading transition duration-300 group-hover:text-primary-400 sm:text-xl">
+                  {category.name}
+                </h2>
+              </div>
+              <p className="relative mt-3 line-clamp-2 flex-1 text-sm font-medium leading-relaxed text-neutral-400">
                 {category.description ?? "Courses under this category."}
               </p>
-              <Link
-                href={`/admin/course/category/${encodeURIComponent(category.id)}`}
-                className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-primary-700 active:scale-[0.98]"
-              >
-                Explore Courses
-                <span aria-hidden="true">→</span>
-              </Link>
-            </div>
+              <div className="relative mt-auto pt-6">
+                <span className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-900/40 transition duration-300 group-hover:bg-primary-700 group-hover:shadow-primary-900/60">
+                  Explore Courses
+                  <svg className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <path d="M5 12h14" />
+                    <path d="m12 5 7 7-7 7" />
+                  </svg>
+                </span>
+              </div>
+            </Link>
           ))}
         </div>
       )}

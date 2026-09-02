@@ -412,16 +412,18 @@ export default function CourseCategoryManager({
                   No categories yet. Use &quot;+ Add New Category&quot; above to create one.
                 </p>
               ) : (
-                <div className="mt-5 space-y-3">
+                <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                   {categories.map((category, index) => (
                     <div
                       key={category.id}
-                      className={`rounded-xl border px-4 py-3 transition ${
+                      className={`group relative flex flex-col overflow-hidden rounded-2xl border p-6 shadow-lg transition duration-300 hover:-translate-y-1 ${
                         category.isActive
-                          ? "border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547]"
-                          : "border-dashed border-ink/15 bg-white admin-dark:bg-[#112544] opacity-60"
+                          ? "border-ink/10 bg-dark-900 shadow-black/20 hover:border-primary-600/60 hover:shadow-primary-900/30"
+                          : "border-dashed border-ink/15 bg-dark-900/60 opacity-60"
                       }`}
                     >
+                      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary-600/10 blur-3xl transition duration-300 group-hover:bg-primary-600/20" />
+                      <div className="pointer-events-none absolute inset-0 bg-medical-dots opacity-30" />
                       {editingId === category.id ? (
                         <div className="grid gap-4">
                           <label className="block">
@@ -492,122 +494,43 @@ export default function CourseCategoryManager({
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={category.isActive}
-                            onChange={() => toggleActive(category)}
-                            disabled={busy}
-                            className="mt-1 h-4 w-4 shrink-0 accent-primary-600"
-                            aria-label={`Enable ${category.name}`}
-                          />
-                          {category.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={category.imageUrl}
-                              alt=""
-                              className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary-600/15 text-xs font-bold text-primary-400">
-                              {index + 1}
-                            </span>
-                          )}
-                          <span className="min-w-0 flex-1">
-                            <span className="block break-words text-sm font-semibold text-heading">
+                        <div className="relative flex flex-1 flex-col">
+                          <div className="relative flex items-center gap-4">
+                            {category.imageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={category.imageUrl} alt="" className="h-14 w-14 shrink-0 rounded-2xl object-cover transition duration-300 group-hover:shadow-md group-hover:shadow-primary-900/50" />
+                            ) : (
+                              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-600/15 text-primary-500 transition duration-300 group-hover:bg-primary-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-primary-900/50">
+                                <span className="text-lg font-extrabold">{index + 1}</span>
+                              </span>
+                            )}
+                            <h3 className="text-lg font-extrabold leading-snug text-heading transition duration-300 group-hover:text-primary-400 sm:text-xl">
                               {category.name}
-                            </span>
-                            <span className="block break-all text-xs text-neutral-600">
-                              /{category.slug} → {category.href}
-                            </span>
-                            {category.description && (
-                              <span className="mt-0.5 block break-words text-xs leading-relaxed text-neutral-500">
-                                {category.description}
-                              </span>
-                            )}
-                            {!category.isActive && (
-                              <span className="mt-1 inline-block rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-400">
-                                Disabled
-                              </span>
-                            )}
-                          </span>
-                          <span className="flex shrink-0 flex-wrap gap-1">
-                            <input
-                              data-image-input={category.id}
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) changeImage(category, file);
-                                e.target.value = "";
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                document
-                                  .querySelector<HTMLInputElement>(
-                                    `input[data-image-input="${category.id}"]`,
-                                  )
-                                  ?.click();
-                              }}
-                              aria-label={`Change image of ${category.name}`}
-                              title="Change image"
-                              className={iconButtonClass}
-                            >
-                              🖼
-                            </button>
-                            {category.imageUrl && (
-                              <button
-                                type="button"
-                                onClick={() => removeImage(category)}
-                                disabled={busy}
-                                aria-label={`Remove image of ${category.name}`}
-                                title="Remove image"
-                                className={iconButtonClass}
-                              >
-                                ⌫
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => startEdit(category)}
-                              disabled={busy}
-                              aria-label={`Edit ${category.name}`}
-                              title="Edit"
-                              className={iconButtonClass}
-                            >
-                              ✎
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => move(index, -1)}
-                              disabled={busy || index === 0}
-                              aria-label={`Move ${category.name} up`}
-                              className={iconButtonClass}
-                            >
-                              ↑
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => move(index, 1)}
-                              disabled={busy || index === categories.length - 1}
-                              aria-label={`Move ${category.name} down`}
-                              className={iconButtonClass}
-                            >
-                              ↓
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(category)}
-                              aria-label={`Delete ${category.name}`}
-                              title="Delete"
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/15 text-red-400 transition hover:border-red-500/60 hover:bg-red-500/10"
-                            >
-                              ✕
-                            </button>
-                          </span>
+                            </h3>
+                            <label className="ml-auto flex cursor-pointer items-center gap-2 rounded-full border border-ink/10 bg-dark-900 px-2.5 py-1 shadow-sm transition hover:border-primary-500/30">
+                              <input type="checkbox" checked={category.isActive} onChange={() => toggleActive(category)} disabled={busy} className="h-3 w-3 accent-primary-600" aria-label={`Enable ${category.name}`} />
+                              <span className={`text-[10px] font-bold uppercase tracking-wide ${category.isActive ? "text-emerald-400" : "text-neutral-500"}`}>{category.isActive ? "Active" : "Disabled"}</span>
+                            </label>
+                          </div>
+                          <p className="relative mt-3 line-clamp-2 flex-1 text-sm font-medium leading-relaxed text-neutral-400">
+                            {category.description ?? "Courses under this category."}
+                          </p>
+                          <p className="relative mt-2 truncate text-xs font-semibold text-neutral-500">
+                            /{category.slug} → {category.href}
+                          </p>
+                          <div className="relative mt-auto pt-4">
+                            <div className="flex flex-wrap gap-1.5">
+                              <input data-image-input={category.id} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) changeImage(category, file); e.target.value = ""; }} />
+                              <button type="button" onClick={() => { document.querySelector<HTMLInputElement>(`input[data-image-input="${category.id}"]`)?.click(); }} aria-label={`Change image of ${category.name}`} title="Change image" className={iconButtonClass}>🖼</button>
+                              {category.imageUrl && (
+                                <button type="button" onClick={() => removeImage(category)} disabled={busy} aria-label={`Remove image of ${category.name}`} title="Remove image" className={iconButtonClass}>⌫</button>
+                              )}
+                              <button type="button" onClick={() => startEdit(category)} disabled={busy} aria-label={`Edit ${category.name}`} title="Edit" className={iconButtonClass}>✎</button>
+                              <button type="button" onClick={() => move(index, -1)} disabled={busy || index === 0} aria-label={`Move ${category.name} up`} className={iconButtonClass}>↑</button>
+                              <button type="button" onClick={() => move(index, 1)} disabled={busy || index === categories.length - 1} aria-label={`Move ${category.name} down`} className={iconButtonClass}>↓</button>
+                              <button type="button" onClick={() => setDeleteTarget(category)} aria-label={`Delete ${category.name}`} title="Delete" className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/15 text-red-400 transition hover:border-red-500/60 hover:bg-red-500/10">✕</button>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
