@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { HubHeader, ManagementCard } from "@/components/admin/hub-ui";
-import { fetchActiveCourseCategories } from "@/lib/course-categories-store";
+import { HubHeader } from "@/components/admin/hub-ui";
+import {
+  fetchActiveCourseCategories,
+  DEFAULT_COURSE_CATEGORIES,
+} from "@/lib/course-categories-store";
 import { examCategoryLabel } from "@/lib/public-exams";
 
 export const dynamic = "force-dynamic";
@@ -21,38 +24,46 @@ function iconForSlug(slug: string): string {
 
 /**
  * Admin → Public Exam Control.
- * Categories are NOT managed here — they are the live Course Control master
- * data (read-only sync by category id). Selecting a category opens a
- * dedicated page listing ONLY that category's public exams; questions,
- * settings and results stay scoped to each exam.
+ * Landing page shows ONLY 4 category cards — no General Management.
+ * Categories are synced from Course Control (by id) but filtered to the
+ * 4 canonical slugs and displayed in fixed order.
+ * Flow: Public Exam Control → Category → Exam List → Exam Management
  */
 export default async function AdminPublicExamHub() {
   const categories = await fetchActiveCourseCategories();
+
+  // Canonical order required by spec: SSC, HSC, Medical, University
+  const CANONICAL_ORDER = ["ssc", "hsc", "medical", "varsity"] as const;
+
+  // Build exactly 4 cards in canonical order.
+  // Prefer live DB category when available, otherwise fall back to default.
+  const displayCategories = CANONICAL_ORDER.map((slug) => {
+    const live = categories.find((c) => c.slug === slug);
+    if (live) return live;
+    const fallback = DEFAULT_COURSE_CATEGORIES.find((c) => c.slug === slug);
+    return fallback ?? null;
+  }).filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <HubHeader
         eyebrow="Admin · Public Exam"
         title="Public Exam Control"
-        description="Category → Exam. Categories below are synchronized with the Main Website Public Exam section by the same category ID — open a category and use + Add Exam; new exams appear on the website automatically."
+        description="Select a category to view and manage its public exams. New exams created inside a category automatically belong to that category."
       />
 
-      {/* Category list — synced ids, exam labels, no Add/Edit/Delete here. */}
       <div className="mt-8">
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
-          Exam Categories
-        </p>
-        {categories.length === 0 ? (
+        {displayCategories.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm text-slate-500 admin-dark:border-zinc-700">
-            No active categories found in Course Control.
+            No categories found.
           </p>
         ) : (
-          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category) => (
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+            {displayCategories.map((category) => (
               <Link
                 key={category.id}
                 href={`/admin/public-exam/category/${encodeURIComponent(category.id)}`}
-                className="group rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#93c5fd] hover:shadow-md admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]"
+                className="group rounded-2xl border border-[#dbeafe] bg-white p-5 shadow-sm shadow-[#0b1e3a]/5 transition hover:-translate-y-0.5 hover:border-[#93c5fd] hover:shadow-md admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]"
               >
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-600/10 text-xl">
                   {iconForSlug(category.slug)}
@@ -67,35 +78,6 @@ export default async function AdminPublicExamHub() {
             ))}
           </div>
         )}
-      </div>
-
-      {/* General (non-category) management utilities. */}
-      <div className="mt-10">
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
-          General Management
-        </p>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ManagementCard
-            href="/admin/exams/question-bank"
-            title="Question Bank"
-            description="Reusable question pool for building exams."
-          />
-          <ManagementCard
-            href="/admin/exams/answer-keys"
-            title="Answer Keys"
-            description="Per-exam answer keys used for grading."
-          />
-          <ManagementCard
-            href="/admin/exams/results"
-            title="Results"
-            description="Student results, merit positions and highest marks."
-          />
-          <ManagementCard
-            href="/admin/exams/settings"
-            title="Exam Settings"
-            description="Duration, negative marking and review defaults."
-          />
-        </div>
       </div>
     </section>
   );
