@@ -320,11 +320,27 @@ export async function ensureQuestionSlots(examId: string, count: number): Promis
     } catch {
       marksPerSlot = 1;
     }
-    for (const sortOrder of missing) {
+    if (missing.length > 0) {
+      const placeholders = missing.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
+      const values: unknown[] = [];
+      for (const sortOrder of missing) {
+        values.push(
+          examId,
+          "",
+          "",
+          null,
+          JSON.stringify(["", "", "", ""]),
+          0,
+          null,
+          marksPerSlot,
+          sortOrder,
+          1,
+        );
+      }
       await exec(
         `INSERT INTO exam_questions (exam_id, bank_subject, question, question_image, options, correct_index, explanation, marks, sort_order, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [examId, "", "", null, JSON.stringify(["", "", "", ""]), 0, null, marksPerSlot, sortOrder, 1],
+         VALUES ${placeholders}`,
+        values,
       );
     }
   } catch {
