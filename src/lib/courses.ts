@@ -54,6 +54,8 @@ export type Course = {
   totalExams?: number;
   /** Extended course details (Course Details section). */
   courseDetails?: CourseDetails;
+  /** Course routine files (PDF / images) — per-course. */
+  routineUrls?: string[];
 };
 
 export const batches: Batch[] = [

@@ -69,6 +69,7 @@ function toCourse(
     totalClasses: row.totalClasses ?? counts?.classes.get(row.slug),
     totalExams: row.totalExams ?? counts?.exams.get(row.slug),
     courseDetails: row.courseDetails,
+    routineUrls: row.routineUrls ?? [],
   };
 }
 

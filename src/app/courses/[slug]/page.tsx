@@ -12,6 +12,7 @@ import {
 import { getLiveCourse } from "@/lib/course-catalog";
 import { getCourseKind } from "@/lib/enrollments";
 import CourseEnrollFlow from "@/components/auth/CourseEnrollFlow";
+import CourseRoutineViewer from "@/components/CourseRoutineViewer";
 
 export const dynamic = "force-dynamic";
 
@@ -162,6 +163,9 @@ export default async function CourseDetailsPage({
             </div>
           </div>
         </div>
+
+        {/* ── Course Routine ── */}
+        <CourseRoutineViewer routineUrls={course.routineUrls} courseName={course.name} />
 
         {/* ── Course Details (extended information) ── */}
         <div className="mt-8 grid gap-8 lg:grid-cols-5">

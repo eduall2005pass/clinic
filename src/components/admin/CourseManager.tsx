@@ -44,6 +44,7 @@ export type CatalogCourse = {
   totalClasses?: number;
   totalExams?: number;
   courseDetails?: CourseDetails;
+  routineUrls?: string[];
 };
 
 const EMPTY_FORM = {
@@ -69,6 +70,7 @@ const EMPTY_FORM = {
   courseTopics: "",
   chapterOverview: "",
   teachersJson: "[]",
+  routineUrls: [] as string[],
 };
 
 type FormState = typeof EMPTY_FORM;
@@ -114,6 +116,7 @@ function toForm(course: CatalogCourse): FormState {
     courseTopics: (details?.topics ?? []).join("\n"),
     chapterOverview: (details?.chapterOverview ?? []).join("\n"),
     teachersJson: JSON.stringify(details?.teachers ?? []),
+    routineUrls: course.routineUrls ?? [],
   };
 }
 
@@ -136,6 +139,9 @@ export default function CourseManager({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [search, setSearch] = useState("");
+  const [routineUploading, setRoutineUploading] = useState(false);
+  const [routineError, setRoutineError] = useState<string | null>(null);
+  const [routinePreview, setRoutinePreview] = useState<string | null>(null);
 
   // Deep links from the Course Control replica:
   //   ?edit=<slug>            → open that course's edit form
@@ -248,6 +254,7 @@ export default function CourseManager({
           totalClasses: form.totalClasses.trim() === "" ? null : Number(form.totalClasses),
           totalExams: form.totalExams.trim() === "" ? null : Number(form.totalExams),
           courseDetails,
+          routineUrls: form.routineUrls,
         }),
       });
       const data = (await response.json().catch(() => null)) as {
@@ -314,6 +321,100 @@ export default function CourseManager({
     } finally {
       setBusy(false);
     }
+  }
+
+  function isRoutinePdf(url: string): boolean {
+    return /\.pdf(\?|$)/i.test(url);
+  }
+  function isRoutineImage(url: string): boolean {
+    return /\.(png|jpe?g|webp|gif|svg|avif|ico)(\?|$)/i.test(url);
+  }
+
+  async function uploadRoutineFiles(files: FileList | File[]) {
+    if (!gate.token) {
+      setRoutineError("Not authorized — please sign in as an admin.");
+      return;
+    }
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+    // Validate extensions
+    const allowed = [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif", ".ico"];
+    for (const f of fileArray) {
+      const dot = f.name.lastIndexOf(".");
+      const ext = dot === -1 ? "" : f.name.slice(dot).toLowerCase();
+      if (!allowed.includes(ext)) {
+        setRoutineError(`Unsupported file type "${ext || f.name}" — use PDF or images.`);
+        return;
+      }
+      if (f.size > 20 * 1024 * 1024) {
+        setRoutineError(`"${f.name}" exceeds 20 MB limit.`);
+        return;
+      }
+    }
+    if (form.routineUrls.length + fileArray.length > 20) {
+      setRoutineError("Maximum 20 routine pages allowed.");
+      return;
+    }
+    setRoutineError(null);
+    setRoutineUploading(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of fileArray) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("dir", "routines");
+        const res = await fetch("/api/uploads", {
+          method: "POST",
+          body: fd,
+          headers: { Authorization: `Bearer ${gate.token}` },
+        });
+        const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+        if (!res.ok || !data.url) throw new Error(data.error || "Upload failed.");
+        uploaded.push(data.url);
+      }
+      setForm((prev) => ({ ...prev, routineUrls: [...prev.routineUrls, ...uploaded] }));
+    } catch (e) {
+      setRoutineError(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setRoutineUploading(false);
+    }
+  }
+
+  async function replaceRoutineAt(index: number, file: File) {
+    if (!gate.token) {
+      setRoutineError("Not authorized.");
+      return;
+    }
+    setRoutineError(null);
+    setRoutineUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("dir", "routines");
+      const prevUrl = form.routineUrls[index];
+      if (prevUrl) fd.append("previousUrl", prevUrl);
+      const res = await fetch("/api/uploads", {
+        method: "POST",
+        body: fd,
+        headers: { Authorization: `Bearer ${gate.token}` },
+      });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error || "Upload failed.");
+      setForm((prev) => {
+        const next = [...prev.routineUrls];
+        next[index] = data.url!;
+        return { ...prev, routineUrls: next };
+      });
+    } catch (e) {
+      setRoutineError(e instanceof Error ? e.message : "Replace failed.");
+    } finally {
+      setRoutineUploading(false);
+    }
+  }
+
+  function removeRoutineAt(index: number) {
+    setForm((prev) => ({ ...prev, routineUrls: prev.routineUrls.filter((_, i) => i !== index) }));
+    setRoutineError(null);
   }
 
   const filtered = (courses ?? []).filter((course) =>
@@ -733,8 +834,131 @@ export default function CourseManager({
               </div>
             </div>
 
+            {/* ── Course Routine (at the very end of the form) ── */}
+            <div className="mt-6 rounded-xl border border-primary-500/40 bg-primary-600/5 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary-600">
+                Course Routine
+              </p>
+              <p className="mt-0.5 text-xs text-slate-500 admin-dark:text-slate-400">
+                Upload the course routine — PDF, single image, or multi-page images. Students will see it in Course Details under “Routine”.
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              {/* Upload area */}
+              <div className="flex flex-wrap items-center gap-3">
+                <label className={`${buttonSecondaryClass} cursor-pointer ${routineUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/avif,.ico"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files) void uploadRoutineFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  {routineUploading ? "Uploading…" : "+ Upload Routine"}
+                </label>
+                <span className="text-xs text-slate-500 admin-dark:text-slate-400">
+                  PDF or images • multiple files = multi-page • max 20 pages • 20 MB each
+                </span>
+                {form.routineUrls.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm("Remove all routine files?")) setForm((p) => ({ ...p, routineUrls: [] }));
+                    }}
+                    className="text-xs font-bold text-red-600 hover:text-red-700"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              {routineError && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 admin-dark:border-red-900/40 admin-dark:bg-red-500/10 admin-dark:text-red-400">
+                  {routineError}
+                </p>
+              )}
+
+              {/* Current routine list */}
+              {form.routineUrls.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-6 text-center admin-dark:border-zinc-700 admin-dark:bg-zinc-900/30">
+                  <p className="text-sm font-semibold text-slate-600 admin-dark:text-zinc-300">No routine uploaded</p>
+                  <p className="mt-1 text-xs text-slate-500 admin-dark:text-slate-400">Upload a PDF or image(s) — it will be saved with this course only.</p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {form.routineUrls.map((url, idx) => (
+                    <li key={url + idx} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 admin-dark:border-zinc-700 admin-dark:bg-zinc-900">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-600/10 text-primary-600 text-xs font-bold">
+                        {isRoutinePdf(url) ? "PDF" : `#${idx + 1}`}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700 admin-dark:text-zinc-200" title={url}>
+                        {url.split("/").pop() || url}
+                      </span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isRoutinePdf(url) ? "bg-red-500/10 text-red-600" : "bg-emerald-500/10 text-emerald-600"}`}>
+                        {isRoutinePdf(url) ? "PDF" : "Image"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setRoutinePreview(url)}
+                        className={buttonSecondaryClass + " px-2.5 py-1 text-[11px]"}
+                      >
+                        Preview
+                      </button>
+                      <label className={`${buttonSecondaryClass} cursor-pointer px-2.5 py-1 text-[11px] ${routineUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                        <input
+                          type="file"
+                          accept=".pdf,image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/avif,.ico"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) void replaceRoutineAt(idx, f);
+                            e.target.value = "";
+                          }}
+                        />
+                        Replace
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeRoutineAt(idx)}
+                        className={buttonDangerClass + " h-7 w-7 text-xs"}
+                        aria-label={`Delete routine page ${idx + 1}`}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Inline preview */}
+              {routinePreview && (
+                <div className="rounded-xl border border-slate-200 bg-white p-3 admin-dark:border-zinc-700 admin-dark:bg-zinc-900">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-bold text-slate-700 admin-dark:text-zinc-200">Routine Preview</p>
+                    <button type="button" onClick={() => setRoutinePreview(null)} className="text-xs font-bold text-slate-500 hover:text-slate-700">Close ✕</button>
+                  </div>
+                  <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 admin-dark:border-zinc-700 admin-dark:bg-zinc-950">
+                    {isRoutinePdf(routinePreview) ? (
+                      <iframe src={routinePreview} title="Routine PDF preview" className="h-[420px] w-full" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={routinePreview} alt="Routine preview" className="max-h-[420px] w-full object-contain" />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] leading-relaxed text-slate-500 admin-dark:text-slate-400">
+                Tip: For a multi-page routine, upload several images in order — they will appear page-by-page for students. A single PDF is also supported with in-app viewing and zoom.
+              </p>
+            </div>
+
             <div className="mt-6 flex gap-3">
-              <button type="button" onClick={handleSave} disabled={busy} className={buttonPrimaryClass}>
+              <button type="button" onClick={handleSave} disabled={busy || routineUploading} className={buttonPrimaryClass}>
                 {busy ? "Saving…" : "Save Course"}
               </button>
               <button type="button" onClick={() => setShowForm(false)} className={buttonSecondaryClass}>

@@ -126,6 +126,8 @@ export type CatalogCourse = {
   courseDetails?: CourseDetails;
   /** Mentors assigned to this course (single-course reads). */
   mentorIds?: string[];
+  /** Course routine files (PDF / images) — per-course, supports multi-page. */
+  routineUrls?: string[];
 };
 
 type CatalogCourseRow = {
@@ -153,6 +155,7 @@ type CatalogCourseRow = {
   total_classes?: string | number | null;
   total_exams?: string | number | null;
   course_details?: string | null;
+  routine_urls?: string | null;
 };
 
 function parseJsonArray(raw: string | null): string[] {
@@ -210,6 +213,7 @@ export function rowToCourse(row: CatalogCourseRow): CatalogCourse {
     totalClasses: row.total_classes != null ? toNumber(row.total_classes) : undefined,
     totalExams: row.total_exams != null ? toNumber(row.total_exams) : undefined,
     courseDetails: parseJsonObject<CourseDetails>(row.course_details ?? null),
+    routineUrls: row.routine_urls ? parseJsonArray(row.routine_urls) : [],
   };
 }
 
@@ -296,6 +300,14 @@ async function ensureTables(): Promise<void> {
   try {
     await exec(
       `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS course_details JSON NULL`,
+    );
+  } catch {
+    // Best effort — column may already exist.
+  }
+  // Course routine files (PDF / images) — per-course, supports multi-page.
+  try {
+    await exec(
+      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS routine_urls JSON NULL`,
     );
   } catch {
     // Best effort — column may already exist.
@@ -562,14 +574,26 @@ export async function saveCatalogCourse(
       ? null
       : Math.max(0, Number(discountRaw) || 0);
 
+  // Routine URLs — accepts array (multi-page) or single string fallback.
+  let routineUrls: string[] = [];
+  if (Array.isArray(input.routineUrls)) {
+    routineUrls = input.routineUrls.map((u) => String(u).trim()).filter(Boolean);
+  } else if (Array.isArray(input.routine_urls)) {
+    routineUrls = (input.routine_urls as unknown[]).map((u) => String(u).trim()).filter(Boolean);
+  } else if (typeof input.routineUrl === "string" && input.routineUrl.trim()) {
+    routineUrls = [input.routineUrl.trim()];
+  }
+  // Deduplicate while preserving order, cap at 20 pages to prevent abuse.
+  routineUrls = Array.from(new Set(routineUrls)).slice(0, 20);
+
   await exec(
     `INSERT INTO catalog_courses
        (slug, name, category, category_id, batch_id, image_url, short_description, description,
         teacher_name, teacher_photo_url, teacher_designation, duration,
         fee, discount_fee, features, overview_title, overview,
         status, availability, coupon_enabled, is_featured, content_layout,
-        total_classes, total_exams, course_details, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        total_classes, total_exams, course_details, routine_urls, updated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        name = VALUES(name), category = VALUES(category), category_id = VALUES(category_id),
        batch_id = VALUES(batch_id),
@@ -583,7 +607,7 @@ export async function saveCatalogCourse(
        coupon_enabled = VALUES(coupon_enabled), is_featured = VALUES(is_featured),
        content_layout = VALUES(content_layout),
        total_classes = VALUES(total_classes), total_exams = VALUES(total_exams),
-       course_details = VALUES(course_details), updated_by = VALUES(updated_by)`,
+       course_details = VALUES(course_details), routine_urls = VALUES(routine_urls), updated_by = VALUES(updated_by)`,
     [
       slug,
       name,
@@ -610,6 +634,7 @@ export async function saveCatalogCourse(
       input.totalClasses != null && input.totalClasses !== "" ? Math.max(0, Number(input.totalClasses) || 0) : null,
       input.totalExams != null && input.totalExams !== "" ? Math.max(0, Number(input.totalExams) || 0) : null,
       input.courseDetails ? JSON.stringify(input.courseDetails) : null,
+      routineUrls.length > 0 ? JSON.stringify(routineUrls) : null,
       adminUid,
     ],
   );
@@ -659,6 +684,7 @@ export async function saveCatalogCourse(
       totalClasses: input.totalClasses != null && input.totalClasses !== "" ? Math.max(0, Number(input.totalClasses) || 0) : undefined,
       totalExams: input.totalExams != null && input.totalExams !== "" ? Math.max(0, Number(input.totalExams) || 0) : undefined,
       courseDetails: (input.courseDetails as CourseDetails | undefined) ?? undefined,
+      routineUrls: Array.isArray(input.routineUrls) ? (input.routineUrls as string[]).map(String).filter(Boolean) : [],
       mentorIds: [],
     };
   }
@@ -775,6 +801,14 @@ export async function deleteCatalogCourse(slug: string): Promise<boolean> {
   // Keep the legacy `courses` registry (referenced by enrollments) intact.
   if (existing.image && isLocalUpload(existing.image)) {
     await removeFile(existing.image);
+  }
+  // Clean up routine files (per-course, stored in medifiles).
+  if (existing.routineUrls && existing.routineUrls.length > 0) {
+    for (const url of existing.routineUrls) {
+      if (url && isLocalUpload(url)) {
+        await removeFile(url).catch(() => undefined);
+      }
+    }
   }
   return true;
 }
