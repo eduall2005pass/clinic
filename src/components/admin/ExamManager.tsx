@@ -94,6 +94,17 @@ function generateExamId(title?: string): string {
   return `${base}-${ts}${rand}`.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 64);
 }
 
+function formatExamTime(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+  } catch {
+    return "—";
+  }
+}
+
 function detectTemplateForCategory(cat: FixedCategory | null | undefined): string {
   if (!cat) return "academic";
   const token = `${cat.name}`.toLowerCase();
@@ -582,87 +593,88 @@ export default function ExamManager({
       ) : (
         <ul className="mt-5 space-y-3">
           {exams.map((exam, examIndex) => (
-            <li key={exam.id} className={`${cardClass} p-4 sm:p-5`}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate text-base font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{exam.title}</h3>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
-                        exam.status === "published"
-                          ? "bg-emerald-500/10 text-emerald-600"
-                          : exam.status === "closed"
-                            ? "bg-red-500/10 text-red-500"
-                            : "bg-zinc-500/10 text-slate-500"
-                      }`}
-                    >
-                      {exam.status}
-                    </span>
-                    {exam.featured && (
-                      <span
-                        title="Featured in the homepage slider"
-                        className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-600"
-                      >
-                        ★ Featured
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-2 text-xs font-semibold text-slate-500">
-                    {exam.kind} · {exam.subject || "general"}
-                    {exam.chapterId &&
-                      ` · ${chapterOptions.find((chapter) => chapter.id === exam.chapterId)?.name ?? exam.chapterId}`}{" "}
-                    · {exam.questionCount} questions ·{" "}
-                    {exam.totalMarks} marks · {exam.durationMinutes} min
-                    {exam.negativeEnabled && ` · −${exam.negativePerWrong ?? 0.25} negative`}
-                    {exam.secondTimerEnabled && ` · 2nd timer −${exam.secondTimerDeduction ?? 5}`}
-                  </p>
-                  {exam.kind === "enrolled" && (
-                    <p className="mt-1 text-xs font-semibold text-slate-500">
-                      Courses:{" "}
-                      {exam.courseIds && exam.courseIds.length > 0
-                        ? exam.courseIds
-                            .map((id) => courseOptions.find((option) => option.slug === id)?.name ?? id)
-                            .join(", ")
-                        : "none assigned"}
-                    </p>
-                  )}
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonPrimaryClass} title="Open Question Management">
-                    Questions
-                  </button>
-                  <button type="button" onClick={() => startEdit(exam)} className={buttonSecondaryClass} title="Edit exam information">
-                    Manage
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void toggleFeatured(exam)}
-                    className={exam.featured ? buttonPrimaryClass : buttonSecondaryClass}
-                    title={exam.featured ? "Featured — click to unfeature" : "Not featured — click to feature"}
+            <li key={exam.id} className={`${cardClass} flex flex-col gap-3 p-4 sm:p-5`}>
+              {/* Top row: Exam Name + Published badge — same row when width allows, wraps cleanly on mobile */}
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="min-w-0 flex-1 truncate text-base font-bold leading-tight text-[#0b1e3a] admin-dark:text-zinc-100">{exam.title}</h3>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
+                    exam.status === "published"
+                      ? "bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 admin-dark:bg-emerald-500/10 admin-dark:text-emerald-400"
+                      : exam.status === "closed"
+                        ? "bg-red-500/10 text-red-600 ring-1 ring-red-500/20"
+                        : "bg-zinc-500/10 text-slate-600 ring-1 ring-zinc-500/20 admin-dark:bg-zinc-500/10 admin-dark:text-slate-400"
+                  }`}
+                >
+                  {exam.status === "published" ? "Published" : exam.status === "draft" ? "Draft" : exam.status}
+                </span>
+                {exam.featured && (
+                  <span
+                    title="Featured in the homepage slider"
+                    className="shrink-0 rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-700 ring-1 ring-amber-500/20"
                   >
-                    {exam.featured ? "★ Featured" : "☆ Feature"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void toggleStatus(exam)}
-                    className={buttonSecondaryClass}
-                    title={exam.status === "published" ? "Unpublish exam" : "Publish exam"}
-                  >
-                    {exam.status === "published" ? "Unpublish" : "Publish"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void remove(exam.id, exam.title)}
-                    disabled={busy}
-                    aria-label={`Delete ${exam.title}`}
-                    className={buttonDangerClass}
-                    title="Delete exam permanently"
-                  >
-                    Delete
-                  </button>
-                </div>
+                    ★ Featured
+                  </span>
+                )}
+              </div>
+              {/* Second line: ONLY Subject · Mark · Minute · Start · End — clean subtle style */}
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs font-medium leading-relaxed text-slate-500 admin-dark:text-slate-400">
+                <span className="font-semibold text-slate-600 admin-dark:text-slate-300">{exam.subject || "—"}</span>
+                <span className="text-slate-300 admin-dark:text-slate-600">·</span>
+                <span>{exam.totalMarks ?? 0} Marks</span>
+                <span className="text-slate-300 admin-dark:text-slate-600">·</span>
+                <span>{exam.durationMinutes ?? 0} Minutes</span>
+                <span className="text-slate-300 admin-dark:text-slate-600">·</span>
+                <span>Start: {formatExamTime(exam.scheduledAt)}</span>
+                <span className="text-slate-300 admin-dark:text-slate-600">·</span>
+                <span>End: {formatExamTime(exam.endsAt)}</span>
+              </p>
+              {/* Action buttons — dedicated second row at bottom, consistent height/padding/radius */}
+              <div className="flex flex-wrap items-center gap-2 border-t border-[#eef4ff] pt-3 admin-dark:border-[#1e3a65]/50">
+                <button
+                  type="button"
+                  onClick={() => setQuestionsExam(exam)}
+                  className={`${buttonPrimaryClass} min-w-[88px] shrink-0 px-4 py-2 text-xs`}
+                  title="Open Question Management"
+                >
+                  Questions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startEdit(exam)}
+                  className={`${buttonSecondaryClass} min-w-[80px] shrink-0 px-4 py-2 text-xs`}
+                  title="Edit exam information"
+                >
+                  Manage
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void toggleFeatured(exam)}
+                  className={`${exam.featured ? buttonPrimaryClass : buttonSecondaryClass} min-w-[88px] shrink-0 px-4 py-2 text-xs`}
+                  title={exam.featured ? "Featured — click to unfeature" : "Not featured — click to feature"}
+                >
+                  {exam.featured ? "Featured" : "Feature"}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void toggleStatus(exam)}
+                  className={`${buttonSecondaryClass} min-w-[96px] shrink-0 px-4 py-2 text-xs`}
+                  title={exam.status === "published" ? "Unpublish exam" : "Publish exam"}
+                >
+                  {exam.status === "published" ? "Unpublished" : "Publish"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void remove(exam.id, exam.title)}
+                  disabled={busy}
+                  aria-label={`Delete ${exam.title}`}
+                  className="min-w-[80px] shrink-0 rounded-xl border border-red-200 bg-[#fef2f2] px-4 py-2 text-xs font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 active:bg-red-100 disabled:opacity-50 admin-dark:border-red-900/30 admin-dark:bg-red-500/10 admin-dark:text-red-400 admin-dark:hover:border-red-800/50 admin-dark:hover:bg-red-500/20"
+                  title="Delete exam permanently"
+                >
+                  Delete
+                </button>
               </div>
             </li>
           ))}
