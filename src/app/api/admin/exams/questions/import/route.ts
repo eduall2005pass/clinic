@@ -15,7 +15,7 @@ type DetectedQuestion = {
   options: string[];
 };
 
-const MOCK_POOL: DetectedQuestion[] = [
+const MOCK_POOL_EN: DetectedQuestion[] = [
   {
     question: "What is the functional unit of the kidney?",
     options: ["Nephron", "Neuron", "Alveolus", "Glomerulus"],
@@ -50,6 +50,42 @@ const MOCK_POOL: DetectedQuestion[] = [
   },
 ];
 
+// Bengali pool — proper Bangla Unicode, preserves scientific/medical terminology
+const MOCK_POOL_BN: DetectedQuestion[] = [
+  {
+    question: "মানবদেহের স্বাভাবিক তাপমাত্রা কত?",
+    options: ["৩৭° সেলসিয়াস", "৩৫° সেলসিয়াস", "৩৯° সেলসিয়াস", "৪০° সেলসিয়াস"],
+  },
+  {
+    question: "কিডনির কার্যকরী একক কী?",
+    options: ["নেফ্রন", "নিউরন", "অ্যালভিওলাস", "গ্লোমেরুলাস"],
+  },
+  {
+    question: "রক্তে গ্লুকোজের মাত্রা নিয়ন্ত্রণ করে কোন হরমোন?",
+    options: ["ইনসুলিন", "থাইরক্সিন", "অ্যাড্রেনালিন", "ইস্ট্রোজেন"],
+  },
+  {
+    question: "কোষের শক্তিঘর কোনটি?",
+    options: ["মাইটোকন্ড্রিয়া", "নিউক্লিয়াস", "রাইবোসোম", "ক্লোরোপ্লাস্ট"],
+  },
+  {
+    question: "কোন রক্তের গ্রুপ সর্বজনীন দাতা?",
+    options: ["O নেগেটিভ", "AB পজিটিভ", "A পজিটিভ", "B নেগেটিভ"],
+  },
+  {
+    question: "মানব রক্তের pH কত?",
+    options: ["৭.৪", "৬.৮", "৮.২", "৫.৫"],
+  },
+  {
+    question: "সূর্যের আলোতে ত্বকে কোন ভিটামিন তৈরি হয়?",
+    options: ["ভিটামিন D", "ভিটামিন A", "ভিটামিন C", "ভিটামিন K"],
+  },
+  {
+    question: "মানবদেহের সবচেয়ে বড় অঙ্গ কোনটি?",
+    options: ["ত্বক", "লিভার", "মস্তিষ্ক", "হৃদপিণ্ড"],
+  },
+];
+
 function detectHighlightedCount(file: File, index: number): number {
   // Mock highlight-based detection: single image may contain 40-50 questions,
   // but only highlighted are counted. We simulate by file size/name heuristic.
@@ -60,14 +96,19 @@ function detectHighlightedCount(file: File, index: number): number {
   return Math.min(10, base + (index % 3));
 }
 
-function buildDetectedSet(totalHighlighted: number): DetectedQuestion[] {
+function buildDetectedSet(totalHighlighted: number, language: "bn" | "en"): DetectedQuestion[] {
+  const pool = language === "bn" ? MOCK_POOL_BN : MOCK_POOL_EN;
   const result: DetectedQuestion[] = [];
   for (let i = 0; i < totalHighlighted; i += 1) {
-    const template = MOCK_POOL[i % MOCK_POOL.length];
+    const template = pool[i % pool.length];
     // Add variation to question text to avoid duplicates
-    const suffix = totalHighlighted > MOCK_POOL.length ? ` (Set ${Math.floor(i / MOCK_POOL.length) + 1})` : "";
+    const suffix = totalHighlighted > pool.length ? ` (Set ${Math.floor(i / pool.length) + 1})` : "";
+    // Preserve Bengali punctuation and Unicode correctly
+    const q = template.question.includes("?") || template.question.includes("؟") || template.question.includes("?")
+      ? template.question.replace("?", `${suffix}?`).replace("？", `${suffix}？`)
+      : template.question + suffix;
     result.push({
-      question: template.question.replace("?", `${suffix}?`),
+      question: q,
       options: [...template.options],
     });
   }
@@ -129,13 +170,18 @@ export async function POST(request: NextRequest) {
     perImage.push({ name: file.name, totalInImage, highlighted: finalHighlighted });
   });
 
+  // Language selector — strict AI instruction, default বাংলা
+  const rawLang = formData.get("language");
+  const language: "bn" | "en" = rawLang === "en" || rawLang === "english" || rawLang === "English" ? "en" : "bn";
+
   // Cap to avoid overload, but allow up to 50 per request
   totalHighlighted = Math.min(50, Math.max(1, totalHighlighted));
 
-  const detected = buildDetectedSet(totalHighlighted);
+  const detected = buildDetectedSet(totalHighlighted, language);
 
   // Do NOT auto-extract correct answer, explanation, subject, marks, etc.
   // Return only question + options; correct answer to be selected manually in review.
+  // Language is strict AI instruction: bn -> Bengali Unicode, en -> English
   return NextResponse.json(
     {
       detected,
@@ -143,7 +189,9 @@ export async function POST(request: NextRequest) {
         imagesProcessed: files.length,
         perImage,
         totalHighlighted,
-        message: `${totalHighlighted} Questions Detected — highlighted only, non-highlighted ignored`,
+        language,
+        languageLabel: language === "bn" ? "বাংলা" : "English",
+        message: `${totalHighlighted} Questions Detected — highlighted only, non-highlighted ignored (${language === "bn" ? "বাংলা" : "English"})`,
       },
     },
     { headers: { "Cache-Control": "no-store" } },

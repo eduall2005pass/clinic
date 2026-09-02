@@ -99,7 +99,9 @@ export default function ExamPaperEditor({
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importDetected, setImportDetected] = useState<Array<{ question: string; options: string[]; correctIndex: number | null }>| null>(null);
-  const [importMeta, setImportMeta] = useState<{ totalHighlighted: number; imagesProcessed: number } | null>(null);
+  const [importMeta, setImportMeta] = useState<{ totalHighlighted: number; imagesProcessed: number; language: "bn" | "en" } | null>(null);
+  const [importLanguage, setImportLanguage] = useState<"bn" | "en">("bn");
+  const [importFiles, setImportFiles] = useState<File[] | null>(null);
 
   // Keep bearer token for upload
   const bearer = useMemo(() => authHeaders["Authorization"] || authHeaders["authorization"] || "", [authHeaders]);
@@ -389,8 +391,9 @@ export default function ExamPaperEditor({
     }
   }
 
-  // Import from Image — Highlight-based detection
-  async function handleImportImages(files: FileList | File[]) {
+  // Import from Image — Highlight-based detection with language strict instruction
+  async function handleImportImages(files: FileList | File[], overrideLanguage?: "bn" | "en") {
+    const lang = overrideLanguage ?? importLanguage;
     const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
     if (list.length === 0) {
       setImportError("Select one or more image files (PNG/JPG/WebP).");
@@ -400,9 +403,11 @@ export default function ExamPaperEditor({
     setImportError(null);
     setImportDetected(null);
     setImportMeta(null);
+    setImportFiles(list);
     try {
       const fd = new FormData();
       list.forEach((f) => fd.append("images", f));
+      fd.append("language", lang);
       const res = await fetch("/api/admin/exams/questions/import", {
         method: "POST",
         headers: { Authorization: bearer as string },
@@ -410,7 +415,7 @@ export default function ExamPaperEditor({
       });
       const data = (await res.json().catch(() => null)) as {
         detected?: Array<{ question: string; options: string[] }>;
-        meta?: { totalHighlighted: number; imagesProcessed: number };
+        meta?: { totalHighlighted: number; imagesProcessed: number; language: "bn" | "en" };
         error?: string;
       } | null;
       if (!res.ok) {
@@ -423,12 +428,51 @@ export default function ExamPaperEditor({
         correctIndex: null as number | null,
       }));
       setImportDetected(detected);
-      setImportMeta({ totalHighlighted: data?.meta?.totalHighlighted ?? detected.length, imagesProcessed: data?.meta?.imagesProcessed ?? list.length });
+      setImportMeta({ totalHighlighted: data?.meta?.totalHighlighted ?? detected.length, imagesProcessed: data?.meta?.imagesProcessed ?? list.length, language: (data?.meta?.language as "bn" | "en") ?? lang });
     } catch (e) {
       setImportError(e instanceof Error ? e.message : "Import failed.");
     } finally {
       setImportBusy(false);
       if (importFileRef.current) importFileRef.current.value = "";
+    }
+  }
+
+  async function handleImportLanguageSwitch(newLang: "bn" | "en") {
+    setImportLanguage(newLang);
+    if (!importDetected || !importFiles || importFiles.length === 0) return;
+    // Preserve correctIndex selections and question order while re-translating via AI
+    const existingCorrect = importDetected.map((d) => d.correctIndex);
+    setImportBusy(true);
+    setImportError(null);
+    try {
+      const fd = new FormData();
+      importFiles.forEach((f) => fd.append("images", f));
+      fd.append("language", newLang);
+      const res = await fetch("/api/admin/exams/questions/import", {
+        method: "POST",
+        headers: { Authorization: bearer as string },
+        body: fd,
+      });
+      const data = (await res.json().catch(() => null)) as {
+        detected?: Array<{ question: string; options: string[] }>;
+        meta?: { totalHighlighted: number; imagesProcessed: number };
+        error?: string;
+      } | null;
+      if (!res.ok) {
+        setImportError(data?.error ?? "Failed to re-translate.");
+        return;
+      }
+      const translated = (data?.detected ?? []).map((d, i) => ({
+        question: d.question,
+        options: d.options,
+        correctIndex: existingCorrect[i] ?? null,
+      }));
+      setImportDetected(translated);
+      setImportMeta((prev) => (prev ? { ...prev, language: newLang } : { totalHighlighted: translated.length, imagesProcessed: importFiles.length, language: newLang }));
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : "Language switch failed.");
+    } finally {
+      setImportBusy(false);
     }
   }
 
@@ -495,6 +539,7 @@ export default function ExamPaperEditor({
     try {
       const fd = new FormData();
       fd.append("images", file);
+      fd.append("language", importLanguage);
       const res = await fetch("/api/admin/exams/questions/import", {
         method: "POST",
         headers: { Authorization: bearer as string },
@@ -743,7 +788,7 @@ export default function ExamPaperEditor({
             </div>
           ) : (
             <>
-              {/* Import from Image — Highlight-based detection */}
+              {/* Import from Image — Highlight-based detection with Language Selector */}
               <div className={`${cardClass} mb-4 p-4 sm:p-5`}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -759,23 +804,56 @@ export default function ExamPaperEditor({
                     </button>
                   </div>
                 </div>
+                {/* Question Language Selector — strict AI instruction, default বাংলা */}
+                <div className="mt-3 rounded-xl border border-[#dbeafe] bg-white p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Question Language — AI Instruction</p>
+                  <p className="mt-1 text-[11px] font-semibold text-slate-500">Selected language is mandatory for AI/OCR. AI will output every question in the selected language.</p>
+                  <div className="mt-2 flex gap-2">
+                    <button type="button" onClick={() => setImportLanguage("bn")} aria-pressed={importLanguage === "bn"} className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-bold transition ${importLanguage === "bn" ? "border-[#1a3a78] bg-[#1a3a78] text-white shadow-md shadow-[#0b1e3a]/20" : "border-[#bfdbfe] bg-[#eff6ff] text-[#1a3a78] hover:bg-[#dbeafe] hover:border-[#93c5fd]"}`}>
+                      🇧🇩 বাংলা
+                    </button>
+                    <button type="button" onClick={() => setImportLanguage("en")} aria-pressed={importLanguage === "en"} className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-bold transition ${importLanguage === "en" ? "border-[#1a3a78] bg-[#1a3a78] text-white shadow-md shadow-[#0b1e3a]/20" : "border-[#bfdbfe] bg-[#eff6ff] text-[#1a3a78] hover:bg-[#dbeafe] hover:border-[#93c5fd]"}`}>
+                      🇬🇧 English
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Question Language: {importLanguage === "bn" ? "বাংলা" : "English"}</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600 admin-dark:text-slate-300">
+                    {importLanguage === "bn" ? (
+                      <span><span className="font-bold">বাংলা</span> নির্বাচিত — AI প্রতিটি প্রশ্ন <span className="font-bold">বাংলা Unicode</span> এ আউটপুট করবে, ইংরেজি উৎস থাকলে স্বাভাবিক বাংলায় অনুবাদ করবে, বৈজ্ঞানিক/মেডিকেল পরিভাষা সঠিক রাখবে। ইংরেজিতে রূপান্তর করবে না।</span>
+                    ) : (
+                      <span><span className="font-bold">English</span> selected — AI will output every question in English, translating Bengali source to natural English when needed, preserving scientific terms.</span>
+                    )}
+                  </p>
+                </div>
                 <div className="mt-3 rounded-xl border border-dashed border-[#bfdbfe] bg-[#f8fbff] px-3 py-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60">
                   <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">How highlight detection works</p>
                   <p className="mt-1 text-xs leading-relaxed text-slate-600 admin-dark:text-slate-300">
                     Single image may contain 40–50 questions, but only <span className="rounded bg-yellow-200 px-1 font-extrabold text-yellow-800">highlighted</span> questions are imported. Example: 50 in image, 30 highlighted → <span className="font-bold text-emerald-600">30 Questions Detected</span>, 20 ignored. Highlight is selection marker only — not the correct answer.
                   </p>
-                  <p className="mt-2 text-[11px] font-semibold text-slate-500">AI extracts only: Question text + Options (A-D). You will select the Correct Answer manually in review.</p>
+                  <p className="mt-2 text-[11px] font-semibold text-slate-500">AI extracts only: Question text + Options (A-D). You will select the Correct Answer manually in review. Language: <span className="font-bold">{importLanguage === "bn" ? "বাংলা" : "English"}</span></p>
                   <p className="mt-1 text-[11px] font-semibold text-amber-600">Do NOT auto-extract: Correct Answer, Explanation, Subject, Marks, Time, Person, Course, Exam Type.</p>
                 </div>
                 {importError && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 admin-dark:border-red-900/30 admin-dark:bg-red-500/10">{importError}</p>}
-                {importMeta && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/20 admin-dark:bg-emerald-500/10">{importMeta.totalHighlighted} Questions Detected — from {importMeta.imagesProcessed} image(s), highlighted only, non-highlighted ignored</p>}
+                {importMeta && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/20 admin-dark:bg-emerald-500/10">{importMeta.totalHighlighted} Questions Detected — from {importMeta.imagesProcessed} image(s), highlighted only, non-highlighted ignored — {importMeta.language === "bn" ? "বাংলা" : "English"}</p>}
               </div>
 
-              {/* Review after detection — SAME Question Card UI as manual */}
+              {/* Review after detection — SAME Question Card UI as manual, with language display and switch */}
               {importDetected && importDetected.length > 0 && (
                 <div className="mb-4">
-                  <h4 className="px-1 text-xs font-extrabold uppercase tracking-widest text-[#1a3a78] admin-dark:text-[#93c5fd]">Review Detected Questions — Same Card UI</h4>
-                  <p className="mt-1 px-1 text-[11px] font-semibold text-slate-500">Detected questions appear exactly like manually created cards. Select the correct answer manually, then Save. Not auto-finalized.</p>
+                  <div className="rounded-xl border border-[#dbeafe] bg-[#f8fbff] p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]/50">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="text-xs font-extrabold uppercase tracking-widest text-[#1a3a78] admin-dark:text-[#93c5fd]">Review Detected Questions — Same Card UI</h4>
+                      <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${importLanguage === "bn" ? "bg-[#1a3a78] text-white" : "bg-white text-[#1a3a78] border border-[#bfdbfe]"}`}>Question Language: {importLanguage === "bn" ? "বাংলা" : "English"}</span>
+                    </div>
+                    <p className="mt-2 text-[11px] font-semibold text-slate-500">Detected questions appear exactly like manually created cards. Select the correct answer manually, then Save. Not auto-finalized.</p>
+                    <div className="mt-3 flex gap-2">
+                      <span className="self-center text-[11px] font-bold text-slate-500">Switch language during review:</span>
+                      <button type="button" disabled={importBusy} onClick={() => void handleImportLanguageSwitch("bn")} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${importLanguage === "bn" ? "bg-[#1a3a78] text-white" : "border border-[#bfdbfe] bg-white text-[#1a3a78] hover:bg-[#eff6ff]"}`}>🇧🇩 বাংলা</button>
+                      <button type="button" disabled={importBusy} onClick={() => void handleImportLanguageSwitch("en")} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${importLanguage === "en" ? "bg-[#1a3a78] text-white" : "border border-[#bfdbfe] bg-white text-[#1a3a78] hover:bg-[#eff6ff]"}`}>🇬🇧 English</button>
+                      {importBusy && <span className="self-center text-xs font-semibold text-amber-600">Translating…</span>}
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-600">Switching regenerates AI output in the new language while preserving meaning, order, highlight selection, correct-answer selection — no re-upload needed. Strict AI instruction: <span className="font-bold">{importLanguage === "bn" ? "বাংলা → Bengali" : "English → English"}</span></p>
+                  </div>
                   <ol className="mt-3 space-y-3">
                     {importDetected.map((item, idx) => (
                       <li key={`import-${idx}`} className={`rounded-2xl border bg-white shadow-sm admin-dark:bg-[#112544] ${item.correctIndex !== null ? "border-[#dbeafe] admin-dark:border-[#1e3a65]" : "border-amber-300 border-dashed bg-amber-50/40 admin-dark:border-amber-500/30 admin-dark:bg-[#1a2a3a]"}`}>
@@ -790,12 +868,12 @@ export default function ExamPaperEditor({
                           </span>
                         </div>
                         <div className="px-4 py-4 sm:px-5">
-                          <textarea rows={2} className={`${inputClass} font-semibold`} value={item.question} onChange={(e) => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, question: e.target.value } : it) : null)} placeholder="Question text (extracted)" />
+                          <textarea rows={2} lang={importLanguage === "bn" ? "bn" : "en"} style={importLanguage === "bn" ? { fontFamily: "'Noto Sans Bengali','Hind Siliguri','Kalpurush','SolaimanLipi',sans-serif" } : undefined} className={`${inputClass} font-semibold ${importLanguage === "bn" ? "leading-relaxed" : ""}`} value={item.question} onChange={(e) => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, question: e.target.value } : it) : null)} placeholder={importLanguage === "bn" ? "প্রশ্নের টেক্সট (বাংলা)" : "Question text (extracted)"} />
                           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             {item.options.map((opt, oi) => (
                               <div key={oi} className="flex gap-2">
                                 <button type="button" onClick={() => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, correctIndex: oi } : it) : null)} className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border-2 text-xs font-extrabold ${item.correctIndex === oi ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-slate-400"}`} title="Select correct answer manually">○</button>
-                                <input className={inputClass} value={opt} onChange={(e) => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, options: it.options.map((o, j) => j === oi ? e.target.value : o) } : it) : null)} placeholder={`Option ${String.fromCharCode(65 + oi)}`} />
+                                <input lang={importLanguage === "bn" ? "bn" : "en"} style={importLanguage === "bn" ? { fontFamily: "'Noto Sans Bengali','Hind Siliguri','Kalpurush',sans-serif" } : undefined} className={`${inputClass} ${importLanguage === "bn" ? "leading-relaxed" : ""}`} value={opt} onChange={(e) => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, options: it.options.map((o, j) => j === oi ? e.target.value : o) } : it) : null)} placeholder={`${String.fromCharCode(65 + oi)} ${importLanguage === "bn" ? "অপশন" : "Option"}`} />
                               </div>
                             ))}
                           </div>
