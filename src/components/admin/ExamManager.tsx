@@ -508,7 +508,7 @@ export default function ExamManager({
   }
 
   async function remove(id: string, name: string) {
-    if (!window.confirm(`Delete “${name}” with its questions, enrollments and results? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete Exam?\n\nThis exam and its associated questions will be permanently removed. This action cannot be undone.\n\nDelete “${name}”?`)) return;
     setBusy(true);
     try {
       const response = await fetch("/api/admin/exams", {
@@ -628,74 +628,40 @@ export default function ExamManager({
                   )}
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
-                  <span className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      disabled={busy || examIndex === 0}
-                      aria-label={`Move ${exam.title} up`}
-                      onClick={() => void move(examIndex, -1)}
-                      className="rounded-lg border border-neutral-200 px-2 text-xs text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 disabled:opacity-30"
-                    >↑</button>
-                    <button
-                      type="button"
-                      disabled={busy || examIndex === (exams?.length ?? 0) - 1}
-                      aria-label={`Move ${exam.title} down`}
-                      onClick={() => void move(examIndex, 1)}
-                      className="rounded-lg border border-neutral-200 px-2 text-xs text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 disabled:opacity-30"
-                    >↓</button>
-                  </span>
-                  <Link href={`/admin/exams/${encodeURIComponent(exam.id)}/manage`} className={buttonPrimaryClass}>
+                  <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonPrimaryClass} title="Open Question Management">
+                    Questions
+                  </button>
+                  <button type="button" onClick={() => startEdit(exam)} className={buttonSecondaryClass} title="Edit exam information">
                     Manage
-                  </Link>
-                  <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonSecondaryClass}>
-                    Questions ({exam.questionCount})
-                  </button>
-                  <button type="button" onClick={() => startEdit(exam)} className={buttonSecondaryClass}>Edit</button>
-                  <Link
-                    href={exam.kind === "public" ? `/admin/result-control/public-exam/${encodeURIComponent(exam.id)}` : `/admin/exams/results?examId=${encodeURIComponent(exam.id)}`}
-                    className={buttonSecondaryClass}
-                  >
-                    View Result
-                  </Link>
-                  {exam.kind === "public" && (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void toggleFeatured(exam)}
-                      className={exam.featured ? buttonPrimaryClass : buttonSecondaryClass}
-                      title="Toggle homepage slider appearance"
-                    >
-                      {exam.featured ? "★ Featured" : "☆ Feature"}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void duplicate(exam.id)}
-                    className={buttonSecondaryClass}
-                    title="Duplicate exam with questions and rules"
-                  >
-                    Duplicate
                   </button>
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => void toggleArchive(exam)}
-                    className={buttonSecondaryClass}
-                    title={exam.status === "closed" ? "Unarchive exam" : "Archive exam"}
+                    onClick={() => void toggleFeatured(exam)}
+                    className={exam.featured ? buttonPrimaryClass : buttonSecondaryClass}
+                    title={exam.featured ? "Featured — click to unfeature" : "Not featured — click to feature"}
                   >
-                    {exam.status === "closed" ? "Unarchive" : "Archive"}
+                    {exam.featured ? "★ Featured" : "☆ Feature"}
                   </button>
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => void toggleStatus(exam)}
                     className={buttonSecondaryClass}
+                    title={exam.status === "published" ? "Unpublish exam" : "Publish exam"}
                   >
                     {exam.status === "published" ? "Unpublish" : "Publish"}
                   </button>
-                  <button type="button" onClick={() => void remove(exam.id, exam.title)} disabled={busy}
-                    aria-label={`Delete ${exam.title}`} className={buttonDangerClass}>✕</button>
+                  <button
+                    type="button"
+                    onClick={() => void remove(exam.id, exam.title)}
+                    disabled={busy}
+                    aria-label={`Delete ${exam.title}`}
+                    className={buttonDangerClass}
+                    title="Delete exam permanently"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             </li>
