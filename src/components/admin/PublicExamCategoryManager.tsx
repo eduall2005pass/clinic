@@ -27,7 +27,7 @@ export default function PublicExamCategoryManager({
       </nav>
       <ExamManager
         title={`${label} — Public Exams`}
-        description={`Only the public exams belonging to “${label}” are listed here. Every exam created with + Add Exam below automatically receives this category and appears under it on the Main Website.`}
+        description={`Only the public exams belonging to “${label}” are listed here. Every exam created with + New Exam automatically receives this category and appears under it on the Main Website.`}
         fixedCategory={category}
       />
     </div>

@@ -596,8 +596,8 @@ export default function ExamManager({
         </ul>
       )}
 
-      {/* Public Exam Control / Course Content Control: [+ Add Exam] sits at the end of the list. */}
-      {(fixedCategory || fixedChapter) && (
+      {/* Public Exam Category: bottom [+ Add Exam] removed — only top + New Exam remains (spec). Keep bottom button for Course Content Control chapter exams only. */}
+      {fixedChapter && !fixedCategory && (
         <div className="mt-5">
           <button type="button" onClick={startCreate} className={`${buttonPrimaryClass} w-full py-3`}>
             + Add Exam
