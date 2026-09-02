@@ -1,4 +1,3 @@
-import SectionHeader from "@/components/SectionHeader";
 import { fetchMentors } from "@/lib/mentors";
 
 export default async function Mentors({
@@ -14,11 +13,13 @@ export default async function Mentors({
     <section id="mentors" className="relative scroll-mt-24 overflow-hidden border-t border-ink/5 bg-dark-950">
       <div className="pointer-events-none absolute -left-32 top-24 h-72 w-72 rounded-full bg-primary-600/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <SectionHeader
-          label="Our Mentors"
-          title={title ?? "Learn from experienced mentors"}
-          description={description ?? "Mentor profiles will grow as the platform expands."}
-        />
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="inline-flex items-center justify-center rounded-2xl border border-ink/10 bg-dark-950 px-6 py-4 shadow-lg shadow-black/10 sm:px-8 sm:py-5">
+            <h2 className="text-xl font-extrabold tracking-tight text-heading sm:text-2xl md:text-[28px] leading-tight">
+              Meet our mentor
+            </h2>
+          </div>
+        </div>
 
         {mentors.length === 0 ? (
           <p className="mt-12 text-center text-sm text-neutral-500">

@@ -1,5 +1,4 @@
 import type { SVGProps } from "react";
-import SectionHeader from "@/components/SectionHeader";
 import { fetchHomeCards } from "@/lib/home-cards";
 
 type SuccessIconProps = SVGProps<SVGSVGElement>;
@@ -151,11 +150,13 @@ export default async function OurSuccess({
       <div className="pointer-events-none absolute inset-0 bg-grid-lines" />
       <div className="pointer-events-none absolute -left-40 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-primary-600/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <SectionHeader
-          label="Our Success"
-          title={title ?? "Milestones that drive us forward"}
-          description={description ?? "A snapshot of what we have achieved together on the road to medical admission."}
-        />
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="inline-flex items-center justify-center rounded-2xl border border-ink/10 bg-dark-950/60 px-6 py-4 shadow-lg shadow-black/20 backdrop-blur sm:px-8 sm:py-5">
+            <h2 className="text-xl font-extrabold tracking-tight text-heading sm:text-2xl md:text-[28px] leading-tight">
+              Success of MediSpark
+            </h2>
+          </div>
+        </div>
 
         {items.length > 0 ? (
           <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-4">

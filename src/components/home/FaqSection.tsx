@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import SectionHeader from "@/components/SectionHeader";
 import { FaqVideoPlayer } from "@/components/admin/FaqManager";
 import { sanitizeFaqHtml } from "@/lib/faq-sanitize";
 import { faqs as defaultFaqs } from "@/lib/faq";
@@ -38,11 +37,13 @@ export default function FaqSection({
   return (
     <section id="faq" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <SectionHeader
-          label="FAQ"
-          title={title ?? "Frequently asked questions"}
-          description={description ?? "Quick answers to the most common questions about MediSpark."}
-        />
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="inline-flex items-center justify-center rounded-2xl border border-ink/10 bg-dark-900 px-6 py-4 shadow-lg shadow-black/10 sm:px-8 sm:py-5">
+            <h2 className="text-xl font-extrabold tracking-tight text-heading sm:text-2xl md:text-[28px] leading-tight">
+              Frequently Asked Question (FAQ)
+            </h2>
+          </div>
+        </div>
 
         <div className="mx-auto mt-10 flex max-w-3xl flex-col gap-3">
           {faqs.map((faq) => {

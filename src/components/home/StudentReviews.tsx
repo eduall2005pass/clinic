@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import SectionHeader from "@/components/SectionHeader";
 import { getPublishedReviews } from "@/lib/reviews";
 import type { StudentReview } from "@/lib/reviews";
 
@@ -42,11 +41,13 @@ export default  function StudentReviews({
   return (
     <section id="reviews" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <SectionHeader
-          label="Student Reviews"
-          title={title ?? "What students say"}
-          description={description ?? "Real reviews from MediSpark students, verified and published after approval."}
-        />
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="inline-flex items-center justify-center rounded-2xl border border-ink/10 bg-dark-900 px-6 py-4 shadow-lg shadow-black/10 sm:px-8 sm:py-5">
+            <h2 className="text-xl font-extrabold tracking-tight text-heading sm:text-2xl md:text-[28px] leading-tight">
+              Student&apos;s review about MediSpark
+            </h2>
+          </div>
+        </div>
 
         {reviews.length > 0 ? (
           <div className="mx-auto mt-12 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
