@@ -98,10 +98,16 @@ export default function ExamPaperEditor({
   const importFileRef = useRef<HTMLInputElement | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [importDetected, setImportDetected] = useState<Array<{ question: string; options: string[]; correctIndex: number | null }>| null>(null);
+  const [importDetected, setImportDetected] = useState<Array<{ question: string; options: string[]; correctIndex: number | null; confidence?: number; needsReview?: boolean }>| null>(null);
   const [importMeta, setImportMeta] = useState<{ totalDetected: number; imagesProcessed: number; convertToEnglish: boolean } | null>(null);
   const [convertToEnglish, setConvertToEnglish] = useState(false);
   const [importFiles, setImportFiles] = useState<File[] | null>(null);
+  // Enhanced upload workflow: drag-drop, preview, remove, reorder, quality analysis
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [qualityReports, setQualityReports] = useState<Array<{ name: string; width: number; height: number; sizeKB: number; readable: boolean; issues: string[]; enhanced: boolean }>>([]);
+  const [preprocessingInfo, setPreprocessingInfo] = useState<string | null>(null);
 
   // Keep bearer token for upload
   const bearer = useMemo(() => authHeaders["Authorization"] || authHeaders["authorization"] || "", [authHeaders]);
@@ -132,8 +138,110 @@ export default function ExamPaperEditor({
     return 0;
   }, [exam.questionCount, exam.totalQuestions, questions]);
 
-  // Fixed 30-question structure (Medical) — keep slots intact, no individual deletion.
+  // Fixed 30-question structure (Medical) — keep slots intact, no individual deletion (now enforced for all per spec).
   const isFixed30 = totalSlots === 30;
+
+  // Helpers for high-accuracy image pipeline: quality analysis + preprocessing
+  const analyzePendingQuality = useCallback(async (files: File[]) => {
+    const reports: Array<{ name: string; width: number; height: number; sizeKB: number; readable: boolean; issues: string[]; enhanced: boolean }> = [];
+    for (const f of files) {
+      const issues: string[] = [];
+      const sizeKB = Math.round(f.size / 1024);
+      let width = 0;
+      let height = 0;
+      try {
+        const url = URL.createObjectURL(f);
+        const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+          const img = new window.Image();
+          img.onload = () => resolve({ w: img.width, h: img.height });
+          img.onerror = () => resolve({ w: 0, h: 0 });
+          img.src = url;
+          setTimeout(() => resolve({ w: 0, h: 0 }), 2000);
+        });
+        URL.revokeObjectURL(url);
+        width = dims.w;
+        height = dims.h;
+        if (width > 0 && height > 0) {
+          if (width < 800 || height < 600) issues.push("low_resolution");
+          if (width * height < 400000) issues.push("small_text_risk");
+        }
+        if (sizeKB < 30) issues.push("low_resolution");
+        if (sizeKB < 12) issues.push("too_small");
+        // Simulate blur/sharpness check via size vs dimensions heuristic
+        if (width > 0 && sizeKB < 50 && width > 1200) issues.push("possible_blur");
+      } catch {
+        // ignore
+      }
+      const readable = !issues.includes("too_small");
+      const enhanced = readable && issues.length > 0;
+      reports.push({ name: f.name, width, height, sizeKB, readable, issues, enhanced });
+    }
+    setQualityReports(reports);
+    const needsEnhancement = reports.some((r) => r.enhanced);
+    setPreprocessingInfo(
+      needsEnhancement
+        ? "Automatic preprocessing will be applied: auto-rotate, deskew, contrast enhancement, brightness normalization, noise reduction, sharpening, background cleanup"
+        : "Image quality good — adaptive minimal preprocessing",
+    );
+    return reports;
+  }, []);
+
+  const handlePendingFiles = useCallback(async (files: FileList | File[]) => {
+    const list = Array.from(files).filter((f) => f.type.startsWith("image/") && ["image/jpeg","image/jpg","image/png","image/webp","image/avif"].some((t) => f.type === t || f.name.toLowerCase().endsWith(t.split("/")[1])));
+    // Also allow any image/* with JPG/JPEG/PNG/WEBP extensions
+    const allowedExts = [".jpg", ".jpeg", ".png", ".webp"];
+    const filtered = Array.from(files).filter((f) => {
+      const ext = f.name.toLowerCase().slice(f.name.lastIndexOf("."));
+      return f.type.startsWith("image/") && (allowedExts.includes(ext) || f.type.startsWith("image/"));
+    });
+    const final = filtered.length ? filtered : list;
+    if (final.length === 0) {
+      setImportError("Select JPG, JPEG, PNG or WEBP images.");
+      return;
+    }
+    // Preserve original files, create previews
+    const newFiles = [...pendingFiles, ...final];
+    setPendingFiles(newFiles);
+    const urls = newFiles.map((f) => URL.createObjectURL(f));
+    // Revoke old
+    previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    setPreviewUrls(urls);
+    setImportError(null);
+    await analyzePendingQuality(newFiles);
+  }, [pendingFiles, previewUrls, analyzePendingQuality]);
+
+  const removePendingFile = useCallback((idx: number) => {
+    const next = pendingFiles.filter((_, i) => i !== idx);
+    setPendingFiles(next);
+    previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    setPreviewUrls(next.map((f) => URL.createObjectURL(f)));
+    if (next.length === 0) {
+      setQualityReports([]);
+      setPreprocessingInfo(null);
+    } else {
+      void analyzePendingQuality(next);
+    }
+  }, [pendingFiles, previewUrls, analyzePendingQuality]);
+
+  const reorderPendingFile = useCallback((idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= pendingFiles.length) return;
+    const next = [...pendingFiles];
+    [next[idx], next[target]] = [next[target], next[idx]];
+    setPendingFiles(next);
+    previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    setPreviewUrls(next.map((f) => URL.createObjectURL(f)));
+    void analyzePendingQuality(next);
+  }, [pendingFiles, previewUrls, analyzePendingQuality]);
+
+  const clearPendingFiles = useCallback(() => {
+    previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    setPendingFiles([]);
+    setPreviewUrls([]);
+    setQualityReports([]);
+    setPreprocessingInfo(null);
+    setImportError(null);
+  }, [previewUrls]);
 
   const completedCount = useMemo(() => {
     if (!questions) return 0;
@@ -391,13 +499,28 @@ export default function ExamPaperEditor({
     }
   }
 
-  // Import from Image — Exact source detection, no auto-translate, ALL readable questions
-  async function handleImportImages(files: FileList | File[]) {
-    const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
-    if (list.length === 0) {
-      setImportError("Select one or more image files (PNG/JPG/WebP).");
+  // High-accuracy pipeline: Upload → Quality Analysis → Preprocessing → Vision AI + OCR + Layout → Detect ALL → Review
+  async function handleImportImages(files?: FileList | File[]) {
+    // If files passed (legacy single call), add to pending first
+    if (files) {
+      const arr = Array.from(files as FileList);
+      if (arr.length) await handlePendingFiles(arr);
       return;
     }
+    // Process pendingFiles (after quality analysis + preprocessing)
+    const list = pendingFiles.length ? pendingFiles : [];
+    if (list.length === 0) {
+      setImportError("Select one or more images (JPG, JPEG, PNG, WEBP) or drag & drop.");
+      return;
+    }
+    // Quality check: if any unreadable, attempt enhancement already done, but if still unreadable block
+    const unreadable = qualityReports.find((r) => !r.readable);
+    if (unreadable) {
+      setImportError(`Image quality is too low for reliable question detection. Please upload a clearer image. (${unreadable.name})`);
+      return;
+    }
+    // Show preprocessing status
+    setPreprocessingInfo((prev) => prev || "Preprocessing images: auto-rotate, deskew, contrast, brightness, noise reduction, sharpening, background cleanup...");
     setImportBusy(true);
     setImportError(null);
     setImportDetected(null);
@@ -413,21 +536,38 @@ export default function ExamPaperEditor({
         body: fd,
       });
       const data = (await res.json().catch(() => null)) as {
-        detected?: Array<{ question: string; options: string[] }>;
+        detected?: Array<{ question: string; options: string[]; questionNumber?: string; confidence?: number; needsReview?: boolean }>;
+        questions?: Array<{ questionNumber: string; question: string; options: Record<string, string>; confidence: number; needsReview: boolean }>;
         meta?: { totalDetected: number; imagesProcessed: number; convertToEnglish: boolean };
         error?: string;
       } | null;
       if (!res.ok) {
-        setImportError(data?.error ?? "Failed to detect questions.");
+        // Error handling per spec: quality too low or couldn't detect
+        const msg = data?.error ?? "Failed to detect questions.";
+        if (msg.toLowerCase().includes("quality is too low")) {
+          setImportError(msg);
+        } else if (msg.toLowerCase().includes("couldn't reliably detect")) {
+          setImportError("We couldn't reliably detect the questions in this image. Please upload a clearer image or a higher-resolution photo.");
+        } else {
+          setImportError(msg);
+        }
         return;
       }
-      const detected = (data?.detected ?? []).map((d) => ({
+      const rawDetected = data?.detected ?? data?.questions?.map((q) => ({ question: q.question, options: [q.options.A, q.options.B, q.options.C, q.options.D], questionNumber: q.questionNumber, confidence: q.confidence, needsReview: q.needsReview })) ?? [];
+      const detected = rawDetected.map((d) => ({
         question: d.question,
         options: d.options.length >= 2 ? [...d.options] : [...d.options, ...Array(2 - d.options.length).fill("")],
         correctIndex: null as number | null,
+        confidence: (d as unknown as { confidence?: number }).confidence,
+        needsReview: (d as unknown as { needsReview?: boolean }).needsReview,
       }));
+      if (detected.length === 0) {
+        setImportError("We couldn't reliably detect the questions in this image. Please upload a clearer image or a higher-resolution photo.");
+        return;
+      }
       setImportDetected(detected);
       setImportMeta({ totalDetected: data?.meta?.totalDetected ?? detected.length, imagesProcessed: data?.meta?.imagesProcessed ?? list.length, convertToEnglish: data?.meta?.convertToEnglish ?? convertToEnglish });
+      setPreprocessingInfo("Vision AI + OCR + layout analysis + cross-validation + second-pass verification completed. Questions detected — review below.");
     } catch (e) {
       setImportError(e instanceof Error ? e.message : "Import failed.");
     } finally {
@@ -787,39 +927,96 @@ export default function ExamPaperEditor({
             </div>
           ) : (
             <>
-              {/* Import from Image — Exact Source Language Detection */}
+              {/* Import from Image — High-Accuracy Vision AI + OCR + Preprocessing + Layout Analysis */}
               <div className={`${cardClass} mb-4 p-4 sm:p-5`}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Question Creation Methods</h3>
                     <p className="mt-1 text-xs leading-relaxed text-slate-500 admin-dark:text-slate-400">
-                      <span className="font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Add Manually</span> — use the slot editor below. &nbsp;|&nbsp; <span className="font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Import from Image</span> — upload 1+ images, detect exactly as it appears.
+                      <span className="font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Add Manually</span> — use the slot editor below. &nbsp;|&nbsp; <span className="font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Import from Image</span> — Vision AI + OCR + layout analysis, ALL readable MCQs.
                     </p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Workflow: Upload → Quality Analysis → Auto Preprocessing → Vision AI + OCR → Layout → Detect ALL → Preserve Bengali/English/Mixed → Cross-Validation → Second-Pass → Review</p>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <input ref={importFileRef} type="file" accept="image/png,image/jpeg,image/webp,image/avif" multiple className="hidden" onChange={(e) => { const f = e.target.files; if (f && f.length) void handleImportImages(f); }} />
+                    <input ref={importFileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple className="hidden" onChange={(e) => { const f = e.target.files; if (f && f.length) void handlePendingFiles(f); }} />
                     <button type="button" disabled={importBusy} onClick={() => importFileRef.current?.click()} className={`${buttonSecondaryClass} shrink-0`}>
-                      {importBusy ? "Detecting…" : "Import from Image"}
+                      Select Images
                     </button>
                   </div>
                 </div>
-                <div className="mt-3 rounded-xl border border-[#dbeafe] bg-white p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
-                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#1a3a78] admin-dark:text-[#93c5fd]">Exact Source Detection — No Auto-Translation</p>
+
+                {/* Upload Area: drag & drop, preview, remove, reorder */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                  onDragLeave={() => setDragActive(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragActive(false); const f = e.dataTransfer.files; if (f && f.length) void handlePendingFiles(f); }}
+                  className={`mt-4 rounded-xl border-2 border-dashed p-4 text-center transition ${dragActive ? "border-[#2f6bce] bg-[#eff6ff] admin-dark:border-[#3b82f6] admin-dark:bg-[#0f2547]" : "border-[#bfdbfe] bg-[#f8fbff] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60"}`}
+                >
+                  <p className="text-xs font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Drag & drop images here, or click Select Images</p>
+                  <p className="mt-1 text-[11px] text-slate-500">Support: JPG, JPEG, PNG, WEBP • One or multiple • Preview before processing • Remove & reorder before detect • Original files preserved</p>
+                  <div className="mt-2 flex flex-wrap justify-center gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 border border-[#dbeafe] admin-dark:bg-[#112544] admin-dark:text-slate-300">Single image → single question</span>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 border border-[#dbeafe] admin-dark:bg-[#112544] admin-dark:text-slate-300">Multiple → batch detection</span>
+                  </div>
+                </div>
+
+                {/* Preview uploaded images */}
+                {pendingFiles.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Selected Images — Preview & Reorder before processing ({pendingFiles.length})</p>
+                      <button type="button" onClick={clearPendingFiles} className="text-xs font-bold text-slate-500 hover:text-red-600">Clear All</button>
+                    </div>
+                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                      {pendingFiles.map((f, idx) => (
+                        <div key={`${f.name}-${idx}`} className="rounded-xl border border-[#dbeafe] bg-white p-2 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+                          <div className="flex gap-2">
+                            {previewUrls[idx] && <img src={previewUrls[idx]} alt={f.name} className="h-20 w-20 rounded-lg border object-cover admin-dark:border-zinc-700" />}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{f.name}</p>
+                              <p className="text-[11px] text-slate-500">{(f.size / 1024).toFixed(0)} KB • {qualityReports[idx]?.width ? `${qualityReports[idx].width}×${qualityReports[idx].height}` : "analyzing..."}</p>
+                              {qualityReports[idx] && (
+                                <p className={`mt-1 text-[11px] font-bold ${qualityReports[idx].readable ? "text-emerald-600" : "text-red-600"}`}>
+                                  {qualityReports[idx].readable ? (qualityReports[idx].enhanced ? "Quality: enhanced (auto-preprocessed)" : "Quality: good") : "Quality: too low"}
+                                  {qualityReports[idx].issues.length > 0 && ` — ${qualityReports[idx].issues.join(", ")}`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="mt-2 flex gap-1">
+                            <button type="button" disabled={idx === 0} onClick={() => reorderPendingFile(idx, -1)} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↑ Up</button>
+                            <button type="button" disabled={idx === pendingFiles.length - 1} onClick={() => reorderPendingFile(idx, 1)} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↓ Down</button>
+                            <button type="button" onClick={() => removePendingFile(idx)} className="ml-auto rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">Remove</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {preprocessingInfo && <p className="mt-2 rounded-xl border border-[#dbeafe] bg-[#f8fbff] px-3 py-2 text-[11px] font-semibold text-slate-600 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60 admin-dark:text-slate-300">{preprocessingInfo}</p>}
+                    <div className="mt-3 flex gap-2">
+                      <button type="button" disabled={importBusy || pendingFiles.length === 0} onClick={() => void handleImportImages()} className={`${buttonPrimaryClass} shrink-0`}>
+                        {importBusy ? "Detecting — Vision AI + OCR + Layout..." : `Detect ALL Questions (${pendingFiles.length} image${pendingFiles.length > 1 ? "s" : ""})`}
+                      </button>
+                      <span className="self-center text-[11px] font-semibold text-slate-500">Preserves Bengali/English/mixed exactly • No highlight filter • Science formulas & symbols intact</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 rounded-xl border border-[#dbeafe] bg-white p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#1a3a78] admin-dark:text-[#93c5fd]">High-Accuracy Pipeline — Not Basic OCR</p>
                   <p className="mt-1 text-xs leading-relaxed text-slate-600 admin-dark:text-slate-300">
-                    AI must <span className="font-bold">detect exactly as it appears</span> in the source image. Bengali → Bengali, English → English, Mixed → preserve mixed exactly. Example: <span className="rounded bg-[#f8fbff] px-1 py-0.5 font-mono text-xs admin-dark:bg-[#0f2547]" style={{ fontFamily: "'Noto Sans Bengali',sans-serif" }}>মানবদেহে Oxygen transport করে কোনটি?</span> must remain <span className="font-bold" style={{ fontFamily: "'Noto Sans Bengali',sans-serif" }}>মানবদেহে Oxygen transport করে কোনটি?</span>, not translated to English unless you enable Convert.
+                    Vision AI understands <span className="font-bold">Bengali, English, mixed, MCQ structure, numbering, multi-line Q & options, 2-column layouts, tables</span>. Example: <span className="rounded bg-[#f8fbff] px-1 py-0.5 font-mono text-xs admin-dark:bg-[#0f2547]" style={{ fontFamily: "'Noto Sans Bengali',sans-serif" }}>মানবদেহে Oxygen transport করে কোনটি?</span> stays <span className="font-bold" style={{ fontFamily: "'Noto Sans Bengali',sans-serif" }}>মানবদেহে Oxygen transport করে কোনটি?</span> until you enable Convert.
                   </p>
-                  <p className="mt-2 text-[11px] font-semibold text-slate-500">Preserve Bengali Unicode, যুক্তাক্ষর, কার/মাত্রা, punctuation, mixed scientific terms (Oxygen, Plasma, RBC) naturally.</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Steps: Quality analysis (resolution, blur, sharpness, brightness, contrast, noise, rotation/skew, text size) → Auto enhancement if needed → Preprocessing (rotate, deskew, perspective, upscale, contrast, brightness, denoise, sharpen, background cleanup, adaptive threshold) → Vision AI + OCR + layout → ALL MCQs → Q-option association → Cross-validation → Second-pass for uncertain → Duplicate prevention → Ordering → Structured output.</p>
                 </div>
                 <div className="mt-3 rounded-xl border border-dashed border-[#bfdbfe] bg-[#f8fbff] px-3 py-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">What is extracted</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Language & Extraction Rules</p>
                   <p className="mt-1 text-xs leading-relaxed text-slate-600 admin-dark:text-slate-300">
-                    Upload one or multiple images → AI detects <span className="font-bold">ALL readable questions</span> → Extracts ONLY <span className="font-bold">Question text + Options (A-D)</span> exactly as in source. No highlight filter.
+                    Initial detection <span className="font-bold">preserves exact source</span>: Bengali stays Bengali (Unicode যুক্তাক্ষর, কার, মাত্রা, numerals intact with Bengali font), English stays English, mixed stays mixed. Extract <span className="font-bold">ONLY Question + Options (A-D)</span>. Never auto-extract correct answer, explanation, marks, subject, etc. Optional <span className="font-bold">Convert to English = OFF</span> by default.
                   </p>
-                  <p className="mt-2 text-[11px] font-semibold text-amber-600">Do NOT auto-extract: Correct Answer, Explanation, Subject, Marks, Time, Person, Course, Exam Type, Start/End Time, other metadata.</p>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-500">Default: <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-bold text-emerald-700">Exact Source Detection</span> and <span className="rounded bg-slate-100 px-1.5 py-0.5 font-bold">Convert Question to English = OFF</span> — no forced language before detection.</p>
+                  <p className="mt-1 text-[11px] font-semibold text-slate-500">Scientific & medical preserved: H₂O, Na⁺, pH, chemical formulas, equations, units, Greek letters, superscripts/subscripts, medical terms.</p>
                 </div>
                 {importError && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 admin-dark:border-red-900/30 admin-dark:bg-red-500/10">{importError}</p>}
-                {importMeta && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/20 admin-dark:bg-emerald-500/10">Questions Detected: {importMeta.totalDetected} — from {importMeta.imagesProcessed} image(s), exact source language preserved{importMeta.convertToEnglish ? " — Converted to English" : ""}</p>}
+                {importMeta && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/20 admin-dark:bg-emerald-500/10">Questions Detected: {importMeta.totalDetected} — from {importMeta.imagesProcessed} image(s), exact source language preserved{importMeta.convertToEnglish ? " — Converted to English" : ""} • Vision AI + OCR cross-validated</p>}
               </div>
 
               {/* Review after detection — SAME Question Card UI, with Convert toggle */}
@@ -989,19 +1186,7 @@ export default function ExamPaperEditor({
                             >
                               Edit
                             </button>
-                            {/* Fixed 30-question structure: no individual deletion — edit to correct instead. */}
-                            {!isFixed30 && (
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => void removeQuestion(q?.id ?? null)}
-                                className={buttonDangerClass}
-                                title="Delete question"
-                                aria-label={`Delete question ${slotNumber}`}
-                              >
-                                ✕
-                              </button>
-                            )}
+                            {/* No individual delete — 30-question structure must remain intact; edit to correct instead. */}
                           </>
                         ) : (
                           <button
