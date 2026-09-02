@@ -91,9 +91,10 @@ export default function ExamPaperEditor({
     marks: "1",
   });
   const [publishBusy, setPublishBusy] = useState(false);
-  const [voiceSlot, setVoiceSlot] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imageUploadingSlot, setImageUploadingSlot] = useState<number | null>(null);
+  const singlePhotoRef = useRef<HTMLInputElement | null>(null);
+  const [singlePhotoSlot, setSinglePhotoSlot] = useState<number | null>(null);
   const importFileRef = useRef<HTMLInputElement | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -362,34 +363,6 @@ export default function ExamPaperEditor({
     }
   }
 
-  async function moveToPosition(fromIdx: number, toIdxOneBased: number) {
-    if (!questions) return;
-    const toIdx = toIdxOneBased - 1;
-    if (toIdx < 0 || toIdx >= questions.length || toIdx === fromIdx) return;
-    const next = [...questions];
-    const [moved] = next.splice(fromIdx, 1);
-    next.splice(toIdx, 0, moved);
-    const ids = next.map((x) => x.id).filter((x): x is number => x !== null);
-    setBusy(true);
-    try {
-      const res = await fetch("/api/admin/exams/questions", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify({ examId: exam.id, order: ids }),
-      });
-      const data = (await res.json().catch(() => null)) as { questions?: ExamQuestion[]; error?: string } | null;
-      if (!res.ok) {
-        setError(data?.error ?? "Failed to reorder.");
-        return;
-      }
-      if (data?.questions) setQuestions(data.questions);
-      else await load();
-      onChanged?.();
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function publishExam() {
     if (!allCompleted) {
       setError(`Complete all ${totalSlots} questions before publishing. ${progressText}.`);
@@ -511,51 +484,70 @@ export default function ExamPaperEditor({
     }
   }
 
-  // Voice input
-  function handleVoice(slotIndex: number, currentText: string, onUpdate: (t: string) => void) {
-    const w = window as unknown as Record<string, unknown>;
-    const Rec = (w["SpeechRecognition"] || w["webkitSpeechRecognition"]) as unknown as
-      | (new () => {
-          lang: string;
-          interimResults: boolean;
-          onresult: ((e: { results: Array<Array<{ transcript: string }>> }) => void) | null;
-          onerror: (() => void) | null;
-          onend: (() => void) | null;
-          start: () => void;
-          stop: () => void;
-        })
-      | undefined;
-    if (!Rec) {
-      setError("Voice input not supported in this browser. Use Chrome/Edge.");
+  // Single Question Photo Upload — AI detects Question + Options only (highlight-based for bulk, single for individual)
+  async function handleSinglePhotoUpload(file: File, slotIndex: number) {
+    if (!file.type.startsWith("image/")) {
+      setError("Select an image file for single question photo.");
       return;
     }
-    if (voiceSlot !== null) {
-      setVoiceSlot(null);
-      return;
-    }
+    setSinglePhotoSlot(slotIndex);
+    setError(null);
     try {
-      const rec = new Rec();
-      rec!.lang = "en-US";
-      rec!.interimResults = false;
-      setVoiceSlot(slotIndex);
-      rec!.onresult = (e) => {
-        const transcript = e.results[0]?.[0]?.transcript ?? "";
-        if (transcript) onUpdate(currentText ? `${currentText} ${transcript}` : transcript);
-        setVoiceSlot(null);
-      };
-      rec!.onerror = () => {
-        setVoiceSlot(null);
-        setError("Voice recognition failed.");
-      };
-      rec!.onend = () => setVoiceSlot(null);
-      rec!.start();
-    } catch {
-      setVoiceSlot(null);
-      setError("Voice input failed to start.");
+      const fd = new FormData();
+      fd.append("images", file);
+      const res = await fetch("/api/admin/exams/questions/import", {
+        method: "POST",
+        headers: { Authorization: bearer as string },
+        body: fd,
+      });
+      const data = (await res.json().catch(() => null)) as {
+        detected?: Array<{ question: string; options: string[] }>;
+        error?: string;
+      } | null;
+      if (!res.ok) {
+        setError(data?.error ?? "Failed to detect question from photo.");
+        return;
+      }
+      const first = data?.detected?.[0];
+      if (!first) {
+        setError("No question detected in the photo. Try a clearer image with highlighted question.");
+        return;
+      }
+      // Fill the slot's form with detected question + options; correct answer to be selected manually
+      const isEditingThis = displaySlots[slotIndex]?.q?.id !== null && editingId === displaySlots[slotIndex]?.q?.id;
+      const targetSlot = slotIndex;
+      if (isEditingThis || placeholderEditingSlot === targetSlot) {
+        setForm((prev) => ({
+          ...prev,
+          question: first.question,
+          options: first.options.length >= 2 ? [...first.options] : [...first.options, ...Array(2 - first.options.length).fill("")],
+          correctIndex: 0,
+        }));
+      } else {
+        // Open the slot for editing with detected data
+        setPlaceholderEditingSlot(targetSlot);
+        setEditingId(null);
+        setForm({
+          subject: exam.subject || "",
+          question: first.question,
+          questionImage: "",
+          options: first.options.length >= 4 ? [...first.options].slice(0, 4) : [...first.options, ...Array(4 - first.options.length).fill("")],
+          correctIndex: 0,
+          explanation: "",
+          marks: String(exam.marksPerQuestion ?? "1"),
+        });
+      }
+      setNotice(`Single photo detected: "${first.question.slice(0, 40)}..." — select correct answer manually.`);
+      setTimeout(() => setNotice(null), 3000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Photo detection failed.");
+    } finally {
+      setSinglePhotoSlot(null);
+      if (singlePhotoRef.current) singlePhotoRef.current.value = "";
     }
   }
 
-  // Image upload
+  // Image upload (single question photo — keep, AI detects question+options)
   async function handleImageUpload(file: File, slotIndex: number, isEditing: boolean) {
     if (!bearer) {
       setError("Not authorized — sign in as admin.");
@@ -618,21 +610,35 @@ export default function ExamPaperEditor({
   const headerDuration = exam.durationMinutes ?? 0;
 
   const hiddenFileInput = (
-    <input
-      ref={fileInputRef}
-      type="file"
-      accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
-      className="hidden"
-      onChange={(e) => {
-        const file = e.target.files?.[0];
-        const slotAttr = e.target.getAttribute("data-slot");
-        const slotIndex = slotAttr ? Number(slotAttr) : -1;
-        if (file && slotIndex >= 0) {
-          const isEditing = editingId !== null || placeholderEditingSlot === slotIndex;
-          void handleImageUpload(file, slotIndex, isEditing);
-        }
-      }}
-    />
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          const slotAttr = e.target.getAttribute("data-slot");
+          const slotIndex = slotAttr ? Number(slotAttr) : -1;
+          if (file && slotIndex >= 0) {
+            const isEditing = editingId !== null || placeholderEditingSlot === slotIndex;
+            void handleImageUpload(file, slotIndex, isEditing);
+          }
+        }}
+      />
+      <input
+        ref={singlePhotoRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/avif"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          const slotAttr = e.target.getAttribute("data-slot");
+          const slotIndex = slotAttr ? Number(slotAttr) : -1;
+          if (file && slotIndex >= 0) void handleSinglePhotoUpload(file, slotIndex);
+        }}
+      />
+    </>
   );
 
   const headerBlock = (
@@ -778,7 +784,10 @@ export default function ExamPaperEditor({
                             <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-amber-500 px-2 text-xs text-white">{String(idx + 1).padStart(2, "0")}</span>
                             <span className="text-amber-700 admin-dark:text-amber-300">Detected — Review & Select Answer</span>
                           </p>
-                          <button type="button" onClick={() => setImportDetected((prev) => (prev ? prev.filter((_, i) => i !== idx) : null))} className="rounded-lg border border-neutral-200 px-2 py-1 text-xs font-bold text-slate-500 hover:bg-red-50 hover:text-red-600">✕ Remove</button>
+                          <span className="flex items-center gap-1">
+                            <button type="button" disabled={idx === 0} onClick={() => setImportDetected((prev) => { if (!prev) return prev; const n = [...prev]; [n[idx], n[idx - 1]] = [n[idx - 1], n[idx]]; return n; })} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↑</button>
+                            <button type="button" disabled={idx === (importDetected?.length ?? 0) - 1} onClick={() => setImportDetected((prev) => { if (!prev) return prev; const n = [...prev]; [n[idx], n[idx + 1]] = [n[idx + 1], n[idx]]; return n; })} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↓</button>
+                          </span>
                         </div>
                         <div className="px-4 py-4 sm:px-5">
                           <textarea rows={2} className={`${inputClass} font-semibold`} value={item.question} onChange={(e) => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, question: e.target.value } : it) : null)} placeholder="Question text (extracted)" />
@@ -864,26 +873,25 @@ export default function ExamPaperEditor({
                             >
                               ↓
                             </button>
-                            {/* Move to position */}
-                            <label className="flex items-center gap-1 rounded-lg border border-[#dbeafe] bg-white px-1.5 py-1 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]" title="Move to position">
-                              <span className="text-[9px] font-extrabold uppercase tracking-wide text-slate-400">Go</span>
-                              <input
-                                type="number"
-                                min={1}
-                                max={totalSlots}
-                                placeholder="#"
-                                className="w-10 rounded bg-transparent text-center text-xs font-bold outline-none"
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    const v = Number((e.target as HTMLInputElement).value);
-                                    if (v >= 1 && v <= totalSlots) void moveToPosition(index, v);
-                                    (e.target as HTMLInputElement).value = "";
-                                  }
-                                }}
-                              />
-                            </label>
                           </>
                         )}
+
+                        {/* Single Question Photo Upload — AI detects Question + Options */}
+                        <button
+                          type="button"
+                          disabled={busy || singlePhotoSlot === index}
+                          onClick={() => {
+                            if (singlePhotoRef.current) {
+                              singlePhotoRef.current.setAttribute("data-slot", String(index));
+                              singlePhotoRef.current.click();
+                            }
+                          }}
+                          className="rounded-lg border border-[#dbeafe] bg-white p-1.5 text-slate-600 hover:bg-[#eff6ff] disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-slate-300"
+                          title="Upload Photo — AI detects Question + Options"
+                          aria-label="Upload Photo for AI detection"
+                        >
+                          {singlePhotoSlot === index ? "…" : "📷"}
+                        </button>
 
                         {/* Image Upload */}
                         <button
@@ -900,29 +908,6 @@ export default function ExamPaperEditor({
                           aria-label="Upload image"
                         >
                           {imageUploadingSlot === index ? "…" : "🖼"}
-                        </button>
-
-                        {/* Voice Input */}
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => {
-                            if (isEditingThis) {
-                              handleVoice(index, form.question, (t) => setForm((p) => ({ ...p, question: t })));
-                            } else if (q?.id !== null && q) {
-                              // quick voice fill for non-editing: start edit with voice
-                              startEdit(q, index);
-                              setTimeout(() => handleVoice(index, form.question, (t) => setForm((p) => ({ ...p, question: t }))), 50);
-                            } else {
-                              startAddForSlot(index);
-                              setTimeout(() => handleVoice(index, "", (t) => setForm((p) => ({ ...p, question: t }))), 50);
-                            }
-                          }}
-                          className={`rounded-lg border p-1.5 text-xs font-bold ${voiceSlot === index ? "border-red-300 bg-red-50 text-red-600 animate-pulse" : "border-[#dbeafe] bg-white text-slate-600 hover:bg-[#eff6ff] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-slate-300"}`}
-                          title="Voice input for question"
-                          aria-label="Voice input"
-                        >
-                          🎙
                         </button>
 
                         {completed ? (
@@ -1039,24 +1024,14 @@ export default function ExamPaperEditor({
                           <div className="mt-3 grid grid-cols-1 gap-3">
                             <div>
                               <label className={labelClass} htmlFor={`eq-text-${index}`}>Question text</label>
-                              <div className="flex gap-2">
-                                <textarea
-                                  id={`eq-text-${index}`}
-                                  rows={2}
-                                  className={`${inputClass} flex-1 font-semibold`}
-                                  value={form.question}
-                                  onChange={(e) => setForm({ ...form, question: e.target.value })}
-                                  placeholder="Type the question…"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleVoice(index, form.question, (t) => setForm((p) => ({ ...p, question: t })))}
-                                  className={`h-fit shrink-0 rounded-xl border px-3 py-2 text-xs font-bold ${voiceSlot === index ? "border-red-300 bg-red-50 text-red-600 animate-pulse" : "border-[#dbeafe] bg-white text-slate-600"}`}
-                                  title="Voice input"
-                                >
-                                  🎙
-                                </button>
-                              </div>
+                              <textarea
+                                id={`eq-text-${index}`}
+                                rows={2}
+                                className={`${inputClass} font-semibold`}
+                                value={form.question}
+                                onChange={(e) => setForm({ ...form, question: e.target.value })}
+                                placeholder="Type the question…"
+                              />
                             </div>
 
                             {/* Image field */}
