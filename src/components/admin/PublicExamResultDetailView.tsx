@@ -585,7 +585,7 @@ export default function PublicExamResultDetailView({
                                   : "bg-zinc-500/10 text-slate-500"
                             }`}
                           >
-                            {question.status} · {question.obtained > 0 ? `+${question.obtained}` : question.obtained} marks
+                            {question.status}
                           </span>
                         </div>
                         <p className="mt-1.5 text-sm leading-relaxed text-zinc-800 admin-dark:text-zinc-200">
@@ -633,19 +633,12 @@ export default function PublicExamResultDetailView({
                             </span>
                           </span>
                           <span className="text-slate-500">
-                            Marks:{" "}
-                            <span
-                              className={
-                                question.obtained > 0
-                                  ? "text-emerald-600"
-                                  : question.obtained < 0
-                                    ? "text-red-500"
-                                    : "text-[#0b1e3a] admin-dark:text-zinc-200"
-                              }
-                            >
-                              {question.obtained > 0 ? "+" : ""}
-                              {question.obtained}
-                              {question.status === "wrong" && detail.negativeEnabled ? ` (negative −${detail.negativePerWrong})` : ""}
+                            Marks: <span className="text-[#0b1e3a] admin-dark:text-zinc-200">{question.marks}</span>
+                            <span className="ml-2 text-slate-500">
+                              Obtained:{" "}
+                              <span className={question.status === "correct" ? "text-emerald-600" : "text-[#0b1e3a] admin-dark:text-zinc-200"}>
+                                {question.status === "correct" ? `+${question.marks}` : "0"}
+                              </span>
                             </span>
                           </span>
                         </div>

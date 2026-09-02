@@ -3,9 +3,9 @@ import {
   batchLabel,
   deriveStatus,
   formatExamTime,
-  negativeMarksFor,
   type PublicExam,
 } from "@/lib/public-exams";
+import { negativePerWrongFor } from "@/lib/exam-taking";
 
 /**
  * Map an admin Exam row onto the exact PublicExam shape the main website's
@@ -33,9 +33,9 @@ export function examToPublic(exam: Exam): PublicExam {
     totalMarks: exam.totalMarks,
     totalQuestions: Math.max(0, Number(exam.questionCount) || 0),
     durationMinutes: exam.durationMinutes,
-    negativeMarks: negativeMarksFor(exam.courseType),
-    negativeEnabled: exam.negativeEnabled,
-    negativePerWrong: exam.negativePerWrong,
+    negativeMarks: negativePerWrongFor(exam),
+    negativeEnabled: exam.ruleTemplate ? exam.ruleTemplate === "medical" || exam.ruleTemplate === "university" : exam.negativeEnabled,
+    negativePerWrong: negativePerWrongFor(exam),
     scheduledAt: scheduledIso,
     endsAt: endsAtIso,
     examDate: scheduledIso ? scheduledIso.slice(0, 10) : "",

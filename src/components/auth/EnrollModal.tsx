@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useCourseAccess } from "@/lib/course-access";
@@ -172,6 +173,14 @@ export default function EnrollModal({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [open, onClose]);
+
+  // Portal guard must live above early returns (hooks rule)
+  const [portalMounted, setPortalMounted] = useState(false);
+  useEffect(() => {
+    setPortalMounted(true);
+    return () => setPortalMounted(false);
+  }, []);
+  if (!portalMounted) return null;
 
   if (!open) return null;
 
@@ -731,7 +740,7 @@ export default function EnrollModal({
     );
   };
 
-return (
+return createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
           role="dialog"
@@ -785,6 +794,7 @@ return (
 
             {renderContent()}
           </div>
-        </div>
-      );
+        </div>,
+    document.body
+  );
 }

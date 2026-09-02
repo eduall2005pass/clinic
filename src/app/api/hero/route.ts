@@ -7,12 +7,11 @@ import {
 } from "@/lib/hero-settings";
 import { requirePermission } from "@/lib/admin";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 300;
 
-const NO_CACHE_HEADERS = {
-  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-  Pragma: "no-cache",
-  Expires: "0",
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
 };
 
 function asString(value: FormDataEntryValue | null): string | undefined {
@@ -28,7 +27,7 @@ function asBool(value: FormDataEntryValue | null): boolean | undefined {
 
 export async function GET() {
   const hero = await fetchHeroSettings();
-  return NextResponse.json({ hero }, { headers: NO_CACHE_HEADERS });
+  return NextResponse.json({ hero }, { headers: CACHE_HEADERS });
 }
 
 export async function POST(request: NextRequest) {
@@ -105,7 +104,7 @@ export async function POST(request: NextRequest) {
       },
       admin.uid,
     );
-    return NextResponse.json({ hero }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ hero }, { headers: CACHE_HEADERS });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save hero section.";
@@ -130,7 +129,7 @@ export async function DELETE(request: NextRequest) {
       { removeImage: true },
       admin.uid,
     );
-    return NextResponse.json({ hero }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ hero }, { headers: CACHE_HEADERS });
   } catch (error) {
     const message =
       error instanceof Error

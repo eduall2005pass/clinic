@@ -16,7 +16,8 @@ import {
   MAX_LOGO_FILE_SIZE,
 } from "@/lib/logo";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 300;
 
 
 function parseOtherLinks(

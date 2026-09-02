@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFirebaseUser } from "@/lib/auth-api";
-import { query, exec, parseDate, isMysqlConfigured } from "@/lib/mysql";
+import { query, exec, parseDate, isMysqlConfigured, ensureColumn } from "@/lib/mysql";
 import { saveFile } from "@/lib/storage";
 import { randomStudentId } from "@/lib/student-id";
 import type { StudentProfile } from "@/lib/auth-context";
@@ -94,9 +94,7 @@ async function uploadProfilePicture(picture: File) {
 let levelSchemaReady: Promise<void> | null = null;
 function ensureLevelColumn(): Promise<void> {
   if (!levelSchemaReady) {
-    levelSchemaReady = exec(
-      `ALTER TABLE students ADD COLUMN IF NOT EXISTS student_level VARCHAR(32) NOT NULL DEFAULT '' AFTER hsc_batch`,
-    )
+    levelSchemaReady = ensureColumn("students", "student_level", "VARCHAR(32) NOT NULL DEFAULT '' AFTER hsc_batch")
       .then(() => undefined)
       .catch((error) => {
         levelSchemaReady = null;

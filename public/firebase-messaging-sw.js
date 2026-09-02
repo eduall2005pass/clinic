@@ -1,15 +1,15 @@
 /* MediSpark push notification service worker (Firebase Cloud Messaging).
    Config values are public Firebase web SDK identifiers. */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getMessaging, onBackgroundMessage } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging.js";
+import { getMessaging, onBackgroundMessage } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-sw.js";
 
 initializeApp({
-  apiKey: "AIzaSyAXKVJLxgZsOTCBJRTJmBs5H3wLlZdj514",
-  authDomain: "shsmc-blood-portal.firebaseapp.com",
-  projectId: "shsmc-blood-portal",
-  storageBucket: "shsmc-blood-portal.firebasestorage.app",
-  messagingSenderId: "968307626441",
-  appId: "1:968307626441:web:9cb217fd903766be4a9818",
+  apiKey: "AIzaSyCmDXN01lk15m7ZDGTTyUN7D9YFljMPX8I",
+  authDomain: "medisparkgo.firebaseapp.com",
+  projectId: "medisparkgo",
+  storageBucket: "medisparkgo.firebasestorage.app",
+  messagingSenderId: "971205669963",
+  appId: "1:971205669963:web:fa88bf03ecf56b496a89ce",
 });
 
 const messaging = getMessaging();

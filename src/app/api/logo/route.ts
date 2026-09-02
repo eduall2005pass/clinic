@@ -10,12 +10,11 @@ import { parseImageDimensions } from "@/lib/image-dimensions";
 import { ALLOWED_LOGO_EXTENSIONS, MAX_LOGO_FILE_SIZE } from "@/lib/logo";
 import { requirePermission } from "@/lib/admin";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 300;
 
-const NO_CACHE_HEADERS = {
-  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-  Pragma: "no-cache",
-  Expires: "0",
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
 };
 
 function parseMode(value: string | null): LogoMode | undefined {
@@ -30,7 +29,7 @@ export async function GET() {
   ]);
   return NextResponse.json(
     { logo, light: themes.light, dark: themes.dark },
-    { headers: NO_CACHE_HEADERS },
+    { headers: CACHE_HEADERS },
   );
 }
 
@@ -71,7 +70,7 @@ export async function POST(request: NextRequest) {
     // Re-create File from bytes — original File's buffer was consumed by arrayBuffer()
     const freshFile = new File([bytes], file.name, { type: file.type });
     const logo = await saveActiveLogo(freshFile, width, height, admin.uid, mode);
-    return NextResponse.json({ logo }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ logo }, { headers: CACHE_HEADERS });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save the logo.";
@@ -87,7 +86,7 @@ export async function DELETE(request: NextRequest) {
   const mode = parseMode(request.nextUrl.searchParams.get("mode"));
   try {
     await removeActiveLogo(mode);
-    return NextResponse.json({ ok: true }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ ok: true }, { headers: CACHE_HEADERS });
   } catch {
     return NextResponse.json(
       { error: "Could not restore the default logo." },

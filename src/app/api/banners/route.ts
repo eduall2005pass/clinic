@@ -15,18 +15,10 @@ import {
   MAX_BANNER_FILE_SIZE,
 } from "@/lib/banners";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 300;
 
-export async function GET(request: NextRequest) {
-  const url = new URL(request.url);
-  if (url.searchParams.get("all") === "1") {
-    const admin = await requirePermission(request, "manageContent");
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    }
-    const slides = await fetchAllBanners();
-    return NextResponse.json({ slides });
-  }
+export async function GET() {
   const slides = await fetchActiveBanners();
   return NextResponse.json({ slides });
 }

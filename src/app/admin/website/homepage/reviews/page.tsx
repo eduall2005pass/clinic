@@ -121,7 +121,7 @@ export default function ReviewsManagementPage() {
     async function load() {
       try {
         const token = user ? await user.getIdToken() : null;
-        const res = await fetch("/api/reviews?all=1", {
+        const res = await fetch("/api/reviews/all", {
           cache: "no-store",
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });

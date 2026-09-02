@@ -7,6 +7,8 @@ import type {
 } from "@/lib/qa";
 import { fetchActiveCourseCategories, type CourseCategory } from "@/lib/course-categories-store";
 
+let ensureQaSeedReady = false;
+let ensureQaColumnsReady = false;
 /**
  * MySQL-backed Q&A store. Questions live in qa_questions and every question
  * carries its full course context (category_id + course_id + subject_id).
@@ -94,6 +96,7 @@ async function ensureTables(): Promise<void> {
 
 /** Add the context columns to pre-existing qa_questions tables. */
 async function ensureQaColumns(): Promise<void> {
+  if (ensureQaColumnsReady) return;
   const columns = [
     { name: "category_id", ddl: "ADD COLUMN category_id VARCHAR(191) NULL AFTER subject_id" },
     { name: "course_id", ddl: "ADD COLUMN course_id VARCHAR(191) NULL AFTER category_id" },
@@ -127,10 +130,12 @@ async function ensureQaColumns(): Promise<void> {
   } catch {
     // Best-effort — insertions still work when no FK exists.
   }
+  ensureQaColumnsReady = true;
 }
 
 /** Seed the default subjects once when the table is empty. */
 export async function ensureQaSeed(): Promise<void> {
+  if (ensureQaSeedReady) return;
   await ensureTables();
   const rows = await query<{ total: number }[]>(
     "SELECT COUNT(*) AS total FROM qa_subjects",
@@ -142,6 +147,7 @@ export async function ensureQaSeed(): Promise<void> {
       [subject.id, subject.name, subject.order],
     );
   }
+  ensureQaSeedReady = true;
 }
 
 export async function fetchQaSubjects(

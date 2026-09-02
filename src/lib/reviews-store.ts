@@ -1,6 +1,7 @@
 import { exec, query } from "@/lib/mysql";
 import { saveFile, removeFile } from "@/lib/storage";
 
+let ensureReviewsTableReady = false;
 export const REVIEW_PHOTO_DIR = "review-photos";
 export const MAX_REVIEW_PHOTO_SIZE = 5 * 1024 * 1024;
 export const ALLOWED_REVIEW_PHOTO_EXTENSIONS = [
@@ -37,6 +38,7 @@ type ReviewRow = {
 };
 
 async function ensureReviewsTable(): Promise<void> {
+  if (ensureReviewsTableReady) return;
   await exec(
     `CREATE TABLE IF NOT EXISTS reviews (
       id VARCHAR(191) NOT NULL PRIMARY KEY,
@@ -53,6 +55,7 @@ async function ensureReviewsTable(): Promise<void> {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   );
+  ensureReviewsTableReady = true;
 }
 
 function rowToReview(row: ReviewRow): ReviewRecord {

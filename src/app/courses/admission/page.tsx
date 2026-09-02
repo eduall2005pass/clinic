@@ -4,7 +4,8 @@ import BatchCourseList from "@/components/BatchCourseList";
 import { fetchBatchFilterOptions } from "@/lib/course-filters";
 import { getLivePublicCourses } from "@/lib/course-catalog";
 
-export const dynamic = "force-dynamic";
+// Cached at the edge; admin changes appear within 60s.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Medical Admission Courses",

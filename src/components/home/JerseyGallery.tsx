@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import SectionHeader from "@/components/SectionHeader";
 import type { JerseyItem } from "@/lib/content-admin";
 
@@ -108,7 +109,7 @@ export default function JerseyGallery({
         </div>
       </div>
 
-      {lightboxOpen && jersey.image && (
+      {lightboxOpen && jersey.image && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -155,6 +156,8 @@ export default function JerseyGallery({
             </figcaption>
           </figure>
         </div>
+      ,
+          document.body
       )}
     </section>
   );

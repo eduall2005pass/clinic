@@ -1,4 +1,4 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, query, ensureColumn } from "@/lib/mysql";
 import {
   faqs as SEED_FAQS,
   type Faq,
@@ -8,6 +8,7 @@ import {
 import { sanitizeFaqHtml } from "@/lib/faq-sanitize";
 import { toVideoEmbed } from "@/lib/video-embed";
 
+let ensureFaqsTableReady = false;
 type FaqRow = {
   id: string;
   question: string;
@@ -29,6 +30,7 @@ function normalizeAnswerType(value: unknown): FaqAnswerType {
 }
 
 async function ensureFaqsTable(): Promise<void> {
+  if (ensureFaqsTableReady) return;
   try {
     await query(
       `CREATE TABLE IF NOT EXISTS faqs (
@@ -47,16 +49,9 @@ async function ensureFaqsTable(): Promise<void> {
     );
     // Older deployments — add the new columns when missing.
     try {
-      await query(
-        `ALTER TABLE faqs
-           ADD COLUMN IF NOT EXISTS answer_type ENUM('text','video','text_video') NOT NULL DEFAULT 'text' AFTER question`,
-      );
-      await query(
-        `ALTER TABLE faqs ADD COLUMN IF NOT EXISTS video_url VARCHAR(1024) NULL AFTER answer`,
-      );
-      await query(
-        `ALTER TABLE faqs ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER status`,
-      );
+      await ensureColumn("faqs", "answer_type", "ENUM('text','video','text_video') NOT NULL DEFAULT 'text' AFTER question");
+      await ensureColumn("faqs", "video_url", "VARCHAR(1024) NULL AFTER answer");
+      await ensureColumn("faqs", "is_active", "TINYINT(1) NOT NULL DEFAULT 1 AFTER status");
     } catch {
       // Columns already exist.
     }
@@ -65,6 +60,7 @@ async function ensureFaqsTable(): Promise<void> {
   } catch {
     // Table creation best-effort — may fail if DB not configured.
   }
+  ensureFaqsTableReady = true;
 }
 
 async function seedDefaultFaqs(): Promise<void> {

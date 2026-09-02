@@ -12,10 +12,6 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "eduspark2024.duckdns.org",
-      },
-      {
-        protocol: "https",
         hostname: "medispark.duckdns.org",
       },
     ],

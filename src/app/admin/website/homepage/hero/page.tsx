@@ -70,7 +70,7 @@ export default function HeroBannerManagementPage() {
     async function load() {
       try {
         const token = user ? await user.getIdToken() : null;
-        const res = await fetch("/api/banners?all=1", {
+        const res = await fetch("/api/banners/all", {
           cache: "no-store",
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });

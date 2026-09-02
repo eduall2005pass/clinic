@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import WebsiteAdminShell from "@/components/admin/WebsiteAdminShell";
+import AdminShell from "@/components/admin/AdminShell";
 
 export const metadata: Metadata = {
   title: "Admin Panel — MediSpark",
@@ -12,5 +12,5 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <WebsiteAdminShell>{children}</WebsiteAdminShell>;
+  return <AdminShell>{children}</AdminShell>;
 }

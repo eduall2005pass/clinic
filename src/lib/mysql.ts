@@ -26,7 +26,7 @@ export function getMysqlPool(): mysql.Pool | null {
       database: mysqlDatabase,
       user: mysqlUser,
       password: mysqlPassword,
-      // Azure Flexible Server caps total connections (B1ms ≈ 171). Every
+      // Azure Flexible Server caps total connections (B1ms ~171). Every
       // warm Vercel instance holds its own pool, so keep per-instance usage
       // small and release idle connections quickly or bursts exhaust the
       // server ("Too many connections" breaks saves mid-request).
@@ -35,6 +35,7 @@ export function getMysqlPool(): mysql.Pool | null {
       idleTimeout: 15_000,
       connectTimeout: 10000,
       waitForConnections: true,
+      enableKeepAlive: true,
       queueLimit: 50,
       // Azure Database for MySQL enforces TLS connections.
       ssl:
@@ -93,6 +94,25 @@ export async function exec(
     }
   }
   throw new Error("Unreachable");
+}
+
+/**
+ * MySQL-safe "add column if missing". MariaDB's `ADD COLUMN IF NOT EXISTS`
+ * is not supported by Azure MySQL, so callers self-heal through this instead.
+ * `definition` includes the column name, e.g. "`title` VARCHAR(255) NULL".
+ */
+export async function ensureColumn(
+  table: string,
+  column: string,
+  definition: string,
+): Promise<void> {
+  const rows = await query<{ n: number }[]>(
+    `SELECT COUNT(*) AS n FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
+    [table, column],
+  );
+  if ((rows[0]?.n ?? 0) > 0) return;
+  await exec(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
 }
 
 /**

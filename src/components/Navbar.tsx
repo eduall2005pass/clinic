@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
@@ -40,6 +40,14 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
   const actionHref = user ? "/dashboard" : loginHref;
   const actionLabel = user ? "Dashboard" : "Login";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 32);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   if (!settings.showNavbar) return null;
 
@@ -80,11 +88,21 @@ export default function Navbar({ config }: { config?: NavbarConfig }) {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    <header
+      className={`sticky top-0 z-50 border-b border-ink/10 bg-dark-950/90 backdrop-blur transition-all duration-300 ${
+        scrolled ? "lg:shadow-xl lg:shadow-black/25" : ""
+      }`}
+    >
+      <nav
+        className={`mx-auto flex max-w-6xl items-center justify-between px-4 py-3 transition-all duration-300 sm:px-6 ${
+          scrolled ? "lg:py-1.5" : ""
+        }`}
+      >
         <Link
           href="/"
-          className="flex w-1/3 max-w-[330px] shrink-0 transition-opacity hover:opacity-90"
+          className={`flex w-1/3 max-w-[330px] shrink-0 transition-all duration-300 hover:opacity-90 ${
+            scrolled ? "lg:max-w-[220px]" : ""
+          }`}
         >
           <Logo size="large" />
         </Link>

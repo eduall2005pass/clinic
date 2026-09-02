@@ -7,10 +7,11 @@ import {
 } from "@/lib/seo-settings";
 import { saveFile, removeFile } from "@/lib/storage";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 300;
 
-const NO_CACHE_HEADERS = {
-  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
 };
 
 const ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
@@ -22,7 +23,7 @@ function asString(value: FormDataEntryValue | null): string {
 
 export async function GET() {
   const seo = await fetchSeoSettings();
-  return NextResponse.json({ seo }, { headers: NO_CACHE_HEADERS });
+  return NextResponse.json({ seo }, { headers: CACHE_HEADERS });
 }
 
 export async function PUT(request: NextRequest) {
@@ -96,7 +97,7 @@ export async function PUT(request: NextRequest) {
       await removeFile(current.ogImageUrl); // Best-effort cleanup of the old image.
     }
 
-    return NextResponse.json({ seo }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ seo }, { headers: CACHE_HEADERS });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save SEO settings.";
@@ -117,7 +118,7 @@ export async function DELETE(request: NextRequest) {
     const current = await fetchSeoSettings();
     const seo = await saveSeoSettings({ ...current, ogImageUrl: "" }, admin.uid);
     if (current.ogImageUrl) await removeFile(current.ogImageUrl);
-    return NextResponse.json({ seo }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ seo }, { headers: CACHE_HEADERS });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to remove the image.";

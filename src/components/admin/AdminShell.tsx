@@ -44,6 +44,13 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   const { theme } = useAdminTheme();
   const gate = useAdminGate();
   const { user, logout: signOut } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 32);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -132,8 +139,8 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
         <div
           className={`flex items-center rounded-xl transition duration-200 ${
             isActive && !isOpen
-              ? "bg-[#234e9f] text-white shadow-md shadow-black/20"
-              : "hover:bg-white/[0.07]"
+              ? "bg-primary-600 text-white shadow-md shadow-primary-900/40"
+              : "hover:bg-white/5"
           }`}
         >
           <Link
@@ -148,7 +155,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
             } ${
               isActive && !isOpen
                 ? "text-white"
-                : "text-slate-400 hover:text-white"
+                : "text-zinc-400 hover:text-white"
             }`}
           >
             <category.icon className="h-5 w-5 shrink-0" />
@@ -160,7 +167,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
               aria-label={isOpen ? `Collapse ${category.name}` : `Expand ${category.name}`}
               aria-expanded={isOpen}
               onClick={() => toggleSection(category.href)}
-              className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
+              className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-white"
             >
               <ChevronDownIcon
                 className={`h-4 w-4 transition-transform duration-200 ${
@@ -186,8 +193,8 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
                     aria-current={subActive ? "page" : undefined}
                     className={`block truncate rounded-lg px-3 py-1.5 text-[13px] font-medium transition duration-150 ${
                       subActive
-                        ? "bg-[#234e9f]/20 text-[#93c5fd]"
-                        : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"
+                        ? "bg-primary-600/15 text-primary-400"
+                        : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                     }`}
                   >
                     {sub.label}
@@ -209,7 +216,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           collapsed ? "justify-center px-0" : ""
         }`}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#234e9f] text-white shadow-lg shadow-black/20">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white shadow-lg shadow-primary-900/40">
           <WebsiteIcon className="h-5 w-5" />
         </span>
         {!collapsed && (
@@ -217,7 +224,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
             <span className="block truncate text-sm font-extrabold tracking-tight text-white">
               MediSpark Admin
             </span>
-            <span className="block text-[11px] font-semibold uppercase tracking-widest text-[#93c5fd]">
+            <span className="block text-[11px] font-semibold uppercase tracking-widest text-primary-500">
               Control Center
             </span>
           </span>
@@ -233,8 +240,8 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
             collapsed ? "justify-center" : ""
           } ${
             pathname === "/admin"
-              ? "bg-[#234e9f] text-white shadow-md shadow-black/20"
-              : "text-slate-400 hover:bg-white/[0.07] hover:text-white"
+              ? "bg-primary-600 text-white shadow-md shadow-primary-900/40"
+              : "text-zinc-400 hover:bg-white/5 hover:text-white"
           }`}
         >
           <DashboardIcon className="h-5 w-5 shrink-0" />
@@ -242,7 +249,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
         </Link>
 
         <p
-          className={`px-3 pb-1 pt-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 ${
+          className={`px-3 pb-1 pt-5 text-[11px] font-bold uppercase tracking-widest text-zinc-600 ${
             collapsed ? "text-center" : ""
           }`}
         >
@@ -254,7 +261,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
         </ul>
 
         <p
-          className={`px-3 pb-1 pt-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 ${
+          className={`px-3 pb-1 pt-5 text-[11px] font-bold uppercase tracking-widest text-zinc-600 ${
             collapsed ? "text-center" : ""
           }`}
         >
@@ -270,7 +277,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={toggleCollapsed}
-          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white ${
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-white/5 hover:text-white ${
             collapsed ? "justify-center px-0" : ""
           }`}
         >
@@ -285,32 +292,32 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
     <AdminToastProvider>
       <div
         data-admin-theme={theme}
-        className="flex min-h-screen overflow-x-hidden bg-[#f1f5f9] transition-colors duration-300 admin-dark:bg-[#0a162e]"
+        className="flex min-h-screen bg-neutral-100 transition-colors duration-300 admin-dark:bg-zinc-950"
       >
-      {/* Desktop sidebar — Deep Navy (visible only on xl+; hamburger handles laptop/tablet) */}
+      {/* Desktop sidebar */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-[#0b1e3a] xl:flex ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-zinc-950 lg:flex ${
           collapsed ? "w-[76px]" : "w-64"
         } transition-[width] duration-300`}
       >
         {sidebarContent}
       </aside>
 
-      {/* Mobile/tablet/laptop drawer — Deep Navy with subtle overlay */}
+      {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-[70] xl:hidden">
+        <div className="fixed inset-0 z-[70] lg:hidden">
           <button
             type="button"
             aria-label="Close menu"
             onClick={() => setMobileOpen(false)}
-            className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           />
-          <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col bg-[#0b1e3a] shadow-2xl shadow-black/60">
+          <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col bg-zinc-950 shadow-2xl shadow-black/60">
             <button
               type="button"
               aria-label="Close menu"
               onClick={() => setMobileOpen(false)}
-              className="absolute right-3 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
+              className="absolute right-3 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-white/10 hover:text-white"
             >
               <CloseIcon className="h-5 w-5" />
             </button>
@@ -320,14 +327,14 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main column */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        {/* Top header — clean white/light-blue */}
-        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-[#dbeafe] bg-white px-4 shadow-sm transition-colors duration-300 sm:px-6 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]">
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Top header */}
+        <header className={`sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-neutral-200 bg-white/90 px-4 backdrop-blur transition-all duration-300 sm:px-6 admin-dark:border-zinc-800 admin-dark:bg-zinc-900/90 ${scrolled ? "lg:shadow-lg lg:shadow-black/25" : ""}`}>
           <button
             type="button"
             aria-label="Open menu"
             onClick={() => setMobileOpen(true)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] xl:hidden admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 text-zinc-700 transition hover:border-primary-500/60 hover:bg-neutral-50 lg:hidden admin-dark:border-zinc-700 admin-dark:text-zinc-200 admin-dark:hover:bg-zinc-800"
           >
             <MenuIcon className="h-5 w-5" />
           </button>
@@ -335,22 +342,22 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           <div className="min-w-0 flex-1">
             {active.breadcrumbs.length > 1 && (
               <nav aria-label="Breadcrumb" className="hidden sm:block">
-                <ol className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 admin-dark:text-[#8da0c0]">
+                <ol className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500">
                   {active.breadcrumbs.slice(0, -1).map((crumb, index) => (
                     <li key={crumb.href + index} className="flex items-center gap-1.5">
                       <Link
                         href={crumb.href}
-                        className="transition hover:text-[#234e9f] admin-dark:hover:text-[#93c5fd]"
+                        className="transition hover:text-primary-400"
                       >
                         {crumb.label}
                       </Link>
-                      <span className="text-slate-400 admin-dark:text-slate-600">/</span>
+                      <span className="text-zinc-700">/</span>
                     </li>
                   ))}
                 </ol>
               </nav>
             )}
-            <h1 className="truncate text-base font-bold text-[#0b1e3a] transition-colors duration-300 sm:text-lg admin-dark:text-white">
+            <h1 className="truncate text-base font-bold text-zinc-900 transition-colors duration-300 sm:text-lg admin-dark:text-zinc-50">
               {active.title}
             </h1>
           </div>
@@ -365,7 +372,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
               type="button"
               aria-label="Search sections"
               onClick={() => setMobileSearchOpen((open) => !open)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] md:hidden admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 text-zinc-700 transition hover:border-primary-500/60 hover:bg-neutral-50 md:hidden admin-dark:border-zinc-700 admin-dark:text-zinc-200 admin-dark:hover:bg-zinc-800"
             >
               <SearchIcon className="h-5 w-5" />
             </button>
@@ -377,10 +384,10 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               aria-label="Notifications"
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] text-[#1a3a78] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#1a3a78]"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 text-zinc-700 transition hover:border-primary-500/60 hover:bg-neutral-50 admin-dark:border-zinc-700 admin-dark:text-zinc-200 admin-dark:hover:bg-zinc-800"
             >
               <NotificationsIcon className="h-5 w-5" />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#234e9f] admin-dark:bg-[#60a5fa]" />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary-600" />
             </button>
 
             {/* Profile */}
@@ -388,41 +395,41 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setProfileOpen((open) => !open)}
-                className="flex items-center gap-2.5 rounded-xl border border-[#dbeafe] bg-[#f8fbff] py-1.5 pl-1.5 pr-2.5 transition hover:border-[#93c5fd] hover:bg-[#eff6ff] sm:pr-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:hover:bg-[#1a3a78]"
+                className="flex items-center gap-2.5 rounded-xl border border-neutral-200 py-1.5 pl-1.5 pr-2.5 transition hover:border-primary-500/60 hover:bg-neutral-50 sm:pr-3 admin-dark:border-zinc-700 admin-dark:hover:bg-zinc-800"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1a3a78] text-xs font-bold text-white admin-dark:bg-[#234e9f]">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-600 text-xs font-bold text-white">
                   A
                 </span>
                 <span className="hidden text-left sm:block">
-                  <span className="block text-xs font-bold leading-tight text-[#0b1e3a] admin-dark:text-white">
+                  <span className="block text-xs font-bold leading-tight text-zinc-900 admin-dark:text-zinc-50">
                     Admin
                   </span>
-                  <span className="block text-[10px] leading-tight text-slate-500 admin-dark:text-[#8da0c0]">
+                  <span className="block text-[10px] leading-tight text-zinc-500">
                     Administrator
                   </span>
                 </span>
               </button>
 
               {profileOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-xl border border-[#dbeafe] bg-white shadow-xl shadow-[#0b1e3a]/10 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
-                  <div className="border-b border-[#eef4ff] px-4 py-3 admin-dark:border-[#1e3a65]">
-                    <p className="text-sm font-bold text-[#0b1e3a] admin-dark:text-white">
+                <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-black/10 admin-dark:border-zinc-700 admin-dark:bg-zinc-900">
+                  <div className="border-b border-neutral-100 px-4 py-3 admin-dark:border-zinc-800">
+                    <p className="text-sm font-bold text-zinc-900 admin-dark:text-zinc-50">
                       Admin
                     </p>
-                    <p className="text-xs text-slate-500 admin-dark:text-[#8da0c0]">admin@medispark.com</p>
+                    <p className="text-xs text-zinc-500">admin@medispark.com</p>
                   </div>
                   <Link
                     href="/admin/administration/admins"
                     onClick={closeOverlays}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[#f8fbff] admin-dark:text-slate-200 admin-dark:hover:bg-[#132a4f]"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-neutral-50 admin-dark:text-zinc-200 admin-dark:hover:bg-zinc-800"
                   >
-                    <SettingsIcon className="h-4 w-4 text-slate-400" />
+                    <SettingsIcon className="h-4 w-4 text-zinc-400" />
                     Profile Settings
                   </Link>
                   <button
                     type="button"
                     onClick={() => void handleLogout()}
-                    className="flex w-full items-center gap-2.5 border-t border-[#eef4ff] px-4 py-2.5 text-sm font-medium text-[#1a3a78] transition hover:bg-[#eff6ff] admin-dark:border-[#1e3a65] admin-dark:text-[#93c5fd] admin-dark:hover:bg-[#132a4f]"
+                    className="flex w-full items-center gap-2.5 border-t border-neutral-100 px-4 py-2.5 text-sm font-medium text-primary-700 transition hover:bg-primary-600/5 admin-dark:border-zinc-800 admin-dark:text-primary-400"
                   >
                     <LogoutIcon className="h-4 w-4" />
                     Logout
@@ -435,7 +442,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
 
         {/* Mobile search panel */}
         {mobileSearchOpen && (
-          <div className="sticky top-16 z-30 border-b border-[#dbeafe] bg-white px-4 py-3 shadow-sm transition-colors duration-300 md:hidden admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]">
+          <div className="sticky top-16 z-30 border-b border-neutral-200 bg-white px-4 py-3 transition-colors duration-300 md:hidden admin-dark:border-zinc-800 admin-dark:bg-zinc-900">
             <AdminSearch
               autoFocus
               onNavigate={() => setMobileSearchOpen(false)}
@@ -443,7 +450,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <main className="flex-1 bg-transparent">{children}</main>
+        <main className="flex-1">{children}</main>
       </div>
       </div>
     </AdminToastProvider>

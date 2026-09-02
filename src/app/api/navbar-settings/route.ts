@@ -3,7 +3,8 @@ import { requirePermission } from "@/lib/admin";
 import { fetchNavbarConfig, saveNavbarConfig } from "@/lib/navbar";
 import { DEFAULT_NAVBAR_ITEMS, type NavbarItem } from "@/lib/navbar-constants";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 300;
 
 export async function GET() {
   const config = await fetchNavbarConfig();

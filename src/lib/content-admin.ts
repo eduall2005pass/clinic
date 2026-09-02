@@ -1,5 +1,7 @@
 import { exec, query } from "@/lib/mysql";
 
+let ensureNotificationsTableReady = false;
+let ensureJerseysTableReady = false;
 // Admin Panel → Content. Notifications broadcast + jersey catalog.
 // Media library reads the shared `uploads` table (see src/lib/storage.ts).
 
@@ -81,6 +83,7 @@ function mapNotificationRow(row: NotificationRow): Notification {
 // ── Notifications ────────────────────────────────────────────────────────
 
 async function ensureNotificationsTable(): Promise<void> {
+  if (ensureNotificationsTableReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS notifications (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -101,6 +104,7 @@ async function ensureNotificationsTable(): Promise<void> {
   } catch {
     // Already migrated — safe to ignore.
   }
+  ensureNotificationsTableReady = true;
 }
 
 export async function fetchNotifications(all = false): Promise<Notification[]> {
@@ -210,6 +214,7 @@ export async function deleteNotification(id: string): Promise<void> {
 // ── Jerseys ──────────────────────────────────────────────────────────────
 
 async function ensureJerseysTable(): Promise<void> {
+  if (ensureJerseysTableReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS jerseys (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -227,6 +232,7 @@ async function ensureJerseysTable(): Promise<void> {
   } catch {
     // Column already exists — safe to ignore.
   }
+  ensureJerseysTableReady = true;
   try {
     await exec(`ALTER TABLE jerseys ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER is_active`);
   } catch {

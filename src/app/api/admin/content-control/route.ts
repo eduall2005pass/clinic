@@ -47,31 +47,23 @@ export async function GET(request: NextRequest) {
       const chapters = await getTypeChapters(scope, ctype);
       return NextResponse.json({ chapters }, { headers: { "Cache-Control": "no-store" } });
     }
-    const types = await ensureTypes(scope);
-    // Structure mode — mirrors the student content flow:
-    //  - multiple subjects assigned → Subject Selection first
-    //    (e.g. Complete Medical Admission Course)
-    //  - one subject with papers   → Paper Selection first
-    //    (e.g. HSC Biology Crash / Varsity Biology: ১ম পত্র / ২য় পত্র)
-    //  - otherwise                 → direct Class/Exam/Materials/Archive
-    //    (e.g. SSC Biology / HSC Botany / HSC Zoology)
-    const subjects = await query<{ id: string; name: string }[]>(
-      `SELECT s.id, s.name FROM course_subjects s
-         JOIN course_subject_assignments a ON a.subject_id = s.id
-        WHERE a.course_slug = ? AND s.is_active = 1 ORDER BY s.sort_order`,
-      [slug],
-    );
-    let papers: Array<{ id: string; name: string; subjectId: string }> = [];
-    if (subjects.length > 0) {
-      papers = await query(
+    const [types, subjects, allPapers] = await Promise.all([
+      ensureTypes(scope),
+      query<{ id: string; name: string }[]>(
+        `SELECT s.id, s.name FROM course_subjects s
+           JOIN course_subject_assignments a ON a.subject_id = s.id
+          WHERE a.course_slug = ? AND s.is_active = 1 ORDER BY s.sort_order`,
+        [slug],
+      ),
+      query<{ id: string; name: string; subjectId: string }[]>(
         `SELECT id, name, subject_id AS subjectId FROM course_papers
           WHERE is_active = 1 ORDER BY sort_order`,
-      );
-      papers = papers.filter((p) => subjects.some((s2) => s2.id === p.subjectId));
-      // Only the selected subject's papers matter inside a subject scope.
-      if (scope.subjectId) {
-        papers = papers.filter((p) => p.subjectId === scope.subjectId);
-      }
+      ),
+    ]);
+    let papers = allPapers.filter((p) => subjects.some((s2) => s2.id === p.subjectId));
+    // Only the selected subject's papers matter inside a subject scope.
+    if (scope.subjectId) {
+      papers = papers.filter((p) => p.subjectId === scope.subjectId);
     }
     const mode =
       subjects.length > 1

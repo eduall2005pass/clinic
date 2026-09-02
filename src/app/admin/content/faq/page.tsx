@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import FaqManager from "@/components/admin/FaqManager";
+import dynamic from "next/dynamic";
+import AdminSkeleton from "@/components/admin/AdminSkeleton";
+
+const FaqManager = dynamic(() => import("@/components/admin/FaqManager"), {
+  loading: () => <AdminSkeleton />,
+});
 
 export const metadata: Metadata = {
   title: "FAQ — MediSpark Admin",

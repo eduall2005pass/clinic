@@ -10,11 +10,11 @@ import { exec, query } from "@/lib/mysql";
 export const UPLOADS_BASE_URL = "/api/files";
 
 const MEDIA_FILES_BASE_URL =
-  process.env.MEDIA_FILES_BASE_URL ?? "https://eduspark2024.duckdns.org/medifiles";
+  process.env.MEDIA_FILES_BASE_URL ?? "https://medispark.duckdns.org/medifiles";
 const MEDIA_UPLOAD_URL =
-  process.env.MEDIA_UPLOAD_URL ?? "https://eduspark2024.duckdns.org/medifiles-upload";
+  process.env.MEDIA_UPLOAD_URL ?? "https://medispark.duckdns.org/medifiles-upload";
 const MEDIA_DELETE_URL =
-  process.env.MEDIA_DELETE_URL ?? "https://eduspark2024.duckdns.org/medifiles-delete";
+  process.env.MEDIA_DELETE_URL ?? "https://medispark.duckdns.org/medifiles-delete";
 
 function mediaToken(): string {
   const token = (process.env.MEDIA_UPLOAD_TOKEN ?? "").trim();

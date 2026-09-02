@@ -9,7 +9,8 @@ import {
   ALLOWED_MENTOR_PHOTO_EXTENSIONS,
 } from "@/lib/mentors";
 
-export const dynamic = "force-dynamic";
+// Public content: edge-cached for fast loads (60s revalidation).
+export const revalidate = 300;
 
 export async function GET() {
   const mentors = await fetchAllMentors();

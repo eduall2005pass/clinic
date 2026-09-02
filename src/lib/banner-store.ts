@@ -1,6 +1,8 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, query, ensureColumn } from "@/lib/mysql";
 import { saveFile } from "@/lib/storage";
 
+let bannerSchemaReady = false;
+let ensureBannersTableReady = false;
 export const BANNER_STORAGE_DIR = "website-banners";
 
 export type CustomBanner = {
@@ -59,7 +61,7 @@ const SEED_BANNERS: Array<{ id: string; url: string; href: string; title: string
 let bannersEnsured = false;
 
 async function ensureBannersTable(): Promise<void> {
-  if (bannersEnsured) return;
+  if (ensureBannersTableReady || bannersEnsured) return;
   await exec(
     `CREATE TABLE IF NOT EXISTS banners (
       id VARCHAR(191) NOT NULL PRIMARY KEY,
@@ -76,15 +78,13 @@ async function ensureBannersTable(): Promise<void> {
   );
   // Older databases may pre-date the title/is_active columns.
   try {
-    await exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS title VARCHAR(255) NULL");
-    await exec(
-      "ALTER TABLE banners ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1",
-    );
-    await exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS start_at DATETIME NULL");
-    await exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS end_at DATETIME NULL");
+    await ensureColumn("banners", "title", "VARCHAR(255) NULL");
+    await ensureColumn("banners", "is_active", "TINYINT(1) NOT NULL DEFAULT 1\", ); await ensureColumn(\"banners\", \"start_at\", \"DATETIME NULL");
+    await ensureColumn("banners", "end_at", "DATETIME NULL");
   } catch {
     // Best effort — column may already exist.
   }
+  ensureBannersTableReady = true;
   bannersEnsured = true;
 }
 
@@ -108,8 +108,10 @@ async function seedDefaultBanners(): Promise<void> {
 }
 
 async function ensureSchema(): Promise<void> {
+  if (bannerSchemaReady) return;
   await ensureBannersTable();
   await seedDefaultBanners();
+  bannerSchemaReady = true;
 }
 
 function toIso(value: Date | string | null | undefined): string | null {

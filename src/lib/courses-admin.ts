@@ -1,5 +1,11 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, query, ensureColumn } from "@/lib/mysql";
 import { removeFile, isLocalUpload } from "@/lib/storage";
+let tablesReady = false;
+let taxonomyTablesReady = false;
+let assignmentTableReady = false;
+let chapterTablesReady = false;
+let courseMentorsReady = false;
+
 
 // Admin Panel → Courses. The full catalog lives in MySQL (`catalog_courses`).
 // When the table is missing/empty the static catalog in `@/lib/courses`
@@ -220,7 +226,7 @@ export function rowToCourse(row: CatalogCourseRow): CatalogCourse {
 let tablesEnsured = false;
 
 async function ensureTables(): Promise<void> {
-  if (tablesEnsured) return;
+  if (tablesReady || tablesEnsured) return;
   await exec(`CREATE TABLE IF NOT EXISTS catalog_courses (
     slug VARCHAR(191) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -249,17 +255,13 @@ async function ensureTables(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   // Databases created before the featured flag need the column added.
   try {
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS is_featured TINYINT(1) NOT NULL DEFAULT 0`,
-    );
+    await ensureColumn("catalog_courses", "is_featured", "`is_featured` TINYINT(1) NOT NULL DEFAULT 0");
   } catch {
     // Best effort — column may already exist.
   }
   // Links every course to its Course Control category (course_categories.id).
   try {
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS category_id VARCHAR(191) NULL`,
-    );
+    await ensureColumn("catalog_courses", "category_id", "`category_id` VARCHAR(191) NULL");
   } catch {
     // Best effort — column may already exist.
   }
@@ -267,10 +269,17 @@ async function ensureTables(): Promise<void> {
   // Widens the ENUM to accept both old and new values during migration,
   // then narrows to only the new flow values once legacy rows are converted.
   try {
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS content_layout ENUM('auto','direct','paper','subject','flow-1','flow-2','flow-3') NOT NULL DEFAULT 'auto' AFTER availability`,
-    );
+    await ensureColumn("catalog_courses", "content_layout", "`content_layout` ENUM('auto','direct','paper','subject','flow-1','flow-2','flow-3') NOT NULL DEFAULT 'auto' AFTER availability");
   } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await ensureColumn("catalog_courses", "total_classes", "`total_classes` INT NULL");
+    await ensureColumn("catalog_courses", "total_exams", "`total_exams` INT NULL");
+    await ensureColumn("catalog_courses", "course_details", "`course_details` JSON NULL");
+  } catch {
+    // Best effort.
+
     // Best effort — column may already exist.
   }
   // Migrate legacy values to the new flow system.
@@ -287,20 +296,14 @@ async function ensureTables(): Promise<void> {
   }
   // Admin-entered class/exam counts for the course card.
   try {
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS total_classes INT NULL`,
-    );
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS total_exams INT NULL`,
-    );
+    await ensureColumn("catalog_courses", "total_classes", "`total_classes` INT NULL");
+    await ensureColumn("catalog_courses", "total_exams", "`total_exams` INT NULL");
   } catch {
     // Best effort — columns may already exist.
   }
   // Extended course details JSON (duration, teachers, topics, chapter overview).
   try {
-    await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS course_details JSON NULL`,
-    );
+    await ensureColumn("catalog_courses", "course_details", "`course_details` JSON NULL");
   } catch {
     // Best effort — column may already exist.
   }
@@ -333,6 +336,7 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — already migrated or no permission.
   }
+  tablesReady = true;
   tablesEnsured = true;
 }
 
@@ -697,13 +701,14 @@ export async function saveCatalogCourse(
 let courseMentorsEnsured = false;
 
 async function ensureCourseMentorsTable(): Promise<void> {
-  if (courseMentorsEnsured) return;
+  if (courseMentorsReady || courseMentorsEnsured) return;
   await exec(`CREATE TABLE IF NOT EXISTS course_mentors (
     course_slug VARCHAR(191) NOT NULL,
     mentor_id VARCHAR(191) NOT NULL,
     sort_order INT NOT NULL DEFAULT 0,
     PRIMARY KEY (course_slug, mentor_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  courseMentorsReady = true;
   courseMentorsEnsured = true;
 }
 
@@ -853,6 +858,7 @@ type TaxonomyRow = {
 };
 
 async function ensureTaxonomyTables(): Promise<void> {
+  if (taxonomyTablesReady) return;
   // course_categories is owned by @/lib/course-categories-store — reuse its
   // schema so both modules never create conflicting table definitions.
   const { ensureSchema } = await import("@/lib/course-categories-store");
@@ -864,6 +870,7 @@ async function ensureTaxonomyTables(): Promise<void> {
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     sort_order INT NOT NULL DEFAULT 0
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  taxonomyTablesReady = true;
 }
 
 async function fetchTaxonomy(
@@ -924,11 +931,13 @@ export type CourseSubjectDetail = CourseTaxonomyItem & {
 };
 
 async function ensureAssignmentTable(): Promise<void> {
+  if (assignmentTableReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS course_subject_assignments (
     subject_id VARCHAR(64) NOT NULL,
     course_slug VARCHAR(191) NOT NULL,
     PRIMARY KEY (subject_id, course_slug)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  assignmentTableReady = true;
 }
 
 async function fetchAssignmentMap(): Promise<Map<string, string[]>> {
@@ -1066,6 +1075,7 @@ type ClassRow = ChapterRow & {
 };
 
 async function ensureChapterTables(): Promise<void> {
+  if (chapterTablesReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS course_chapters (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     subject_id VARCHAR(64) NOT NULL,
@@ -1086,6 +1096,7 @@ async function ensureChapterTables(): Promise<void> {
     sort_order INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  chapterTablesReady = true;
 }
 
 export async function fetchChapters(subjectId?: string): Promise<Chapter[]> {

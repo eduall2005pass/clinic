@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type ExamRulesData = {
   name: string;
@@ -61,12 +62,12 @@ export function buildExamRules(exam: ExamRulesData): ExamRule[] {
     {
       title: "Answer Selection Rules",
       detail:
-        "Select ONE option per question. An answer is locked immediately after selection — you cannot change or clear it, and you cannot go back to a previous question.",
+        "Select ONE option per question. An answer is locked immediately after selection — you cannot change or clear it. You may answer questions in any order and return to skipped ones before submitting.",
     },
     {
       title: "Submission Rules",
       detail:
-        "Click Submit Exam when you finish (or reach the last question). Your result is calculated and shown instantly after submission.",
+        "Answer all questions on this single scrollable paper, then click Submit Exam. Your result is calculated and shown instantly after submission.",
     },
     {
       title: "Auto-Submit Rules",
@@ -143,9 +144,18 @@ export function ExamRulesModal({
     };
   }, [open, onClose]);
 
+  const [portalMounted, setPortalMounted] = useState(false);
+  useEffect(() => {
+    setPortalMounted(true);
+    return () => setPortalMounted(false);
+  }, []);
+  if (!portalMounted) return null;
+
   if (!open) return null;
 
-  return (
+    // Portal to <body>: ancestor transforms break position:fixed on desktop.
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -218,6 +228,6 @@ export function ExamRulesModal({
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>,
+  document.body);
 }

@@ -16,11 +16,33 @@ import {
   fetchThemeSettings,
   buildThemeOverrideCss,
 } from "@/lib/theme-settings";
+import { unstable_cache } from "next/cache";
 import "./globals.css";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
+// Branding/settings change rarely — cache layout data for 60s so every page
+// render is fast. Admin edits appear within a minute.
+const getCachedSeo = unstable_cache(fetchSeoSettings, ["layout-seo"], {
+  revalidate: 60,
+});
+const getCachedActiveLogo = unstable_cache(getActiveLogo, ["layout-logo"], {
+  revalidate: 60,
+});
+const getCachedThemeLogos = unstable_cache(fetchThemeLogos, ["layout-themelogos"], {
+  revalidate: 60,
+});
+const getCachedWebsiteSettings = unstable_cache(
+  getWebsiteSettingsWithFallback,
+  ["layout-website-settings"],
+  { revalidate: 60 },
+);
+const getCachedNavbarConfig = unstable_cache(fetchNavbarConfig, ["layout-navbar"], {
+  revalidate: 60,
+});
+const getCachedThemeSettings = unstable_cache(
+  fetchThemeSettings,
+  ["layout-theme"],
+  { revalidate: 60 },
+);
 
 const DEFAULT_SITE_TITLE =
   "MediSpark — HSC Academic & Medical Admission Preparation";
@@ -28,7 +50,7 @@ const DEFAULT_META_DESCRIPTION =
   "MediSpark is an HSC academic and medical admission preparation platform — courses, exams, and Q&A built for future medical students.";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const seo = await fetchSeoSettings();
+  const seo = await getCachedSeo();
   const siteTitle = seo.siteTitle || DEFAULT_SITE_TITLE;
   const description = seo.metaDescription || DEFAULT_META_DESCRIPTION;
   return {
@@ -61,11 +83,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [initialLogo, initialThemeLogos, initialSettings, navbarConfig, themeSettings] =
     await Promise.all([
-      getActiveLogo(),
-      fetchThemeLogos(),
-      getWebsiteSettingsWithFallback(),
-      fetchNavbarConfig(),
-      fetchThemeSettings(),
+      getCachedActiveLogo(),
+      getCachedThemeLogos(),
+      getCachedWebsiteSettings(),
+      getCachedNavbarConfig(),
+      getCachedThemeSettings(),
     ]);
   const themeOverrideCss = buildThemeOverrideCss(themeSettings);
   return (

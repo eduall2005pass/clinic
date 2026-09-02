@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ExamCategoryCards from "@/components/ExamCategoryCards";
 import { fetchLiveExamCounts } from "@/lib/public-exams-server";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Public Exam",

@@ -41,51 +41,22 @@ export async function POST(
 
   const { id } = await context.params;
 
-  // Sequential guard: ensure questionId is the next expected in order.
-  // Fetch ordered active question IDs, find index, and reject if the
-  // student is jumping more than 1 ahead of current progress or trying
-  // to answer a previous skipped question (no going back).
+  // Validate question belongs to this exam (free-order: any question may be
+  // answered at any time, any skip/jump is allowed).
   try {
     const questionRows = await query<{ id: number | string }[]>(
-      `SELECT id FROM exam_questions WHERE exam_id = ? AND is_active = 1 ORDER BY id ASC`,
+      `SELECT id FROM exam_questions WHERE exam_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC`,
       [id],
     );
     const orderedIds = questionRows.map((r) => Number(r.id));
-    const idx = orderedIds.indexOf(body.questionId);
-    if (idx === -1) {
+    if (!orderedIds.includes(body.questionId)) {
       return NextResponse.json(
         { error: "Invalid question for this exam." },
         { status: 400 },
       );
     }
-    let answeredRows: { question_id: number | string }[] = [];
-    try {
-      answeredRows = await query<{ question_id: number | string }[]>(
-        `SELECT question_id FROM exam_attempt_answers WHERE exam_id = ? AND student_uid = ?`,
-        [id, user.uid],
-      );
-    } catch {
-      answeredRows = [];
-    }
-    const answeredSet = new Set(answeredRows.map((r) => Number(r.question_id)));
-    if (!answeredSet.has(body.questionId)) {
-      const answeredCount = answeredRows.length;
-      if (idx > answeredCount + 1) {
-        return NextResponse.json(
-          { error: "Questions must be answered in sequence." },
-          { status: 400 },
-        );
-      }
-      if (idx < answeredCount) {
-        return NextResponse.json(
-          { error: "Questions must be answered in sequence." },
-          { status: 400 },
-        );
-      }
-    }
   } catch {
-    // On DB errors for the verification queries, fall through to saveExamAnswer
-    // so the request is not blocked by a transient verification failure.
+    // On transient DB errors fall through — saveExamAnswer remains authoritative.
   }
 
   const result = await saveExamAnswer(

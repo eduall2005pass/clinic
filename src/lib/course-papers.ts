@@ -1,4 +1,4 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, query, ensureColumn } from "@/lib/mysql";
 
 // ── Papers (১ম / ২য় পত্র) & Materials — Admin-managed content ────────────
 // Papers sit between a subject and its chapters (course_chapters.paper_id).
@@ -62,9 +62,7 @@ async function ensurePaperTables(): Promise<void> {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   );
   try {
-    await exec(
-      `ALTER TABLE course_chapters ADD COLUMN IF NOT EXISTS paper_id VARCHAR(64) NULL AFTER subject_id`,
-    );
+    await ensureColumn("course_chapters", "paper_id", "VARCHAR(64) NULL AFTER subject_id");
   } catch {
     // Column may already exist.
   }

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { fetchExamPageById } from "@/lib/public-exams-server";
 import ExamRulesGate from "@/components/ExamRulesGate";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type RulesPageProps = {
   params: Promise<{ id: string }>;

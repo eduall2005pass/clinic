@@ -1,4 +1,4 @@
-import { query } from "@/lib/mysql";
+import { query, ensureColumn } from "@/lib/mysql";
 import { saveFile, removeFile } from "@/lib/storage";
 
 export const MENTOR_PHOTO_DIR = "mentor-photos";
@@ -123,25 +123,17 @@ async function ensureMentorsTable(): Promise<void> {
     );
     // Older tables may pre-date the extended profile columns.
     try {
-      await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS photo_url VARCHAR(1024) NULL");
-      await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS photo_storage_path VARCHAR(1024) NULL");
-      await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS bio TEXT NULL");
-    await query(
-      "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS qualification VARCHAR(255) NULL",
-    );
-    await query(
-      "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_founder TINYINT(1) NOT NULL DEFAULT 0",
-    );
-    await query(
-      "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_co_founder TINYINT(1) NOT NULL DEFAULT 0",
-    );
-    await query(
-      "ALTER TABLE mentors ADD COLUMN IF NOT EXISTS is_developer TINYINT(1) NOT NULL DEFAULT 0",
-    );
-      await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_facebook VARCHAR(1024) NULL");
-      await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_instagram VARCHAR(1024) NULL");
-      await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_linkedin VARCHAR(1024) NULL");
-      await query("ALTER TABLE mentors ADD COLUMN IF NOT EXISTS social_youtube VARCHAR(1024) NULL");
+      await ensureColumn("mentors", "photo_url", "VARCHAR(1024) NULL");
+      await ensureColumn("mentors", "photo_storage_path", "VARCHAR(1024) NULL");
+      await ensureColumn("mentors", "bio", "TEXT NULL");
+    await ensureColumn("mentors", "qualification", "VARCHAR(255) NULL");
+    await ensureColumn("mentors", "is_founder", "TINYINT(1) NOT NULL DEFAULT 0");
+    await ensureColumn("mentors", "is_co_founder", "TINYINT(1) NOT NULL DEFAULT 0");
+    await ensureColumn("mentors", "is_developer", "TINYINT(1) NOT NULL DEFAULT 0");
+      await ensureColumn("mentors", "social_facebook", "VARCHAR(1024) NULL");
+      await ensureColumn("mentors", "social_instagram", "VARCHAR(1024) NULL");
+      await ensureColumn("mentors", "social_linkedin", "VARCHAR(1024) NULL");
+      await ensureColumn("mentors", "social_youtube", "VARCHAR(1024) NULL");
     } catch {
       // Best effort — columns may already exist.
     }

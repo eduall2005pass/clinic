@@ -1,6 +1,7 @@
 import { exec, query } from "@/lib/mysql";
 import { saveFile, removeFile, isLocalUpload } from "@/lib/storage";
 
+let courseCategoriesReady = false;
 export const COURSE_CATEGORIES_STORAGE_DIR = "course-categories";
 
 export type CourseCategory = {
@@ -80,7 +81,7 @@ export const MAX_CATEGORY_IMAGE_SIZE = 5 * 1024 * 1024;
 let schemaEnsured = false;
 
 export async function ensureSchema(): Promise<void> {
-  if (schemaEnsured) return;
+  if (courseCategoriesReady || schemaEnsured) return;
   await exec(
     `CREATE TABLE IF NOT EXISTS course_categories (
       id VARCHAR(191) NOT NULL PRIMARY KEY,
@@ -95,8 +96,9 @@ export async function ensureSchema(): Promise<void> {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uq_course_categories_slug (slug)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
-  );
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+   );
+  courseCategoriesReady = true;
   schemaEnsured = true;
 }
 

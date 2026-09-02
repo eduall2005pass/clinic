@@ -145,11 +145,11 @@ export function buildDefaultExamRules(examId: string): ExamRule[] {
     },
     {
       title: "Answer Selection Rules",
-      text: "Select ONE option per question. An answer is locked immediately after selection — you cannot change or clear it, and you cannot go back to a previous question.",
+      text: "Select ONE option per question. An answer is locked immediately after selection — you cannot change or clear it. You may answer questions in any order and return to skipped ones before submitting.",
     },
     {
       title: "Submission Rules",
-      text: "Click Submit Exam when you finish (or reach the last question). Your result is calculated and shown instantly after submission.",
+      text: "Answer all questions on this single scrollable paper, then click Submit Exam. Your result is calculated and shown instantly after submission.",
     },
     {
       title: "Auto-Submit Rules",

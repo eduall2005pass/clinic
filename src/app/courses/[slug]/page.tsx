@@ -14,7 +14,8 @@ import { getCourseKind } from "@/lib/enrollments";
 import CourseEnrollFlow from "@/components/auth/CourseEnrollFlow";
 import CourseRoutineViewer from "@/components/CourseRoutineViewer";
 
-export const dynamic = "force-dynamic";
+// Cached at the edge; admin changes appear within 60s.
+export const revalidate = 300;
 
 type CourseDetailsParams = { params: Promise<{ slug: string }> };
 

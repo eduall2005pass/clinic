@@ -1,52 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MediSpark (bloodarenabd.tech)
 
-## Firestore rules
+HSC academic & medical admission preparation platform.
+Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS.
 
-Publish `firestore.rules` (and `storage.rules`) to your Firebase project. They
-enforce enrollment security:
+## Architecture
 
-- Students can only create/manage their own enrollment (`enrollments/{uid}_{courseId}`).
-- Free courses can only be created as `active`; paid courses only as `pending` —
-  a paid enrollment can never be created or flipped to `active` by a student.
-- `courses/{courseId}` is a read-only registry. Its `kind` must match the
-  canonical catalog (`src/lib/courses.ts`); missing or mismatched entries are
-  rejected. The app self-registers canonical course documents on first
-  enrollment. If a course is added/removed, update `canonicalKind` in
-  `firestore.rules` accordingly.
-- Classes, materials, exams, and Q&A reads require an ACTIVE (and for Q&A, PAID)
-  enrollment for that specific course.
+| Layer | Service |
+|---|---|
+| Web app | Vercel — project `medisparkbd` (auto-deploys on push to `main`) |
+| Database | Azure Database for MySQL Flexible Server (`eduall2005pass.mysql.database.azure.com:3306`, TLS enforced) |
+| Media files | `medispark` VM (`medispark.duckdns.org`) — nginx serves `/var/www/medispark-uploads/`, upload service on `127.0.0.1:4021` |
+| Auth | Firebase (Google sign-in, project `medisparkgo`) |
 
-## Getting Started
+- All application data lives in **Azure MySQL**. No Firestore/Supabase/local-disk storage.
+- Uploaded media (logo, banners, course images, profile pictures, audio) live on the
+  VM disk; only their URL is stored in MySQL. Legacy `/api/files/<id>` route still
+  serves a few old rows from the `uploads` table.
+- Admin authorization = row in the `admins` table. Matching is by Firebase UID **or**
+  verified email (see `src/lib/admin.ts`) so access survives Firebase project changes.
 
-First, run the development server:
+## Repository / deploy flow
+
+- This repo (`eduall2005pass/medisparkbd`) is the **verify track** — every push to
+  `main` auto-deploys to Vercel and runs against Azure MySQL + medispark.duckdns.org.
+- Collaborators work on `eduall2005pass/clinic` (legacy track, still on the old VM's
+  MariaDB). Before starting work, pull their changes:
+
+  ```bash
+  git pull clinic main
+  ```
+
+- Code must stay compatible with BOTH databases (see SSL logic in `src/lib/mysql.ts`).
+- **Never force-push.** If a push is rejected: `git pull --rebase` first, then push again.
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env   # fill in credentials (never commit .env)
+pnpm dev               # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Useful commands:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx tsc --noEmit   # typecheck (rm -rf .next first if stale errors appear)
+pnpm build         # production build
+vercel --prod      # manual production deploy (usually not needed)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment variables
 
-## Learn More
+Set locally in `.env`, in production via Vercel project settings:
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Purpose |
+|---|---|
+| `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_DATABASE` / `MYSQL_USER` / `MYSQL_PASSWORD` | Azure MySQL connection |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` … | Firebase web config (project `medisparkgo`) |
+| `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | Firebase Admin (token verification) |
+| `MEDIA_UPLOAD_TOKEN` | Shared secret between app and the VM upload service |
+| `MEDIA_FILES_BASE_URL` / `MEDIA_UPLOAD_URL` / `MEDIA_DELETE_URL` | Media endpoints (`https://medispark.duckdns.org/…`) |
+| `NEXT_PUBLIC_FIREBASE_VAPID_KEY` | Web push notifications |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Secrets live outside the repo (local `.env` / Vercel dashboard). **Never commit them.**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Database schema
 
-## Deploy on Vercel
+Schema and migrations live in `src/sql/*.sql`. After changing the schema:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Add/update a migration file in `src/sql/`
+2. Apply it:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   mysql -h eduall2005pass.mysql.database.azure.com -P 3306 \
+     -u <admin> -p bloodare_medispark < src/sql/<file>.sql
+   ```
+
+Note: the Azure server has GIPK (generated invisible primary keys) enabled —
+tables without an explicit PK get a hidden `my_row_id`. Real keys are added as
+`uq_<table>_pk` UNIQUE indexes; follow that pattern for new tables.
+
+## Key source paths
+
+- `src/lib/mysql.ts` — DB pool + query helpers (TLS-aware)
+- `src/lib/storage.ts` — media save/delete (forwards bytes to the VM service)
+- `src/lib/admin.ts` — admin auth gate (`requireAdmin`, `requirePermission`)
+- `server/medifiles-server.mjs` + `deploy/*` — VM-side file service & nginx config
