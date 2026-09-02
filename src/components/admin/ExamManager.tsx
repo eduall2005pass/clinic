@@ -76,7 +76,35 @@ const EMPTY = {
   status: "draft" as "draft" | "published" | "closed",
   scheduledAt: "",
   endsAt: "",
+  ruleTemplate: "academic" as string,
+  questionCount: "30",
+  marksPerQuestion: "1",
 };
+
+function generateExamId(title?: string): string {
+  const base =
+    title
+      ?.toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 20) || "exam";
+  const rand = Math.random().toString(36).slice(2, 6);
+  const ts = Date.now().toString(36).slice(-4);
+  return `${base}-${ts}${rand}`.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 64);
+}
+
+function detectTemplateForCategory(cat: FixedCategory | null | undefined): string {
+  if (!cat) return "academic";
+  const token = `${cat.name}`.toLowerCase();
+  if (/medical/.test(token)) return "medical";
+  if (/varsity|universit/.test(token)) return "university";
+  if (/ssc|hsc|academic/.test(token)) return "academic";
+  const label = examCategoryLabel(cat).toLowerCase();
+  if (/medical/.test(label)) return "medical";
+  if (/university|varsity/.test(label)) return "university";
+  return "academic";
+}
 
 type CourseOption = { slug: string; name: string };
 type ChapterOption = { id: string; name: string };
@@ -195,7 +223,12 @@ export default function ExamManager({
   }
 
   function startCreate() {
-    setForm(EMPTY);
+    if (fixedCategory) {
+      const tpl = detectTemplateForCategory(fixedCategory);
+      setForm({ ...EMPTY, id: generateExamId(), ruleTemplate: tpl, questionCount: "30", marksPerQuestion: "1" });
+    } else {
+      setForm(EMPTY);
+    }
     setCourseIds([]);
     setFormCategoryId("");
     setEditingId(null);
@@ -205,6 +238,11 @@ export default function ExamManager({
   }
 
   function startEdit(exam: Exam) {
+    const tpl =
+      (exam as unknown as { ruleTemplate?: string | null }).ruleTemplate ??
+      detectTemplateForCategory(fixedCategory ?? null);
+    const qc = (exam as unknown as { questionCount?: number }).questionCount ?? exam.questionCount ?? 30;
+    const mpq = (exam as unknown as { marksPerQuestion?: number | null }).marksPerQuestion ?? 1;
     setForm({
       id: exam.id,
       title: exam.title,
@@ -224,6 +262,9 @@ export default function ExamManager({
       status: exam.status,
       scheduledAt: exam.scheduledAt ? exam.scheduledAt.slice(0, 16) : "",
       endsAt: exam.endsAt ? exam.endsAt.slice(0, 16) : "",
+      ruleTemplate: tpl || "academic",
+      questionCount: String(qc || 30),
+      marksPerQuestion: String(mpq ?? 1),
     });
     setCourseIds(exam.courseIds ?? []);
     setFormCategoryId(exam.categoryId ?? "");
@@ -234,8 +275,14 @@ export default function ExamManager({
   }
 
   async function save() {
-    if (form.kind === "enrolled" && courseIds.length === 0) {
+    // Public Exam Control has its own validation — skip enrolled kind check when fixedCategory.
+    if (!fixedCategory && form.kind === "enrolled" && courseIds.length === 0) {
       setNotice({ kind: "error", text: "Assign at least one course to an enrolled exam." });
+      return;
+    }
+    // Title required in all modes.
+    if (!form.title.trim()) {
+      setNotice({ kind: "error", text: "Exam Title is required." });
       return;
     }
     // Keep the exam's category stable: fixed inside a category page.
@@ -247,19 +294,74 @@ export default function ExamManager({
       : form.kind === "public"
         ? formCategoryId || existing?.categoryId || ""
         : existing?.categoryId ?? "";
-    if (form.kind === "public" && !fixedCategory && !categoryId) {
+    if (!fixedCategory && form.kind === "public" && !categoryId) {
       setNotice({ kind: "error", text: "Select a category for this public exam." });
       return;
     }
+    // Public Exam Control validation for the new form fields.
+    if (fixedCategory) {
+      if (!form.subject.trim()) {
+        setNotice({ kind: "error", text: "Subject is required." });
+        return;
+      }
+      const qc = Number((form as unknown as Record<string, unknown>).questionCount);
+      if (!Number.isFinite(qc) || qc <= 0 || qc > 500) {
+        setNotice({ kind: "error", text: "Total Questions must be between 1 and 500." });
+        return;
+      }
+      const mpq = Number((form as unknown as Record<string, unknown>).marksPerQuestion);
+      if (!Number.isFinite(mpq) || mpq <= 0) {
+        setNotice({ kind: "error", text: "Marks Per Question must be a positive number." });
+        return;
+      }
+    }
     const chapterId = fixedChapter ? fixedChapter.id : form.chapterId;
+    // Auto-generate ID for Public Exam Control when missing.
+    let examId = form.id.trim().toLowerCase();
+    if (fixedCategory && !examId) {
+      examId = generateExamId(form.title);
+    }
+    if (!examId) {
+      setNotice({ kind: "error", text: "Exam ID is required." });
+      return;
+    }
     setBusy(true);
     setNotice(null);
     try {
-      const response = await fetch("/api/admin/exams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...gate.headers },
-        body: JSON.stringify({
+      // For Public Exam Control, derive marks from template + auto totals.
+      let payload: Record<string, unknown>;
+      if (fixedCategory) {
+        const qc = Math.floor(Number((form as unknown as Record<string, unknown>).questionCount) || 0);
+        const mpqNum = Number((form as unknown as Record<string, unknown>).marksPerQuestion) || 1;
+        const total = qc * mpqNum;
+        const tpl = (form as unknown as Record<string, unknown>).ruleTemplate as string;
+        payload = {
+          id: examId,
+          title: form.title.trim(),
+          kind: "public",
+          batchId: form.batchId,
+          subject: form.subject.trim(),
+          courseType: form.courseType,
+          durationMinutes: Number(form.durationMinutes) || 30,
+          status: form.status,
+          scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
+          endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+          bannerUrl: form.bannerUrl || null,
+          chapterId,
+          categoryId,
+          courseIds: [],
+          ruleTemplate: tpl || detectTemplateForCategory(fixedCategory),
+          questionCount: qc,
+          marksPerQuestion: mpqNum,
+          totalMarks: total,
+          // template controls these — still send for legacy columns but server will override via ruleTemplateDefaults
+          negativeMarks: 0,
+          ...(editingSortOrder !== null ? { sortOrder: editingSortOrder } : {}),
+        };
+      } else {
+        payload = {
           ...form,
+          id: examId,
           ...(editingSortOrder !== null ? { sortOrder: editingSortOrder } : {}),
           chapterId,
           courseIds: form.kind === "enrolled" ? courseIds : [],
@@ -269,13 +371,17 @@ export default function ExamManager({
           negativePerWrong: Number(form.negativePerWrong) || 0.25,
           secondTimerEnabled: form.secondTimerEnabled,
           secondTimerDeduction: Number(form.secondTimerDeduction) || 5,
-          // Legacy column mirrors the per-exam toggle for older views.
           negativeMarks: form.negativeEnabled ? Number(form.negativePerWrong) || 0.25 : 0,
           durationMinutes: Number(form.durationMinutes) || 30,
           totalMarks: form.totalMarks ? Number(form.totalMarks) : undefined,
           scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
           endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
-        }),
+        };
+      }
+      const response = await fetch("/api/admin/exams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...gate.headers },
+        body: JSON.stringify(payload),
       });
       const data = (await response.json().catch(() => null)) as { error?: string; exam?: Exam } | null;
       if (!response.ok) {
@@ -286,9 +392,10 @@ export default function ExamManager({
       setShowForm(false);
       await load();
       setNotice({ kind: "success", text: `Exam “${data?.exam?.title ?? form.title}” saved.` });
-      // After creating an exam, open the single Exam Management page (spec sections 19/20).
+      // After creating an exam, auto-create Q01..QNN slots already handled server-side via ensureQuestionSlots.
+      // Open the Questions tab directly so admin sees all generated slots without clicking Add 30 times.
       if (wasNew && data?.exam?.id) {
-        router.push(`/admin/exams/${encodeURIComponent(data.exam.id)}/manage`);
+        router.push(`/admin/exams/${encodeURIComponent(data.exam.id)}/manage?tab=questions`);
       }
     } finally {
       setBusy(false);
@@ -618,217 +725,338 @@ export default function ExamManager({
                 void save();
               }}
             >
-              <div>
-                <label className={labelClass} htmlFor="ex-id">ID (lowercase-dash)</label>
-                <input id="ex-id" className={inputClass} value={form.id} disabled={Boolean(editingId)}
-                  onChange={(event) => setForm({ ...form, id: event.target.value.toLowerCase() })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-title">Title</label>
-                <input id="ex-title" className={inputClass} value={form.title}
-                  onChange={(event) => setForm({ ...form, title: event.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-kind">Kind</label>
-                {fixedCategory ? (
-                  <>
-                    <input id="ex-kind" className={inputClass} value="Public" disabled />
+              {fixedCategory ? (
+                <>
+                  {/* Public Exam Control — 15-field form exactly as spec */}
+                  <div className="sm:col-span-2">
+                    <label className={labelClass} htmlFor="ex-title">Exam Title</label>
+                    <input id="ex-title" className={inputClass} value={form.title} placeholder="e.g. Medical Admission Model Test 01"
+                      onChange={(event) => setForm({ ...form, title: event.target.value })} />
+                    <p className="mt-1 text-[11px] text-slate-500">Category: <span className="font-bold">{examCategoryLabel(fixedCategory)}</span> (fixed — auto-assigned)</p>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-id">Exam ID — auto-generated</label>
+                    <input id="ex-id" className={`${inputClass} bg-slate-50`} value={form.id} disabled placeholder="auto-generated" />
+                    <p className="mt-1 text-[11px] text-slate-500">{editingId ? "Existing ID (not editable)." : "Auto-generated ID will be used to create question slots Q01..QNN."}</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <MediaUploadField
+                      id="ex-banner"
+                      label="Exam Banner — upload"
+                      directory="exams"
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                      preview
+                      value={form.bannerUrl}
+                      onChange={(url) => setForm({ ...form, bannerUrl: url })}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-status">Status</label>
+                    <select id="ex-status" className={inputClass} value={form.status}
+                      onChange={(event) => setForm({ ...form, status: event.target.value as "draft" | "published" | "closed" })}>
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-batch">Batch</label>
+                    <select id="ex-batch" className={inputClass} value={form.batchId}
+                      onChange={(event) => setForm({ ...form, batchId: event.target.value })}>
+                      <option value="">Any</option>
+                      <option value="hsc-28">HSC 28</option>
+                      <option value="hsc-27">HSC 27</option>
+                      <option value="hsc-26">HSC 26</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-subject">Subject</label>
+                    <input id="ex-subject" className={inputClass} value={form.subject} placeholder="e.g. Biology"
+                      onChange={(event) => setForm({ ...form, subject: event.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-course-type">Course Type</label>
+                    <select id="ex-course-type" className={inputClass} value={form.courseType}
+                      onChange={(event) => setForm({ ...form, courseType: event.target.value as "Academic" | "Admission" })}>
+                      <option value="Academic">Academic</option>
+                      <option value="Admission">Admission</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-chapter">Chapter</label>
+                    {fixedChapter ? (
+                      <>
+                        <input id="ex-chapter" className={inputClass} value={fixedChapter.name} disabled />
+                        <p className="mt-1 text-[11px] text-slate-500">Fixed to this chapter — auto-assigned.</p>
+                      </>
+                    ) : (
+                      <select id="ex-chapter" className={inputClass} value={form.chapterId}
+                        onChange={(event) => setForm({ ...form, chapterId: event.target.value })}>
+                        <option value="">None</option>
+                        {chapterOptions.map((chapter) => (
+                          <option key={chapter.id} value={chapter.id}>{chapter.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-duration">Duration (minutes)</label>
+                    <input id="ex-duration" type="number" min="1" className={inputClass} value={form.durationMinutes}
+                      onChange={(event) => setForm({ ...form, durationMinutes: event.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-rules">Rules</label>
+                    <select id="ex-rules" className={inputClass} value={(form as unknown as { ruleTemplate: string }).ruleTemplate}
+                      onChange={(event) => setForm({ ...form, ruleTemplate: event.target.value } as unknown as typeof form)}>
+                      <option value="academic">Academic Rules</option>
+                      <option value="medical">Medical Rules</option>
+                      <option value="university">University Rules</option>
+                    </select>
                     <p className="mt-1 text-[11px] text-slate-500">
-                      Category: <span className="font-bold">{examCategoryLabel(fixedCategory)}</span> (fixed — auto-assigned)
+                      {(form as unknown as { ruleTemplate: string }).ruleTemplate === "medical" && "Medical: negative marking + second-timer penalty."}
+                      {(form as unknown as { ruleTemplate: string }).ruleTemplate === "university" && "University: negative marking, no second-timer."}
+                      {(form as unknown as { ruleTemplate: string }).ruleTemplate === "academic" && "Academic: no negative marking, no second-timer."}
                     </p>
-                  </>
-                ) : (
-                  <select id="ex-kind" className={inputClass} value={form.kind}
-                    onChange={(event) => setForm({ ...form, kind: event.target.value as Exam["kind"] })}>
-                    <option value="public">Public</option>
-                    <option value="practice">Practice</option>
-                    {allowEnrolled && <option value="enrolled">Enrolled (course students)</option>}
-                  </select>
-                )}
-              </div>
-              {!fixedCategory && form.kind === "public" && (
-                <div>
-                  <label className={labelClass} htmlFor="ex-category">Category (Course Control)</label>
-                  <select
-                    id="ex-category"
-                    className={inputClass}
-                    value={formCategoryId}
-                    onChange={(event) => setFormCategoryId(event.target.value)}
-                  >
-                    <option value="">Select a category…</option>
-                    {categoryOptions.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {examCategoryLabel(category)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {allowEnrolled && form.kind === "enrolled" && (
-                <div className="sm:col-span-2">
-                  <span className={labelClass}>Assign courses (students enrolled in any of these)</span>
-                  {courseOptions.length === 0 ? (
-                    <p className="mt-1 text-xs text-slate-500">Loading courses…</p>
-                  ) : (
-                    <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
-                      {courseOptions.map((course) => (
-                        <label key={course.slug} className="flex items-center gap-2 text-sm text-slate-700 admin-dark:text-zinc-200">
-                          <input
-                            type="checkbox"
-                            checked={courseIds.includes(course.slug)}
-                            onChange={(event) =>
-                              setCourseIds(
-                                event.target.checked
-                                  ? [...courseIds, course.slug]
-                                  : courseIds.filter((id) => id !== course.slug),
-                              )
-                            }
-                          />
-                          <span className="truncate">{course.name}</span>
-                          <span className="ml-auto shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400">{course.slug}</span>
-                        </label>
-                      ))}
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-qcount">Total Questions</label>
+                    <input id="ex-qcount" type="number" min="1" max="500" className={inputClass} value={(form as unknown as { questionCount: string }).questionCount}
+                      onChange={(event) => setForm({ ...form, questionCount: event.target.value } as unknown as typeof form)} />
+                    <p className="mt-1 text-[11px] text-slate-500">Q01..Q{String((form as unknown as { questionCount: string }).questionCount || "0").padStart(2, "0")} slots will be auto-created.</p>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-mpq">Marks Per Question</label>
+                    <input id="ex-mpq" type="number" min="0.5" step="0.5" className={inputClass} value={(form as unknown as { marksPerQuestion: string }).marksPerQuestion}
+                      onChange={(event) => setForm({ ...form, marksPerQuestion: event.target.value } as unknown as typeof form)} />
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-total">Total Marks — auto calculated</label>
+                    <input id="ex-total" className={`${inputClass} bg-slate-50`} value={String((Number((form as unknown as { questionCount: string }).questionCount) || 0) * (Number((form as unknown as { marksPerQuestion: string }).marksPerQuestion) || 0))} disabled />
+                    <p className="mt-1 text-[11px] text-slate-500">{(form as unknown as { questionCount: string }).questionCount || 0} × {(form as unknown as { marksPerQuestion: string }).marksPerQuestion || 0} = {String((Number((form as unknown as { questionCount: string }).questionCount) || 0) * (Number((form as unknown as { marksPerQuestion: string }).marksPerQuestion) || 0))} marks</p>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-schedule">Start Time</label>
+                    <input id="ex-schedule" type="datetime-local" className={inputClass} value={form.scheduledAt}
+                      onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-ends">End Time</label>
+                    <input id="ex-ends" type="datetime-local" className={inputClass} value={form.endsAt}
+                      onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
+                  </div>
+                  {/* Rules auto-drive marking — no manual toggles. EditingId still shows ExamRulesEditor for rule text. */}
+                  {editingId && (
+                    <div className="sm:col-span-2">
+                      <ExamRulesEditor examId={editingId} authHeaders={gate.headers} />
                     </div>
                   )}
-                </div>
-              )}
-              <div className="sm:col-span-2">
-                <MediaUploadField
-                  id="ex-banner"
-                  label="Exam Banner (shown on the student exam card & rules page)"
-                  directory="exams"
-                  accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
-                  preview
-                  value={form.bannerUrl}
-                  onChange={(url) => setForm({ ...form, bannerUrl: url })}
-                />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-status">Status</label>
-                <select id="ex-status" className={inputClass} value={form.status}
-                  onChange={(event) =>
-                    setForm({ ...form, status: event.target.value as "draft" | "published" | "closed" })
-                  }>
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                  <option value="closed">Closed</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-batch">Batch</label>
-                <select id="ex-batch" className={inputClass} value={form.batchId}
-                  onChange={(event) => setForm({ ...form, batchId: event.target.value })}>
-                  <option value="">Any</option>
-                  <option value="hsc-28">HSC 28</option>
-                  <option value="hsc-27">HSC 27</option>
-                  <option value="hsc-26">HSC 26</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-subject">Subject</label>
-                <input id="ex-subject" className={inputClass} value={form.subject}
-                  onChange={(event) => setForm({ ...form, subject: event.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-course-type">Course type</label>
-                <select id="ex-course-type" className={inputClass} value={form.courseType}
-                  onChange={(event) =>
-                    setForm({ ...form, courseType: event.target.value as "Academic" | "Admission" })
-                  }>
-                  <option value="Academic">Academic</option>
-                  <option value="Admission">Admission</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-chapter">Chapter (course content)</label>
-                {fixedChapter ? (
-                  <>
-                    <input id="ex-chapter" className={inputClass} value={fixedChapter.name} disabled />
-                    <p className="mt-1 text-[11px] text-slate-500">Fixed to this chapter — auto-assigned.</p>
-                  </>
-                ) : (
-                  <select id="ex-chapter" className={inputClass} value={form.chapterId}
-                    onChange={(event) => setForm({ ...form, chapterId: event.target.value })}>
-                    <option value="">None</option>
-                    {chapterOptions.map((chapter) => (
-                      <option key={chapter.id} value={chapter.id}>{chapter.name}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-duration">Duration (minutes)</label>
-                <input id="ex-duration" type="number" min="1" className={inputClass} value={form.durationMinutes}
-                  onChange={(event) => setForm({ ...form, durationMinutes: event.target.value })} />
-              </div>
-              <div className="sm:col-span-2 rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700 admin-dark:text-zinc-200">
-                    Negative Marking
-                  </span>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600 admin-dark:text-zinc-300">
-                    <input
-                      type="checkbox"
-                      checked={form.negativeEnabled}
-                      onChange={(event) => setForm({ ...form, negativeEnabled: event.target.checked })}
+                </>
+              ) : (
+                <>
+                  {/* Non-Public-Exam form — keep original fields for Course Content Control */}
+                  <div>
+                    <label className={labelClass} htmlFor="ex-id">ID (lowercase-dash)</label>
+                    <input id="ex-id" className={inputClass} value={form.id} disabled={Boolean(editingId)}
+                      onChange={(event) => setForm({ ...form, id: event.target.value.toLowerCase() })} />
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-title">Title</label>
+                    <input id="ex-title" className={inputClass} value={form.title}
+                      onChange={(event) => setForm({ ...form, title: event.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-kind">Kind</label>
+                    <select id="ex-kind" className={inputClass} value={form.kind}
+                      onChange={(event) => setForm({ ...form, kind: event.target.value as Exam["kind"] })}>
+                      <option value="public">Public</option>
+                      <option value="practice">Practice</option>
+                      {allowEnrolled && <option value="enrolled">Enrolled (course students)</option>}
+                    </select>
+                  </div>
+                  {form.kind === "public" && (
+                    <div>
+                      <label className={labelClass} htmlFor="ex-category">Category (Course Control)</label>
+                      <select
+                        id="ex-category"
+                        className={inputClass}
+                        value={formCategoryId}
+                        onChange={(event) => setFormCategoryId(event.target.value)}
+                      >
+                        <option value="">Select a category…</option>
+                        {categoryOptions.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {examCategoryLabel(category)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {allowEnrolled && form.kind === "enrolled" && (
+                    <div className="sm:col-span-2">
+                      <span className={labelClass}>Assign courses (students enrolled in any of these)</span>
+                      {courseOptions.length === 0 ? (
+                        <p className="mt-1 text-xs text-slate-500">Loading courses…</p>
+                      ) : (
+                        <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
+                          {courseOptions.map((course) => (
+                            <label key={course.slug} className="flex items-center gap-2 text-sm text-slate-700 admin-dark:text-zinc-200">
+                              <input
+                                type="checkbox"
+                                checked={courseIds.includes(course.slug)}
+                                onChange={(event) =>
+                                  setCourseIds(
+                                    event.target.checked
+                                      ? [...courseIds, course.slug]
+                                      : courseIds.filter((id) => id !== course.slug),
+                                  )
+                                }
+                              />
+                              <span className="truncate">{course.name}</span>
+                              <span className="ml-auto shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400">{course.slug}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="sm:col-span-2">
+                    <MediaUploadField
+                      id="ex-banner"
+                      label="Exam Banner (shown on the student exam card & rules page)"
+                      directory="exams"
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                      preview
+                      value={form.bannerUrl}
+                      onChange={(url) => setForm({ ...form, bannerUrl: url })}
                     />
-                    {form.negativeEnabled ? "ON" : "OFF"}
-                  </label>
-                </div>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Wrong Answer Penalty: <span className="font-bold">0.25</span> per wrong answer
-                  {form.negativeEnabled ? "" : " (no deduction while OFF)"}.
-                </p>
-              </div>
-              <div className="sm:col-span-2 rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700 admin-dark:text-zinc-200">
-                    Second Timer Penalty
-                  </span>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600 admin-dark:text-zinc-300">
-                    <input
-                      type="checkbox"
-                      checked={form.secondTimerEnabled}
-                      onChange={(event) => setForm({ ...form, secondTimerEnabled: event.target.checked })}
-                    />
-                    {form.secondTimerEnabled ? "ON" : "OFF"}
-                  </label>
-                </div>
-                <div className="mt-2 flex items-center gap-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                    Second Timer Deduction
-                  </span>
-                  <input
-                    aria-label="Second timer deduction (marks)"
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    disabled={!form.secondTimerEnabled}
-                    className={`${inputClass} w-28 disabled:opacity-50`}
-                    value={form.secondTimerDeduction}
-                    onChange={(event) => setForm({ ...form, secondTimerDeduction: event.target.value })}
-                  />
-                  <span className="text-[11px] text-slate-500">marks (repeat attempt of THIS exam only)</span>
-                </div>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="ex-marks">Total marks (auto from questions)</label>
-                <input id="ex-marks" type="number" min="0" className={inputClass} value={form.totalMarks}
-                  placeholder="Auto" onChange={(event) => setForm({ ...form, totalMarks: event.target.value })} />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="ex-schedule">Start time (optional)</label>
-                <input id="ex-schedule" type="datetime-local" className={inputClass} value={form.scheduledAt}
-                  onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="ex-ends">End time (optional — exam closes after this)</label>
-                <input id="ex-ends" type="datetime-local" className={inputClass} value={form.endsAt}
-                  onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
-              </div>
-              {/* Per-exam rule management (exam_id-scoped, MySQL-backed). */}
-              {editingId && (
-                <ExamRulesEditor examId={editingId} authHeaders={gate.headers} />
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-status">Status</label>
+                    <select id="ex-status" className={inputClass} value={form.status}
+                      onChange={(event) =>
+                        setForm({ ...form, status: event.target.value as "draft" | "published" | "closed" })
+                      }>
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-batch">Batch</label>
+                    <select id="ex-batch" className={inputClass} value={form.batchId}
+                      onChange={(event) => setForm({ ...form, batchId: event.target.value })}>
+                      <option value="">Any</option>
+                      <option value="hsc-28">HSC 28</option>
+                      <option value="hsc-27">HSC 27</option>
+                      <option value="hsc-26">HSC 26</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-subject">Subject</label>
+                    <input id="ex-subject" className={inputClass} value={form.subject}
+                      onChange={(event) => setForm({ ...form, subject: event.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-course-type">Course type</label>
+                    <select id="ex-course-type" className={inputClass} value={form.courseType}
+                      onChange={(event) =>
+                        setForm({ ...form, courseType: event.target.value as "Academic" | "Admission" })
+                      }>
+                      <option value="Academic">Academic</option>
+                      <option value="Admission">Admission</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-chapter">Chapter (course content)</label>
+                    {fixedChapter ? (
+                      <>
+                        <input id="ex-chapter" className={inputClass} value={fixedChapter.name} disabled />
+                        <p className="mt-1 text-[11px] text-slate-500">Fixed to this chapter — auto-assigned.</p>
+                      </>
+                    ) : (
+                      <select id="ex-chapter" className={inputClass} value={form.chapterId}
+                        onChange={(event) => setForm({ ...form, chapterId: event.target.value })}>
+                        <option value="">None</option>
+                        {chapterOptions.map((chapter) => (
+                          <option key={chapter.id} value={chapter.id}>{chapter.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-duration">Duration (minutes)</label>
+                    <input id="ex-duration" type="number" min="1" className={inputClass} value={form.durationMinutes}
+                      onChange={(event) => setForm({ ...form, durationMinutes: event.target.value })} />
+                  </div>
+                  <div className="sm:col-span-2 rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700 admin-dark:text-zinc-200">
+                        Negative Marking
+                      </span>
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600 admin-dark:text-zinc-300">
+                        <input
+                          type="checkbox"
+                          checked={form.negativeEnabled}
+                          onChange={(event) => setForm({ ...form, negativeEnabled: event.target.checked })}
+                        />
+                        {form.negativeEnabled ? "ON" : "OFF"}
+                      </label>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Wrong Answer Penalty: <span className="font-bold">0.25</span> per wrong answer
+                      {form.negativeEnabled ? "" : " (no deduction while OFF)"}.
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2 rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700 admin-dark:text-zinc-200">
+                        Second Timer Penalty
+                      </span>
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600 admin-dark:text-zinc-300">
+                        <input
+                          type="checkbox"
+                          checked={form.secondTimerEnabled}
+                          onChange={(event) => setForm({ ...form, secondTimerEnabled: event.target.checked })}
+                        />
+                        {form.secondTimerEnabled ? "ON" : "OFF"}
+                      </label>
+                    </div>
+                    <div className="mt-2 flex items-center gap-3">
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        Second Timer Deduction
+                      </span>
+                      <input
+                        aria-label="Second timer deduction (marks)"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        disabled={!form.secondTimerEnabled}
+                        className={`${inputClass} w-28 disabled:opacity-50`}
+                        value={form.secondTimerDeduction}
+                        onChange={(event) => setForm({ ...form, secondTimerDeduction: event.target.value })}
+                      />
+                      <span className="text-[11px] text-slate-500">marks (repeat attempt of THIS exam only)</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="ex-marks">Total marks (auto from questions)</label>
+                    <input id="ex-marks" type="number" min="0" className={inputClass} value={form.totalMarks}
+                      placeholder="Auto" onChange={(event) => setForm({ ...form, totalMarks: event.target.value })} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass} htmlFor="ex-schedule">Start time (optional)</label>
+                    <input id="ex-schedule" type="datetime-local" className={inputClass} value={form.scheduledAt}
+                      onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass} htmlFor="ex-ends">End time (optional — exam closes after this)</label>
+                    <input id="ex-ends" type="datetime-local" className={inputClass} value={form.endsAt}
+                      onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
+                  </div>
+                  {editingId && (
+                    <ExamRulesEditor examId={editingId} authHeaders={gate.headers} />
+                  )}
+                </>
               )}
               <div className="sm:col-span-2 flex gap-3">
                 <button type="submit" disabled={busy} className={buttonPrimaryClass}>{busy ? "Saving…" : "Save Exam"}</button>
