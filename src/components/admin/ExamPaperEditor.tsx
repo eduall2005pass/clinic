@@ -94,6 +94,11 @@ export default function ExamPaperEditor({
   const [voiceSlot, setVoiceSlot] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imageUploadingSlot, setImageUploadingSlot] = useState<number | null>(null);
+  const importFileRef = useRef<HTMLInputElement | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importDetected, setImportDetected] = useState<Array<{ question: string; options: string[]; correctIndex: number | null }>| null>(null);
+  const [importMeta, setImportMeta] = useState<{ totalHighlighted: number; imagesProcessed: number } | null>(null);
 
   // Keep bearer token for upload
   const bearer = useMemo(() => authHeaders["Authorization"] || authHeaders["authorization"] || "", [authHeaders]);
@@ -408,6 +413,101 @@ export default function ExamPaperEditor({
     }
   }
 
+  // Import from Image — Highlight-based detection
+  async function handleImportImages(files: FileList | File[]) {
+    const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (list.length === 0) {
+      setImportError("Select one or more image files (PNG/JPG/WebP).");
+      return;
+    }
+    setImportBusy(true);
+    setImportError(null);
+    setImportDetected(null);
+    setImportMeta(null);
+    try {
+      const fd = new FormData();
+      list.forEach((f) => fd.append("images", f));
+      const res = await fetch("/api/admin/exams/questions/import", {
+        method: "POST",
+        headers: { Authorization: bearer as string },
+        body: fd,
+      });
+      const data = (await res.json().catch(() => null)) as {
+        detected?: Array<{ question: string; options: string[] }>;
+        meta?: { totalHighlighted: number; imagesProcessed: number };
+        error?: string;
+      } | null;
+      if (!res.ok) {
+        setImportError(data?.error ?? "Failed to detect questions.");
+        return;
+      }
+      const detected = (data?.detected ?? []).map((d) => ({
+        question: d.question,
+        options: d.options.length >= 2 ? [...d.options] : [...d.options, ...Array(2 - d.options.length).fill("")],
+        correctIndex: null as number | null,
+      }));
+      setImportDetected(detected);
+      setImportMeta({ totalHighlighted: data?.meta?.totalHighlighted ?? detected.length, imagesProcessed: data?.meta?.imagesProcessed ?? list.length });
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : "Import failed.");
+    } finally {
+      setImportBusy(false);
+      if (importFileRef.current) importFileRef.current.value = "";
+    }
+  }
+
+  async function saveImportedQuestion(item: { question: string; options: string[]; correctIndex: number | null }, idx: number) {
+    if (!item.question.trim() || item.question.trim().length < 3) {
+      setImportError(`Question ${idx + 1}: text required.`);
+      return;
+    }
+    const nonEmpty = item.options.filter((o) => o.trim().length > 0);
+    if (nonEmpty.length < 2) {
+      setImportError(`Question ${idx + 1}: at least two options required.`);
+      return;
+    }
+    if (item.correctIndex === null || item.correctIndex < 0 || item.correctIndex >= item.options.length || !item.options[item.correctIndex]?.trim()) {
+      setImportError(`Question ${idx + 1}: select the correct answer manually.`);
+      return;
+    }
+    if (totalSlots > 0 && questions && questions.filter(isCompleted).length >= totalSlots) {
+      setImportError(`Cannot add more than fixed ${totalSlots} questions.`);
+      return;
+    }
+    setBusy(true);
+    setImportError(null);
+    try {
+      const res = await fetch("/api/admin/exams/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({
+          examId: exam.id,
+          subject: exam.subject || "",
+          question: item.question.trim(),
+          questionImage: null,
+          options: item.options,
+          correctIndex: item.correctIndex,
+          explanation: null,
+          marks: Number(exam.marksPerQuestion ?? 1) || 1,
+          isActive: true,
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        setImportError(data?.error ?? "Failed to save question.");
+        return;
+      }
+      // Remove from detected list after successful save
+      setImportDetected((prev) => (prev ? prev.filter((_, i) => i !== idx) : null));
+      await load();
+      onChanged?.();
+      setNotice(`Question ${idx + 1} saved.`);
+      setTimeout(() => setNotice(null), 2000);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   // Voice input
   function handleVoice(slotIndex: number, currentText: string, onUpdate: (t: string) => void) {
     const w = window as unknown as Record<string, unknown>;
@@ -633,7 +733,76 @@ export default function ExamPaperEditor({
               <p className="mt-1 text-xs text-slate-500">Set Total Questions on the exam to generate Q01..QNN slots.</p>
             </div>
           ) : (
-            <ol className="space-y-4">
+            <>
+              {/* Import from Image — Highlight-based detection */}
+              <div className={`${cardClass} mb-4 p-4 sm:p-5`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Question Creation Methods</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500 admin-dark:text-slate-400">
+                      <span className="font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Add Manually</span> — use the slot editor below. &nbsp;|&nbsp; <span className="font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Import from Image</span> — upload 1+ images, AI detects only highlighted questions.
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <input ref={importFileRef} type="file" accept="image/png,image/jpeg,image/webp,image/avif" multiple className="hidden" onChange={(e) => { const f = e.target.files; if (f && f.length) void handleImportImages(f); }} />
+                    <button type="button" disabled={importBusy} onClick={() => importFileRef.current?.click()} className={`${buttonSecondaryClass} shrink-0`}>
+                      {importBusy ? "Detecting…" : "Import from Image"}
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-3 rounded-xl border border-dashed border-[#bfdbfe] bg-[#f8fbff] px-3 py-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">How highlight detection works</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600 admin-dark:text-slate-300">
+                    Single image may contain 40–50 questions, but only <span className="rounded bg-yellow-200 px-1 font-extrabold text-yellow-800">highlighted</span> questions are imported. Example: 50 in image, 30 highlighted → <span className="font-bold text-emerald-600">30 Questions Detected</span>, 20 ignored. Highlight is selection marker only — not the correct answer.
+                  </p>
+                  <p className="mt-2 text-[11px] font-semibold text-slate-500">AI extracts only: Question text + Options (A-D). You will select the Correct Answer manually in review.</p>
+                  <p className="mt-1 text-[11px] font-semibold text-amber-600">Do NOT auto-extract: Correct Answer, Explanation, Subject, Marks, Time, Person, Course, Exam Type.</p>
+                </div>
+                {importError && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 admin-dark:border-red-900/30 admin-dark:bg-red-500/10">{importError}</p>}
+                {importMeta && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/20 admin-dark:bg-emerald-500/10">{importMeta.totalHighlighted} Questions Detected — from {importMeta.imagesProcessed} image(s), highlighted only, non-highlighted ignored</p>}
+              </div>
+
+              {/* Review after detection — SAME Question Card UI as manual */}
+              {importDetected && importDetected.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="px-1 text-xs font-extrabold uppercase tracking-widest text-[#1a3a78] admin-dark:text-[#93c5fd]">Review Detected Questions — Same Card UI</h4>
+                  <p className="mt-1 px-1 text-[11px] font-semibold text-slate-500">Detected questions appear exactly like manually created cards. Select the correct answer manually, then Save. Not auto-finalized.</p>
+                  <ol className="mt-3 space-y-3">
+                    {importDetected.map((item, idx) => (
+                      <li key={`import-${idx}`} className={`rounded-2xl border bg-white shadow-sm admin-dark:bg-[#112544] ${item.correctIndex !== null ? "border-[#dbeafe] admin-dark:border-[#1e3a65]" : "border-amber-300 border-dashed bg-amber-50/40 admin-dark:border-amber-500/30 admin-dark:bg-[#1a2a3a]"}`}>
+                        <div className="flex items-start justify-between gap-2 border-b border-[#eef4ff] px-4 py-3 admin-dark:border-[#1e3a65]/60">
+                          <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest">
+                            <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-amber-500 px-2 text-xs text-white">{String(idx + 1).padStart(2, "0")}</span>
+                            <span className="text-amber-700 admin-dark:text-amber-300">Detected — Review & Select Answer</span>
+                          </p>
+                          <button type="button" onClick={() => setImportDetected((prev) => (prev ? prev.filter((_, i) => i !== idx) : null))} className="rounded-lg border border-neutral-200 px-2 py-1 text-xs font-bold text-slate-500 hover:bg-red-50 hover:text-red-600">✕ Remove</button>
+                        </div>
+                        <div className="px-4 py-4 sm:px-5">
+                          <textarea rows={2} className={`${inputClass} font-semibold`} value={item.question} onChange={(e) => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, question: e.target.value } : it) : null)} placeholder="Question text (extracted)" />
+                          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {item.options.map((opt, oi) => (
+                              <div key={oi} className="flex gap-2">
+                                <button type="button" onClick={() => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, correctIndex: oi } : it) : null)} className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border-2 text-xs font-extrabold ${item.correctIndex === oi ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-slate-400"}`} title="Select correct answer manually">○</button>
+                                <input className={inputClass} value={opt} onChange={(e) => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, options: it.options.map((o, j) => j === oi ? e.target.value : o) } : it) : null)} placeholder={`Option ${String.fromCharCode(65 + oi)}`} />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button type="button" disabled={busy || item.correctIndex === null} onClick={() => void saveImportedQuestion(item, idx)} className={buttonPrimaryClass}>Save to Slot</button>
+                            <span className="self-center text-[11px] font-semibold text-slate-500">{item.correctIndex === null ? "Select correct answer before saving" : `Correct: ${String.fromCharCode(65 + (item.correctIndex ?? 0))} — will behave like manual question after save`}</span>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" disabled={importDetected.length === 0} onClick={() => setImportDetected(null)} className={buttonSecondaryClass}>Dismiss Review</button>
+                    <span className="self-center text-xs font-semibold text-slate-500">Auto-detected cards use SAME UI as manual — after Save they appear in the slot list below.</span>
+                  </div>
+                </div>
+              )}
+
+              <ol className="space-y-4">
               {displaySlots.map(({ index, q }) => {
                 const slotNumber = index + 1;
                 const completed = isCompleted(q);
@@ -971,9 +1140,10 @@ export default function ExamPaperEditor({
                 );
               })}
             </ol>
-          )}
+            </>
+           )}
 
-          {/* Bottom publish hint */}
+           {/* Bottom publish hint */}
           {questions && totalSlots > 0 && (
             <div className="mt-6 rounded-2xl border border-[#dbeafe] bg-white p-4 text-center admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
               <p className="text-xs font-bold text-slate-600 admin-dark:text-slate-300">
