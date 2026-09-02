@@ -5,7 +5,7 @@ import type { RowDataPacket } from "mysql2/promise";
 
 // Student-facing exam taking. MediSpark exam rules enforced here:
 //  - answers are stored server-side and locked after the first selection
-//  - forward-only navigation (client-side) with server-side answer storage
+//  - free-scrolling single-page paper (all questions visible, any order)
 //  - negative marking is a per-exam Admin setting (ON → −0.25 per wrong)
 //  - second-timer penalty (per-exam Admin setting): repeating the SAME exam
 //    deducts extra marks AFTER negative marking; first attempts never lose marks
@@ -35,7 +35,20 @@ export function negativePerWrongFor(exam: {
   negativeEnabled?: boolean;
   negativePerWrong?: number;
   courseType: string;
+  ruleTemplate?: string | null;
 }): number {
+  // Rule template is the source of truth when present (Spec §17).
+  if (exam.ruleTemplate) {
+    switch (exam.ruleTemplate) {
+      case "medical":
+      case "university":
+        return 0.25;
+      case "academic":
+        return 0;
+      default:
+        break;
+    }
+  }
   if (exam.negativeEnabled === undefined) {
     // Legacy exams stored before the per-exam toggle keep the old rule.
     return negativeMarksFor(exam.courseType);
@@ -43,11 +56,40 @@ export function negativePerWrongFor(exam: {
   return exam.negativeEnabled ? Math.max(0, exam.negativePerWrong ?? 0.25) : 0;
 }
 
+/** Whether this exam's rule template enables negative marking. */
+export function isNegativeEnabled(exam: {
+  negativeEnabled?: boolean;
+  ruleTemplate?: string | null;
+  courseType: string;
+}): boolean {
+  if (exam.ruleTemplate) return exam.ruleTemplate === "medical" || exam.ruleTemplate === "university";
+  if (exam.negativeEnabled !== undefined) return Boolean(exam.negativeEnabled);
+  return exam.courseType === "Admission";
+}
+
+/** Resolve second-timer config from rule template or stored flags. */
+export function secondTimerConfigFor(exam: {
+  secondTimerEnabled?: boolean;
+  secondTimerDeduction?: number;
+  ruleTemplate?: string | null;
+}): { enabled: boolean; deduction: number } {
+  if (exam.ruleTemplate) {
+    if (exam.ruleTemplate === "medical") return { enabled: true, deduction: 5 };
+    // academic and university both have no second timer per Spec §17
+    return { enabled: false, deduction: 0 };
+  }
+  const enabled = Boolean(exam.secondTimerEnabled);
+  const deduction = enabled && exam.secondTimerDeduction != null && exam.secondTimerDeduction > 0 ? Number(exam.secondTimerDeduction) : 0;
+  return { enabled, deduction: enabled ? deduction || 5 : 0 };
+}
+
 export type TakingQuestion = {
   id: number;
   question: string;
   options: string[];
   marks: number;
+  /** Optional per-question image (question_image column). */
+  questionImage?: string | null;
 };
 
 export type SubmissionOutcome = {
@@ -427,12 +469,8 @@ async function finalizeAttempt(
   } catch {
     // On failure treat as first timer — never penalise without evidence.
   }
-  const secondTimerDeduction =
-    found.secondTimerEnabled && found.secondTimerDeduction > 0
-      ? found.secondTimerDeduction
-      : 0;
-  const timerPenalty =
-    found.secondTimerEnabled && isSecondTimer ? secondTimerDeduction : 0;
+  const { enabled: secondEnabled, deduction: secondDeduction } = secondTimerConfigFor(found);
+  const timerPenalty = secondEnabled && isSecondTimer ? secondDeduction : 0;
 
   // Final marks = raw (post-negative-marking) − second-timer penalty.
   const finalScore = Math.max(
@@ -648,10 +686,17 @@ export async function getExamForTaking(
   }
 
   const optionRows = await query<
-    { id: number; question: string; options: string; marks: string | number }[]
+    {
+      id: number;
+      question: string;
+      options: string;
+      marks: string | number;
+      question_image?: string | null;
+      sort_order?: number | null;
+    }[]
   >(
-    `SELECT id, question, options, marks FROM exam_questions
-     WHERE exam_id = ? AND is_active = 1 ORDER BY id ASC`,
+    `SELECT id, question, options, marks, question_image, sort_order FROM exam_questions
+      WHERE exam_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC`,
     [examId],
   );
 
@@ -664,6 +709,7 @@ export async function getExamForTaking(
         question: row.question,
         options: parsed.map(String),
         marks: Number(row.marks) || 1,
+        questionImage: (row.question_image as string | null) ?? null,
       });
     }
   }

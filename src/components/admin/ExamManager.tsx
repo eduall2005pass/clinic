@@ -13,9 +13,10 @@ import {
   buttonDangerClass,
   type Notice,
 } from "@/components/admin/admin-ui";
-import ExamQuestions from "@/components/admin/ExamQuestions";
+import ExamPaperEditor from "@/components/admin/ExamPaperEditor";
 import ExamRulesEditor from "@/components/admin/ExamRulesEditor";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MediaUploadField } from "@/components/admin/MediaUploadField";
 import { examCategoryLabel } from "@/lib/public-exams";
 
@@ -100,6 +101,7 @@ export default function ExamManager({
   fixedChapter?: FixedChapter;
 }) {
   const gate = useAdminGate();
+  const router = useRouter();
   const [exams, setExams] = useState<Exam[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<FixedCategory[]>([]);
@@ -280,9 +282,14 @@ export default function ExamManager({
         setNotice({ kind: "error", text: data?.error ?? "Failed to save." });
         return;
       }
+      const wasNew = !editingId;
       setShowForm(false);
       await load();
       setNotice({ kind: "success", text: `Exam “${data?.exam?.title ?? form.title}” saved.` });
+      // After creating an exam, open the single Exam Management page (spec sections 19/20).
+      if (wasNew && data?.exam?.id) {
+        router.push(`/admin/exams/${encodeURIComponent(data.exam.id)}/manage`);
+      }
     } finally {
       setBusy(false);
     }
@@ -530,6 +537,9 @@ export default function ExamManager({
                       className="rounded-lg border border-neutral-200 px-2 text-xs text-slate-500 transition hover:border-[#93c5fd] hover:text-[#1a3a78] admin-dark:border-zinc-700 disabled:opacity-30"
                     >↓</button>
                   </span>
+                  <Link href={`/admin/exams/${encodeURIComponent(exam.id)}/manage`} className={buttonPrimaryClass}>
+                    Manage
+                  </Link>
                   <button type="button" onClick={() => setQuestionsExam(exam)} className={buttonSecondaryClass}>
                     Questions ({exam.questionCount})
                   </button>
@@ -830,8 +840,18 @@ export default function ExamManager({
       )}
 
       {questionsExam && (
-        <ExamQuestions
-          exam={{ id: questionsExam.id, title: questionsExam.title, subject: questionsExam.subject }}
+        <ExamPaperEditor
+          exam={{
+            id: questionsExam.id,
+            title: questionsExam.title,
+            subject: questionsExam.subject,
+            totalMarks: questionsExam.totalMarks,
+            durationMinutes: questionsExam.durationMinutes,
+            questionCount: questionsExam.questionCount,
+            status: questionsExam.status,
+            ruleTemplate: (questionsExam as unknown as { ruleTemplate?: string | null }).ruleTemplate ?? null,
+            marksPerQuestion: (questionsExam as unknown as { marksPerQuestion?: number | null }).marksPerQuestion ?? null,
+          }}
           authHeaders={gate.headers}
           onClose={() => setQuestionsExam(null)}
           onChanged={() => void load()}

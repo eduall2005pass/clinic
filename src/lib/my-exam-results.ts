@@ -147,6 +147,9 @@ type DetailRow = {
   exam_id: string;
   title: string;
   course_type: string;
+  rule_template: string | null;
+  negative_enabled: number | boolean | null;
+  negative_per_wrong: string | number | null;
   score: string | number;
   total_marks: string | number;
   merit_position: number | null;
@@ -168,7 +171,8 @@ export async function getStudentExamResultDetail(
   try {
     if (!examId || examId.length > 64) return null;
     const rows = await query<DetailRow[]>(
-      `SELECT r.exam_id, ex.title, ex.course_type, r.score, r.total_marks,
+      `SELECT r.exam_id, ex.title, ex.course_type, ex.rule_template, ex.negative_enabled, ex.negative_per_wrong,
+              r.score, r.total_marks,
               r.merit_position, r.time_taken_seconds, r.details, r.submitted_at,
               cc.name AS course_name
          FROM exam_results r
@@ -234,8 +238,17 @@ export async function getStudentExamResultDetail(
       }
     }
 
-    // Existing MediSpark rule: −0.25 per wrong on Medical Admission only.
-    const negativePerWrong = row.course_type === "Admission" ? 0.25 : 0;
+    // Per-exam rule template controls negative marking (Spec §17).
+    let negativePerWrong = 0;
+    if (row.rule_template) {
+      negativePerWrong = row.rule_template === "medical" || row.rule_template === "university" ? 0.25 : 0;
+    } else if (row.negative_enabled !== null && row.negative_enabled !== undefined) {
+      const enabled = Boolean(row.negative_enabled);
+      const perWrong = Number(row.negative_per_wrong ?? 0.25);
+      negativePerWrong = enabled ? (Number.isFinite(perWrong) && perWrong > 0 ? perWrong : 0.25) : 0;
+    } else {
+      negativePerWrong = row.course_type === "Admission" ? 0.25 : 0;
+    }
 
     return {
       examId: row.exam_id,

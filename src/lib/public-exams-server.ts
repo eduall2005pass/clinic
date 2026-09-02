@@ -49,7 +49,7 @@ function toPublicExam(exam: Exam): PublicExam {
     scheduledAt: scheduledIso,
     endsAt: endsAtIso,
     secondTimerEnabled: exam.secondTimerEnabled ?? false,
-    secondTimerDeduction: exam.secondTimerDeduction ?? 3,
+    secondTimerDeduction: exam.secondTimerDeduction ?? 5,
     examDate: scheduledIso ? scheduledIso.slice(0, 10) : "",
     examTime: scheduledIso ? formatExamTime(scheduledIso) : "",
     status: deriveStatus(exam),

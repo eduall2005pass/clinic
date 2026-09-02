@@ -34,6 +34,11 @@ export async function GET(request: NextRequest) {
     kinds.length > 0
       ? (await fetchExams()).filter((exam) => kinds.includes(exam.kind))
       : await fetchExams();
+  // Single-exam fetch for the management page (?id=<examId>).
+  const idParam = request.nextUrl.searchParams.get("id");
+  if (idParam && idParam.trim()) {
+    exams = exams.filter((exam) => exam.id === idParam.trim());
+  }
   // Backend-enforced category isolation (category_id synced from Course
   // Control categories). Exams without a category never leak into a list.
   const categoryId = request.nextUrl.searchParams.get("categoryId");

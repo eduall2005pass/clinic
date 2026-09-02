@@ -143,7 +143,8 @@ export default function ExamResultClient({
         <ol className="space-y-4">
           {script.questions.map((item, index) => {
             const isCorrect = item.chosenIndex !== null && item.chosenIndex === item.correctIndex;
-            const status = item.chosenIndex === null ? "Unanswered" : isCorrect ? `Correct +${item.obtained}` : `Wrong ${item.obtained}`;
+            // Per Spec §17/18: negative marking is shown only as a total on the Rules page/result summary, not beside each question.
+            const status = item.chosenIndex === null ? "Unanswered" : isCorrect ? "Correct" : "Wrong";
             return (
               <li
                 key={item.questionId}
@@ -202,7 +203,10 @@ export default function ExamResultClient({
                 </div>
                 <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] font-semibold">
                   <span className="text-slate-500">
-                    Marks: <span className={item.obtained > 0 ? "text-emerald-400" : item.obtained < 0 ? "text-red-400" : "text-neutral-400"}>{item.obtained > 0 ? `+${item.obtained}` : `${item.obtained}`}</span>
+                    Marks: <span className="text-heading">{item.marks}</span>
+                    <span className="ml-2 text-neutral-500">
+                      Obtained: <span className={isCorrect ? "text-emerald-400" : "text-neutral-400"}>{isCorrect ? `+${item.marks}` : "0"}</span>
+                    </span>
                   </span>
                   <span className="text-slate-500">
                     Your Answer: <span className="text-heading">{item.chosenIndex == null ? "—" : String.fromCharCode(65 + item.chosenIndex)}</span>

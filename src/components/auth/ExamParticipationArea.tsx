@@ -19,6 +19,7 @@ type TakingQuestion = {
   question: string;
   options: string[];
   marks: number;
+  questionImage?: string | null;
 };
 
 type SubmissionOutcome = {
@@ -73,6 +74,10 @@ function formatDuration(seconds: number): string {
   return `${s}s`;
 }
 
+function padNum(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
 export default function ExamParticipationArea({
   examId,
   autoBegin: propAutoBegin,
@@ -96,7 +101,6 @@ export default function ExamParticipationArea({
   const [exam, setExam] = useState<TakingExam | null>(null);
   const [questions, setQuestions] = useState<TakingQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [current, setCurrent] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<SubmissionOutcome | null>(null);
@@ -113,16 +117,21 @@ export default function ExamParticipationArea({
   /**
    * Activate a freshly created server session — locks in the start time and
    * starts the countdown. Only called after rules are accepted.
+   * Timer is ONE per entire exam; scrolling never affects it.
    */
   const activateSession = useCallback(
-    (sessionToken: string | null, durationMinutes: number) => {
+    (sessionToken: string | null, durationMinutes: number, serverSecondsLeft?: number | null) => {
       tokenRef.current = sessionToken;
       answersRef.current = {};
       setAnswers({});
-      setCurrent(0);
       setBegun(true);
       // Fresh session — clear any leftover answers from a terminated one.
-      setSecondsLeft(Math.max(60, durationMinutes * 60));
+      // Prefer server-computed remaining time when available (authoritative clock).
+      const initial =
+        typeof serverSecondsLeft === "number" && Number.isFinite(serverSecondsLeft)
+          ? Math.max(0, Math.floor(serverSecondsLeft))
+          : Math.max(60, durationMinutes * 60);
+      setSecondsLeft(initial);
     },
     [],
   );
@@ -147,13 +156,14 @@ export default function ExamParticipationArea({
       );
       const data = (await response.json().catch(() => ({}))) as {
         sessionToken?: string | null;
+        secondsLeft?: number | null;
         error?: string;
       };
       if (!response.ok) {
         setLoadError(data.error ?? "Could not start the exam. Please retry.");
         return;
       }
-      activateSession(data.sessionToken ?? null, exam.durationMinutes);
+      activateSession(data.sessionToken ?? null, exam.durationMinutes, data.secondsLeft ?? null);
     } catch {
       setLoadError("Failed to start the exam. Check your connection.");
     } finally {
@@ -200,12 +210,13 @@ export default function ExamParticipationArea({
             );
             const startData = (await startResponse
               .json()
-              .catch(() => ({}))) as { sessionToken?: string | null };
+              .catch(() => ({}))) as { sessionToken?: string | null; secondsLeft?: number | null };
             if (cancelled) return;
             if (startResponse.ok && data.exam) {
               activateSession(
                 startData.sessionToken ?? null,
                 data.exam.durationMinutes,
+                startData.secondsLeft ?? null,
               );
             }
           } catch {
@@ -280,14 +291,18 @@ export default function ExamParticipationArea({
     return () => clearTimeout(timer);
   }, [secondsLeft, outcome, terminatedNotice, submit]);
 
-  // Interrupted exam (tab closed / navigated away) → auto-submit what was answered.
+  // Interrupted active exam → automatically submit and cannot be recovered/resumed.
+  // Handles tab close, navigation away, refresh, and hidden tab.
+  // Server-side stored answers remain authoritative; this sends the latest
+  // local selections with keepalive so the result is finalized.
   useEffect(() => {
     function handleInterrupt() {
       if (submittedRef.current || !user) return;
-      const answered = answersRef.current;
-      if (!exam || Object.keys(answered).length === 0) return;
+      // Only auto-submit if the attempt has actually begun (rules accepted).
+      if (!begun) return;
       submittedRef.current = true;
       try {
+        const answered = answersRef.current;
         const body = JSON.stringify({
           answers: Object.fromEntries(
             Object.entries(answered).map(([key, value]) => [String(key), value]),
@@ -309,14 +324,23 @@ export default function ExamParticipationArea({
         // Best effort — the server-side stored answers remain authoritative.
       }
     }
+    function handleVisibility() {
+      if (document.visibilityState === "hidden") handleInterrupt();
+    }
     window.addEventListener("pagehide", handleInterrupt);
-    return () => window.removeEventListener("pagehide", handleInterrupt);
-  }, [exam, examId, user]);
+    window.addEventListener("beforeunload", handleInterrupt);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("pagehide", handleInterrupt);
+      window.removeEventListener("beforeunload", handleInterrupt);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [examId, user, begun]);
 
   /** Select an answer — allowed only once per question, no changing later. */
   async function chooseOption(question: TakingQuestion, optionIndex: number) {
     if (answers[question.id] !== undefined || submitting || outcome) return;
-    // Lock locally right away.
+    // Lock locally right away — option-circle selection IS the lock mechanism.
     const next = { ...answersRef.current, [question.id]: optionIndex };
     answersRef.current = next;
     setAnswers(next);
@@ -358,9 +382,6 @@ export default function ExamParticipationArea({
         // Offline answer is kept locally; the final submit still carries it.
       }
     }
-
-    // Move to the next question automatically (no going back).
-    setCurrent((value) => Math.min(value + 1, questions.length - 1));
   }
 
   const openAnswerScript = async () => {
@@ -473,7 +494,7 @@ export default function ExamParticipationArea({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-sm font-bold leading-relaxed text-heading sm:text-base">
-                      {index + 1}. {item.question}
+                      {padNum(index + 1)}. {item.question}
                     </p>
                     <span
                       className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
@@ -487,8 +508,8 @@ export default function ExamParticipationArea({
                       {item.chosenIndex === null
                         ? "Unanswered"
                         : isCorrect
-                          ? `Correct +${item.obtained}`
-                          : `Wrong ${item.obtained}`}
+                          ? "Correct"
+                          : "Wrong"}
                     </span>
                   </div>
 
@@ -535,9 +556,9 @@ export default function ExamParticipationArea({
                   </div>
                   <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] font-semibold">
                     <span className="text-slate-500">
-                      Marks:{" "}
-                      <span className={item.obtained > 0 ? "text-emerald-400" : item.obtained < 0 ? "text-red-400" : "text-neutral-400"}>
-                        {item.obtained > 0 ? `+${item.obtained}` : `${item.obtained}`}
+                      Marks: <span className="text-heading">{item.marks}</span>
+                      <span className="ml-2 text-neutral-500">
+                        Obtained: <span className={isCorrect ? "text-emerald-400" : "text-neutral-400"}>{isCorrect ? `+${item.marks}` : "0"}</span>
                       </span>
                     </span>
                     <span className="text-slate-500">
@@ -741,138 +762,197 @@ export default function ExamParticipationArea({
     );
   }
 
-  /* ── Active exam interface ──────────────────────────────────────────── */
+  /* ── Active exam — Single scrollable paper ─────────────────────────── */
 
   const answeredCount = Object.keys(answers).length;
-  const question = questions[current];
-  const selected = answers[question.id];
-  const locked = selected !== undefined;
-  const isLast = current === questions.length - 1;
+  const totalQuestions = questions.length;
+  const totalMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 1), 0);
+  const unansweredCount = totalQuestions - answeredCount;
 
   return (
-    <div className="rounded-2xl border border-primary-600/30 bg-dark-900 p-5 sm:p-6">
-      {/* Header: timer + progress (no negative-marking info here). */}
-      <div className="sticky top-0 z-10 -mx-5 flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-dark-900 px-5 py-4 sm:-mx-6 sm:px-6">
-        <div>
-          <h3 className="font-extrabold text-heading">{exam.name}</h3>
-          <p className="text-xs text-neutral-400">
-            Question {current + 1} of {questions.length} · answered{" "}
-            {answeredCount}
+    <div className="space-y-4">
+      {/* Sticky header: exam meta + timer + submit */}
+      <div className="sticky top-0 z-20 -mx-4 border-b border-ink/10 bg-dark-950/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-sm font-extrabold text-heading sm:text-base">{exam.name}</h2>
+            <p className="mt-0.5 text-xs font-semibold text-neutral-400">
+              {totalQuestions} Questions · {totalMarks} Marks · {exam.durationMinutes} min
+              {exam.negativeMarks > 0 ? ` · −${exam.negativeMarks}/wrong` : ""}
+              {" · "}
+              <span className="text-primary-300">Answered {answeredCount}/{totalQuestions}</span>
+              {unansweredCount > 0 ? <span className="text-neutral-500"> · {unansweredCount} left</span> : null}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <span
+              className={`rounded-full px-3 py-1.5 font-mono text-sm font-extrabold sm:px-4 sm:text-base ${
+                secondsLeft !== null && secondsLeft < 60
+                  ? "bg-red-500/15 text-red-400"
+                  : "bg-primary-600/15 text-primary-300"
+              }`}
+            >
+              ⏱ {formatClock(secondsLeft ?? 0)}
+            </span>
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => {
+                if (window.confirm("Are you sure you want to submit the exam?")) {
+                  void submit();
+                }
+              }}
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-emerald-700 disabled:opacity-50 sm:px-5 sm:text-sm"
+            >
+              {submitting ? "Submitting…" : "Submit Exam"}
+            </button>
+          </div>
+        </div>
+        {/* Thin progress bar */}
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-dark-800">
+          <div
+            className="h-full rounded-full bg-primary-600 transition-all duration-300"
+            style={{ width: `${totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Exam paper — all questions vertically, free scroll */}
+      <div className="rounded-2xl border border-ink/10 bg-dark-900 p-4 sm:p-6">
+        {/* Paper header */}
+        <div className="border-b border-ink/10 pb-4">
+          <h3 className="text-base font-extrabold text-heading sm:text-lg">{exam.name}</h3>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+            <span className="rounded-full border border-ink/10 bg-dark-850 px-3 py-1 text-neutral-300">Total Questions: {totalQuestions}</span>
+            <span className="rounded-full border border-ink/10 bg-dark-850 px-3 py-1 text-neutral-300">Total Marks: {totalMarks}</span>
+            <span className="rounded-full border border-ink/10 bg-dark-850 px-3 py-1 text-neutral-300">Duration: {exam.durationMinutes} min</span>
+            {exam.negativeMarks > 0 && (
+              <span className="rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-red-300">Negative: −{exam.negativeMarks} per wrong</span>
+            )}
+            <span className="rounded-full border border-primary-500/20 bg-primary-600/10 px-3 py-1 text-primary-300">
+              {answeredCount} answered · {unansweredCount} not answered
+            </span>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+            Free scrolling — answer any question in any order. Each option locks immediately after selection and cannot be changed. You may skip questions and return later. Unanswered remain clickable until you submit.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span
-            className={`rounded-full px-4 py-1.5 font-mono text-lg font-extrabold ${
-              secondsLeft !== null && secondsLeft < 60
-                ? "bg-red-500/15 text-red-400"
-                : "bg-primary-600/15 text-primary-300"
-            }`}
-          >
-            ⏱ {formatClock(secondsLeft ?? 0)}
-          </span>
+
+        {/* Questions list */}
+        <ol className="mt-6 space-y-6">
+          {questions.map((q, idx) => {
+            const selectedIndex = answers[q.id];
+            const isLocked = selectedIndex !== undefined;
+            const isUnanswered = !isLocked;
+            return (
+              <li
+                key={q.id}
+                id={`q-${q.id}`}
+                className={`rounded-2xl border p-4 sm:p-5 ${isLocked ? "border-primary-500/25 bg-primary-600/[0.04]" : "border-ink/10 bg-dark-850/50"}`}
+              >
+                {/* Question header */}
+                <div className="flex items-start justify-between gap-3">
+                  <p className="flex-1 text-sm font-bold leading-relaxed text-heading sm:text-[15px]">
+                    <span className="mr-2 inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-dark-800 px-1.5 text-xs font-extrabold text-neutral-300 sm:h-7 sm:px-2">
+                      {padNum(idx + 1)}
+                    </span>
+                    {q.question}
+                  </p>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
+                      isUnanswered
+                        ? "bg-amber-500/15 text-amber-300 border border-amber-500/20"
+                        : "bg-primary-600/15 text-primary-300 border border-primary-500/20"
+                    }`}
+                  >
+                    {isUnanswered ? "Not Answered" : "Locked"}
+                  </span>
+                </div>
+
+                {q.questionImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={q.questionImage}
+                    alt={`Question ${idx + 1} image`}
+                    className="mt-3 max-h-72 w-full rounded-xl border border-ink/10 object-contain bg-dark-950"
+                  />
+                ) : null}
+
+                <p className="mt-2 text-xs font-semibold text-neutral-500">Marks: {q.marks}</p>
+
+                {/* Options — ○ circle style, one-time lock */}
+                <div className="mt-3 space-y-2">
+                  {q.options.map((option, optionIndex) => {
+                    const isSelected = selectedIndex === optionIndex;
+                    const disabled = isLocked || submitting;
+                    // Unanswered: all options are enabled. Answered: selected shows locked, others disabled grey.
+                    return (
+                      <button
+                        key={optionIndex}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => void chooseOption(q, optionIndex)}
+                        className={`flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-sm font-semibold transition sm:px-4 ${
+                          isSelected
+                            ? "border-primary-500 bg-primary-600/15 text-heading shadow-sm"
+                            : isLocked
+                              ? "border-ink/10 bg-dark-800 text-neutral-500 opacity-60 cursor-not-allowed"
+                              : "border-ink/10 bg-dark-900 text-neutral-200 hover:border-primary-500/40 hover:bg-dark-800"
+                        }`}
+                      >
+                        {/* Circle */}
+                        <span
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-extrabold transition ${
+                            isSelected
+                              ? "border-primary-500 bg-primary-600 text-white"
+                              : isLocked
+                                ? "border-ink/20 bg-dark-800 text-neutral-500"
+                                : "border-ink/20 bg-dark-850 text-neutral-400"
+                          }`}
+                        >
+                          {isSelected ? "●" : "○"}
+                        </span>
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink/10 text-[11px] font-extrabold text-neutral-400">
+                          {String.fromCharCode(65 + optionIndex)}
+                        </span>
+                        <span className="min-w-0 flex-1 break-words font-bold">{option}</span>
+                        {isSelected && (
+                          <span className="ml-auto shrink-0 rounded-full bg-primary-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                            Locked
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className="mt-2.5 text-xs font-medium text-neutral-500">
+                  {isLocked ? "Answer saved — locked permanently." : "Select one option — it will lock immediately and cannot be changed."}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+
+        {/* Bottom submit */}
+        <div className="mt-8 flex flex-col items-center gap-3 border-t border-ink/10 pt-6 sm:flex-row sm:justify-between">
+          <p className="text-xs font-semibold text-neutral-400">
+            Answered <span className="font-extrabold text-primary-300">{answeredCount}</span> / {totalQuestions} · Unanswered{" "}
+            <span className="font-extrabold text-amber-300">{unansweredCount}</span>
+          </p>
           <button
             type="button"
             disabled={submitting}
             onClick={() => {
-              if (
-                window.confirm(
-                  `Submit the exam? ${answeredCount}/${questions.length} answered. You cannot return to previous questions.`,
-                )
-              ) {
+              if (window.confirm("Are you sure you want to submit the exam?")) {
                 void submit();
               }
             }}
-            className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-extrabold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+            className="w-full rounded-xl bg-emerald-600 px-8 py-3 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-700 disabled:opacity-50 sm:w-auto"
           >
-            {submitting ? "Submitting…" : "Submit"}
+            {submitting ? "Submitting…" : "Submit Exam"}
           </button>
         </div>
-      </div>
-
-      {/* One question at a time — no previous-question navigation. */}
-      <div className="py-8">
-          <p className="text-base font-bold leading-relaxed text-heading sm:text-lg">
-            {current + 1}. {question.question}
-          </p>
-          <p className="mt-1 text-xs text-neutral-500">{question.marks} marks</p>
-
-          <div className="mt-5 space-y-2.5">
-            {question.options.map((option, optionIndex) => {
-              const isSelected = selected === optionIndex;
-              const disabled = locked || submitting;
-              return (
-                <button
-                  key={optionIndex}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => void chooseOption(question, optionIndex)}
-                  className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
-                    isSelected
-                      ? "border-primary-500 bg-primary-600/15 text-heading"
-                      : disabled
-                        ? "border-ink/10 bg-dark-850 text-neutral-500 opacity-70"
-                        : "border-ink/10 bg-dark-850 text-neutral-300 hover:border-primary-500/50"
-                  }`}
-                >
-                  <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${
-                      isSelected
-                        ? "bg-primary-600 text-white"
-                        : "bg-ink/10 text-neutral-400"
-                    }`}
-                  >
-                    {String.fromCharCode(65 + optionIndex)}
-                  </span>
-                  {option}
-                  {isSelected && (
-                    <span className="ml-auto shrink-0 rounded-full bg-primary-600/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-300">
-                      Locked
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <p className="mt-4 text-xs text-neutral-500">
-            {locked
-              ? "Answer saved — you cannot change it."
-              : "Select an answer once — it cannot be changed afterwards."}
-          </p>
-
-          {/* Next / Submit — forward-only navigation. */}
-          <div className="mt-8 flex items-center justify-between gap-3">
-            <span className="text-xs text-neutral-500">
-              Answered {answeredCount}/{questions.length}
-            </span>
-            {!isLast ? (
-              <button
-                type="button"
-                disabled={!locked}
-                onClick={() => setCurrent((value) => value + 1)}
-                className="rounded-xl bg-primary-600 px-6 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next Question →
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Submit the exam? ${answeredCount}/${questions.length} answered.`,
-                    )
-                  ) {
-                    void submit();
-                  }
-                }}
-                className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-extrabold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {submitting ? "Submitting…" : "Submit Exam"}
-              </button>
-            )}
-          </div>
       </div>
     </div>
   );

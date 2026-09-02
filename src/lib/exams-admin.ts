@@ -54,6 +54,10 @@ export type Exam = {
   sortOrder: number;
   /** Public Exam Control category (synced from Course Control categories). */
   categoryId?: string | null;
+  /** Selected rule template key (medical/academic/university). */
+  ruleTemplate?: string | null;
+  /** Marks per question (auto-calculates totalMarks). */
+  marksPerQuestion?: number | null;
 };
 
 export type ExamQuestion = {
@@ -61,6 +65,8 @@ export type ExamQuestion = {
   examId: string | null;
   subject: string;
   question: string;
+  /** Optional per-question image (question_image column). */
+  questionImage?: string | null;
   options: ExamQuestionOption[];
   correctIndex: number;
   explanation: string | null;
@@ -121,6 +127,8 @@ type ExamRow = {
   chapter_id: string | null;
   sort_order?: string | number | null;
   category_id?: string | null;
+  rule_template?: string | null;
+  marks_per_question?: string | number | null;
 };
 
 type QuestionRow = {
@@ -128,6 +136,7 @@ type QuestionRow = {
   exam_id: string | null;
   bank_subject: string;
   question: string;
+  question_image?: string | null;
   options: string;
   correct_index: number;
   explanation: string | null;
@@ -201,6 +210,11 @@ function rowToExam(row: ExamRow): Exam {
     chapterId: row.chapter_id ?? null,
     sortOrder: toNumber(row.sort_order ?? null),
     categoryId: row.category_id ?? null,
+    ruleTemplate: row.rule_template ?? null,
+    marksPerQuestion:
+      row.marks_per_question === undefined || row.marks_per_question === null
+        ? null
+        : toNumber(row.marks_per_question as string | number),
   };
 }
 
@@ -211,12 +225,111 @@ function rowToQuestion(row: QuestionRow): ExamQuestion {
     examId: row.exam_id,
     subject: row.bank_subject ?? "",
     question: row.question,
+    questionImage: row.question_image ?? null,
     options: Array.isArray(options) ? options.map(String) : [],
     correctIndex: row.correct_index ?? 0,
     explanation: row.explanation,
     marks: toNumber(row.marks),
     isActive: Boolean(row.is_active),
   };
+}
+
+// ── Auto-detect Rule Template ──────────────────────────────────────────
+
+/**
+ * Auto-detect rule template based on category.
+ * - Medical Admission -> 'medical'
+ * - SSC/HSC Academic -> 'academic'
+ * - University Admission -> 'university'
+ */
+export function detectRuleTemplate(category: string): string {
+  const normalized = category.trim().toLowerCase();
+  if (normalized.includes("medical")) return "medical";
+  if (normalized.includes("university") || normalized.includes("varsity")) return "university";
+  if (
+    normalized.includes("ssc") ||
+    normalized.includes("hsc") ||
+    normalized.includes("academic")
+  )
+    return "academic";
+  // Fallback: academic for unknown academic-like categories
+  return "academic";
+}
+
+export function ruleTemplateDefaults(template: string): {
+  negativeEnabled: boolean;
+  negativePerWrong: number;
+  secondTimerEnabled: boolean;
+  secondTimerDeduction: number;
+} {
+  switch (template) {
+    case "medical":
+      return {
+        negativeEnabled: true,
+        negativePerWrong: 0.25,
+        secondTimerEnabled: true,
+        secondTimerDeduction: 5,
+      };
+    case "university":
+      return {
+        negativeEnabled: true,
+        negativePerWrong: 0.25,
+        secondTimerEnabled: false,
+        secondTimerDeduction: 0,
+      };
+    case "academic":
+    default:
+      return {
+        negativeEnabled: false,
+        negativePerWrong: 0,
+        secondTimerEnabled: false,
+        secondTimerDeduction: 0,
+      };
+  }
+}
+
+// ── Ensure Question Slots ──────────────────────────────────────────────
+
+/**
+ * Ensure N question slots exist for an exam with sort_order 1..N.
+ * Missing slots are created with empty question text for incomplete slots.
+ */
+export async function ensureQuestionSlots(examId: string, count: number): Promise<void> {
+  if (!examId || !count || count <= 0) return;
+  await ensureTables();
+  try {
+    const existing = await query<{ sort_order: number }[]>(
+      `SELECT sort_order FROM exam_questions WHERE exam_id = ? ORDER BY sort_order ASC`,
+      [examId],
+    );
+    const existingOrders = new Set(existing.map((r) => Number(r.sort_order)));
+    const missing: number[] = [];
+    for (let i = 1; i <= count; i += 1) {
+      if (!existingOrders.has(i)) missing.push(i);
+    }
+    if (missing.length === 0) return;
+    // Use exam's marks_per_question for slot marks when available
+    let marksPerSlot = 1;
+    try {
+      const examRows = await query<{ marks_per_question: string | number | null }[]>(
+        `SELECT marks_per_question FROM exams WHERE id = ? LIMIT 1`,
+        [examId],
+      );
+      const raw = Number(examRows[0]?.marks_per_question ?? 1);
+      if (Number.isFinite(raw) && raw > 0) marksPerSlot = raw;
+    } catch {
+      marksPerSlot = 1;
+    }
+    for (const sortOrder of missing) {
+      await exec(
+        `INSERT INTO exam_questions (exam_id, bank_subject, question, question_image, options, correct_index, explanation, marks, sort_order, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [examId, "", "", null, JSON.stringify(["", "", "", ""]), 0, null, marksPerSlot, sortOrder, 1],
+      );
+    }
+  } catch {
+    // Best-effort — slots may be created on next call.
+  }
 }
 
 async function ensureTables(): Promise<void> {
@@ -343,6 +456,22 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort.
   }
+  // ── Exam System v2: rule_template + marks_per_question + question_image ──
+  try {
+    await ensureColumn("exams", "rule_template", "`rule_template` VARCHAR(32) NULL AFTER category_id");
+  } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await ensureColumn("exams", "marks_per_question", "`marks_per_question` DECIMAL(5,2) NOT NULL DEFAULT 1 AFTER total_marks");
+  } catch {
+    // Best effort — column may already exist.
+  }
+  try {
+    await ensureColumn("exam_questions", "question_image", "`question_image` VARCHAR(1024) NULL AFTER question");
+  } catch {
+    // Best effort — column may already exist.
+  }
   await exec(`CREATE TABLE IF NOT EXISTS exam_courses (
     exam_id VARCHAR(64) NOT NULL,
     course_id VARCHAR(191) NOT NULL,
@@ -422,9 +551,9 @@ async function ensureTables(): Promise<void> {
 
 const EXAM_COLUMNS = `id, title, description, banner_url, kind, batch_id,
   subject, chapter_id, sort_order, course_type, duration_minutes,
-  total_marks, negative_marks, negative_enabled, negative_per_wrong,
+  total_marks, marks_per_question, negative_marks, negative_enabled, negative_per_wrong,
   second_timer_enabled, second_timer_deduction, question_count, status,
-  featured, scheduled_at, ends_at, answer_key, category_id`;
+  featured, scheduled_at, ends_at, answer_key, category_id, rule_template`;
 
 // ── Exams CRUD ───────────────────────────────────────────────────────────
 
@@ -571,19 +700,74 @@ export async function saveExam(
   }
   const chapterId = asString(input.chapterId) || null;
   const categoryId = asString(input.categoryId) || null;
+  // ── Rule template auto-detection ──
+  let ruleTemplate = asString((input as Record<string, unknown>).ruleTemplate) || asString((input as Record<string, unknown>).rule_template as string) || "";
+  if (!ruleTemplate) {
+    const categoryForDetect = asString((input as Record<string, unknown>).category as string) || "";
+    if (categoryForDetect) {
+      ruleTemplate = detectRuleTemplate(categoryForDetect);
+    } else if (categoryId) {
+      // Resolve the human-readable category name/slug from Course Control for accurate template selection.
+      try {
+        const catRows = await query<{ name: string; slug: string }[]>(
+          `SELECT name, slug FROM course_categories WHERE id = ? LIMIT 1`,
+          [categoryId],
+        );
+        const cat = catRows[0];
+        if (cat) {
+          const token = `${cat.slug ?? ""} ${cat.name ?? ""}`.trim();
+          if (token) ruleTemplate = detectRuleTemplate(token);
+        }
+        // Fallback to raw id detection if lookup fails
+        if (!ruleTemplate) ruleTemplate = detectRuleTemplate(categoryId);
+      } catch {
+        ruleTemplate = detectRuleTemplate(categoryId);
+      }
+    }
+  }
+  const allowedTemplates = new Set(["medical", "academic", "university"]);
+  if (ruleTemplate && !allowedTemplates.has(ruleTemplate)) {
+    // Normalize unexpected values via detector
+    ruleTemplate = detectRuleTemplate(ruleTemplate);
+  }
+  const resolvedRuleTemplate: string | null = ruleTemplate || null;
+
+  // ── Marks per question & total marks auto-calc ──
+  const marksPerQuestionRaw = Number((input as Record<string, unknown>).marksPerQuestion ?? (input as Record<string, unknown>).marks_per_question ?? 1);
+  const marksPerQuestion =
+    Number.isFinite(marksPerQuestionRaw) && marksPerQuestionRaw > 0
+      ? Math.min(100, marksPerQuestionRaw)
+      : 1;
+
+  const questionCountRaw = Number((input as Record<string, unknown>).questionCount ?? (input as Record<string, unknown>).question_count ?? (input as Record<string, unknown>).totalQuestions ?? 0);
+  const requestedQuestionCount =
+    Number.isFinite(questionCountRaw) && questionCountRaw > 0
+      ? Math.floor(questionCountRaw)
+      : 0;
+
   // Per-exam marking settings (Admin → Public Exam Control).
-  const negativeEnabled = input.negativeEnabled === true;
-  const negativePerWrongRaw = Number(input.negativePerWrong);
-  const negativePerWrong =
+  let negativeEnabled = input.negativeEnabled === true;
+  let negativePerWrongRaw = Number(input.negativePerWrong);
+  let negativePerWrong =
     Number.isFinite(negativePerWrongRaw) && negativePerWrongRaw > 0
       ? Math.min(99, negativePerWrongRaw)
       : 0.25;
-  const secondTimerEnabled = input.secondTimerEnabled === true;
-  const secondTimerDeductionRaw = Number(input.secondTimerDeduction);
-  const secondTimerDeduction =
+  let secondTimerEnabled = input.secondTimerEnabled === true;
+  let secondTimerDeductionRaw = Number(input.secondTimerDeduction);
+  let secondTimerDeduction =
     Number.isFinite(secondTimerDeductionRaw) && secondTimerDeductionRaw > 0
       ? Math.min(9999, secondTimerDeductionRaw)
       : 5;
+
+  // Override with template defaults when a template is selected
+  if (resolvedRuleTemplate) {
+    const defaults = ruleTemplateDefaults(resolvedRuleTemplate);
+    negativeEnabled = defaults.negativeEnabled;
+    negativePerWrong = defaults.negativePerWrong;
+    secondTimerEnabled = defaults.secondTimerEnabled;
+    secondTimerDeduction = defaults.secondTimerDeduction;
+  }
+
   const featured = input.featured === true;
   // Keep the admin's explicit order; new exams without one go to the end.
   let sortOrder = Math.max(0, Number(input.sortOrder) || 0);
@@ -594,6 +778,23 @@ export async function saveExam(
     sortOrder = toNumber(maxRows[0]?.m ?? null) + 1;
   }
 
+  // Auto-calculate total marks when questionCount + marksPerQuestion are provided,
+  // otherwise fall back to existing linked-question totals for backward compatibility.
+  let questionCount: number;
+  let totalMarks: number;
+  if (requestedQuestionCount > 0) {
+    questionCount = requestedQuestionCount;
+    totalMarks = questionCount * marksPerQuestion;
+  } else if (totals[0]?.count && totals[0]?.count > 0) {
+    questionCount = totals[0].count;
+    totalMarks = Number(totals[0].marks ?? 0) || questionCount * marksPerQuestion;
+  } else {
+    const fallbackCount = Number((input as Record<string, unknown>).question_count ?? 0) || 0;
+    const fallbackMarks = Number(input.totalMarks ?? 0) || 0;
+    questionCount = fallbackCount || 0;
+    totalMarks = fallbackMarks || (questionCount ? questionCount * marksPerQuestion : 0);
+  }
+
   const existing = await query<{ id: string }[]>(
     `SELECT id FROM exams WHERE id = ? LIMIT 1`,
     [id],
@@ -601,15 +802,15 @@ export async function saveExam(
   const isNew = existing.length === 0;
   await exec(
     `INSERT INTO exams (${EXAM_COLUMNS}, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE title = VALUES(title), description = VALUES(description),
        banner_url = VALUES(banner_url),
        kind = VALUES(kind), batch_id = VALUES(batch_id),
        subject = VALUES(subject), chapter_id = VALUES(chapter_id), sort_order = VALUES(sort_order),
-       category_id = VALUES(category_id),
+       category_id = VALUES(category_id), rule_template = VALUES(rule_template),
        course_type = VALUES(course_type),
        duration_minutes = VALUES(duration_minutes),
-       total_marks = VALUES(total_marks), negative_marks = VALUES(negative_marks),
+       total_marks = VALUES(total_marks), marks_per_question = VALUES(marks_per_question), negative_marks = VALUES(negative_marks),
        negative_enabled = VALUES(negative_enabled),
        negative_per_wrong = VALUES(negative_per_wrong),
        second_timer_enabled = VALUES(second_timer_enabled),
@@ -630,13 +831,14 @@ export async function saveExam(
       sortOrder,
       input.courseType === "Admission" ? "Admission" : "Academic",
       Math.max(1, Number(input.durationMinutes) || 30),
-      Number(totals[0]?.marks ?? input.totalMarks) || 0,
-      Math.max(0, Number(input.negativeMarks) || 0),
+      totalMarks,
+      marksPerQuestion,
+      Math.max(0, Number(input.negativeMarks) || 0) || (negativeEnabled ? negativePerWrong : 0),
       negativeEnabled ? 1 : 0,
       negativePerWrong,
       secondTimerEnabled ? 1 : 0,
       secondTimerDeduction,
-      totals[0]?.count ?? 0,
+      questionCount,
       ["draft", "published", "closed"].includes(String(input.status))
         ? String(input.status)
         : "draft",
@@ -645,6 +847,7 @@ export async function saveExam(
       endsAt,
       answerKeyJson,
       categoryId,
+      resolvedRuleTemplate,
       adminUid,
     ],
   );
@@ -656,6 +859,15 @@ export async function saveExam(
       await seedDefaultExamRules(id);
     } catch {
       // Best effort — rules can still be added manually.
+    }
+  }
+
+  // Auto-generate question slots when exam is created with question_count = N
+  if (questionCount > 0) {
+    try {
+      await ensureQuestionSlots(id, questionCount);
+    } catch {
+      // Best effort — slots may be created on next edit.
     }
   }
 
@@ -675,6 +887,9 @@ export async function saveExam(
   exam.chapterId = chapterId;
   return exam;
 }
+
+/** Alias for saveExam for backward compatibility (exam creation). */
+export const createExam = saveExam;
 
 /** Change display order of exams from an ordered id list. */
 export async function reorderExams(orderedIds: string[]): Promise<void> {
@@ -743,10 +958,12 @@ export async function saveQuestion(
   const orderRaw = Number(input.order);
   const explicitOrder = Number.isInteger(orderRaw) && orderRaw > 0 ? orderRaw : null;
   const examId = asString(input.examId) || null;
+  const questionImage = asString((input as Record<string, unknown>).questionImage as string) || asString((input as Record<string, unknown>).question_image as string) || null;
   const values = [
     examId,
     asString(input.subject),
     text,
+    questionImage,
     JSON.stringify(options),
     correctIndex,
     asString(input.explanation) || null,
@@ -764,7 +981,7 @@ export async function saveQuestion(
     if (!current[0]) throw new Error("Question not found.");
     const orderClause = explicitOrder !== null ? `, sort_order = ${explicitOrder}` : "";
     await exec(
-      `UPDATE exam_questions SET exam_id = ?, bank_subject = ?, question = ?,
+      `UPDATE exam_questions SET exam_id = ?, bank_subject = ?, question = ?, question_image = ?,
          options = ?, correct_index = ?, explanation = ?, marks = ?, is_active = ?${orderClause}
        WHERE id = ?`,
       [...values, existingId],
@@ -793,9 +1010,9 @@ export async function saveQuestion(
   }
   const sortOrder = explicitOrder ?? nextOrder;
   await exec(
-    `INSERT INTO exam_questions (exam_id, bank_subject, question, options, correct_index, explanation, marks, sort_order, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [...values.slice(0, 6), marks, sortOrder, values[7]],
+    `INSERT INTO exam_questions (exam_id, bank_subject, question, question_image, options, correct_index, explanation, marks, sort_order, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], sortOrder, values[8]],
   );
   await recomputeExamTotals(examId);
   return fetchQuestions({ examId: examId ?? "bank", subject: asString(input.subject) });
@@ -812,9 +1029,9 @@ export async function duplicateQuestion(id: number): Promise<ExamQuestion[]> {
   );
   const sortOrder = (next[0]?.m ?? 0) + 1;
   await exec(
-    `INSERT INTO exam_questions (exam_id, bank_subject, question, options, correct_index, explanation, marks, sort_order, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [src.exam_id, src.bank_subject, src.question, src.options, src.correct_index, src.explanation, Math.max(0.5, Number(src.marks) || 1), sortOrder, 1],
+    `INSERT INTO exam_questions (exam_id, bank_subject, question, question_image, options, correct_index, explanation, marks, sort_order, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [src.exam_id, src.bank_subject, src.question, (src as unknown as { question_image?: string | null }).question_image ?? null, src.options, src.correct_index, src.explanation, Math.max(0.5, Number(src.marks) || 1), sortOrder, 1],
   );
   await recomputeExamTotals(src.exam_id);
   return fetchQuestions({ examId: src.exam_id ?? "bank" });
@@ -839,18 +1056,18 @@ export async function attachBankQuestion(
     throw new Error("Invalid exam id.");
   }
   const source = await query<
-    { bank_subject: string; question: string; options: string; correct_index: number; explanation: string | null; marks: string | number }[]
+    { bank_subject: string; question: string; question_image: string | null; options: string; correct_index: number; explanation: string | null; marks: string | number }[]
   >(
-    `SELECT bank_subject, question, options, correct_index, explanation, marks
+    `SELECT bank_subject, question, question_image, options, correct_index, explanation, marks
      FROM exam_questions WHERE id = ? AND exam_id IS NULL LIMIT 1`,
     [questionId],
   );
   const src = source[0];
   if (!src) throw new Error("Bank question not found.");
   await exec(
-    `INSERT INTO exam_questions (exam_id, bank_subject, question, options, correct_index, explanation, marks, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-    [examId, src.bank_subject, src.question, src.options, src.correct_index, src.explanation, Math.max(0.5, Number(src.marks) || 1)],
+    `INSERT INTO exam_questions (exam_id, bank_subject, question, question_image, options, correct_index, explanation, marks, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+    [examId, src.bank_subject, src.question, (src as unknown as { question_image?: string | null }).question_image ?? null, src.options, src.correct_index, src.explanation, Math.max(0.5, Number(src.marks) || 1)],
   );
   await recomputeExamTotals(examId);
   return fetchQuestions({ examId });
@@ -886,7 +1103,7 @@ export async function duplicateExam(sourceId: string, adminUid: string): Promise
   const maxRows = await query<{ m: number | null }[]>(`SELECT MAX(sort_order) AS m FROM exams`);
   const nextOrder = (maxRows[0]?.m ?? 0) + 1;
   await exec(
-    `INSERT INTO exams (${EXAM_COLUMNS}, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO exams (${EXAM_COLUMNS}, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       newId,
       newTitle,
@@ -900,6 +1117,7 @@ export async function duplicateExam(sourceId: string, adminUid: string): Promise
       src.course_type,
       src.duration_minutes,
       0,
+      (src as unknown as { marks_per_question?: string | number | null }).marks_per_question ?? 1,
       src.negative_marks,
       src.negative_enabled ?? 0,
       src.negative_per_wrong ?? 0.25,
@@ -912,6 +1130,7 @@ export async function duplicateExam(sourceId: string, adminUid: string): Promise
       null,
       null,
       src.category_id ?? null,
+      (src as unknown as { rule_template?: string | null }).rule_template ?? null,
       adminUid,
     ],
   );
@@ -919,8 +1138,8 @@ export async function duplicateExam(sourceId: string, adminUid: string): Promise
   const qs = await query<QuestionRow[]>(`SELECT * FROM exam_questions WHERE exam_id = ?`, [sourceId]);
   for (const q of qs) {
     await exec(
-      `INSERT INTO exam_questions (exam_id, bank_subject, question, options, correct_index, explanation, marks, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [newId, q.bank_subject, q.question, q.options, q.correct_index, q.explanation, q.marks, q.sort_order ?? 0, q.is_active],
+      `INSERT INTO exam_questions (exam_id, bank_subject, question, question_image, options, correct_index, explanation, marks, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [newId, q.bank_subject, q.question, (q as unknown as { question_image?: string | null }).question_image ?? null, q.options, q.correct_index, q.explanation, q.marks, q.sort_order ?? 0, q.is_active],
     );
   }
   // Copy rules

@@ -180,6 +180,7 @@ type ExamMetaRow = {
   duration_minutes: number;
   scheduled_at: Date | string | null;
   course_type: string;
+  rule_template: string | null;
   negative_enabled: number | boolean | undefined;
   negative_per_wrong: string | number | undefined;
   second_timer_enabled: number | boolean | undefined;
@@ -190,7 +191,7 @@ async function fetchPublicExamMeta(examId: string) {
   const rows = await query<ExamMetaRow[]>(
     `SELECT e.id, e.title, cat.name AS category_name,
             e.total_marks, e.duration_minutes, e.scheduled_at,
-            e.course_type, e.negative_enabled, e.negative_per_wrong,
+            e.course_type, e.rule_template, e.negative_enabled, e.negative_per_wrong,
             e.second_timer_enabled, e.second_timer_deduction
        FROM exams e
        LEFT JOIN course_categories cat ON cat.id = e.category_id
@@ -484,16 +485,15 @@ export async function fetchPublicExamStudentResult(
     let wrongCount = 0;
     let unansweredCount = 0;
     let rawMarks = 0;
-    // Legacy rows (before the per-exam flags existed) keep the original
-    // MediSpark rule: negative marking only for Admission exams, −0.25.
-    const negativePerWrong =
-      meta.negative_enabled === undefined
-        ? meta.course_type === "Admission"
-          ? 0.25
-          : 0
-        : meta.negative_enabled
-          ? Math.max(0, Number(meta.negative_per_wrong ?? 0.25) || 0)
-          : 0;
+    // Rule template is source of truth when present; fallback to stored flags for legacy rows.
+    let negativePerWrong = 0;
+    if (meta.rule_template) {
+      negativePerWrong = meta.rule_template === "medical" || meta.rule_template === "university" ? 0.25 : 0;
+    } else if (meta.negative_enabled === undefined) {
+      negativePerWrong = meta.course_type === "Admission" ? 0.25 : 0;
+    } else {
+      negativePerWrong = meta.negative_enabled ? Math.max(0, Number(meta.negative_per_wrong ?? 0.25) || 0) : 0;
+    }
 
     const questions: AnswerSheetQuestion[] = questionRows.map((row, index) => {
       const options = parseJsonColumn<string[]>(row.options) ?? [];
@@ -519,12 +519,8 @@ export async function fetchPublicExamStudentResult(
         correctAnswer: row.correct_index,
         status,
         marks,
-        obtained:
-          status === "correct"
-            ? marks
-            : status === "wrong"
-              ? -negativePerWrong
-              : 0,
+        // Per Spec §17: do not display negative beside each question; wrong → 0 per-question, negative accounted globally.
+        obtained: status === "correct" ? marks : 0,
         explanation: row.explanation ?? null,
       };
     });
@@ -548,7 +544,7 @@ export async function fetchPublicExamStudentResult(
       negativeDeduction: toNumber(result.negative_deduction),
       negativePerWrong,
       negativeEnabled: negativePerWrong > 0,
-      secondTimerEnabled: Boolean(meta.second_timer_enabled),
+      secondTimerEnabled: meta.rule_template ? meta.rule_template === "medical" : Boolean(meta.second_timer_enabled),
       timerPenalty: toNumber(result.timer_penalty),
       isSecondTimer: (result.is_second_timer ?? 0) === 1,
       finalMarks: Math.round(toNumber(result.score) * 100) / 100,
