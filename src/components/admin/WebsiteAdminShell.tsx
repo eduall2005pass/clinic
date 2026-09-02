@@ -19,6 +19,7 @@ const ADMIN_NAV = [
   { label: "HOME", href: "/admin" },
   { label: "Website Control", href: "/admin/website-information" },
   { label: "Enrollment Control", href: "/admin/enrollment-control" },
+  { label: "Home Page Control", href: "/admin/home-control" },
   { label: "Course Control", href: "/admin/course-control" },
   { label: "Course Content Control", href: "/admin/course-content-control" },
   { label: "Public Exam Control", href: "/admin/public-exam-control" },
@@ -35,6 +36,7 @@ const ADMIN_NAV = [
 const ADMIN_CONTROL_PERMISSIONS: Record<string, readonly string[]> = {
   "/admin/website-information": ["manageContent"],
   "/admin/enrollment-control": ["manageStudents", "manageCourses"],
+  "/admin/home-control": ["manageContent"],
   "/admin/course-control": ["manageCourses"],
   "/admin/course-content-control": ["manageCourseContent", "manageCourses"],
   "/admin/public-exam-control": ["managePublicExam", "manageExams"],

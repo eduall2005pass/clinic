@@ -25,6 +25,7 @@ import {
   MegaphoneIcon,
   UserShieldIcon,
   ResultsChartIcon,
+  HomeIcon,
 } from "@/components/admin/icons";
 import { AdminThemeProvider, useAdminTheme } from "@/components/admin/AdminThemeProvider";
 import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
@@ -35,12 +36,12 @@ import { useAuth } from "@/lib/auth-context";
 
 const SIDEBAR_STORAGE_KEY = "medispark-admin-sidebar-collapsed";
 
-// === Required sidebar structure: HOME separate + MANAGEMENT heading + 11 flat items ===
-// Routes unchanged — labels exactly as specified.
+// === Required sidebar structure: HOME separate + MANAGEMENT heading + Home Page Control after Enrollment ===
 const ADMIN_NAV = [
   { label: "HOME", href: "/admin", icon: DashboardIcon },
   { label: "Website Control", href: "/admin/website-information", icon: WebsiteIcon },
   { label: "Enrollment Control", href: "/admin/enrollment-control", icon: EnrollmentsIcon },
+  { label: "Home Page Control", href: "/admin/home-control", icon: HomeIcon },
   { label: "Course Control", href: "/admin/course-control", icon: CoursesIcon },
   { label: "Course Content Control", href: "/admin/course-content-control", icon: BookOpenIcon },
   { label: "Public Exam Control", href: "/admin/public-exam-control", icon: ExamsIcon },
@@ -55,6 +56,7 @@ const ADMIN_NAV = [
 const ADMIN_CONTROL_PERMISSIONS: Record<string, readonly string[]> = {
   "/admin/website-information": ["manageContent"],
   "/admin/enrollment-control": ["manageStudents", "manageCourses"],
+  "/admin/home-control": ["manageContent"],
   "/admin/course-control": ["manageCourses"],
   "/admin/course-content-control": ["manageCourseContent", "manageCourses"],
   "/admin/public-exam-control": ["managePublicExam", "manageExams"],
