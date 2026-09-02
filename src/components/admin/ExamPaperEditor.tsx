@@ -129,6 +129,9 @@ export default function ExamPaperEditor({
     return 0;
   }, [exam.questionCount, exam.totalQuestions, questions]);
 
+  // Fixed 30-question structure (Medical) — keep slots intact, no individual deletion.
+  const isFixed30 = totalSlots === 30;
+
   const completedCount = useMemo(() => {
     if (!questions) return 0;
     return questions.filter(isCompleted).length;
@@ -932,16 +935,19 @@ export default function ExamPaperEditor({
                             >
                               Edit
                             </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => void removeQuestion(q?.id ?? null)}
-                              className={buttonDangerClass}
-                              title="Delete question"
-                              aria-label={`Delete question ${slotNumber}`}
-                            >
-                              ✕
-                            </button>
+                            {/* Fixed 30-question structure: no individual deletion — edit to correct instead. */}
+                            {!isFixed30 && (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void removeQuestion(q?.id ?? null)}
+                                className={buttonDangerClass}
+                                title="Delete question"
+                                aria-label={`Delete question ${slotNumber}`}
+                              >
+                                ✕
+                              </button>
+                            )}
                           </>
                         ) : (
                           <button
