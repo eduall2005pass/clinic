@@ -16,10 +16,9 @@ import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
  * Every option opens a dedicated management page — functionality unchanged.
  */
 const ADMIN_NAV = [
-  { label: "Homepage", href: "/admin" },
-  { label: "Website Information", href: "/admin/website-information" },
+  { label: "HOME", href: "/admin" },
+  { label: "Website Control", href: "/admin/website-information" },
   { label: "Enrollment Control", href: "/admin/enrollment-control" },
-  { label: "Home Control", href: "/admin/home-control" },
   { label: "Course Control", href: "/admin/course-control" },
   { label: "Course Content Control", href: "/admin/course-content-control" },
   { label: "Public Exam Control", href: "/admin/public-exam-control" },
@@ -36,7 +35,6 @@ const ADMIN_NAV = [
 const ADMIN_CONTROL_PERMISSIONS: Record<string, readonly string[]> = {
   "/admin/website-information": ["manageContent"],
   "/admin/enrollment-control": ["manageStudents", "manageCourses"],
-  "/admin/home-control": ["manageContent"],
   "/admin/course-control": ["manageCourses"],
   "/admin/course-content-control": ["manageCourseContent", "manageCourses"],
   "/admin/public-exam-control": ["managePublicExam", "manageExams"],
@@ -271,34 +269,52 @@ function WebsiteAdminShellInner({
               </svg>
             </button>
           </div>
-          <nav className="flex-1 px-3 py-4">
-            <ul className="space-y-1">
-              {visibleNav.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    aria-current={isActive(item.href) ? "page" : undefined}
-                    className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                      isActive(item.href)
-                        ? "bg-[#234e9f] text-white shadow-md"
-                        : "text-slate-300 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <Link
-                  href="/"
-                  onClick={() => setMenuOpen(false)}
-                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#93c5fd] hover:bg-white/10 hover:text-white"
-                >
-                  View Website →
-                </Link>
-              </li>
-            </ul>
+          <nav className="flex-1 overflow-y-auto px-3 py-4">
+            {/* HOME — completely separate and appears first */}
+            {(() => {
+              const homeItem = visibleNav.find((i) => i.href === "/admin");
+              const managementItems = visibleNav.filter((i) => i.href !== "/admin");
+              return (
+                <>
+                  {homeItem && (
+                    <Link
+                      href={homeItem.href}
+                      onClick={() => setMenuOpen(false)}
+                      aria-current={isActive(homeItem.href) ? "page" : undefined}
+                      className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                        isActive(homeItem.href)
+                          ? "bg-[#234e9f] text-white shadow-md"
+                          : "text-slate-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {homeItem.label}
+                    </Link>
+                  )}
+                  {/* MANAGEMENT — visual heading only, not clickable */}
+                  <p className="px-4 pb-2 pt-5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                    MANAGEMENT
+                  </p>
+                  <ul className="space-y-1">
+                    {managementItems.map((item) => (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setMenuOpen(false)}
+                          aria-current={isActive(item.href) ? "page" : undefined}
+                          className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                            isActive(item.href)
+                              ? "bg-[#234e9f] text-white shadow-md"
+                              : "text-slate-300 hover:bg-white/10 hover:text-white"
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              );
+            })()}
           </nav>
         </aside>
       </div>

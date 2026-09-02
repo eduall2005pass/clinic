@@ -4,14 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  adminCategories,
-  adminProfileCategory,
-  findAdminCategory,
   findActiveAdminNav,
 } from "@/lib/admin-nav";
 import {
   CloseIcon,
-  ChevronDownIcon,
   DashboardIcon,
   MenuIcon,
   SearchIcon,
@@ -20,15 +16,67 @@ import {
   LogoutIcon,
   WebsiteIcon,
   PanelLeftIcon,
+  CoursesIcon,
+  BookOpenIcon,
+  ExamsIcon,
+  FaqIcon,
+  StudentsIcon,
+  EnrollmentsIcon,
+  MegaphoneIcon,
+  UserShieldIcon,
+  ResultsChartIcon,
 } from "@/components/admin/icons";
 import { AdminThemeProvider, useAdminTheme } from "@/components/admin/AdminThemeProvider";
 import AdminThemeToggle from "@/components/admin/AdminThemeToggle";
 import AdminToastProvider from "@/components/admin/AdminToastProvider";
 import AdminSearch from "@/components/admin/AdminSearch";
-import { useAdminGate, hasAdminPermission } from "@/components/admin/admin-ui";
+import { useAdminGate } from "@/components/admin/admin-ui";
 import { useAuth } from "@/lib/auth-context";
 
 const SIDEBAR_STORAGE_KEY = "medispark-admin-sidebar-collapsed";
+
+// === Required sidebar structure: HOME separate + MANAGEMENT heading + 11 flat items ===
+// Routes unchanged — labels exactly as specified.
+const ADMIN_NAV = [
+  { label: "HOME", href: "/admin", icon: DashboardIcon },
+  { label: "Website Control", href: "/admin/website-information", icon: WebsiteIcon },
+  { label: "Enrollment Control", href: "/admin/enrollment-control", icon: EnrollmentsIcon },
+  { label: "Course Control", href: "/admin/course-control", icon: CoursesIcon },
+  { label: "Course Content Control", href: "/admin/course-content-control", icon: BookOpenIcon },
+  { label: "Public Exam Control", href: "/admin/public-exam-control", icon: ExamsIcon },
+  { label: "Q&A Control", href: "/admin/qa-control", icon: FaqIcon },
+  { label: "Dashboard Control", href: "/admin/dashboard-control", icon: DashboardIcon },
+  { label: "Student Control", href: "/admin/student-control", icon: StudentsIcon },
+  { label: "Result Control", href: "/admin/result-control", icon: ResultsChartIcon },
+  { label: "Notification Control", href: "/admin/notification-control", icon: MegaphoneIcon },
+  { label: "Admin Center", href: "/admin/admin-center", icon: UserShieldIcon },
+] as const;
+
+const ADMIN_CONTROL_PERMISSIONS: Record<string, readonly string[]> = {
+  "/admin/website-information": ["manageContent"],
+  "/admin/enrollment-control": ["manageStudents", "manageCourses"],
+  "/admin/course-control": ["manageCourses"],
+  "/admin/course-content-control": ["manageCourseContent", "manageCourses"],
+  "/admin/public-exam-control": ["managePublicExam", "manageExams"],
+  "/admin/qa-control": ["manageQa", "manageContent"],
+  "/admin/dashboard-control": ["manageSystem", "manageContent"],
+  "/admin/student-control": ["manageStudents"],
+  "/admin/result-control": ["manageResults", "manageExams"],
+  "/admin/notification-control": ["manageContent", "manageSystem"],
+  "/admin/admin-center": ["manageAdmins"],
+};
+
+function hasControlAccess(
+  role: string | null,
+  permissions: string[],
+  href: string,
+): boolean {
+  if (role === "admin" || role === "moderator" || role === "teacher") return true;
+  if (href === "/admin") return true;
+  const required = ADMIN_CONTROL_PERMISSIONS[href];
+  if (!required) return true;
+  return required.some((perm) => permissions.includes(perm));
+}
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   return (
@@ -54,7 +102,6 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [manualOpenSection, setManualOpenSection] = useState<string | null>(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -116,97 +163,29 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   };
 
   const active = findActiveAdminNav(pathname);
-  const activeSectionHref = findAdminCategory(pathname)?.href ?? null;
-  const openSection = manualOpenSection !== null ? manualOpenSection : activeSectionHref;
 
-  // Role-based navigation: hide sections the admin's role does not cover.
-  // (Writes are enforced server-side regardless of what the UI shows.)
-  const visibleCategories = adminCategories.filter(
-    (category) =>
-      category.permission === null ||
-      hasAdminPermission(gate, category.permission),
+  // Filtered nav for RBAC — respects role permissions, keeps routes unchanged
+  const visibleNav = ADMIN_NAV.filter((item) =>
+    hasControlAccess(gate.role, gate.permissions, item.href),
   );
+  const homeItem = visibleNav.find((i) => i.href === "/admin") ?? ADMIN_NAV[0];
+  const managementItems = visibleNav.filter((i) => i.href !== "/admin");
 
-  const toggleSection = (href: string) => {
-    setManualOpenSection(openSection === href ? "" : href);
-  };
+  const isActive = (href: string) =>
+    href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(href + "/");
 
-  const renderSection = (category: (typeof adminCategories)[number]) => {
-    const isActive = activeSectionHref === category.href;
-    const isOpen = !collapsed && openSection === category.href;
-    return (
-      <li key={category.href}>
-        <div
-          className={`flex items-center rounded-xl transition duration-200 ${
-            isActive && !isOpen
-              ? "bg-primary-600 text-white shadow-md shadow-primary-900/40"
-              : "hover:bg-white/5"
-          }`}
-        >
-          <Link
-            href={category.href}
-            title={collapsed ? category.name : undefined}
-            onClick={() => {
-              closeOverlays();
-              setManualOpenSection(category.href);
-            }}
-            className={`group flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-sm font-medium transition duration-200 ${
-              collapsed ? "justify-center" : ""
-            } ${
-              isActive && !isOpen
-                ? "text-white"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <category.icon className="h-5 w-5 shrink-0" />
-            {!collapsed && <span className="truncate">{category.name}</span>}
-          </Link>
-          {!collapsed && (
-            <button
-              type="button"
-              aria-label={isOpen ? `Collapse ${category.name}` : `Expand ${category.name}`}
-              aria-expanded={isOpen}
-              onClick={() => toggleSection(category.href)}
-              className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-white"
-            >
-              <ChevronDownIcon
-                className={`h-4 w-4 transition-transform duration-200 ${
-                  isOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-          )}
-        </div>
-
-        {isOpen && (
-          <ul className="mt-1 space-y-0.5 border-l border-white/10 pb-1 pl-4 ml-5">
-            {category.subsections.map((sub) => {
-              const subActive =
-                pathname === sub.href ||
-                (sub.href !== category.href &&
-                  pathname.startsWith(sub.href + "/"));
-              return (
-                <li key={sub.label + sub.href}>
-                  <Link
-                    href={sub.href}
-                    onClick={closeOverlays}
-                    aria-current={subActive ? "page" : undefined}
-                    className={`block truncate rounded-lg px-3 py-1.5 text-[13px] font-medium transition duration-150 ${
-                      subActive
-                        ? "bg-primary-600/15 text-primary-400"
-                        : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-                    }`}
-                  >
-                    {sub.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </li>
-    );
-  };
+  // Header title/breadcrumb prefers ADMIN_NAV match for new routes
+  const activeNavItem = [...ADMIN_NAV]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((item) => pathname === item.href || pathname.startsWith(item.href + "/"));
+  const displayTitle = activeNavItem ? activeNavItem.label : active.title;
+  const displayBreadcrumbs =
+    activeNavItem && activeNavItem.href !== "/admin"
+      ? [
+          { label: "HOME", href: "/admin" },
+          { label: activeNavItem.label, href: activeNavItem.href },
+        ]
+      : active.breadcrumbs;
 
   const sidebarContent = (
     <>
@@ -232,44 +211,57 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
       </Link>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        {/* HOME — completely separate and appears first */}
         <Link
-          href="/admin"
-          title={collapsed ? "Home" : undefined}
+          href={homeItem.href}
+          title={collapsed ? homeItem.label : undefined}
           onClick={closeOverlays}
+          aria-current={isActive(homeItem.href) ? "page" : undefined}
           className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 ${
             collapsed ? "justify-center" : ""
           } ${
-            pathname === "/admin"
+            isActive(homeItem.href)
               ? "bg-primary-600 text-white shadow-md shadow-primary-900/40"
               : "text-zinc-400 hover:bg-white/5 hover:text-white"
           }`}
         >
-          <DashboardIcon className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Home</span>}
+          <homeItem.icon className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>{homeItem.label}</span>}
         </Link>
 
+        {/* MANAGEMENT — visual heading only, not clickable */}
         <p
           className={`px-3 pb-1 pt-5 text-[11px] font-bold uppercase tracking-widest text-zinc-600 ${
             collapsed ? "text-center" : ""
           }`}
         >
-          {collapsed ? "•••" : "Management"}
+          {collapsed ? "•••" : "MANAGEMENT"}
         </p>
 
         <ul className="space-y-1">
-          {visibleCategories.map(renderSection)}
-        </ul>
-
-        <p
-          className={`px-3 pb-1 pt-5 text-[11px] font-bold uppercase tracking-widest text-zinc-600 ${
-            collapsed ? "text-center" : ""
-          }`}
-        >
-          {collapsed ? "•••" : "Account"}
-        </p>
-
-        <ul className="space-y-1">
-          {renderSection(adminProfileCategory)}
+          {managementItems.map((item) => {
+            const activeItem = isActive(item.href);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  title={collapsed ? item.label : undefined}
+                  onClick={closeOverlays}
+                  aria-current={activeItem ? "page" : undefined}
+                  className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 ${
+                    collapsed ? "justify-center" : ""
+                  } ${
+                    activeItem
+                      ? "bg-primary-600 text-white shadow-md shadow-primary-900/40"
+                      : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
@@ -340,10 +332,10 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="min-w-0 flex-1">
-            {active.breadcrumbs.length > 1 && (
+            {displayBreadcrumbs.length > 1 && (
               <nav aria-label="Breadcrumb" className="hidden sm:block">
                 <ol className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500">
-                  {active.breadcrumbs.slice(0, -1).map((crumb, index) => (
+                  {displayBreadcrumbs.slice(0, -1).map((crumb, index) => (
                     <li key={crumb.href + index} className="flex items-center gap-1.5">
                       <Link
                         href={crumb.href}
@@ -358,7 +350,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
               </nav>
             )}
             <h1 className="truncate text-base font-bold text-zinc-900 transition-colors duration-300 sm:text-lg admin-dark:text-zinc-50">
-              {active.title}
+              {displayTitle}
             </h1>
           </div>
 
