@@ -1,12 +1,22 @@
 import { exec, parseJsonColumn, query, ensureColumn, withTransaction } from "@/lib/mysql";
 import { seedDefaultExamRules } from "@/lib/exam-rules";
-import { unstable_cache } from "next/cache";
+import { revalidateTag, unstable_cache } from "next/cache";
 
 let ensureTablesReady = false;
 let ensureSettingsTableReady = false;
 let ensureResultTablesReady = false;
 let examsCache: { data: Exam[]; at: number } | null = null;
 const EXAMS_CACHE_TTL = 30_000;
+
+function invalidateExamsCache(): void {
+  examsCache = null;
+  try {
+    // Next.js 16 deprecates single-arg revalidateTag; use "max" profile to bust all cache lifetimes
+    (revalidateTag as unknown as (tag: string, profile: string) => void)("exams", "max");
+  } catch {
+    // revalidateTag may not be available in all runtimes (e.g. during build)
+  }
+}
 
 // Admin Panel → Exams. Exams, question bank, enrollments, results and
 // settings all live in MySQL. `exam_questions.exam_id = NULL` marks a
@@ -904,6 +914,7 @@ export async function saveExam(
   const exam = rowToExam(rows[0]);
   exam.courseIds = courseIds;
   exam.chapterId = chapterId;
+  invalidateExamsCache();
   return exam;
 }
 
@@ -919,6 +930,7 @@ export async function reorderExams(orderedIds: string[]): Promise<void> {
       orderedIds[index],
     ]);
   }
+  invalidateExamsCache();
 }
 
 export async function deleteExam(id: string): Promise<void> {
@@ -929,6 +941,7 @@ export async function deleteExam(id: string): Promise<void> {
   await exec(`DELETE FROM exam_courses WHERE exam_id = ?`, [id]);
   await exec(`DELETE FROM exam_rules WHERE exam_id = ?`, [id]);
   await exec(`DELETE FROM exams WHERE id = ?`, [id]);
+  invalidateExamsCache();
 }
 
 // ── Question bank ────────────────────────────────────────────────────────
@@ -1011,6 +1024,7 @@ export async function saveQuestion(
     );
     await recomputeExamTotals(current[0].exam_id);
     await recomputeExamTotals(examId);
+    invalidateExamsCache();
     return fetchQuestions({ examId: examId ?? "bank", subject: asString(input.subject) });
   }
 
@@ -1038,6 +1052,7 @@ export async function saveQuestion(
     [values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], sortOrder, values[8]],
   );
   await recomputeExamTotals(examId);
+  invalidateExamsCache();
   return fetchQuestions({ examId: examId ?? "bank", subject: asString(input.subject) });
 }
 
@@ -1143,7 +1158,7 @@ export async function saveQuestionsBulk(
     freshIds.forEach((id) => savedIds.push(id));
   }
   // Invalidate exams cache so updated totals show immediately without stale 30s cache
-  examsCache = null;
+  invalidateExamsCache();
   return { questions, savedIds };
 }
 
@@ -1163,6 +1178,7 @@ export async function duplicateQuestion(id: number): Promise<ExamQuestion[]> {
     [src.exam_id, src.bank_subject, src.question, (src as unknown as { question_image?: string | null }).question_image ?? null, src.options, src.correct_index, src.explanation, Math.max(0.5, Number(src.marks) || 1), sortOrder, 1],
   );
   await recomputeExamTotals(src.exam_id);
+  invalidateExamsCache();
   return fetchQuestions({ examId: src.exam_id ?? "bank" });
 }
 
@@ -1172,6 +1188,7 @@ export async function reorderQuestions(examId: string | null, orderedIds: number
     await exec(`UPDATE exam_questions SET sort_order = ? WHERE id = ? AND ${examId ? "exam_id = ?" : "exam_id IS NULL"}`, examId ? [index + 1, orderedIds[index], examId] : [index + 1, orderedIds[index]]);
   }
   const key = examId ?? "bank";
+  invalidateExamsCache();
   return fetchQuestions({ examId: key });
 }
 
@@ -1199,6 +1216,7 @@ export async function attachBankQuestion(
     [examId, src.bank_subject, src.question, (src as unknown as { question_image?: string | null }).question_image ?? null, src.options, src.correct_index, src.explanation, Math.max(0.5, Number(src.marks) || 1)],
   );
   await recomputeExamTotals(examId);
+  invalidateExamsCache();
   return fetchQuestions({ examId });
 }
 
@@ -1210,6 +1228,7 @@ export async function deleteQuestion(id: number): Promise<void> {
   );
   await exec(`DELETE FROM exam_questions WHERE id = ?`, [id]);
   await recomputeExamTotals(rows[0]?.exam_id ?? null);
+  invalidateExamsCache();
 }
 
 export async function duplicateExam(sourceId: string, adminUid: string): Promise<Exam> {
@@ -1290,6 +1309,7 @@ export async function duplicateExam(sourceId: string, adminUid: string): Promise
     // best effort
   }
   await recomputeExamTotals(newId);
+  invalidateExamsCache();
   const newRows = await query<ExamRow[]>(`SELECT ${EXAM_COLUMNS} FROM exams WHERE id = ? LIMIT 1`, [newId]);
   if (!newRows[0]) throw new Error("Failed to duplicate exam.");
   const exam = rowToExam(newRows[0]);
@@ -1313,6 +1333,7 @@ export async function archiveExam(id: string, archived: boolean): Promise<void> 
   } catch {
     // ignore
   }
+  invalidateExamsCache();
 }
 
 /** Keep exams.question_count / total_marks in sync with linked questions. */
@@ -1532,6 +1553,7 @@ export async function setExamStatus(
   }
   const result = await exec(`UPDATE exams SET status = ? WHERE id = ?`, [status, id]);
   if (!result.affectedRows) throw new Error("Exam not found.");
+  invalidateExamsCache();
 }
 
 /**

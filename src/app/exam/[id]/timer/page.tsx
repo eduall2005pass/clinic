@@ -36,8 +36,8 @@ export default function TimerSelectionPage({
     (async () => {
       try {
         const token = await user.getIdToken();
-        // Fetch exam details
-        const examRes = await fetch(`/api/exams/${examId}`, {
+        // Fetch exam details by exact Exam ID — the primary identifier throughout the flow
+        const examRes = await fetch(`/api/exams/${encodeURIComponent(examId)}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           cache: "no-store",
         });
@@ -45,10 +45,16 @@ export default function TimerSelectionPage({
           exam?: { id: string; title: string };
           error?: string;
         };
+        if (!examRes.ok) {
+          if (!cancelled) {
+            setData({ exam: null, hasPriorAttempt: false, error: examData.error ?? "Exam not found." });
+          }
+          return;
+        }
 
-        // Check prior attempt
+        // Check prior attempt — use dedicated prior-attempt endpoint (exam ID is the primary identifier)
         const priorRes = await fetch(
-          `/api/exams/${examId}/rules?checkPrior=1`,
+          `/api/exams/${encodeURIComponent(examId)}/prior-attempt`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : undefined,
             cache: "no-store",
@@ -56,6 +62,7 @@ export default function TimerSelectionPage({
         );
         const priorData = (await priorRes.json().catch(() => ({}))) as {
           hasPriorAttempt?: boolean;
+          error?: string;
         };
 
         if (cancelled) return;

@@ -677,8 +677,11 @@ export async function getExamForTaking(
   secondsLeft: number | null;
   startedAt: string | null;
 } | null> {
-  const exams = await fetchExams();
-  const found = exams.find((exam) => exam.id === examId);
+  // Direct ID lookup — never via cached fetchExams list. Ensures the exact
+  // published exam selected on Live Website is resolved, with no stale cache
+  // or category/batch filtering mismatches.
+  const { fetchExamById } = await import("@/lib/exams-admin");
+  const found = await fetchExamById(examId);
   if (!found || !isLivePublished(found)) return null;
   // Enrolled exams are only visible to students enrolled in an assigned course.
   if (found.kind === "enrolled") {

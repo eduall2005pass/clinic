@@ -14,12 +14,19 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
+  // Use direct ID lookup — same unique Exam ID throughout the flow.
   const exam = await fetchExamPageById(id);
   if (!exam) {
-    return NextResponse.json(
-      { error: "Exam not found or not available." },
-      { status: 404 },
-    );
+    // Distinguish missing ID vs draft to avoid false "No exam found" on status mismatches
+    const { fetchExamById } = await import("@/lib/exams-admin");
+    const direct = await fetchExamById(id);
+    if (!direct) {
+      return NextResponse.json({ error: "Exam not found." }, { status: 404 });
+    }
+    if (direct.status === "draft") {
+      return NextResponse.json({ error: "This exam is not published yet." }, { status: 403 });
+    }
+    return NextResponse.json({ error: "Exam not found or not available." }, { status: 404 });
   }
   const stored = await fetchExamRules(id);
   const rules = stored.length > 0 ? stored : buildDefaultExamRules(id);

@@ -80,6 +80,20 @@ export async function GET(
     startAttempt,
   );
   if (!payload) {
+    // Distinguish missing ID vs genuinely unavailable (draft/closed/enrolled)
+    // to avoid showing "No exam found" due to category/status mismatches.
+    const { fetchExamById } = await import("@/lib/exams-admin");
+    const direct = await fetchExamById(id);
+    if (!direct) {
+      return NextResponse.json({ error: "Exam not found." }, { status: 404 });
+    }
+    if (direct.status === "draft") {
+      return NextResponse.json({ error: "This exam is not published yet." }, { status: 403 });
+    }
+    if (direct.kind === "enrolled") {
+      return NextResponse.json({ error: "You are not enrolled for this exam." }, { status: 403 });
+    }
+    // Published but otherwise unavailable (e.g. no questions, or not Live)
     return NextResponse.json(
       { error: "Exam not found or not available." },
       { status: 404 },
