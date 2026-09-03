@@ -957,8 +957,12 @@ export async function saveQuestion(
   input: Record<string, unknown>,
 ): Promise<ExamQuestion[]> {
   await ensureTables();
+  const questionImageEarly =
+    asString((input as Record<string, unknown>).questionImage as string) ||
+    asString((input as Record<string, unknown>).question_image as string) ||
+    null;
   const text = asString(input.question);
-  if (text.length < 3) throw new Error("Question text is required.");
+  if (text.length < 3 && !questionImageEarly) throw new Error("Question text or image is required (add at least 3 characters or an image).");
   const options = Array.isArray(input.options)
     ? input.options.map((option) => String(option))
     : [];
@@ -974,7 +978,7 @@ export async function saveQuestion(
   const orderRaw = Number(input.order);
   const explicitOrder = Number.isInteger(orderRaw) && orderRaw > 0 ? orderRaw : null;
   const examId = asString(input.examId) || null;
-  const questionImage = asString((input as Record<string, unknown>).questionImage as string) || asString((input as Record<string, unknown>).question_image as string) || null;
+  const questionImage = questionImageEarly;
   const values = [
     examId,
     asString(input.subject),
