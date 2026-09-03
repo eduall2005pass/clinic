@@ -1,7 +1,8 @@
-import { exec, parseJsonColumn, query, ensureColumn } from "@/lib/mysql";
+import { exec, parseJsonColumn, query, ensureColumn, withTransaction } from "@/lib/mysql";
 import { seedDefaultExamRules } from "@/lib/exam-rules";
 import { unstable_cache } from "next/cache";
 
+let ensureTablesReady = false;
 let ensureSettingsTableReady = false;
 let ensureResultTablesReady = false;
 let examsCache: { data: Exam[]; at: number } | null = null;
@@ -349,6 +350,7 @@ export async function ensureQuestionSlots(examId: string, count: number): Promis
 }
 
 async function ensureTables(): Promise<void> {
+  if (ensureTablesReady) return;
   await exec(`CREATE TABLE IF NOT EXISTS exams (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -563,6 +565,7 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — columns may already exist.
   }
+  ensureTablesReady = true;
 }
 
 const EXAM_COLUMNS = `id, title, description, banner_url, kind, batch_id,
@@ -1054,16 +1057,7 @@ export async function saveQuestionsBulk(
   if (!Array.isArray(items) || items.length === 0) throw new Error("No questions to save.");
   if (items.length > 200) throw new Error("Too many questions in one batch (max 200).");
 
-  const savedIds: number[] = [];
-  // Determine next sort_order once for inserts that don't specify order
-  let nextOrder = 1;
-  try {
-    const max = await query<{ m: number | null }[]>(`SELECT MAX(sort_order) AS m FROM exam_questions WHERE exam_id = ?`, [cleanExamId]);
-    nextOrder = (max[0]?.m ?? 0) + 1;
-  } catch {
-    nextOrder = 1;
-  }
-
+  // Validate all items upfront (fast fail, no DB work on invalid payload)
   for (let idx = 0; idx < items.length; idx += 1) {
     const input = items[idx] as Record<string, unknown>;
     const qImage =
@@ -1078,46 +1072,78 @@ export async function saveQuestionsBulk(
     if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= options.length) throw new Error(`Q${String(idx + 1).padStart(2, "0")}: Correct answer index is out of range.`);
     const marks = Math.max(0.5, Number(input.marks) || 1);
     if (!Number.isFinite(marks) || marks <= 0) throw new Error(`Q${String(idx + 1).padStart(2, "0")}: Marks must be positive.`);
-    const orderRaw = Number(input.order);
-    const explicitOrder = Number.isInteger(orderRaw) && orderRaw > 0 ? orderRaw : null;
-    const subject = asString(input.subject);
-    const explanation = asString(input.explanation) || null;
-    const isActive = input.isActive === false ? 0 : 1;
-    const existingId = Number(input.id);
-    if (Number.isInteger(existingId) && existingId > 0) {
-      const cur = await query<{ exam_id: string | null }[]>(`SELECT exam_id FROM exam_questions WHERE id = ? LIMIT 1`, [existingId]);
-      if (!cur[0]) throw new Error(`Question ${existingId} not found.`);
-      // Prevent moving question to different exam unintentionally — keep examId fixed to bulk examId
-      const orderClause = explicitOrder !== null ? `, sort_order = ${explicitOrder}` : "";
-      await exec(
-        `UPDATE exam_questions SET exam_id = ?, bank_subject = ?, question = ?, question_image = ?, options = ?, correct_index = ?, explanation = ?, marks = ?, is_active = ?${orderClause} WHERE id = ?`,
-        [cleanExamId, subject, text, qImage, JSON.stringify(options), correctIndex, explanation, marks, isActive, existingId],
-      );
-      savedIds.push(existingId);
-    } else {
-      const sortOrder = explicitOrder ?? nextOrder++;
-      await exec(
-        `INSERT INTO exam_questions (exam_id, bank_subject, question, question_image, options, correct_index, explanation, marks, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cleanExamId, subject, text, qImage, JSON.stringify(options), correctIndex, explanation, marks, sortOrder, isActive],
-      );
-      // Retrieve last inserted id
-      try {
-        const last = await query<{ id: number }[]>(`SELECT LAST_INSERT_ID() as id`);
-        if (last[0]?.id) savedIds.push(Number(last[0].id));
-      } catch {
-        // fallback — id will be resolved via fetchQuestions
+  }
+
+  // Single transaction: all updates/inserts + totals recompute atomically on one connection.
+  const savedIds = await withTransaction(async (conn) => {
+    const ids: number[] = [];
+    // Determine next sort_order once
+    let nextOrder = 1;
+    try {
+      const [rows] = await conn.execute(`SELECT MAX(sort_order) AS m FROM exam_questions WHERE exam_id = ?`, [cleanExamId]);
+      const r = rows as unknown as { m: number | null }[];
+      nextOrder = (r[0]?.m ?? 0) + 1;
+    } catch {
+      nextOrder = 1;
+    }
+
+    for (let idx = 0; idx < items.length; idx += 1) {
+      const input = items[idx] as Record<string, unknown>;
+      const qImage =
+        asString((input as Record<string, unknown>).questionImage as string) ||
+        asString((input as Record<string, unknown>).question_image as string) ||
+        null;
+      const text = asString(input.question);
+      const options = Array.isArray(input.options) ? input.options.map((o) => String(o)) : [];
+      const correctIndex = Number(input.correctIndex);
+      const marks = Math.max(0.5, Number(input.marks) || 1);
+      const orderRaw = Number(input.order);
+      const explicitOrder = Number.isInteger(orderRaw) && orderRaw > 0 ? orderRaw : null;
+      const subject = asString(input.subject);
+      const explanation = asString(input.explanation) || null;
+      const isActive = input.isActive === false ? 0 : 1;
+      const existingId = Number(input.id);
+      if (Number.isInteger(existingId) && existingId > 0) {
+        const [curRows] = await conn.execute(`SELECT exam_id FROM exam_questions WHERE id = ? LIMIT 1`, [existingId]);
+        const cur = curRows as unknown as { exam_id: string | null }[];
+        if (!cur[0]) throw new Error(`Question ${existingId} not found.`);
+        const orderClause = explicitOrder !== null ? `, sort_order = ${explicitOrder}` : "";
+        await conn.execute(
+          `UPDATE exam_questions SET exam_id = ?, bank_subject = ?, question = ?, question_image = ?, options = ?, correct_index = ?, explanation = ?, marks = ?, is_active = ?${orderClause} WHERE id = ?`,
+          [cleanExamId, subject, text, qImage, JSON.stringify(options), correctIndex, explanation, marks, isActive, existingId],
+        );
+        ids.push(existingId);
+      } else {
+        const sortOrder = explicitOrder ?? nextOrder++;
+        const [result] = await conn.execute(
+          `INSERT INTO exam_questions (exam_id, bank_subject, question, question_image, options, correct_index, explanation, marks, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [cleanExamId, subject, text, qImage, JSON.stringify(options), correctIndex, explanation, marks, sortOrder, isActive],
+        );
+        const insertId = (result as unknown as { insertId?: number })?.insertId;
+        if (insertId) ids.push(Number(insertId));
       }
     }
-  }
-  await recomputeExamTotals(cleanExamId);
+    // Recompute exam totals once, within transaction (single connection, no extra pool roundtrip)
+    try {
+      const [totRows] = await conn.execute(`SELECT COUNT(*) AS count, SUM(marks) AS marks FROM exam_questions WHERE exam_id = ? AND is_active = 1`, [cleanExamId]);
+      const tot = (totRows as unknown as { count: number; marks: string | null }[])[0];
+      await conn.execute(`UPDATE exams SET question_count = ?, total_marks = ? WHERE id = ?`, [tot?.count ?? 0, Number(tot?.marks ?? 0) || 0, cleanExamId]);
+    } catch {
+      // Best-effort
+    }
+    return ids;
+  });
+
+  // Fetch fresh questions outside transaction (one query) — keeps read after commit consistent
   const questions = await fetchQuestions({ examId: cleanExamId });
-  // Ensure savedIds are populated from fresh list if LAST_INSERT_ID failed
+  // Populate any missing insertIds from fresh list (e.g. if driver didn't return insertId)
   if (savedIds.length < items.length) {
     const freshIds = questions.map((q) => q.id).filter((id): id is number => id !== null);
-    // Use freshIds as fallback — not critical for client sync since client will remap by order
     savedIds.length = 0;
     freshIds.forEach((id) => savedIds.push(id));
   }
+  // Invalidate exams cache so updated totals show immediately without stale 30s cache
+  examsCache = null;
   return { questions, savedIds };
 }
 

@@ -87,6 +87,7 @@ export default function ExamPaperEditor({
   const [savingAll, setSavingAll] = useState(false);
   const [imageUploadingSlot, setImageUploadingSlot] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isSavingRef = useRef(false);
   // Single data structure — one set of fixed slots, both detected and manual share it
   const [slots, setSlots] = useState<ExamQuestion[]>([]);
 
@@ -221,8 +222,8 @@ export default function ExamPaperEditor({
   }
 
   async function saveAll() {
-    // Prevent duplicate rapid taps
-    if (savingAll || busy) return;
+    // Prevent duplicate rapid taps — ref guard handles sync double-click before state updates
+    if (isSavingRef.current || savingAll || busy) return;
     setError(null);
     setNotice(null);
     if (slots.length === 0) {
@@ -269,7 +270,7 @@ export default function ExamPaperEditor({
       } else {
         const origImage = original.questionImage ?? null;
         const curImage = s.questionImage ?? null;
-        if ((original.question ?? "") !== s.question) isDirty = true;
+        if ((original.question ?? "").trim() !== s.question.trim()) isDirty = true;
         else if (origImage !== curImage) isDirty = true;
         else if (original.correctIndex !== s.correctIndex) isDirty = true;
         else if ((original.subject ?? "") !== (s.subject ?? "")) isDirty = true;
@@ -309,7 +310,14 @@ export default function ExamPaperEditor({
       setTimeout(() => setNotice(null), 2500);
       return;
     }
+    if (imageUploadingSlot !== null) {
+      setError("Please wait — image is still uploading. Save will be available once the upload finishes.");
+      return;
+    }
 
+    // Guard duplicate taps only for the async section
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     setSavingAll(true);
     setBusy(true);
     setNotice("Saving...");
@@ -363,6 +371,7 @@ export default function ExamPaperEditor({
       setError("Failed to save. Please try again.");
       setNotice(null);
     } finally {
+      isSavingRef.current = false;
       setBusy(false);
       setSavingAll(false);
     }
@@ -418,8 +427,8 @@ export default function ExamPaperEditor({
         <div className="flex items-center justify-between gap-3">
           <h2 className="truncate text-lg font-extrabold leading-tight text-[#0b1e3a] admin-dark:text-white sm:text-xl">{exam.title}</h2>
           <div className="flex shrink-0 items-center gap-2">
-            <button type="button" disabled={busy || savingAll} onClick={() => void load()} className={buttonSecondaryClass}>↻ Refresh</button>
-            <button type="button" disabled={busy || savingAll} onClick={() => void saveAll()} className={buttonPrimaryClass}>{savingAll ? "Saving…" : "💾 Save"}</button>
+            <button type="button" disabled={busy || savingAll || imageUploadingSlot !== null} onClick={() => void load()} className={buttonSecondaryClass}>↻ Refresh</button>
+            <button type="button" disabled={busy || savingAll || imageUploadingSlot !== null} onClick={() => void saveAll()} className={buttonPrimaryClass}>{savingAll ? "Saving…" : imageUploadingSlot !== null ? "Uploading…" : "💾 Save"}</button>
           </div>
         </div>
         {totalSlots > 0 && (
