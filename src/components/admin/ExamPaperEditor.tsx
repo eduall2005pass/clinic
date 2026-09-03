@@ -221,22 +221,32 @@ export default function ExamPaperEditor({
   }
 
   async function saveAll() {
+    // Prevent duplicate rapid taps
+    if (savingAll || busy) return;
     setError(null);
     setNotice(null);
     if (slots.length === 0) {
       setError("No questions to save.");
       return;
     }
-    // Pre-validation: ensure at least one completed slot, and no partially filled invalid slots
+
+    // Immediate validation + dirty detection — only save changed questions
+    const dirtyPayload: Record<string, unknown>[] = [];
     let hasAnyContent = false;
     for (let idx = 0; idx < slots.length; idx++) {
       const s = slots[idx];
+      const original = questions?.[idx] ?? null;
       const hasText = s.question.trim().length >= 3;
       const hasImage = !!s.questionImage;
       const hasContent = hasText || hasImage;
       const hasAnyOption = s.options.some((o) => o.trim().length > 0);
-      if (!hasContent && !hasAnyOption) continue; // completely empty slot — skip
+      const isEmptySlot = !hasContent && !hasAnyOption;
+      if (isEmptySlot) {
+        // Empty and no original, or empty but original was also empty (placeholder) — skip, do not delete untouched others
+        continue;
+      }
       hasAnyContent = true;
+      // Validate this non-empty slot immediately
       if (!hasContent) {
         setError(`Q${pad(idx + 1)}: Add question text or image (image can be the full question).`);
         return;
@@ -250,64 +260,108 @@ export default function ExamPaperEditor({
         setError(`Q${pad(idx + 1)}: Select a valid correct answer.`);
         return;
       }
+
+      // Dirty check — skip if identical to persisted version
+      let isDirty = false;
+      if (!original || original.id === null) {
+        // New question with content -> dirty
+        isDirty = true;
+      } else {
+        const origImage = original.questionImage ?? null;
+        const curImage = s.questionImage ?? null;
+        if ((original.question ?? "") !== s.question) isDirty = true;
+        else if (origImage !== curImage) isDirty = true;
+        else if (original.correctIndex !== s.correctIndex) isDirty = true;
+        else if ((original.subject ?? "") !== (s.subject ?? "")) isDirty = true;
+        else if (Number(original.marks) !== Number(s.marks)) isDirty = true;
+        else {
+          for (let oi = 0; oi < 4; oi++) {
+            if ((original.options[oi] ?? "") !== (s.options[oi] ?? "")) {
+              isDirty = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!isDirty) continue;
+
+      dirtyPayload.push({
+        ...(original && original.id !== null ? { id: original.id } : {}),
+        examId: exam.id,
+        subject: s.subject || exam.subject || "",
+        question: s.question.trim(),
+        questionImage: s.questionImage || null,
+        question_image: s.questionImage || null,
+        options: s.options,
+        correctIndex: s.correctIndex,
+        explanation: s.explanation || null,
+        marks: Number(s.marks) || Number(exam.marksPerQuestion) || 1,
+        isActive: true,
+        order: idx + 1,
+      });
     }
     if (!hasAnyContent) {
       setError("No question content to save — add text or image to at least one question.");
       return;
     }
+    if (dirtyPayload.length === 0) {
+      setNotice("✓ Saved — no changes to update.");
+      setTimeout(() => setNotice(null), 2500);
+      return;
+    }
 
     setSavingAll(true);
     setBusy(true);
+    setNotice("Saving...");
     try {
-      let savedCount = 0;
-      for (let index = 0; index < slots.length; index++) {
-        const slot = slots[index];
-        const hasText = slot.question.trim().length >= 3;
-        const hasImage = !!slot.questionImage;
-        const hasContent = hasText || hasImage;
-        const hasAnyOption = slot.options.some((o) => o.trim().length > 0);
-        if (!hasContent && !hasAnyOption) continue; // skip empty
-        // validation already done, but keep guard
-        if (!hasContent) continue;
-        const nonEmpty = slot.options.filter((o) => o.trim().length > 0);
-        if (nonEmpty.length < 2) continue;
-        if (slot.correctIndex < 0 || slot.correctIndex >= slot.options.length || !slot.options[slot.correctIndex]?.trim()) continue;
-
-        const existing = questions?.[index] ?? null;
-        // For image-only questions, ensure question text is at least a placeholder if server still requires it
-        // But server now allows image-only, so we can send empty string + image; however we send trimmed text directly
-        // If image-only and text empty, send text as "" — server will accept due to image
-        const questionText = slot.question.trim();
-        const body: Record<string, unknown> = {
-          ...(existing && existing.id !== null ? { id: existing.id } : {}),
-          examId: exam.id,
-          subject: slot.subject || exam.subject || "",
-          question: questionText,
-          questionImage: slot.questionImage || null,
-          question_image: slot.questionImage || null,
-          options: slot.options,
-          correctIndex: slot.correctIndex,
-          explanation: slot.explanation || null,
-          marks: Number(slot.marks) || Number(exam.marksPerQuestion) || 1,
-          isActive: true,
-          order: index + 1,
-        };
-        const res = await fetch("/api/admin/exams/questions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders },
-          body: JSON.stringify(body),
-        });
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        if (!res.ok) {
-          setError(data?.error ?? `Failed to save Q${pad(index + 1)}.`);
-          return;
-        }
-        savedCount += 1;
+      const res = await fetch("/api/admin/exams/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ examId: exam.id, questions: dirtyPayload }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string; questions?: ExamQuestion[] } | null;
+      if (!res.ok) {
+        setError(data?.error ?? "Failed to save. Please try again.");
+        setNotice(null);
+        return;
       }
-      await load();
+      // Persist confirmed — update local state without full editor reload
+      if (data?.questions && Array.isArray(data.questions)) {
+        // Sync questions directly; slots will be reconciled via effect but we patch ids immediately to keep stability
+        setQuestions(data.questions);
+        // Optimistically patch slots ids for newly created questions to keep stable until effect syncs
+        setSlots((prev) =>
+          prev.map((slot, idx) => {
+            const orig = questions?.[idx] ?? null;
+            // Find matching fresh question by order (sort_order)
+            const fresh = data.questions![idx] ?? null;
+            if (fresh && fresh.id !== null) {
+              return { ...slot, id: fresh.id, examId: fresh.examId };
+            }
+            // If we inserted a new row, fresh may be at idx; keep slot id if still null and fresh exists
+            return slot;
+          }),
+        );
+      } else {
+        // Fallback — minimal refresh of questions only, not full page
+        // Keep it as silent background sync without flashing editor
+        try {
+          const r = await fetch(`/api/admin/exams/questions?examId=${encodeURIComponent(exam.id)}`, {
+            cache: "no-store",
+            headers: authHeaders,
+          });
+          const d = (await r.json()) as { questions?: ExamQuestion[] };
+          if (r.ok) setQuestions(d.questions ?? []);
+        } catch {
+          // ignore — data is already persisted, UI shows Saved
+        }
+      }
       onChanged?.();
-      setNotice(savedCount > 0 ? `Saved ${savedCount} question(s) successfully.` : "No changes to save.");
+      setNotice("✓ Saved");
       setTimeout(() => setNotice(null), 3000);
+    } catch {
+      setError("Failed to save. Please try again.");
+      setNotice(null);
     } finally {
       setBusy(false);
       setSavingAll(false);

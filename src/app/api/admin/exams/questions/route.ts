@@ -8,6 +8,7 @@ import {
   fetchQuestions,
   reorderQuestions,
   saveQuestion,
+  saveQuestionsBulk,
 } from "@/lib/exams-admin";
 
 export const dynamic = "force-dynamic";
@@ -54,10 +55,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
   }
+  // Bulk save: { examId, questions: [...] } — saves only changed questions in one request (fast, 1 roundtrip)
+  if (Array.isArray((body as Record<string, unknown>).questions)) {
+    const examId = String((body as Record<string, unknown>).examId ?? "").trim();
+    const items = (body as Record<string, unknown>).questions as Record<string, unknown>[];
+    try {
+      const result = await saveQuestionsBulk(examId, items);
+      await logAdminAction(admin, "question.bulk_save", `exam=${examId} count=${items.length}`, request);
+      return NextResponse.json({ ok: true, questions: result.questions, savedIds: result.savedIds });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save questions.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
   try {
-    await saveQuestion(body);
+    const result = await saveQuestion(body);
     await logAdminAction(admin, "question.save", String(body.subject ?? ""), request);
-    return NextResponse.json({ ok: true });
+    // Return fresh exam questions so client can sync without a second fetch when possible
+    return NextResponse.json({ ok: true, questions: result });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to save the question.";

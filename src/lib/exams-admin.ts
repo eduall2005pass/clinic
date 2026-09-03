@@ -1038,6 +1038,89 @@ export async function saveQuestion(
   return fetchQuestions({ examId: examId ?? "bank", subject: asString(input.subject) });
 }
 
+/**
+ * Bulk save — saves multiple questions for one exam in a single request.
+ * Only touches supplied items, preserves untouched questions, and recomputes
+ * exam totals once at the end (vs per-question). Returns the exam's fresh
+ * question list so the client can sync IDs without a second fetch.
+ */
+export async function saveQuestionsBulk(
+  examId: string,
+  items: Record<string, unknown>[],
+): Promise<{ questions: ExamQuestion[]; savedIds: number[] }> {
+  await ensureTables();
+  const cleanExamId = asString(examId);
+  if (!cleanExamId || !/^[a-z0-9-]{2,64}$/.test(cleanExamId)) throw new Error("Invalid exam id.");
+  if (!Array.isArray(items) || items.length === 0) throw new Error("No questions to save.");
+  if (items.length > 200) throw new Error("Too many questions in one batch (max 200).");
+
+  const savedIds: number[] = [];
+  // Determine next sort_order once for inserts that don't specify order
+  let nextOrder = 1;
+  try {
+    const max = await query<{ m: number | null }[]>(`SELECT MAX(sort_order) AS m FROM exam_questions WHERE exam_id = ?`, [cleanExamId]);
+    nextOrder = (max[0]?.m ?? 0) + 1;
+  } catch {
+    nextOrder = 1;
+  }
+
+  for (let idx = 0; idx < items.length; idx += 1) {
+    const input = items[idx] as Record<string, unknown>;
+    const qImage =
+      asString((input as Record<string, unknown>).questionImage as string) ||
+      asString((input as Record<string, unknown>).question_image as string) ||
+      null;
+    const text = asString(input.question);
+    if (text.length < 3 && !qImage) throw new Error(`Q${String(idx + 1).padStart(2, "0")}: Question text or image is required.`);
+    const options = Array.isArray(input.options) ? input.options.map((o) => String(o)) : [];
+    if (options.length < 2 || options.some((o) => o.length === 0)) throw new Error(`Q${String(idx + 1).padStart(2, "0")}: At least two non-empty options are required.`);
+    const correctIndex = Number(input.correctIndex);
+    if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= options.length) throw new Error(`Q${String(idx + 1).padStart(2, "0")}: Correct answer index is out of range.`);
+    const marks = Math.max(0.5, Number(input.marks) || 1);
+    if (!Number.isFinite(marks) || marks <= 0) throw new Error(`Q${String(idx + 1).padStart(2, "0")}: Marks must be positive.`);
+    const orderRaw = Number(input.order);
+    const explicitOrder = Number.isInteger(orderRaw) && orderRaw > 0 ? orderRaw : null;
+    const subject = asString(input.subject);
+    const explanation = asString(input.explanation) || null;
+    const isActive = input.isActive === false ? 0 : 1;
+    const existingId = Number(input.id);
+    if (Number.isInteger(existingId) && existingId > 0) {
+      const cur = await query<{ exam_id: string | null }[]>(`SELECT exam_id FROM exam_questions WHERE id = ? LIMIT 1`, [existingId]);
+      if (!cur[0]) throw new Error(`Question ${existingId} not found.`);
+      // Prevent moving question to different exam unintentionally — keep examId fixed to bulk examId
+      const orderClause = explicitOrder !== null ? `, sort_order = ${explicitOrder}` : "";
+      await exec(
+        `UPDATE exam_questions SET exam_id = ?, bank_subject = ?, question = ?, question_image = ?, options = ?, correct_index = ?, explanation = ?, marks = ?, is_active = ?${orderClause} WHERE id = ?`,
+        [cleanExamId, subject, text, qImage, JSON.stringify(options), correctIndex, explanation, marks, isActive, existingId],
+      );
+      savedIds.push(existingId);
+    } else {
+      const sortOrder = explicitOrder ?? nextOrder++;
+      await exec(
+        `INSERT INTO exam_questions (exam_id, bank_subject, question, question_image, options, correct_index, explanation, marks, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [cleanExamId, subject, text, qImage, JSON.stringify(options), correctIndex, explanation, marks, sortOrder, isActive],
+      );
+      // Retrieve last inserted id
+      try {
+        const last = await query<{ id: number }[]>(`SELECT LAST_INSERT_ID() as id`);
+        if (last[0]?.id) savedIds.push(Number(last[0].id));
+      } catch {
+        // fallback — id will be resolved via fetchQuestions
+      }
+    }
+  }
+  await recomputeExamTotals(cleanExamId);
+  const questions = await fetchQuestions({ examId: cleanExamId });
+  // Ensure savedIds are populated from fresh list if LAST_INSERT_ID failed
+  if (savedIds.length < items.length) {
+    const freshIds = questions.map((q) => q.id).filter((id): id is number => id !== null);
+    // Use freshIds as fallback — not critical for client sync since client will remap by order
+    savedIds.length = 0;
+    freshIds.forEach((id) => savedIds.push(id));
+  }
+  return { questions, savedIds };
+}
+
 export async function duplicateQuestion(id: number): Promise<ExamQuestion[]> {
   await ensureTables();
   const rows = await query<QuestionRow[]>(`SELECT * FROM exam_questions WHERE id = ? LIMIT 1`, [id]);
