@@ -4,16 +4,10 @@ import { requireAnyPermission } from "@/lib/admin";
 export const dynamic = "force-dynamic";
 
 /**
- * MEDISPARK PRODUCTION VISION MCQ PIPELINE
- * Absolute rule: NEVER add example content. Only the uploaded image(s) are the source.
- *
- * Workflow: Upload → Quality Analysis → Preprocessing → Vision AI + OCR + Layout
- * → Detect ALL actual MCQs → Separate Question + Options → Cross-Validate → Deduplicate
- * → Determine Order → Detection Count → Question Cards → Review → Import
- *
- * This implementation is production-ready: it validates image quality,
- * applies preprocessing, calls Vision AI when configured, preserves Bengali/English/mixed,
- * and never hallucinates or reuses example data.
+ * QUESTION DETECTION — TEXT ONLY
+ * Image-based detection (Upload Image / Vision AI / OCR) has been disabled per requirements.
+ * Workflow is now: Paste Questions → Text-based bulk MCQ detection → Auto-separate → Q01..QNN mapping → Preview → Review/Edit → Save
+ * This endpoint now returns 410 to enforce Text Only. Other image uploads (banners, profiles, Q&A, etc.) remain unaffected via /api/uploads.
  */
 
 type DetectedQuestion = {
@@ -115,128 +109,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const formData = await request.formData().catch(() => null);
-  if (!formData) {
-    return NextResponse.json({ error: "Invalid form data." }, { status: 400 });
-  }
-
-  const files = formData.getAll("images").filter((v): v is File => v instanceof File && v.size > 0);
-  const single = formData.get("image");
-  if (single instanceof File && single.size > 0 && files.length === 0) files.push(single);
-  const fileField = formData.get("file");
-  if (fileField instanceof File && fileField.size > 0 && files.length === 0) files.push(fileField);
-
-  if (files.length === 0) {
-    return NextResponse.json({ error: "No images provided. Upload one or multiple images (JPG, JPEG, PNG, WEBP)." }, { status: 400 });
-  }
-
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/avif", "image/bmp", "image/tiff"];
-  const allowedExts = [".jpg", ".jpeg", ".png", ".webp", ".avif"];
-  for (const file of files) {
-    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
-    const isAllowedType = file.type.startsWith("image/") && allowedTypes.includes(file.type);
-    const isAllowedExt = allowedExts.includes(ext);
-    if (!isAllowedType && !isAllowedExt) {
-      if (!file.type.startsWith("image/")) {
-        return NextResponse.json({ error: `Unsupported file type for "${file.name}". Supported: JPG, JPEG, PNG, WEBP.` }, { status: 400 });
-      }
-    }
-    if (file.size > 20 * 1024 * 1024) {
-      return NextResponse.json({ error: `"${file.name}" exceeds 20MB limit.` }, { status: 413 });
-    }
-  }
-
-  const qualityReports: Array<{ name: string; isReadable: boolean; issues: string[]; enhanced: boolean; preprocessing: string[] }> = [];
-  for (const file of files) {
-    const quality = analyzeImageQuality(file);
-    if (!quality.isReadable) {
-      return NextResponse.json(
-        { error: `Image quality is too low for reliable question detection. Please upload a clearer image. (${file.name})` },
-        { status: 422 },
-      );
-    }
-    const preprocessing = applyPreprocessing(quality.enhanced);
-    qualityReports.push({ name: file.name, isReadable: true, issues: quality.issues, enhanced: quality.enhanced, preprocessing });
-  }
-
-  const rawConvert = formData.get("convertToEnglish");
-  const convertToEnglish = rawConvert === "true" || rawConvert === "1" || rawConvert === "on";
-  const rawLang = formData.get("language");
-  const legacyConvert = rawLang === "en" || rawLang === "english";
-  const shouldConvert = convertToEnglish || legacyConvert;
-
-  // Production Vision AI: only the uploaded image(s) are the source
-  let questions: DetectedQuestion[] | null = await callVisionAI(files, { convertToEnglish: shouldConvert });
-
-  // If Vision AI not configured, try fallback OCR that does NOT invent
-  if (questions === null) {
-    questions = await fallbackOcrExtract(files);
-  }
-
-  // At this point, questions contains ONLY content derived from the image via Vision AI/OCR.
-  // It never contains example or demo content.
-
-  if (!questions || questions.length === 0) {
-    // Do not hallucinate. Inform admin to configure Vision AI or upload clearer image.
-    const hasVisionConfig = Boolean(process.env.VISION_API_KEY || process.env.OPENAI_API_KEY || process.env.VISION_API_ENDPOINT);
-    if (!hasVisionConfig) {
-      return NextResponse.json(
-        {
-          error:
-            "Vision AI is not configured. Please set VISION_API_KEY (or OPENAI_API_KEY) and VISION_API_ENDPOINT in your environment to enable high-accuracy image detection. No example questions were added — only the uploaded image is used as source.",
-          meta: {
-            imagesProcessed: files.length,
-            qualityReports,
-            preprocessingApplied: qualityReports.every((r) => r.enhanced) ? "enhanced_copy_created" : "adaptive_minimal",
-          },
-        },
-        { status: 503 },
-      );
-    }
-    return NextResponse.json(
-      { error: "We couldn't reliably detect the questions in this image. Please upload a clearer image or a higher-resolution photo." },
-      { status: 422 },
-    );
-  }
-
-  // Cross-validate and handle duplicates/order
-  questions = crossValidate(questions);
-  questions = preventDuplicates(questions);
-
-  // Optional English conversion is handled inside Vision AI when shouldConvert is true.
-  // If Vision AI already did conversion, questions are already in English.
-  // No additional translation here to preserve source unless explicitly requested.
-
-  const totalDetected = questions.length;
-
-  const structured = {
-    questions: questions.map((q) => ({
-      questionNumber: q.questionNumber,
-      question: q.question,
-      options: q.options,
-      confidence: q.confidence,
-      needsReview: q.needsReview,
-    })),
-  };
-
+  // Question Detection is now Text Only — image-based detection disabled per requirements.
+  // Use Paste Questions: paste MCQs as text → bulk detection → Q01..QNN mapping → Preview → Review/Edit → Save
   return NextResponse.json(
     {
-      detected: questions.map((q) => ({ question: q.question, options: [q.options.A, q.options.B, q.options.C, q.options.D], questionNumber: q.questionNumber, confidence: q.confidence, needsReview: q.needsReview })),
-      questions: structured.questions,
-      meta: {
-        imagesProcessed: files.length,
-        totalDetected,
-        convertToEnglish: shouldConvert,
-        qualityReports,
-        layoutAnalysis: {
-          columnsDetected: files.length > 1 ? "multi" : "single",
-          readingOrder: "first column then second column where applicable",
-          unrelatedTextFiltered: true,
-        },
-        preprocessingApplied: qualityReports.every((r) => r.enhanced) ? "enhanced_copy_created" : "adaptive_minimal",
-        message: `${totalDetected} Questions Detected`,
-      },
+      error:
+        "Image-based question detection is disabled. Question Detection and Material PDF Generator are Text Only. Please use Paste Questions — paste MCQs as text and the system will automatically detect, separate, and map to Q01..QNN for Preview → Review/Edit → Save.",
     },
-    { headers: { "Cache-Control": "no-store" } },
+    { status: 410 },
   );
 }

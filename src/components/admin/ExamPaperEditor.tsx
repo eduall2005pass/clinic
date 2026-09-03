@@ -94,23 +94,7 @@ export default function ExamPaperEditor({
   const [publishBusy, setPublishBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imageUploadingSlot, setImageUploadingSlot] = useState<number | null>(null);
-  const singlePhotoRef = useRef<HTMLInputElement | null>(null);
-  const [singlePhotoSlot, setSinglePhotoSlot] = useState<number | null>(null);
-  const importFileRef = useRef<HTMLInputElement | null>(null);
-  const [importBusy, setImportBusy] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importDetected, setImportDetected] = useState<Array<{ question: string; options: string[]; correctIndex: number | null; confidence?: number; needsReview?: boolean }>| null>(null);
-  const [importMeta, setImportMeta] = useState<{ totalDetected: number; imagesProcessed: number; convertToEnglish: boolean } | null>(null);
-  const [convertToEnglish, setConvertToEnglish] = useState(false);
-  const [importFiles, setImportFiles] = useState<File[] | null>(null);
-  // Enhanced upload workflow: drag-drop, preview, remove, reorder, quality analysis
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [dragActive, setDragActive] = useState(false);
-  const [qualityReports, setQualityReports] = useState<Array<{ name: string; width: number; height: number; sizeKB: number; readable: boolean; issues: string[]; enhanced: boolean }>>([]);
-  const [preprocessingInfo, setPreprocessingInfo] = useState<string | null>(null);
-  // Paste Questions — Bulk MCQ Import
-  const [activeImportTab, setActiveImportTab] = useState<"image" | "paste">("image");
+  // Paste Questions — Bulk MCQ Import (Text Only)
   const [pasteText, setPasteText] = useState("");
   const [pasteDetected, setPasteDetected] = useState<ParsedPasteMcq[] | null>(null);
   const [pasteError, setPasteError] = useState<string | null>(null);
@@ -149,108 +133,6 @@ export default function ExamPaperEditor({
 
   // Fixed 30-question structure (Medical) — keep slots intact, no individual deletion (now enforced for all per spec).
   const isFixed30 = totalSlots === 30;
-
-  // Helpers for high-accuracy image pipeline: quality analysis + preprocessing
-  const analyzePendingQuality = useCallback(async (files: File[]) => {
-    const reports: Array<{ name: string; width: number; height: number; sizeKB: number; readable: boolean; issues: string[]; enhanced: boolean }> = [];
-    for (const f of files) {
-      const issues: string[] = [];
-      const sizeKB = Math.round(f.size / 1024);
-      let width = 0;
-      let height = 0;
-      try {
-        const url = URL.createObjectURL(f);
-        const dims = await new Promise<{ w: number; h: number }>((resolve) => {
-          const img = new window.Image();
-          img.onload = () => resolve({ w: img.width, h: img.height });
-          img.onerror = () => resolve({ w: 0, h: 0 });
-          img.src = url;
-          setTimeout(() => resolve({ w: 0, h: 0 }), 2000);
-        });
-        URL.revokeObjectURL(url);
-        width = dims.w;
-        height = dims.h;
-        if (width > 0 && height > 0) {
-          if (width < 800 || height < 600) issues.push("low_resolution");
-          if (width * height < 400000) issues.push("small_text_risk");
-        }
-        if (sizeKB < 30) issues.push("low_resolution");
-        if (sizeKB < 12) issues.push("too_small");
-        // Simulate blur/sharpness check via size vs dimensions heuristic
-        if (width > 0 && sizeKB < 50 && width > 1200) issues.push("possible_blur");
-      } catch {
-        // ignore
-      }
-      const readable = !issues.includes("too_small");
-      const enhanced = readable && issues.length > 0;
-      reports.push({ name: f.name, width, height, sizeKB, readable, issues, enhanced });
-    }
-    setQualityReports(reports);
-    const needsEnhancement = reports.some((r) => r.enhanced);
-    setPreprocessingInfo(
-      needsEnhancement
-        ? "Automatic preprocessing will be applied: auto-rotate, deskew, contrast enhancement, brightness normalization, noise reduction, sharpening, background cleanup"
-        : "Image quality good — adaptive minimal preprocessing",
-    );
-    return reports;
-  }, []);
-
-  const handlePendingFiles = useCallback(async (files: FileList | File[]) => {
-    const list = Array.from(files).filter((f) => f.type.startsWith("image/") && ["image/jpeg","image/jpg","image/png","image/webp","image/avif"].some((t) => f.type === t || f.name.toLowerCase().endsWith(t.split("/")[1])));
-    // Also allow any image/* with JPG/JPEG/PNG/WEBP extensions
-    const allowedExts = [".jpg", ".jpeg", ".png", ".webp"];
-    const filtered = Array.from(files).filter((f) => {
-      const ext = f.name.toLowerCase().slice(f.name.lastIndexOf("."));
-      return f.type.startsWith("image/") && (allowedExts.includes(ext) || f.type.startsWith("image/"));
-    });
-    const final = filtered.length ? filtered : list;
-    if (final.length === 0) {
-      setImportError("Select JPG, JPEG, PNG or WEBP images.");
-      return;
-    }
-    // Preserve original files, create previews
-    const newFiles = [...pendingFiles, ...final];
-    setPendingFiles(newFiles);
-    const urls = newFiles.map((f) => URL.createObjectURL(f));
-    // Revoke old
-    previewUrls.forEach((u) => URL.revokeObjectURL(u));
-    setPreviewUrls(urls);
-    setImportError(null);
-    await analyzePendingQuality(newFiles);
-  }, [pendingFiles, previewUrls, analyzePendingQuality]);
-
-  const removePendingFile = useCallback((idx: number) => {
-    const next = pendingFiles.filter((_, i) => i !== idx);
-    setPendingFiles(next);
-    previewUrls.forEach((u) => URL.revokeObjectURL(u));
-    setPreviewUrls(next.map((f) => URL.createObjectURL(f)));
-    if (next.length === 0) {
-      setQualityReports([]);
-      setPreprocessingInfo(null);
-    } else {
-      void analyzePendingQuality(next);
-    }
-  }, [pendingFiles, previewUrls, analyzePendingQuality]);
-
-  const reorderPendingFile = useCallback((idx: number, dir: -1 | 1) => {
-    const target = idx + dir;
-    if (target < 0 || target >= pendingFiles.length) return;
-    const next = [...pendingFiles];
-    [next[idx], next[target]] = [next[target], next[idx]];
-    setPendingFiles(next);
-    previewUrls.forEach((u) => URL.revokeObjectURL(u));
-    setPreviewUrls(next.map((f) => URL.createObjectURL(f)));
-    void analyzePendingQuality(next);
-  }, [pendingFiles, previewUrls, analyzePendingQuality]);
-
-  const clearPendingFiles = useCallback(() => {
-    previewUrls.forEach((u) => URL.revokeObjectURL(u));
-    setPendingFiles([]);
-    setPreviewUrls([]);
-    setQualityReports([]);
-    setPreprocessingInfo(null);
-    setImportError(null);
-  }, [previewUrls]);
 
   const completedCount = useMemo(() => {
     if (!questions) return 0;
@@ -508,123 +390,7 @@ export default function ExamPaperEditor({
     }
   }
 
-  // High-accuracy pipeline: Upload → Quality Analysis → Preprocessing → Vision AI + OCR + Layout → Detect ALL → Review
-  async function handleImportImages(files?: FileList | File[]) {
-    // If files passed (legacy single call), add to pending first
-    if (files) {
-      const arr = Array.from(files as FileList);
-      if (arr.length) await handlePendingFiles(arr);
-      return;
-    }
-    // Process pendingFiles (after quality analysis + preprocessing)
-    const list = pendingFiles.length ? pendingFiles : [];
-    if (list.length === 0) {
-      setImportError("Select one or more images (JPG, JPEG, PNG, WEBP) or drag & drop.");
-      return;
-    }
-    // Quality check: if any unreadable, attempt enhancement already done, but if still unreadable block
-    const unreadable = qualityReports.find((r) => !r.readable);
-    if (unreadable) {
-      setImportError(`Image quality is too low for reliable question detection. Please upload a clearer image. (${unreadable.name})`);
-      return;
-    }
-    // Show preprocessing status
-    setPreprocessingInfo((prev) => prev || "Preprocessing images: auto-rotate, deskew, contrast, brightness, noise reduction, sharpening, background cleanup...");
-    setImportBusy(true);
-    setImportError(null);
-    setImportDetected(null);
-    setImportMeta(null);
-    setImportFiles(list);
-    try {
-      const fd = new FormData();
-      list.forEach((f) => fd.append("images", f));
-      fd.append("convertToEnglish", convertToEnglish ? "true" : "false");
-      const res = await fetch("/api/admin/exams/questions/import", {
-        method: "POST",
-        headers: { Authorization: bearer as string },
-        body: fd,
-      });
-      const data = (await res.json().catch(() => null)) as {
-        detected?: Array<{ question: string; options: string[]; questionNumber?: string; confidence?: number; needsReview?: boolean }>;
-        questions?: Array<{ questionNumber: string; question: string; options: Record<string, string>; confidence: number; needsReview: boolean }>;
-        meta?: { totalDetected: number; imagesProcessed: number; convertToEnglish: boolean };
-        error?: string;
-      } | null;
-      if (!res.ok) {
-        // Error handling per spec: quality too low or couldn't detect
-        const msg = data?.error ?? "Failed to detect questions.";
-        if (msg.toLowerCase().includes("quality is too low")) {
-          setImportError(msg);
-        } else if (msg.toLowerCase().includes("couldn't reliably detect")) {
-          setImportError("We couldn't reliably detect the questions in this image. Please upload a clearer image or a higher-resolution photo.");
-        } else {
-          setImportError(msg);
-        }
-        return;
-      }
-      const rawDetected = data?.detected ?? data?.questions?.map((q) => ({ question: q.question, options: [q.options.A, q.options.B, q.options.C, q.options.D], questionNumber: q.questionNumber, confidence: q.confidence, needsReview: q.needsReview })) ?? [];
-      const detected = rawDetected.map((d) => ({
-        question: d.question,
-        options: d.options.length >= 2 ? [...d.options] : [...d.options, ...Array(2 - d.options.length).fill("")],
-        correctIndex: null as number | null,
-        confidence: (d as unknown as { confidence?: number }).confidence,
-        needsReview: (d as unknown as { needsReview?: boolean }).needsReview,
-      }));
-      if (detected.length === 0) {
-        setImportError("We couldn't reliably detect the questions in this image. Please upload a clearer image or a higher-resolution photo.");
-        return;
-      }
-      setImportDetected(detected);
-      setImportMeta({ totalDetected: data?.meta?.totalDetected ?? detected.length, imagesProcessed: data?.meta?.imagesProcessed ?? list.length, convertToEnglish: data?.meta?.convertToEnglish ?? convertToEnglish });
-      setPreprocessingInfo("Vision AI + OCR + layout analysis + cross-validation + second-pass verification completed. Questions detected — review below.");
-    } catch (e) {
-      setImportError(e instanceof Error ? e.message : "Import failed.");
-    } finally {
-      setImportBusy(false);
-      if (importFileRef.current) importFileRef.current.value = "";
-    }
-  }
-
-  async function handleConvertToggle(newValue: boolean) {
-    setConvertToEnglish(newValue);
-    if (!importDetected || !importFiles || importFiles.length === 0) return;
-    // Preserve correctIndex selections and order while converting via AI, no re-upload needed
-    const existingCorrect = importDetected.map((d) => d.correctIndex);
-    setImportBusy(true);
-    setImportError(null);
-    try {
-      const fd = new FormData();
-      importFiles.forEach((f) => fd.append("images", f));
-      fd.append("convertToEnglish", newValue ? "true" : "false");
-      const res = await fetch("/api/admin/exams/questions/import", {
-        method: "POST",
-        headers: { Authorization: bearer as string },
-        body: fd,
-      });
-      const data = (await res.json().catch(() => null)) as {
-        detected?: Array<{ question: string; options: string[] }>;
-        meta?: { totalDetected: number; imagesProcessed: number };
-        error?: string;
-      } | null;
-      if (!res.ok) {
-        setImportError(data?.error ?? "Failed to convert.");
-        return;
-      }
-      const converted = (data?.detected ?? []).map((d, i) => ({
-        question: d.question,
-        options: d.options,
-        correctIndex: existingCorrect[i] ?? null,
-      }));
-      setImportDetected(converted);
-      setImportMeta((prev) => (prev ? { ...prev, convertToEnglish: newValue } : { totalDetected: converted.length, imagesProcessed: importFiles.length, convertToEnglish: newValue }));
-    } catch (e) {
-      setImportError(e instanceof Error ? e.message : "Convert failed.");
-    } finally {
-      setImportBusy(false);
-    }
-  }
-
-  // ── Paste Questions: Detect & Parse → Preview → Review/Edit → Save (slot-mapped Q01..QNN) ──
+  // ── Paste Questions: Detect & Parse → Preview → Review/Edit → Save (slot-mapped Q01..QNN) — Text Only ──
   function handlePasteDetect() {
     setPasteError(null);
     setPasteNotice(null);
@@ -782,123 +548,7 @@ export default function ExamPaperEditor({
     }
   }
 
-  async function saveImportedQuestion(item: { question: string; options: string[]; correctIndex: number | null }, idx: number) {
-    if (!item.question.trim() || item.question.trim().length < 3) {
-      setImportError(`Question ${idx + 1}: text required.`);
-      return;
-    }
-    const nonEmpty = item.options.filter((o) => o.trim().length > 0);
-    if (nonEmpty.length < 2) {
-      setImportError(`Question ${idx + 1}: at least two options required.`);
-      return;
-    }
-    if (item.correctIndex === null || item.correctIndex < 0 || item.correctIndex >= item.options.length || !item.options[item.correctIndex]?.trim()) {
-      setImportError(`Question ${idx + 1}: select the correct answer manually.`);
-      return;
-    }
-    if (totalSlots > 0 && questions && questions.filter(isCompleted).length >= totalSlots) {
-      setImportError(`Cannot add more than fixed ${totalSlots} questions.`);
-      return;
-    }
-    setBusy(true);
-    setImportError(null);
-    try {
-      const res = await fetch("/api/admin/exams/questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify({
-          examId: exam.id,
-          subject: exam.subject || "",
-          question: item.question.trim(),
-          questionImage: null,
-          options: item.options,
-          correctIndex: item.correctIndex,
-          explanation: null,
-          marks: Number(exam.marksPerQuestion ?? 1) || 1,
-          isActive: true,
-        }),
-      });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (!res.ok) {
-        setImportError(data?.error ?? "Failed to save question.");
-        return;
-      }
-      // Remove from detected list after successful save
-      setImportDetected((prev) => (prev ? prev.filter((_, i) => i !== idx) : null));
-      await load();
-      onChanged?.();
-      setNotice(`Question ${idx + 1} saved.`);
-      setTimeout(() => setNotice(null), 2000);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Single Question Photo Upload — AI detects Question + Options only (highlight-based for bulk, single for individual)
-  async function handleSinglePhotoUpload(file: File, slotIndex: number) {
-    if (!file.type.startsWith("image/")) {
-      setError("Select an image file for single question photo.");
-      return;
-    }
-    setSinglePhotoSlot(slotIndex);
-    setError(null);
-    try {
-      const fd = new FormData();
-      fd.append("images", file);
-      fd.append("convertToEnglish", convertToEnglish ? "true" : "false");
-      const res = await fetch("/api/admin/exams/questions/import", {
-        method: "POST",
-        headers: { Authorization: bearer as string },
-        body: fd,
-      });
-      const data = (await res.json().catch(() => null)) as {
-        detected?: Array<{ question: string; options: string[] }>;
-        error?: string;
-      } | null;
-      if (!res.ok) {
-        setError(data?.error ?? "Failed to detect question from photo.");
-        return;
-      }
-      const first = data?.detected?.[0];
-      if (!first) {
-        setError("No question detected in the photo. Try a clearer image with highlighted question.");
-        return;
-      }
-      // Fill the slot's form with detected question + options; correct answer to be selected manually
-      const isEditingThis = displaySlots[slotIndex]?.q?.id !== null && editingId === displaySlots[slotIndex]?.q?.id;
-      const targetSlot = slotIndex;
-      if (isEditingThis || placeholderEditingSlot === targetSlot) {
-        setForm((prev) => ({
-          ...prev,
-          question: first.question,
-          options: first.options.length >= 2 ? [...first.options] : [...first.options, ...Array(2 - first.options.length).fill("")],
-          correctIndex: 0,
-        }));
-      } else {
-        // Open the slot for editing with detected data
-        setPlaceholderEditingSlot(targetSlot);
-        setEditingId(null);
-        setForm({
-          subject: exam.subject || "",
-          question: first.question,
-          questionImage: "",
-          options: first.options.length >= 4 ? [...first.options].slice(0, 4) : [...first.options, ...Array(4 - first.options.length).fill("")],
-          correctIndex: 0,
-          explanation: "",
-          marks: String(exam.marksPerQuestion ?? "1"),
-        });
-      }
-      setNotice(`Single photo detected: "${first.question.slice(0, 40)}..." — select correct answer manually.`);
-      setTimeout(() => setNotice(null), 3000);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Photo detection failed.");
-    } finally {
-      setSinglePhotoSlot(null);
-      if (singlePhotoRef.current) singlePhotoRef.current.value = "";
-    }
-  }
-
-  // Image upload (single question photo — keep, AI detects question+options)
+  // Image upload (question illustration — manual, not AI detection) — kept for manual question editing
   async function handleImageUpload(file: File, slotIndex: number, isEditing: boolean) {
     if (!bearer) {
       setError("Not authorized — sign in as admin.");
@@ -961,35 +611,21 @@ export default function ExamPaperEditor({
   const headerDuration = exam.durationMinutes ?? 0;
 
   const hiddenFileInput = (
-    <>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          const slotAttr = e.target.getAttribute("data-slot");
-          const slotIndex = slotAttr ? Number(slotAttr) : -1;
-          if (file && slotIndex >= 0) {
-            const isEditing = editingId !== null || placeholderEditingSlot === slotIndex;
-            void handleImageUpload(file, slotIndex, isEditing);
-          }
-        }}
-      />
-      <input
-        ref={singlePhotoRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/avif"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          const slotAttr = e.target.getAttribute("data-slot");
-          const slotIndex = slotAttr ? Number(slotAttr) : -1;
-          if (file && slotIndex >= 0) void handleSinglePhotoUpload(file, slotIndex);
-        }}
-      />
-    </>
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        const slotAttr = e.target.getAttribute("data-slot");
+        const slotIndex = slotAttr ? Number(slotAttr) : -1;
+        if (file && slotIndex >= 0) {
+          const isEditing = editingId !== null || placeholderEditingSlot === slotIndex;
+          void handleImageUpload(file, slotIndex, isEditing);
+        }
+      }}
+    />
   );
 
   const headerBlock = (
@@ -1094,108 +730,14 @@ export default function ExamPaperEditor({
             </div>
           ) : (
             <>
-              {/* Bulk Question Import — Upload Image | Paste Questions */}
+              {/* Bulk Question Import — Text Only */}
               <div className={`${cardClass} mb-4 p-4 sm:p-5`}>
-                {/* Tabs */}
                 <div className="flex items-center gap-2 border-b border-[#eef4ff] pb-3 admin-dark:border-[#1e3a65]/60">
-                  <button
-                    type="button"
-                    onClick={() => setActiveImportTab("image")}
-                    className={`rounded-full px-4 py-1.5 text-xs font-extrabold transition ${activeImportTab === "image" ? "bg-[#1a3a78] text-white shadow" : "border border-[#bfdbfe] bg-[#eff6ff] text-[#1a3a78] hover:bg-[#dbeafe] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#93c5fd]"}`}
-                  >
-                    Upload Image
-                  </button>
-                  <span className="text-slate-400">|</span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveImportTab("paste")}
-                    className={`rounded-full px-4 py-1.5 text-xs font-extrabold transition ${activeImportTab === "paste" ? "bg-[#1a3a78] text-white shadow" : "border border-[#bfdbfe] bg-[#eff6ff] text-[#1a3a78] hover:bg-[#dbeafe] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#93c5fd]"}`}
-                  >
-                    Paste Questions
-                  </button>
-                  <span className="ml-auto hidden text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:inline">Bulk MCQ Import</span>
+                  <span className="rounded-full bg-[#1a3a78] px-4 py-1.5 text-xs font-extrabold text-white shadow">Paste Questions</span>
+                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/30 admin-dark:bg-emerald-500/10 admin-dark:text-emerald-300">Text Only</span>
+                  <span className="ml-auto hidden text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:inline">Bulk MCQ Import — Text Only</span>
                 </div>
-
-                {activeImportTab === "image" ? (
-                  <>
-                    <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Upload Image — Vision AI</h3>
-                        <p className="mt-1 text-xs leading-relaxed text-slate-500 admin-dark:text-slate-400">
-                          Vision AI + OCR + layout analysis — detects ALL readable MCQs automatically.
-                        </p>
-                        <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Workflow: Upload → Quality Analysis → Auto Preprocessing → Vision AI + OCR → Layout → Detect ALL → Review</p>
-                      </div>
-                      <div className="flex shrink-0 gap-2">
-                        <input ref={importFileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple className="hidden" onChange={(e) => { const f = e.target.files; if (f && f.length) void handlePendingFiles(f); }} />
-                        <button type="button" disabled={importBusy} onClick={() => importFileRef.current?.click()} className={`${buttonSecondaryClass} shrink-0`}>
-                          Select Images
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Upload Area */}
-                    <div
-                      onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                      onDragLeave={() => setDragActive(false)}
-                      onDrop={(e) => { e.preventDefault(); setDragActive(false); const f = e.dataTransfer.files; if (f && f.length) void handlePendingFiles(f); }}
-                      className={`mt-4 rounded-xl border-2 border-dashed p-4 text-center transition ${dragActive ? "border-[#2f6bce] bg-[#eff6ff] admin-dark:border-[#3b82f6] admin-dark:bg-[#0f2547]" : "border-[#bfdbfe] bg-[#f8fbff] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60"}`}
-                    >
-                      <p className="text-xs font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Drag & drop images here, or click Select Images</p>
-                      <p className="mt-1 text-[11px] text-slate-500">JPG, JPEG, PNG, WEBP • One or multiple • Preview, remove & reorder before detect</p>
-                    </div>
-
-                    {pendingFiles.length > 0 && (
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Selected Images — Preview & Reorder ({pendingFiles.length})</p>
-                          <button type="button" onClick={clearPendingFiles} className="text-xs font-bold text-slate-500 hover:text-red-600">Clear All</button>
-                        </div>
-                        <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                          {pendingFiles.map((f, idx) => (
-                            <div key={`${f.name}-${idx}`} className="rounded-xl border border-[#dbeafe] bg-white p-2 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
-                              <div className="flex gap-2">
-                                {previewUrls[idx] && <img src={previewUrls[idx]} alt={f.name} className="h-20 w-20 rounded-lg border object-cover admin-dark:border-zinc-700" />}
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-xs font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{f.name}</p>
-                                  <p className="text-[11px] text-slate-500">{(f.size / 1024).toFixed(0)} KB • {qualityReports[idx]?.width ? `${qualityReports[idx].width}×${qualityReports[idx].height}` : "analyzing..."}</p>
-                                  {qualityReports[idx] && (
-                                    <p className={`mt-1 text-[11px] font-bold ${qualityReports[idx].readable ? "text-emerald-600" : "text-red-600"}`}>
-                                      {qualityReports[idx].readable ? (qualityReports[idx].enhanced ? "Quality: enhanced" : "Quality: good") : "Quality: too low"}
-                                      {qualityReports[idx].issues.length > 0 && ` — ${qualityReports[idx].issues.join(", ")}`}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="mt-2 flex gap-1">
-                                <button type="button" disabled={idx === 0} onClick={() => reorderPendingFile(idx, -1)} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↑ Up</button>
-                                <button type="button" disabled={idx === pendingFiles.length - 1} onClick={() => reorderPendingFile(idx, 1)} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↓ Down</button>
-                                <button type="button" onClick={() => removePendingFile(idx)} className="ml-auto rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">Remove</button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        {preprocessingInfo && <p className="mt-2 rounded-xl border border-[#dbeafe] bg-[#f8fbff] px-3 py-2 text-[11px] font-semibold text-slate-600 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60 admin-dark:text-slate-300">{preprocessingInfo}</p>}
-                        <div className="mt-3 flex gap-2">
-                          <button type="button" disabled={importBusy || pendingFiles.length === 0} onClick={() => void handleImportImages()} className={`${buttonPrimaryClass} shrink-0`}>
-                            {importBusy ? "Detecting..." : `Detect ALL (${pendingFiles.length} image${pendingFiles.length > 1 ? "s" : ""})`}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-4 rounded-xl border border-[#dbeafe] bg-white p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
-                      <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#1a3a78] admin-dark:text-[#93c5fd]">Pipeline — Not Basic OCR</p>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-600 admin-dark:text-slate-300">
-                        Vision AI understands Bengali/English/mixed, MCQ structure, numbering, multi-line Q & options, 2-column layouts, tables. Science formulas preserved.
-                      </p>
-                    </div>
-                    {importError && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 admin-dark:border-red-900/30 admin-dark:bg-red-500/10">{importError}</p>}
-                    {importMeta && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/20 admin-dark:bg-emerald-500/10">Questions Detected: {importMeta.totalDetected} — from {importMeta.imagesProcessed} image(s)</p>}
-                  </>
-                ) : (
-                  /* ── Paste Questions tab ── */
-                  <div className="mt-4">
+                <div className="mt-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Paste Questions — Bulk MCQ Import</h3>
@@ -1326,70 +868,8 @@ export default function ExamPaperEditor({
                         </div>
                       );
                     })()}
-                  </div>
-                )}
-              </div>
-
-              {/* Review after detection — Image tab only */}
-              {activeImportTab === "image" && importDetected && importDetected.length > 0 && (
-                <div className="mb-4">
-                  <div className="rounded-xl border border-[#dbeafe] bg-[#f8fbff] p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]/50">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-xs font-extrabold uppercase tracking-widest text-[#1a3a78] admin-dark:text-[#93c5fd]">Review Detected Questions — Same Card UI</h4>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 border border-[#dbeafe] admin-dark:bg-[#0f2547] admin-dark:text-slate-300">Questions Detected: {importDetected.length}</span>
-                    </div>
-                    <p className="mt-2 text-[11px] font-semibold text-slate-500">Detected questions appear exactly like manually created cards. Review the original detected version first. Select the correct answer manually, then Save. Not auto-finalized.</p>
-                    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#dbeafe] bg-white p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
-                      <p className="text-xs font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Convert Question to English</p>
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${convertToEnglish ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600"}`}>{convertToEnglish ? "ON" : "OFF"}</span>
-                      <div className="ml-auto flex gap-2">
-                        <button type="button" disabled={importBusy} onClick={() => void handleConvertToggle(false)} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${!convertToEnglish ? "bg-[#1a3a78] text-white" : "border border-[#bfdbfe] bg-white text-[#1a3a78] hover:bg-[#eff6ff]"}`}>OFF</button>
-                        <button type="button" disabled={importBusy} onClick={() => void handleConvertToggle(true)} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${convertToEnglish ? "bg-[#1a3a78] text-white" : "border border-[#bfdbfe] bg-white text-[#1a3a78] hover:bg-[#eff6ff]"}`}>ON</button>
-                      </div>
-                      {importBusy && <span className="text-xs font-semibold text-amber-600">Converting…</span>}
-                    </div>
-                    <p className="mt-2 text-[11px] leading-relaxed text-slate-600 admin-dark:text-slate-300">
-                      Default <span className="font-bold">OFF</span>: keep question exactly as detected. When <span className="font-bold">ON</span>: AI converts Question + Options to clear natural English, preserving meaning and scientific accuracy. Example: <span style={{ fontFamily: "'Noto Sans Bengali',sans-serif" }}>মানবদেহে Oxygen transport করে কোনটি?</span> → <span className="italic">Which carries oxygen in the human body?</span> Only when explicitly enabled.
-                    </p>
-                    <p className="mt-1 text-[11px] font-semibold text-slate-500">Switching preserves question order, correct-answer selection — no re-upload needed. Priority: STEP 1 Detect exactly → STEP 2 Preserve → STEP 3 No auto-translate → STEP 4 Only convert when ON.</p>
-                  </div>
-                  <ol className="mt-3 space-y-3">
-                    {importDetected.map((item, idx) => (
-                      <li key={`import-${idx}`} className={`rounded-2xl border bg-white shadow-sm admin-dark:bg-[#112544] ${item.correctIndex !== null ? "border-[#dbeafe] admin-dark:border-[#1e3a65]" : "border-amber-300 border-dashed bg-amber-50/40 admin-dark:border-amber-500/30 admin-dark:bg-[#1a2a3a]"}`}>
-                        <div className="flex items-start justify-between gap-2 border-b border-[#eef4ff] px-4 py-3 admin-dark:border-[#1e3a65]/60">
-                          <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest">
-                            <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-amber-500 px-2 text-xs text-white">{String(idx + 1).padStart(2, "0")}</span>
-                            <span className="text-amber-700 admin-dark:text-amber-300">Detected — Review & Select Answer</span>
-                          </p>
-                          <span className="flex items-center gap-1">
-                            <button type="button" disabled={idx === 0} onClick={() => setImportDetected((prev) => { if (!prev) return prev; const n = [...prev]; [n[idx], n[idx - 1]] = [n[idx - 1], n[idx]]; return n; })} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↑</button>
-                            <button type="button" disabled={idx === (importDetected?.length ?? 0) - 1} onClick={() => setImportDetected((prev) => { if (!prev) return prev; const n = [...prev]; [n[idx], n[idx + 1]] = [n[idx + 1], n[idx]]; return n; })} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↓</button>
-                          </span>
-                        </div>
-                        <div className="px-4 py-4 sm:px-5">
-                          <textarea rows={2} lang={convertToEnglish ? "en" : "bn"} style={!convertToEnglish ? { fontFamily: "'Noto Sans Bengali','Hind Siliguri','Kalpurush','SolaimanLipi',sans-serif" } : undefined} className={`${inputClass} font-semibold ${!convertToEnglish ? "leading-relaxed" : ""}`} value={item.question} onChange={(e) => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, question: e.target.value } : it) : null)} placeholder={convertToEnglish ? "Question text (English)" : "প্রশ্নের টেক্সট (exact source)"} />
-                          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            {item.options.map((opt, oi) => (
-                              <div key={oi} className="flex gap-2">
-                                <button type="button" onClick={() => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, correctIndex: oi } : it) : null)} className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border-2 text-xs font-extrabold ${item.correctIndex === oi ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-slate-400"}`} title="Select correct answer manually">○</button>
-                                <input lang={convertToEnglish ? "en" : "bn"} style={!convertToEnglish ? { fontFamily: "'Noto Sans Bengali','Hind Siliguri','Kalpurush',sans-serif" } : undefined} className={`${inputClass} ${!convertToEnglish ? "leading-relaxed" : ""}`} value={opt} onChange={(e) => setImportDetected((prev) => prev ? prev.map((it, i) => i === idx ? { ...it, options: it.options.map((o, j) => j === oi ? e.target.value : o) } : it) : null)} placeholder={`${String.fromCharCode(65 + oi)} ${convertToEnglish ? "Option" : "অপশন"}`} />
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <button type="button" disabled={busy || item.correctIndex === null} onClick={() => void saveImportedQuestion(item, idx)} className={buttonPrimaryClass}>Save to Slot</button>
-                            <span className="self-center text-[11px] font-semibold text-slate-500">{item.correctIndex === null ? "Select correct answer before saving" : `Correct: ${String.fromCharCode(65 + (item.correctIndex ?? 0))} — will behave like manual question after save`}</span>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" disabled={importDetected.length === 0} onClick={() => setImportDetected(null)} className={buttonSecondaryClass}>Dismiss Review</button>
-                    <span className="self-center text-xs font-semibold text-slate-500">Auto-detected cards use SAME UI as manual — after Save they appear in the slot list below.</span>
-                  </div>
                 </div>
-              )}
+              </div>
 
               <ol className="space-y-4">
               {displaySlots.map(({ index, q }) => {
@@ -1453,24 +933,7 @@ export default function ExamPaperEditor({
                           </>
                         )}
 
-                        {/* Single Question Photo Upload — AI detects Question + Options */}
-                        <button
-                          type="button"
-                          disabled={busy || singlePhotoSlot === index}
-                          onClick={() => {
-                            if (singlePhotoRef.current) {
-                              singlePhotoRef.current.setAttribute("data-slot", String(index));
-                              singlePhotoRef.current.click();
-                            }
-                          }}
-                          className="rounded-lg border border-[#dbeafe] bg-white p-1.5 text-slate-600 hover:bg-[#eff6ff] disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-slate-300"
-                          title="Upload Photo — AI detects Question + Options"
-                          aria-label="Upload Photo for AI detection"
-                        >
-                          {singlePhotoSlot === index ? "…" : "📷"}
-                        </button>
-
-                        {/* Image Upload */}
+                        {/* Image Upload — manual question illustration (kept) */}
                         <button
                           type="button"
                           disabled={busy || imageUploadingSlot === index}
