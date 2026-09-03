@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import MaterialCard from "@/components/dashboard/MaterialCard";
 import { isActiveEnrollment } from "@/lib/enrollments";
 import PermissionGate, {
   courseDeniedGuidance,
@@ -957,38 +958,16 @@ function PaperChapterView({
           }
         >
           {(chapter) => (
-            <ul className="space-y-2">
-              {chapter.materials.map((material, index) => (
-                <li key={material.id}>
-                  <a
-                    href={material.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() =>
-                      recordRecentView(user, "material", String(material.id))
-                    }
-                    className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                      </svg>
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
-                        {index + 1}. {material.title}
-                      </span>
-                      <span className="text-[11px] text-neutral-500">
-                        {materialTypeLabels[material.materialType] ?? "Material"}
-                      </span>
-                    </span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5h7m0 0v7m0-7L10 16" />
-                    </svg>
-                  </a>
-                </li>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {chapter.materials.map((material) => (
+                <MaterialCard
+                  key={material.id}
+                  slug={slug}
+                  material={material}
+                  onView={() => recordRecentView(user, "material", String(material.id))}
+                />
               ))}
-            </ul>
+            </div>
           )}
         </ContentCard>
 
@@ -1029,15 +1008,15 @@ function PaperChapterView({
                     </Link>
                   </li>
                 ))}
-                {chapter.materials.map((m, index) => (
+                {chapter.materials.map((m) => (
                   <li key={`arch-m-${m.id}`}>
-                    <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" onClick={() => recordRecentView(user, "material", String(m.id))} className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-400">{index + 1}</span>
+                    <Link href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/materials/${encodeURIComponent(String(m.id))}`} onClick={() => recordRecentView(user, "material", String(m.id))} className="group flex items-center justify-between gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5">
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">{m.title}</span>
-                        <span className="text-[11px] text-neutral-500">Archived · {materialTypeLabels[m.materialType] ?? "Material"}</span>
+                        <span className="inline-flex rounded-full bg-ink/10 px-2 py-0.5 text-[10px] font-bold text-neutral-400">{m.questionCount ?? 0} Questions</span>
                       </span>
-                    </a>
+                      <span className="shrink-0 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-bold text-white group-hover:bg-primary-700">View PDF</span>
+                    </Link>
                   </li>
                 ))}
               </ul>

@@ -17,7 +17,7 @@ import {
 type Subject = { id: string; name: string };
 type Paper = { id: string; subjectId: string; name: string; kind: "paper" | "segment"; isActive: boolean };
 type Chapter = { id: string; name: string; paperId: string | null };
-type Material = { id: number; chapterId: string; title: string; materialType: string; fileUrl: string };
+type Material = { id: number; chapterId: string; title: string; materialType: string; fileUrl: string; questionCount: number };
 
 const MATERIAL_TYPES = ["pdf", "slide", "note", "link", "other"];
 
@@ -347,6 +347,7 @@ function MaterialsManager({
   const [title, setTitle] = useState("");
   const [type, setType] = useState("pdf");
   const [fileUrl, setFileUrl] = useState("");
+  const [questionCount, setQuestionCount] = useState("");
   const [reorderBusy, setReorderBusy] = useState(false);
 
   const loadMaterials = useCallback(async () => {
@@ -390,15 +391,18 @@ function MaterialsManager({
       setNotice({ kind: "error", text: "Select a chapter and fill in title + file URL." });
       return;
     }
+    const qc = Math.max(0, Number(questionCount) || 0);
     const ok = await call("/api/admin/materials", "POST", {
       chapterId,
       title: title.trim(),
       materialType: type,
       fileUrl: fileUrl.trim(),
+      questionCount: qc,
     });
     if (ok) {
       setTitle("");
       setFileUrl("");
+      setQuestionCount("");
       await loadMaterials();
       setNotice({ kind: "success", text: "Material added." });
     }
@@ -426,10 +430,14 @@ function MaterialsManager({
 
       {chapterId && (
         <>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="block">
-              <span className={labelClass}>Title</span>
-              <input className={inputClass} value={title} onChange={(event) => setTitle(event.target.value)} />
+              <span className={labelClass}>Material Name</span>
+              <input className={inputClass} value={title} placeholder="e.g. Biology Chapter 01 MCQ" onChange={(event) => setTitle(event.target.value)} />
+            </label>
+            <label className="block">
+              <span className={labelClass}>Question Count</span>
+              <input className={inputClass} type="number" min={0} value={questionCount} placeholder="e.g. 30" onChange={(event) => setQuestionCount(event.target.value)} />
             </label>
             <label className="block">
               <span className={labelClass}>Type</span>
@@ -464,6 +472,7 @@ function MaterialsManager({
                 <li key={material.id} className="flex items-center gap-3 rounded-xl border border-ink/10 bg-[#f1f5f9] admin-dark:bg-[#0a162e]/60 px-3.5 py-2.5">
                   <span className="min-w-0 flex-1 truncate text-sm text-neutral-200">
                     {index + 1}. {material.title}{" "}
+                    <span className="inline-flex items-center rounded-full bg-primary-600/15 px-2 py-0.5 text-[10px] font-bold text-primary-400">{material.questionCount ?? 0} Questions</span>{" "}
                     <span className="text-[10px] font-bold uppercase text-neutral-500">{material.materialType}</span>
                   </span>
                   <span className="flex shrink-0 gap-1.5">

@@ -19,6 +19,7 @@ export type CourseMaterialItem = {
   title: string;
   materialType: "slide" | "pdf" | "note" | "link" | "other";
   fileUrl: string;
+  questionCount: number;
 };
 
 type PaperRow = {
@@ -35,6 +36,7 @@ type MaterialRow = {
   title: string;
   material_type: string;
   file_url: string;
+  question_count?: number | null;
 };
 
 async function ensurePaperTables(): Promise<void> {
@@ -56,6 +58,7 @@ async function ensurePaperTables(): Promise<void> {
       title VARCHAR(255) NOT NULL,
       material_type ENUM('slide','pdf','note','link','other') NOT NULL DEFAULT 'pdf',
       file_url VARCHAR(1024) NOT NULL,
+      question_count INT NOT NULL DEFAULT 0,
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       sort_order INT NOT NULL DEFAULT 0,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -63,6 +66,11 @@ async function ensurePaperTables(): Promise<void> {
   );
   try {
     await ensureColumn("course_chapters", "paper_id", "VARCHAR(64) NULL AFTER subject_id");
+  } catch {
+    // Column may already exist.
+  }
+  try {
+    await ensureColumn("course_materials", "question_count", "INT NOT NULL DEFAULT 0");
   } catch {
     // Column may already exist.
   }
@@ -216,22 +224,38 @@ export async function fetchMaterials(
   chapterId?: string,
 ): Promise<CourseMaterialItem[]> {
   await ensurePaperTables();
-  const rows = chapterId
-    ? await query<MaterialRow[]>(
-        `SELECT id, chapter_id, title, material_type, file_url FROM course_materials
-          WHERE chapter_id = ? AND is_active = 1 ORDER BY sort_order ASC`,
-        [chapterId],
-      )
-    : await query<MaterialRow[]>(
-        `SELECT id, chapter_id, title, material_type, file_url FROM course_materials
-          WHERE is_active = 1 ORDER BY sort_order ASC`,
-      );
+  // question_count may not exist on older DBs — fallback gracefully.
+  let rows: MaterialRow[];
+  try {
+    rows = chapterId
+      ? await query<MaterialRow[]>(
+          `SELECT id, chapter_id, title, material_type, file_url, question_count FROM course_materials
+            WHERE chapter_id = ? AND is_active = 1 ORDER BY sort_order ASC`,
+          [chapterId],
+        )
+      : await query<MaterialRow[]>(
+          `SELECT id, chapter_id, title, material_type, file_url, question_count FROM course_materials
+            WHERE is_active = 1 ORDER BY sort_order ASC`,
+        );
+  } catch {
+    rows = chapterId
+      ? await query<MaterialRow[]>(
+          `SELECT id, chapter_id, title, material_type, file_url FROM course_materials
+            WHERE chapter_id = ? AND is_active = 1 ORDER BY sort_order ASC`,
+          [chapterId],
+        )
+      : await query<MaterialRow[]>(
+          `SELECT id, chapter_id, title, material_type, file_url FROM course_materials
+            WHERE is_active = 1 ORDER BY sort_order ASC`,
+        );
+  }
   return rows.map((row) => ({
     id: Number(row.id),
     chapterId: row.chapter_id,
     title: row.title,
     materialType: asMaterialType(row.material_type),
     fileUrl: row.file_url,
+    questionCount: Math.max(0, Number(row.question_count ?? 0) || 0),
   }));
 }
 
@@ -242,28 +266,53 @@ export async function saveMaterial(
   const title = asString(input.title);
   const chapterId = asString(input.chapterId, 64);
   const fileUrl = asString(input.fileUrl, 1024);
+  const questionCount = Math.max(0, Number(input.questionCount ?? input.question_count ?? 0) || 0);
   if (!title) throw new Error("Material title is required.");
   if (!chapterId) throw new Error("A chapter must be selected.");
   if (!fileUrl) throw new Error("Material file/URL is required.");
   if (input.id !== undefined && input.id !== null && input.id !== "") {
-    await exec(
-      `UPDATE course_materials SET title = ?, material_type = ?, file_url = ?, chapter_id = ?
-       WHERE id = ?`,
-      [
-        title,
-        asMaterialType(input.materialType),
-        fileUrl,
-        chapterId,
-        Number(input.id),
-      ],
-    );
+    // Try with question_count; fallback if column missing.
+    try {
+      await exec(
+        `UPDATE course_materials SET title = ?, material_type = ?, file_url = ?, chapter_id = ?, question_count = ?
+         WHERE id = ?`,
+        [
+          title,
+          asMaterialType(input.materialType),
+          fileUrl,
+          chapterId,
+          questionCount,
+          Number(input.id),
+        ],
+      );
+    } catch {
+      await exec(
+        `UPDATE course_materials SET title = ?, material_type = ?, file_url = ?, chapter_id = ?
+         WHERE id = ?`,
+        [
+          title,
+          asMaterialType(input.materialType),
+          fileUrl,
+          chapterId,
+          Number(input.id),
+        ],
+      );
+    }
     return fetchMaterials(chapterId);
   }
-  await exec(
-    `INSERT INTO course_materials (chapter_id, title, material_type, file_url)
-     VALUES (?, ?, ?, ?)`,
-    [chapterId, title, asMaterialType(input.materialType), fileUrl],
-  );
+  try {
+    await exec(
+      `INSERT INTO course_materials (chapter_id, title, material_type, file_url, question_count)
+       VALUES (?, ?, ?, ?, ?)`,
+      [chapterId, title, asMaterialType(input.materialType), fileUrl, questionCount],
+    );
+  } catch {
+    await exec(
+      `INSERT INTO course_materials (chapter_id, title, material_type, file_url)
+       VALUES (?, ?, ?, ?)`,
+      [chapterId, title, asMaterialType(input.materialType), fileUrl],
+    );
+  }
   return fetchMaterials(chapterId);
 }
 

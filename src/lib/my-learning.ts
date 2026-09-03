@@ -48,6 +48,7 @@ export type MaterialItem = {
   title: string;
   materialType: string;
   fileUrl: string;
+  questionCount: number;
   isFavourite: boolean;
 };
 
@@ -371,6 +372,7 @@ type MaterialRow = {
   title: string;
   material_type: string;
   file_url: string;
+  question_count?: number | null;
 };
 type ExamRow = {
   id: string;
@@ -530,14 +532,25 @@ export async function getCourseLearningData(
       ),
       safe<MaterialRow[]>(
         "materials query",
-        () =>
-          query<MaterialRow[]>(
-            `SELECT id, chapter_id, title, material_type, file_url
-               FROM course_materials
-              WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
-              ORDER BY sort_order, id`,
-            chapterIds,
-          ),
+        async () => {
+          try {
+            return await query<MaterialRow[]>(
+              `SELECT id, chapter_id, title, material_type, file_url, question_count
+                 FROM course_materials
+                WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
+                ORDER BY sort_order, id`,
+              chapterIds,
+            );
+          } catch {
+            return await query<MaterialRow[]>(
+              `SELECT id, chapter_id, title, material_type, file_url
+                 FROM course_materials
+                WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
+                ORDER BY sort_order, id`,
+              chapterIds,
+            );
+          }
+        },
         [],
       ),
       safe<ExamRow[]>(
@@ -645,6 +658,7 @@ function buildCourseData(
       title: material.title,
       materialType: material.material_type,
       fileUrl: material.file_url,
+      questionCount: Math.max(0, Number(material.question_count ?? 0) || 0),
       isFavourite: favourites.has(`material:${material.id}`),
     });
   }
@@ -947,14 +961,25 @@ export async function getAdminCourseLearningData(
       ),
       safe<MaterialRow[]>(
         "materials query",
-        () =>
-          query<MaterialRow[]>(
-            `SELECT id, chapter_id, title, material_type, file_url
-               FROM course_materials
-              WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
-              ORDER BY sort_order, id`,
-            chapterIds,
-          ),
+        async () => {
+          try {
+            return await query<MaterialRow[]>(
+              `SELECT id, chapter_id, title, material_type, file_url, question_count
+                 FROM course_materials
+                WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
+                ORDER BY sort_order, id`,
+              chapterIds,
+            );
+          } catch {
+            return await query<MaterialRow[]>(
+              `SELECT id, chapter_id, title, material_type, file_url
+                 FROM course_materials
+                WHERE chapter_id IN (${chapterPlaceholders}) AND is_active = 1
+                ORDER BY sort_order, id`,
+              chapterIds,
+            );
+          }
+        },
         [],
       ),
       safe<ExamRow[]>(

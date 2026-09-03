@@ -9,6 +9,7 @@ import {
   inputClass,
   labelClass,
 } from "./admin-ui";
+import { parsePastedMcqs, recomputeParsedMcq, type ParsedPasteMcq } from "@/lib/paste-mcq-parser";
 
 type ExamBrief = {
   id: string;
@@ -108,6 +109,14 @@ export default function ExamPaperEditor({
   const [dragActive, setDragActive] = useState(false);
   const [qualityReports, setQualityReports] = useState<Array<{ name: string; width: number; height: number; sizeKB: number; readable: boolean; issues: string[]; enhanced: boolean }>>([]);
   const [preprocessingInfo, setPreprocessingInfo] = useState<string | null>(null);
+  // Paste Questions — Bulk MCQ Import
+  const [activeImportTab, setActiveImportTab] = useState<"image" | "paste">("image");
+  const [pasteText, setPasteText] = useState("");
+  const [pasteDetected, setPasteDetected] = useState<ParsedPasteMcq[] | null>(null);
+  const [pasteError, setPasteError] = useState<string | null>(null);
+  const [pasteBusy, setPasteBusy] = useState(false);
+  const [pasteSaveBusy, setPasteSaveBusy] = useState(false);
+  const [pasteNotice, setPasteNotice] = useState<string | null>(null);
 
   // Keep bearer token for upload
   const bearer = useMemo(() => authHeaders["Authorization"] || authHeaders["authorization"] || "", [authHeaders]);
@@ -615,6 +624,164 @@ export default function ExamPaperEditor({
     }
   }
 
+  // ── Paste Questions: Detect & Parse → Preview → Review/Edit → Save (slot-mapped Q01..QNN) ──
+  function handlePasteDetect() {
+    setPasteError(null);
+    setPasteNotice(null);
+    if (!pasteText.trim()) {
+      setPasteError("Paste some MCQs first.");
+      return;
+    }
+    setPasteBusy(true);
+    try {
+      const parsed = parsePastedMcqs(pasteText);
+      if (parsed.length === 0) {
+        setPasteError("No MCQs detected. Check formatting — ensure each question has options A–D and answer like 'Ans: A'.");
+        setPasteDetected(null);
+        return;
+      }
+      setPasteDetected(parsed);
+      setPasteNotice(null);
+    } catch (e) {
+      setPasteError(e instanceof Error ? e.message : "Failed to parse.");
+      setPasteDetected(null);
+    } finally {
+      setPasteBusy(false);
+    }
+  }
+
+  function handlePasteClear() {
+    setPasteText("");
+    setPasteDetected(null);
+    setPasteError(null);
+    setPasteNotice(null);
+  }
+
+  async function handlePasteSaveAll() {
+    if (!pasteDetected || pasteDetected.length === 0) return;
+    if (totalSlots <= 0) {
+      setPasteError("Exam Total Questions is not set. Set it in Exam Information first.");
+      return;
+    }
+    const truncated = pasteDetected.slice(0, totalSlots);
+    const extra = pasteDetected.length - totalSlots;
+    // Validate all truncated before saving
+    const validated = truncated.map(recomputeParsedMcq);
+    const needsReviewCount = validated.filter((v) => v.needsReview).length;
+    if (needsReviewCount > 0) {
+      setPasteError(`${needsReviewCount} question(s) need review — fix missing fields or correct answer before saving.`);
+      setPasteDetected(validated);
+      return;
+    }
+    setPasteSaveBusy(true);
+    setPasteError(null);
+    try {
+      let saved = 0;
+      let failed: string[] = [];
+      for (let i = 0; i < validated.length; i++) {
+        const item = validated[i];
+        const slotIndex = i; // Q01 → first detected, etc.
+        const targetQ = displaySlots[slotIndex]?.q ?? null;
+        const existingId = targetQ?.id ?? null;
+        // Ensure options exactly 4 non-empty (parser guarantees)
+        const body: Record<string, unknown> = {
+          ...(existingId ? { id: existingId } : {}),
+          examId: exam.id,
+          subject: exam.subject || "",
+          question: item.question.trim(),
+          questionImage: targetQ?.questionImage || null,
+          question_image: targetQ?.questionImage || null,
+          options: item.options,
+          correctIndex: item.correctIndex!,
+          explanation: null,
+          marks: Number(exam.marksPerQuestion ?? 1) || 1,
+          isActive: true,
+          order: slotIndex + 1,
+        };
+        const res = await fetch("/api/admin/exams/questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify(body),
+        });
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        if (!res.ok) {
+          failed.push(`Q${String(slotIndex + 1).padStart(2, "0")}: ${data?.error ?? "save failed"}`);
+        } else {
+          saved++;
+        }
+      }
+      await load();
+      onChanged?.();
+      if (failed.length > 0) {
+        setPasteError(`Saved ${saved}/${validated.length}. Failures: ${failed.join("; ")}`);
+      } else {
+        let msg = `Saved ${saved} question(s) to ${exam.id} — mapped Q01..Q${String(saved).padStart(2, "0")}.`;
+        if (extra > 0) msg += ` Warning: ${extra} extra detected question(s) were not added (exam limited to ${totalSlots}).`;
+        if (validated.length < totalSlots) msg += ` ${totalSlots - validated.length} slot(s) remain empty.`;
+        setPasteNotice(msg);
+        // Keep pasteDetected for review but mark as saved
+      }
+    } catch (e) {
+      setPasteError(e instanceof Error ? e.message : "Bulk save failed.");
+    } finally {
+      setPasteSaveBusy(false);
+    }
+  }
+
+  async function handlePasteSaveOne(idx: number) {
+    if (!pasteDetected || !pasteDetected[idx]) return;
+    if (totalSlots <= 0) {
+      setPasteError("Exam Total Questions is not set.");
+      return;
+    }
+    if (idx >= totalSlots) {
+      setPasteError(`Question ${idx + 1} is beyond exam limit (${totalSlots}) — not saved.`);
+      return;
+    }
+    const item = recomputeParsedMcq(pasteDetected[idx]);
+    if (item.needsReview) {
+      setPasteError(`Fix Q${String(idx + 1).padStart(2, "0")} — ${item.issues.join("; ")}`);
+      setPasteDetected((prev) => (prev ? prev.map((p, i) => (i === idx ? item : p)) : null));
+      return;
+    }
+    setPasteSaveBusy(true);
+    setPasteError(null);
+    try {
+      const slotIndex = idx;
+      const targetQ = displaySlots[slotIndex]?.q ?? null;
+      const existingId = targetQ?.id ?? null;
+      const res = await fetch("/api/admin/exams/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({
+          ...(existingId ? { id: existingId } : {}),
+          examId: exam.id,
+          subject: exam.subject || "",
+          question: item.question.trim(),
+          questionImage: targetQ?.questionImage || null,
+          question_image: targetQ?.questionImage || null,
+          options: item.options,
+          correctIndex: item.correctIndex!,
+          explanation: null,
+          marks: Number(exam.marksPerQuestion ?? 1) || 1,
+          isActive: true,
+          order: slotIndex + 1,
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        setPasteError(data?.error ?? "Failed to save.");
+        return;
+      }
+      await load();
+      onChanged?.();
+      setPasteNotice(`Q${String(slotIndex + 1).padStart(2, "0")} saved.`);
+      setTimeout(() => setPasteNotice(null), 2500);
+    } finally {
+      setPasteSaveBusy(false);
+    }
+  }
+
   async function saveImportedQuestion(item: { question: string; options: string[]; correctIndex: number | null }, idx: number) {
     if (!item.question.trim() || item.question.trim().length < 3) {
       setImportError(`Question ${idx + 1}: text required.`);
@@ -927,100 +1094,244 @@ export default function ExamPaperEditor({
             </div>
           ) : (
             <>
-              {/* Import from Image — High-Accuracy Vision AI + OCR + Preprocessing + Layout Analysis */}
+              {/* Bulk Question Import — Upload Image | Paste Questions */}
               <div className={`${cardClass} mb-4 p-4 sm:p-5`}>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Question Creation Methods</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500 admin-dark:text-slate-400">
-                      <span className="font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Add Manually</span> — use the slot editor below. &nbsp;|&nbsp; <span className="font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">Import from Image</span> — Vision AI + OCR + layout analysis, ALL readable MCQs.
-                    </p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Workflow: Upload → Quality Analysis → Auto Preprocessing → Vision AI + OCR → Layout → Detect ALL → Preserve Bengali/English/Mixed → Cross-Validation → Second-Pass → Review</p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <input ref={importFileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple className="hidden" onChange={(e) => { const f = e.target.files; if (f && f.length) void handlePendingFiles(f); }} />
-                    <button type="button" disabled={importBusy} onClick={() => importFileRef.current?.click()} className={`${buttonSecondaryClass} shrink-0`}>
-                      Select Images
-                    </button>
-                  </div>
+                {/* Tabs */}
+                <div className="flex items-center gap-2 border-b border-[#eef4ff] pb-3 admin-dark:border-[#1e3a65]/60">
+                  <button
+                    type="button"
+                    onClick={() => setActiveImportTab("image")}
+                    className={`rounded-full px-4 py-1.5 text-xs font-extrabold transition ${activeImportTab === "image" ? "bg-[#1a3a78] text-white shadow" : "border border-[#bfdbfe] bg-[#eff6ff] text-[#1a3a78] hover:bg-[#dbeafe] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#93c5fd]"}`}
+                  >
+                    Upload Image
+                  </button>
+                  <span className="text-slate-400">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveImportTab("paste")}
+                    className={`rounded-full px-4 py-1.5 text-xs font-extrabold transition ${activeImportTab === "paste" ? "bg-[#1a3a78] text-white shadow" : "border border-[#bfdbfe] bg-[#eff6ff] text-[#1a3a78] hover:bg-[#dbeafe] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#93c5fd]"}`}
+                  >
+                    Paste Questions
+                  </button>
+                  <span className="ml-auto hidden text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:inline">Bulk MCQ Import</span>
                 </div>
 
-                {/* Upload Area: drag & drop, preview, remove, reorder */}
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                  onDragLeave={() => setDragActive(false)}
-                  onDrop={(e) => { e.preventDefault(); setDragActive(false); const f = e.dataTransfer.files; if (f && f.length) void handlePendingFiles(f); }}
-                  className={`mt-4 rounded-xl border-2 border-dashed p-4 text-center transition ${dragActive ? "border-[#2f6bce] bg-[#eff6ff] admin-dark:border-[#3b82f6] admin-dark:bg-[#0f2547]" : "border-[#bfdbfe] bg-[#f8fbff] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60"}`}
-                >
-                  <p className="text-xs font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Drag & drop images here, or click Select Images</p>
-                  <p className="mt-1 text-[11px] text-slate-500">Support: JPG, JPEG, PNG, WEBP • One or multiple • Preview before processing • Remove & reorder before detect • Original files preserved</p>
-                  <div className="mt-2 flex flex-wrap justify-center gap-2">
-                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 border border-[#dbeafe] admin-dark:bg-[#112544] admin-dark:text-slate-300">Single image → single question</span>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 border border-[#dbeafe] admin-dark:bg-[#112544] admin-dark:text-slate-300">Multiple → batch detection</span>
-                  </div>
-                </div>
-
-                {/* Preview uploaded images */}
-                {pendingFiles.length > 0 && (
-                  <div className="mt-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Selected Images — Preview & Reorder before processing ({pendingFiles.length})</p>
-                      <button type="button" onClick={clearPendingFiles} className="text-xs font-bold text-slate-500 hover:text-red-600">Clear All</button>
+                {activeImportTab === "image" ? (
+                  <>
+                    <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Upload Image — Vision AI</h3>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-500 admin-dark:text-slate-400">
+                          Vision AI + OCR + layout analysis — detects ALL readable MCQs automatically.
+                        </p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Workflow: Upload → Quality Analysis → Auto Preprocessing → Vision AI + OCR → Layout → Detect ALL → Review</p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <input ref={importFileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple className="hidden" onChange={(e) => { const f = e.target.files; if (f && f.length) void handlePendingFiles(f); }} />
+                        <button type="button" disabled={importBusy} onClick={() => importFileRef.current?.click()} className={`${buttonSecondaryClass} shrink-0`}>
+                          Select Images
+                        </button>
+                      </div>
                     </div>
-                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                      {pendingFiles.map((f, idx) => (
-                        <div key={`${f.name}-${idx}`} className="rounded-xl border border-[#dbeafe] bg-white p-2 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
-                          <div className="flex gap-2">
-                            {previewUrls[idx] && <img src={previewUrls[idx]} alt={f.name} className="h-20 w-20 rounded-lg border object-cover admin-dark:border-zinc-700" />}
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-xs font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{f.name}</p>
-                              <p className="text-[11px] text-slate-500">{(f.size / 1024).toFixed(0)} KB • {qualityReports[idx]?.width ? `${qualityReports[idx].width}×${qualityReports[idx].height}` : "analyzing..."}</p>
-                              {qualityReports[idx] && (
-                                <p className={`mt-1 text-[11px] font-bold ${qualityReports[idx].readable ? "text-emerald-600" : "text-red-600"}`}>
-                                  {qualityReports[idx].readable ? (qualityReports[idx].enhanced ? "Quality: enhanced (auto-preprocessed)" : "Quality: good") : "Quality: too low"}
-                                  {qualityReports[idx].issues.length > 0 && ` — ${qualityReports[idx].issues.join(", ")}`}
-                                </p>
-                              )}
+
+                    {/* Upload Area */}
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                      onDragLeave={() => setDragActive(false)}
+                      onDrop={(e) => { e.preventDefault(); setDragActive(false); const f = e.dataTransfer.files; if (f && f.length) void handlePendingFiles(f); }}
+                      className={`mt-4 rounded-xl border-2 border-dashed p-4 text-center transition ${dragActive ? "border-[#2f6bce] bg-[#eff6ff] admin-dark:border-[#3b82f6] admin-dark:bg-[#0f2547]" : "border-[#bfdbfe] bg-[#f8fbff] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60"}`}
+                    >
+                      <p className="text-xs font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Drag & drop images here, or click Select Images</p>
+                      <p className="mt-1 text-[11px] text-slate-500">JPG, JPEG, PNG, WEBP • One or multiple • Preview, remove & reorder before detect</p>
+                    </div>
+
+                    {pendingFiles.length > 0 && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Selected Images — Preview & Reorder ({pendingFiles.length})</p>
+                          <button type="button" onClick={clearPendingFiles} className="text-xs font-bold text-slate-500 hover:text-red-600">Clear All</button>
+                        </div>
+                        <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                          {pendingFiles.map((f, idx) => (
+                            <div key={`${f.name}-${idx}`} className="rounded-xl border border-[#dbeafe] bg-white p-2 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+                              <div className="flex gap-2">
+                                {previewUrls[idx] && <img src={previewUrls[idx]} alt={f.name} className="h-20 w-20 rounded-lg border object-cover admin-dark:border-zinc-700" />}
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-xs font-bold text-[#0b1e3a] admin-dark:text-zinc-100">{f.name}</p>
+                                  <p className="text-[11px] text-slate-500">{(f.size / 1024).toFixed(0)} KB • {qualityReports[idx]?.width ? `${qualityReports[idx].width}×${qualityReports[idx].height}` : "analyzing..."}</p>
+                                  {qualityReports[idx] && (
+                                    <p className={`mt-1 text-[11px] font-bold ${qualityReports[idx].readable ? "text-emerald-600" : "text-red-600"}`}>
+                                      {qualityReports[idx].readable ? (qualityReports[idx].enhanced ? "Quality: enhanced" : "Quality: good") : "Quality: too low"}
+                                      {qualityReports[idx].issues.length > 0 && ` — ${qualityReports[idx].issues.join(", ")}`}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="mt-2 flex gap-1">
+                                <button type="button" disabled={idx === 0} onClick={() => reorderPendingFile(idx, -1)} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↑ Up</button>
+                                <button type="button" disabled={idx === pendingFiles.length - 1} onClick={() => reorderPendingFile(idx, 1)} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↓ Down</button>
+                                <button type="button" onClick={() => removePendingFile(idx)} className="ml-auto rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">Remove</button>
+                              </div>
                             </div>
+                          ))}
+                        </div>
+                        {preprocessingInfo && <p className="mt-2 rounded-xl border border-[#dbeafe] bg-[#f8fbff] px-3 py-2 text-[11px] font-semibold text-slate-600 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60 admin-dark:text-slate-300">{preprocessingInfo}</p>}
+                        <div className="mt-3 flex gap-2">
+                          <button type="button" disabled={importBusy || pendingFiles.length === 0} onClick={() => void handleImportImages()} className={`${buttonPrimaryClass} shrink-0`}>
+                            {importBusy ? "Detecting..." : `Detect ALL (${pendingFiles.length} image${pendingFiles.length > 1 ? "s" : ""})`}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 rounded-xl border border-[#dbeafe] bg-white p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
+                      <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#1a3a78] admin-dark:text-[#93c5fd]">Pipeline — Not Basic OCR</p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 admin-dark:text-slate-300">
+                        Vision AI understands Bengali/English/mixed, MCQ structure, numbering, multi-line Q & options, 2-column layouts, tables. Science formulas preserved.
+                      </p>
+                    </div>
+                    {importError && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 admin-dark:border-red-900/30 admin-dark:bg-red-500/10">{importError}</p>}
+                    {importMeta && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/20 admin-dark:bg-emerald-500/10">Questions Detected: {importMeta.totalDetected} — from {importMeta.imagesProcessed} image(s)</p>}
+                  </>
+                ) : (
+                  /* ── Paste Questions tab ── */
+                  <div className="mt-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Paste Questions — Bulk MCQ Import</h3>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-500 admin-dark:text-slate-400">
+                          Paste 30, 40 or any number of MCQs at once. System auto-detects boundaries, ignores original numbering and maps to Q01–Q{String(totalSlots).padStart(2, "0")}.
+                        </p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                          Workflow: <span className="font-bold">Paste → Detect &amp; Parse → Preview → Review/Edit → Save</span> — never auto-publishes. Handles A/B/C/D or a/b/c/d, blank lines, inconsistent numbering, different spacing.
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 py-1 text-xs font-bold text-[#1a3a78] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#93c5fd]">Slots: Q01–Q{String(totalSlots).padStart(2, "0")} ({totalSlots} Qs)</span>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className={labelClass} htmlFor="paste-mcq-textarea">Paste MCQs (example format shown below)</label>
+                      <textarea
+                        id="paste-mcq-textarea"
+                        rows={12}
+                        className={`${inputClass} font-mono text-xs leading-relaxed`}
+                        placeholder={`Example:\n5. What is the capital of Bangladesh?\nA. Dhaka\nB. Chittagong\nC. Khulna\nD. Rajshahi\nAns: A\n\n6. Water chemical formula?\na) H2O\nb) CO2\nc) O2\nd) N2\nAnswer: a\n\n7. Which carries oxygen in human body?\nA. RBC\nB. WBC\nC. Platelet\nD. Plasma\nCorrect: A\n\nTip: numbering (5., 6., Q01, etc.) is ignored — pasted Qs map to Q01, Q02, Q03 in order. Include Ans:/Answer:/Correct: line for correct answer.`}
+                        value={pasteText}
+                        onChange={(e) => setPasteText(e.target.value)}
+                      />
+                      <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                        Fixed slots: exam has <span className="font-bold">{totalSlots} questions</span>. If you paste 25 → fill Q01–Q25, leave rest empty. If 40 into 30 → only Q01–Q30 saved, extra flagged.
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" disabled={pasteBusy || !pasteText.trim()} onClick={handlePasteDetect} className={`${buttonPrimaryClass} disabled:opacity-40`}>
+                        {pasteBusy ? "Detecting..." : "Detect & Parse"}
+                      </button>
+                      <button type="button" onClick={handlePasteClear} className={buttonSecondaryClass}>Clear</button>
+                      <span className="self-center text-[11px] font-semibold text-slate-500">Intelligent boundary detection — not dependent on exact “1.” numbering.</span>
+                    </div>
+
+                    {pasteError && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 admin-dark:border-red-900/30 admin-dark:bg-red-500/10">{pasteError}</p>}
+                    {pasteNotice && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/20 admin-dark:bg-emerald-500/10">{pasteNotice}</p>}
+
+                    {/* Paste detection summary & preview */}
+                    {pasteDetected && pasteDetected.length > 0 && (() => {
+                      const recomputed = pasteDetected.map(recomputeParsedMcq);
+                      const detected = recomputed.length;
+                      const success = recomputed.filter((r) => !r.needsReview).length;
+                      const needsReview = detected - success;
+                      const extra = Math.max(0, detected - totalSlots);
+                      const withinSlots = Math.min(detected, totalSlots);
+                      return (
+                        <div className="mt-4">
+                          <div className="rounded-xl border border-[#dbeafe] bg-[#f8fbff] p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f]">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0b1e3a] border border-[#dbeafe] admin-dark:bg-[#0f2547] admin-dark:text-zinc-100">Detected: {detected} Questions</span>
+                              <span className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white">Successfully Parsed: {success}</span>
+                              <span className={`rounded-full px-3 py-1 text-xs font-bold ${needsReview > 0 ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>Needs Review: {needsReview}</span>
+                              <span className="rounded-full bg-[#1a3a78] px-3 py-1 text-xs font-bold text-white">→ Q01–Q{String(withinSlots).padStart(2, "0")} {totalSlots ? `of ${totalSlots}` : ""}</span>
+                            </div>
+                            {extra > 0 && (
+                              <p className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 admin-dark:border-amber-500/30 admin-dark:bg-amber-500/10 admin-dark:text-amber-300">
+                                ⚠ Warning: {extra} extra question(s) detected beyond exam limit ({totalSlots}). Only Q01–Q{String(totalSlots).padStart(2, "0")} will be saved. Extra will be ignored.
+                              </p>
+                            )}
+                            {totalSlots > detected && (
+                              <p className="mt-2 text-[11px] font-semibold text-slate-500">Paste fewer than slots: filling Q01–Q{String(detected).padStart(2, "0")}, Q{String(detected + 1).padStart(2, "0")}–Q{String(totalSlots).padStart(2, "0")} will remain empty.</p>
+                            )}
+                            <p className="mt-2 text-[11px] font-semibold text-slate-500">Original numbering ignored — e.g., pasted 5.,6.,7. → mapped to Q01, Q02, Q03. Edit any card before saving.</p>
                           </div>
-                          <div className="mt-2 flex gap-1">
-                            <button type="button" disabled={idx === 0} onClick={() => reorderPendingFile(idx, -1)} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↑ Up</button>
-                            <button type="button" disabled={idx === pendingFiles.length - 1} onClick={() => reorderPendingFile(idx, 1)} className="rounded-lg border border-[#dbeafe] bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-[#eff6ff] disabled:opacity-30">↓ Down</button>
-                            <button type="button" onClick={() => removePendingFile(idx)} className="ml-auto rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">Remove</button>
+
+                          <ol className="mt-3 space-y-3">
+                            {recomputed.map((item, idx) => {
+                              const isBeyond = idx >= totalSlots;
+                              const slotLabel = `Q${String(idx + 1).padStart(2, "0")}`;
+                              return (
+                                <li key={`paste-${idx}`} className={`rounded-2xl border bg-white shadow-sm admin-dark:bg-[#112544] ${isBeyond ? "border-red-300 border-dashed opacity-75" : item.needsReview ? "border-amber-300 border-dashed bg-amber-50/40 admin-dark:border-amber-500/30 admin-dark:bg-[#1a2a3a]" : "border-[#dbeafe] admin-dark:border-[#1e3a65]"}`}>
+                                  <div className="flex items-start justify-between gap-2 border-b border-[#eef4ff] px-4 py-3 admin-dark:border-[#1e3a65]/60">
+                                    <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest">
+                                      <span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs ${isBeyond ? "bg-red-500 text-white" : item.needsReview ? "bg-amber-500 text-white" : "bg-[#1a3a78] text-white"}`}>
+                                        {slotLabel}
+                                      </span>
+                                      <span className={isBeyond ? "text-red-600" : item.needsReview ? "text-amber-700 admin-dark:text-amber-300" : "text-[#0b1e3a] admin-dark:text-zinc-100"}>
+                                        {isBeyond ? "Extra — beyond limit" : item.needsReview ? "Needs Review" : "Ready"}
+                                      </span>
+                                      {item.originalNumber && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">orig: {item.originalNumber}</span>}
+                                    </p>
+                                    <span className="text-[11px] font-bold text-slate-500">→ {slotLabel} {isBeyond ? "(ignored)" : ""}</span>
+                                  </div>
+                                  <div className="px-4 py-4 sm:px-5">
+                                    {item.needsReview && (
+                                      <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 admin-dark:border-amber-500/20 admin-dark:bg-amber-500/10">
+                                        <p className="text-xs font-bold text-amber-700 admin-dark:text-amber-300">Needs Review — {item.issues.join("; ")}</p>
+                                      </div>
+                                    )}
+                                    <label className={labelClass} htmlFor={`paste-q-${idx}`}>Question Text</label>
+                                    <textarea id={`paste-q-${idx}`} rows={2} className={`${inputClass} font-semibold`} value={item.question} onChange={(e) => setPasteDetected((prev) => prev ? prev.map((p, i) => i === idx ? recomputeParsedMcq({ ...p, question: e.target.value }) : p) : null)} placeholder="Question" />
+                                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                      {item.options.map((opt, oi) => (
+                                        <div key={oi} className="flex gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => setPasteDetected((prev) => prev ? prev.map((p, i) => i === idx ? recomputeParsedMcq({ ...p, correctIndex: oi }) : p) : null)}
+                                            className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border-2 text-xs font-extrabold ${item.correctIndex === oi ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-slate-400"}`}
+                                            title="Mark as correct"
+                                          >
+                                            {item.correctIndex === oi ? "●" : "○"}
+                                          </button>
+                                          <input className={inputClass} value={opt} onChange={(e) => setPasteDetected((prev) => prev ? prev.map((p, i) => i === idx ? recomputeParsedMcq({ ...p, options: p.options.map((o, j) => j === oi ? e.target.value : o) as [string,string,string,string] }) : p) : null)} placeholder={`${String.fromCharCode(65 + oi)} Option`} />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      <button type="button" disabled={pasteSaveBusy || isBeyond} onClick={() => void handlePasteSaveOne(idx)} className={`${buttonPrimaryClass} text-xs disabled:opacity-40`}>
+                                        Save {slotLabel}
+                                      </button>
+                                      <span className="self-center text-[11px] font-semibold text-slate-500">{item.correctIndex === null ? "Select correct answer (●) before saving" : `Correct: ${String.fromCharCode(65 + (item.correctIndex ?? 0))}`}</span>
+                                    </div>
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ol>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button type="button" disabled={pasteSaveBusy} onClick={() => void handlePasteSaveAll()} className={`${buttonPrimaryClass} disabled:opacity-40`}>
+                              {pasteSaveBusy ? "Saving..." : `Save All to Slots (Q01–Q${String(Math.min(detected, totalSlots)).padStart(2, "0")})`}
+                            </button>
+                            <button type="button" onClick={() => setPasteDetected(null)} className={buttonSecondaryClass}>Dismiss Preview</button>
+                            <span className="self-center text-[11px] font-semibold text-slate-500">Never auto-publishes — review then Save. Editable before save.</span>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                    {preprocessingInfo && <p className="mt-2 rounded-xl border border-[#dbeafe] bg-[#f8fbff] px-3 py-2 text-[11px] font-semibold text-slate-600 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60 admin-dark:text-slate-300">{preprocessingInfo}</p>}
-                    <div className="mt-3 flex gap-2">
-                      <button type="button" disabled={importBusy || pendingFiles.length === 0} onClick={() => void handleImportImages()} className={`${buttonPrimaryClass} shrink-0`}>
-                        {importBusy ? "Detecting — Vision AI + OCR + Layout..." : `Detect ALL Questions (${pendingFiles.length} image${pendingFiles.length > 1 ? "s" : ""})`}
-                      </button>
-                      <span className="self-center text-[11px] font-semibold text-slate-500">Preserves Bengali/English/mixed exactly • No highlight filter • Science formulas & symbols intact</span>
-                    </div>
+                      );
+                    })()}
                   </div>
                 )}
-
-                <div className="mt-4 rounded-xl border border-[#dbeafe] bg-white p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]">
-                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#1a3a78] admin-dark:text-[#93c5fd]">High-Accuracy Pipeline — Not Basic OCR</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-600 admin-dark:text-slate-300">
-                    Vision AI understands <span className="font-bold">Bengali, English, mixed, MCQ structure, numbering, multi-line Q & options, 2-column layouts, tables</span>. Example: <span className="rounded bg-[#f8fbff] px-1 py-0.5 font-mono text-xs admin-dark:bg-[#0f2547]" style={{ fontFamily: "'Noto Sans Bengali',sans-serif" }}>মানবদেহে Oxygen transport করে কোনটি?</span> stays <span className="font-bold" style={{ fontFamily: "'Noto Sans Bengali',sans-serif" }}>মানবদেহে Oxygen transport করে কোনটি?</span> until you enable Convert.
-                  </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Steps: Quality analysis (resolution, blur, sharpness, brightness, contrast, noise, rotation/skew, text size) → Auto enhancement if needed → Preprocessing (rotate, deskew, perspective, upscale, contrast, brightness, denoise, sharpen, background cleanup, adaptive threshold) → Vision AI + OCR + layout → ALL MCQs → Q-option association → Cross-validation → Second-pass for uncertain → Duplicate prevention → Ordering → Structured output.</p>
-                </div>
-                <div className="mt-3 rounded-xl border border-dashed border-[#bfdbfe] bg-[#f8fbff] px-3 py-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547]/60">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Language & Extraction Rules</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-600 admin-dark:text-slate-300">
-                    Initial detection <span className="font-bold">preserves exact source</span>: Bengali stays Bengali (Unicode যুক্তাক্ষর, কার, মাত্রা, numerals intact with Bengali font), English stays English, mixed stays mixed. Extract <span className="font-bold">ONLY Question + Options (A-D)</span>. Never auto-extract correct answer, explanation, marks, subject, etc. Optional <span className="font-bold">Convert to English = OFF</span> by default.
-                  </p>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-500">Scientific & medical preserved: H₂O, Na⁺, pH, chemical formulas, equations, units, Greek letters, superscripts/subscripts, medical terms.</p>
-                </div>
-                {importError && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 admin-dark:border-red-900/30 admin-dark:bg-red-500/10">{importError}</p>}
-                {importMeta && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/20 admin-dark:bg-emerald-500/10">Questions Detected: {importMeta.totalDetected} — from {importMeta.imagesProcessed} image(s), exact source language preserved{importMeta.convertToEnglish ? " — Converted to English" : ""} • Vision AI + OCR cross-validated</p>}
               </div>
 
-              {/* Review after detection — SAME Question Card UI, with Convert toggle */}
-              {importDetected && importDetected.length > 0 && (
+              {/* Review after detection — Image tab only */}
+              {activeImportTab === "image" && importDetected && importDetected.length > 0 && (
                 <div className="mb-4">
                   <div className="rounded-xl border border-[#dbeafe] bg-[#f8fbff] p-3 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]/50">
                     <div className="flex flex-wrap items-center justify-between gap-2">

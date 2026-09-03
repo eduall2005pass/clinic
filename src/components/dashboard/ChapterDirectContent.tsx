@@ -10,6 +10,7 @@ import {
 } from "@/components/dashboard/CourseLevels";
 import type { ContentKind } from "@/components/dashboard/CourseContentCards";
 import { contentBase, flatChapters } from "@/components/dashboard/CourseContentCards";
+import MaterialCard from "@/components/dashboard/MaterialCard";
 
 const KIND_META: Record<ContentKind, { title: string; emptyLabel: string }> = {
   classes: { title: "Classes", emptyLabel: "classes" },
@@ -156,41 +157,21 @@ export default function ChapterDirectContentView({
           </ol>
         ))}
 
-      {/* ── Materials (PDFs open in a new tab) ──────────────────────────── */}
+      {/* ── Materials — clean minimal cards: Name + Question Count badge + View PDF ─ */}
       {kind === "materials" &&
         (chapter.materials.length === 0 ? (
           <EmptyNotice what="materials" />
         ) : (
-          <ol className="mt-6 space-y-2">
-            {chapter.materials.map((material, index) => (
-              <li key={material.id}>
-                <a
-                  href={material.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() =>
-                    recordRecentView(user, "material", String(material.id))
-                  }
-                  className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-sm font-extrabold text-emerald-400">
-                    {index + 1}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
-                      {material.title}
-                    </span>
-                    <span className="text-[11px] text-neutral-500">
-                      {material.materialType.toUpperCase()} · Material {index + 1}
-                    </span>
-                  </span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-primary-400">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5h7m0 0v7m0-7L10 16" />
-                  </svg>
-                </a>
-              </li>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {chapter.materials.map((material) => (
+              <MaterialCard
+                key={material.id}
+                slug={slug}
+                material={material}
+                onView={() => recordRecentView(user, "material", String(material.id))}
+              />
             ))}
-          </ol>
+          </div>
         ))}
 
       {/* ── Archive ─────────────────────────────────────────────────────────── */}
@@ -225,25 +206,23 @@ export default function ChapterDirectContentView({
                 </Link>
               </li>
             ))}
-            {chapter.materials.map((material, index) => (
+            {chapter.materials.map((material) => (
               <li key={`arch-mat-${material.id}`}>
-                <a
-                  href={material.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/materials/${encodeURIComponent(String(material.id))}`}
                   onClick={() => recordRecentView(user, "material", String(material.id))}
-                  className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                  className="group flex items-center justify-between gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-sm font-extrabold text-amber-400">
-                    {index + 1}
-                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-heading group-hover:text-primary-400">
                       {material.title}
                     </span>
-                    <span className="text-[11px] text-neutral-500">Archived · {material.materialType.toUpperCase()}</span>
+                    <span className="inline-flex rounded-full bg-ink/10 px-2 py-0.5 text-[10px] font-bold text-neutral-400">
+                      {material.questionCount ?? 0} Questions
+                    </span>
                   </span>
-                </a>
+                  <span className="shrink-0 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-bold text-white group-hover:bg-primary-700">View PDF</span>
+                </Link>
               </li>
             ))}
             {chapter.exams.length > 0 && (
