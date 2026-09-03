@@ -203,7 +203,7 @@ export default function ExamCard({
             </p>
           </div>
           <div className="border-x border-ink/10 px-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+            <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
               Total Marks
             </p>
             <p className="mt-1 text-sm font-bold text-heading">

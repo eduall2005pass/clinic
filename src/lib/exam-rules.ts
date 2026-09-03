@@ -133,35 +133,35 @@ export function buildDefaultExamRules(examId: string): ExamRule[] {
   const defaults: Array<Pick<ExamRule, "title" | "text">> = [
     {
       title: "Duration",
-      text: "You will get the full exam duration. A countdown timer starts as soon as you begin.",
+      text: "আপনি পরীক্ষার পুরো সময় পাবেন। পরীক্ষা শুরু করার সাথে সাথেই কাউন্টডাউন টাইমার চালু হবে।",
     },
     {
       title: "Marking System",
-      text: "Every correct answer earns the full marks of that question. Unanswered questions score zero.",
+      text: "প্রতিটি সঠিক উত্তরের জন্য প্রশ্নের পুরো নম্বর পাবেন। উত্তর না দিলে শূন্য নম্বর পাবেন।",
     },
     {
       title: "Negative Marking",
-      text: "If negative marking is enabled for this exam, each wrong answer deducts 0.25 marks. Answer carefully!",
+      text: "এই পরীক্ষায় নেগেটিভ মার্কিং চালু থাকলে প্রতিটি ভুল উত্তরের জন্য ০.২৫ নম্বর কাটা যাবে। সতর্কভাবে উত্তর দিন!",
     },
     {
       title: "Answer Selection Rules",
-      text: "Select ONE option per question. An answer is locked immediately after selection — you cannot change or clear it. You may answer questions in any order and return to skipped ones before submitting.",
+      text: "প্রতিটি প্রশ্নের জন্য একটি অপশন নির্বাচন করুন। উত্তর নির্বাচন করার সাথে সাথেই তা লক হয়ে যাবে — পরিবর্তন বা মুছে ফেলা যাবে না। আপনি যেকোনো ক্রমে প্রশ্নের উত্তর দিতে পারবেন এবং জমা দেওয়ার আগে বাদ পড়া প্রশ্নে ফিরে যেতে পারবেন।",
     },
     {
       title: "Submission Rules",
-      text: "Answer all questions on this single scrollable paper, then click Submit Exam. Your result is calculated and shown instantly after submission.",
+      text: "একটি স্ক্রলযোগ্য প্রশ্নপত্রে সব প্রশ্নের উত্তর দিন, তারপর Submit Exam এ ক্লিক করুন। জমা দেওয়ার সাথে সাথেই আপনার ফলাফল হিসাব করে দেখানো হবে।",
     },
     {
       title: "Auto-Submit Rules",
-      text: "When the timer reaches zero the exam auto-submits your locked answers. If the exam is interrupted (tab closed / page left), everything already answered is auto-submitted too. Starting the exam on another device ends this session and submits it automatically.",
+      text: "টাইমার শূন্যে পৌঁছালে পরীক্ষা স্বয়ংক্রিয়ভাবে আপনার লক করা উত্তরগুলো জমা দিয়ে দেবে। যদি পরীক্ষা চলাকালীন ট্যাব বন্ধ করেন বা পেজ ছেড়ে যান, তাহলে ইতিমধ্যে দেওয়া উত্তরগুলোও স্বয়ংক্রিয়ভাবে জমা হয়ে যাবে। অন্য ডিভাইসে একই পরীক্ষা শুরু করলে এই সেশনটি শেষ হয়ে স্বয়ংক্রিয়ভাবে জমা হয়ে যাবে।",
     },
     {
       title: "Second Attempt Timer Penalty",
-      text: "If enabled for this exam, repeating this same exam as a second-timer deducts extra marks after grading. First attempts are never penalised.",
+      text: "এই পরীক্ষার জন্য চালু থাকলে, একই পরীক্ষা দ্বিতীয়বার (Second Timer) দিলে গ্রেডিংয়ের পর অতিরিক্ত নম্বর কাটা যাবে। প্রথমবারের (First Timer) প্রচেষ্টায় কখনো জরিমানা করা হয় না।",
     },
     {
       title: "Answer Key",
-      text: "Correct answers stay hidden during the exam. After submission you can open the answer script from your result card to compare your answers with the correct ones.",
+      text: "পরীক্ষা চলাকালীন সঠিক উত্তরগুলো লুকানো থাকবে। জমা দেওয়ার পর আপনি রেজাল্ট কার্ড থেকে উত্তরপত্র খুলে আপনার উত্তরগুলো সঠিক উত্তরের সাথে মিলিয়ে দেখতে পারবেন।",
     },
   ];
   return defaults.map((rule, index) => ({

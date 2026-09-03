@@ -771,72 +771,24 @@ export default function ExamParticipationArea({
 
   return (
     <div className="space-y-4">
-      {/* Sticky header: exam meta + timer + submit */}
+      {/* Fixed Header — ONLY Total Questions (left) and Countdown Timer (right) */}
       <div className="sticky top-0 z-20 -mx-4 border-b border-ink/10 bg-dark-950/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-sm font-extrabold text-heading sm:text-base">{exam.name}</h2>
-            <p className="mt-0.5 text-xs font-semibold text-neutral-400">
-              {totalQuestions} Questions · {totalMarks} Marks · {exam.durationMinutes} min
-              {exam.negativeMarks > 0 ? ` · −${exam.negativeMarks}/wrong` : ""}
-              {" · "}
-              <span className="text-primary-300">Answered {answeredCount}/{totalQuestions}</span>
-              {unansweredCount > 0 ? <span className="text-neutral-500"> · {unansweredCount} left</span> : null}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <span
-              className={`rounded-full px-3 py-1.5 font-mono text-sm font-extrabold sm:px-4 sm:text-base ${
-                secondsLeft !== null && secondsLeft < 60
-                  ? "bg-red-500/15 text-red-400"
-                  : "bg-primary-600/15 text-primary-300"
-              }`}
-            >
-              ⏱ {formatClock(secondsLeft ?? 0)}
-            </span>
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => {
-                if (window.confirm("Are you sure you want to submit the exam?")) {
-                  void submit();
-                }
-              }}
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-emerald-700 disabled:opacity-50 sm:px-5 sm:text-sm"
-            >
-              {submitting ? "Submitting…" : "Submit Exam"}
-            </button>
-          </div>
-        </div>
-        {/* Thin progress bar */}
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-dark-800">
-          <div
-            className="h-full rounded-full bg-primary-600 transition-all duration-300"
-            style={{ width: `${totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0}%` }}
-          />
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-bold text-heading">Total Questions: {totalQuestions}</span>
+          <span
+            className={`rounded-full px-3 py-1.5 font-mono text-sm font-extrabold sm:px-4 sm:text-base ${
+              secondsLeft !== null && secondsLeft < 60
+                ? "bg-red-500/15 text-red-400"
+                : "bg-primary-600/15 text-primary-300"
+            }`}
+          >
+            Countdown Timer: {formatClock(secondsLeft ?? 0)}
+          </span>
         </div>
       </div>
 
       {/* Exam paper — all questions vertically, free scroll */}
       <div className="rounded-2xl border border-ink/10 bg-dark-900 p-4 sm:p-6">
-        {/* Paper header */}
-        <div className="border-b border-ink/10 pb-4">
-          <h3 className="text-base font-extrabold text-heading sm:text-lg">{exam.name}</h3>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
-            <span className="rounded-full border border-ink/10 bg-dark-850 px-3 py-1 text-neutral-300">Total Questions: {totalQuestions}</span>
-            <span className="rounded-full border border-ink/10 bg-dark-850 px-3 py-1 text-neutral-300">Total Marks: {totalMarks}</span>
-            <span className="rounded-full border border-ink/10 bg-dark-850 px-3 py-1 text-neutral-300">Duration: {exam.durationMinutes} min</span>
-            {exam.negativeMarks > 0 && (
-              <span className="rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-red-300">Negative: −{exam.negativeMarks} per wrong</span>
-            )}
-            <span className="rounded-full border border-primary-500/20 bg-primary-600/10 px-3 py-1 text-primary-300">
-              {answeredCount} answered · {unansweredCount} not answered
-            </span>
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-            Free scrolling — answer any question in any order. Each option locks immediately after selection and cannot be changed. You may skip questions and return later. Unanswered remain clickable until you submit.
-          </p>
-        </div>
 
         {/* Questions list */}
         <ol className="mt-6 space-y-6">
