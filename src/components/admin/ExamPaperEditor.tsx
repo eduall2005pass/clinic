@@ -175,6 +175,13 @@ export default function ExamPaperEditor({
   }
 
   function startEdit(q: ExamQuestion, slotIndex: number) {
+    // Normalize to exactly 4 options A-D — same fixed data structure for Detect from Text and Add Manually
+    const normalizeOpts = (opts: string[]): string[] => {
+      const base = [...opts];
+      if (base.length > 4) return base.slice(0, 4);
+      if (base.length < 4) return [...base, ...EMPTY_OPTIONS.slice(base.length)];
+      return base;
+    };
     if (q.id === null) {
       // placeholder without id — treat as new at that slot position
       setPlaceholderEditingSlot(slotIndex);
@@ -183,7 +190,7 @@ export default function ExamPaperEditor({
         subject: q.subject || exam.subject || "",
         question: q.question || "",
         questionImage: q.questionImage || "",
-        options: q.options.length >= 2 ? [...q.options] : [...q.options, ...EMPTY_OPTIONS.slice(q.options.length)],
+        options: normalizeOpts(q.options ?? []),
         correctIndex: q.correctIndex ?? 0,
         explanation: q.explanation ?? "",
         marks: String(q.marks ?? exam.marksPerQuestion ?? 1),
@@ -193,8 +200,7 @@ export default function ExamPaperEditor({
     }
     setEditingId(q.id);
     setPlaceholderEditingSlot(null);
-    const opts = q.options.length >= 2 ? [...q.options] : [...q.options, ...EMPTY_OPTIONS.slice(q.options.length)];
-    // Ensure exactly 4 base, but allow extra
+    const opts = normalizeOpts(q.options ?? []);
     setForm({
       subject: q.subject || exam.subject || "",
       question: q.question,
@@ -679,7 +685,7 @@ export default function ExamPaperEditor({
                 />
               </div>
               {!allCompleted && totalSlots > 0 && (
-                <p className="mt-1 text-[11px] font-semibold text-amber-600">Complete all slots before publishing — missing slots show “Not Added”.</p>
+                <p className="mt-1 text-[11px] font-semibold text-amber-600">Complete all slots before publishing — missing slots show “Not Added”. Counter counts both Detect from Text and Add Manually (e.g., 25 detected + 5 manually = 30/30).</p>
               )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -730,22 +736,25 @@ export default function ExamPaperEditor({
             </div>
           ) : (
             <>
-              {/* Bulk Question Import — Text Only */}
+              {/* Bulk Question Import — Text Only — Two Input Methods for Every Slot */}
               <div className={`${cardClass} mb-4 p-4 sm:p-5`}>
                 <div className="flex items-center gap-2 border-b border-[#eef4ff] pb-3 admin-dark:border-[#1e3a65]/60">
-                  <span className="rounded-full bg-[#1a3a78] px-4 py-1.5 text-xs font-extrabold text-white shadow">Paste Questions</span>
+                  <span className="rounded-full bg-[#1a3a78] px-4 py-1.5 text-xs font-extrabold text-white shadow">Two Input Methods for Every Slot</span>
                   <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 admin-dark:border-emerald-900/30 admin-dark:bg-emerald-500/10 admin-dark:text-emerald-300">Text Only</span>
                   <span className="ml-auto hidden text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:inline">Bulk MCQ Import — Text Only</span>
                 </div>
                 <div className="mt-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">Paste Questions — Bulk MCQ Import</h3>
+                        <h3 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-zinc-100">1. Detect from Text — Bulk pasted MCQs are automatically parsed</h3>
                         <p className="mt-1 text-xs leading-relaxed text-slate-500 admin-dark:text-slate-400">
-                          Paste 30, 40 or any number of MCQs at once. System auto-detects boundaries, ignores original numbering and maps to Q01–Q{String(totalSlots).padStart(2, "0")}.
+                          Paste 30, 40 or any number of MCQs at once. System auto-detects boundaries, ignores original numbering and <span className="font-bold">maps sequentially into the existing fixed slots Q01–Q{String(totalSlots).padStart(2, "0")}</span>. Example: 30 detected → Q01–Q30 automatically filled. Both methods use the same fixed question slots and same question data structure.
                         </p>
                         <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                          Workflow: <span className="font-bold">Paste → Detect &amp; Parse → Preview → Review/Edit → Save</span> — never auto-publishes. Handles A/B/C/D or a/b/c/d, blank lines, inconsistent numbering, different spacing.
+                          Workflow: <span className="font-bold">Paste → Detect &amp; Parse → Preview → Review/Edit → Save</span> — never auto-publishes, never creates duplicate slots or additional slots after detection. Handles A/B/C/D or a/b/c/d, blank lines, inconsistent numbering, different spacing.
+                        </p>
+                        <p className="mt-1 text-[11px] leading-relaxed font-bold text-[#1a3a78] admin-dark:text-[#93c5fd]">
+                          2. Add Manually — every slot (Q01, Q02, … Q{String(totalSlots).padStart(2, "0")}) also has a manual entry option: Question Text, Option A/B/C/D, Correct Answer, Marks. Fixed Total Questions = {totalSlots} remains unchanged.
                         </p>
                       </div>
                       <span className="shrink-0 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 py-1 text-xs font-bold text-[#1a3a78] admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-[#93c5fd]">Slots: Q01–Q{String(totalSlots).padStart(2, "0")} ({totalSlots} Qs)</span>
@@ -971,8 +980,10 @@ export default function ExamPaperEditor({
                               else startAddForSlot(index);
                             }}
                             className="rounded-lg bg-[#1a3a78] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#123060] admin-dark:bg-[#234e9f]"
+                            title="Add Manually — Question Text, Option A/B/C/D, Correct Answer, Marks"
+                            aria-label={`Add Manually for Question ${pad(slotNumber)}`}
                           >
-                            {q && q.id !== null ? "Complete" : "+ Add"}
+                            Add Manually
                           </button>
                         )}
                       </div>
@@ -984,6 +995,9 @@ export default function ExamPaperEditor({
                         <div className="rounded-xl border border-dashed border-amber-200 bg-white px-4 py-6 text-center admin-dark:border-amber-500/20 admin-dark:bg-[#0f2547]/50">
                           <p className="text-sm font-bold text-slate-600 admin-dark:text-slate-300">
                             {q && q.id !== null && q.question ? "Incomplete — finish editing to mark as Added." : `Slot ${pad(slotNumber)} is empty.`}
+                          </p>
+                          <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                            Two Input Methods for this slot: <span className="font-bold">Detect from Text</span> (paste bulk above → mapped to {pad(slotNumber)}) OR <span className="font-bold">Add Manually</span> (Question Text, Option A/B/C/D, Correct Answer, Marks).
                           </p>
                           {q && q.id !== null && q.questionImage ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -1088,10 +1102,10 @@ export default function ExamPaperEditor({
                             </div>
 
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                              {form.options.map((opt, oi) => (
+                              {([0,1,2,3] as const).map((oi) => (
                                 <div key={oi}>
                                   <label className={labelClass} htmlFor={`eq-opt-${index}-${oi}`}>
-                                    Option {String.fromCharCode(65 + oi)}
+                                    Option {String.fromCharCode(65 + oi)} <span className="text-red-500">*</span>
                                   </label>
                                   <div className="flex gap-2">
                                     <button
@@ -1106,20 +1120,15 @@ export default function ExamPaperEditor({
                                     <input
                                       id={`eq-opt-${index}-${oi}`}
                                       className={inputClass}
-                                      value={opt}
-                                      onChange={(e) => setForm({ ...form, options: form.options.map((v, i) => (i === oi ? e.target.value : v)) })}
+                                      value={form.options[oi] ?? ""}
+                                      onChange={(e) => setForm({ ...form, options: form.options.map((v, i) => (i === oi ? e.target.value : v)) as string[] })}
                                       placeholder={`Option ${String.fromCharCode(65 + oi)}`}
                                     />
                                   </div>
                                 </div>
                               ))}
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <button type="button" onClick={() => setForm({ ...form, options: [...form.options, ""] })} className={buttonSecondaryClass}>+ Add option</button>
-                              {form.options.length > 2 && (
-                                <button type="button" onClick={() => setForm({ ...form, options: form.options.slice(0, -1), correctIndex: Math.min(form.correctIndex, form.options.length - 2) })} className={buttonSecondaryClass}>− Remove last</button>
-                              )}
-                            </div>
+                            <p className="text-[11px] font-semibold text-slate-500">Manual entry requires exactly Option A, B, C, D — same fixed data structure as Detect from Text. Select correct answer via ●.</p>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                               <div>
                                 <label className={labelClass} htmlFor={`eq-marks-${index}`}>Marks</label>
