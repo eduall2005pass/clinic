@@ -2,7 +2,7 @@ packages:
   - "."
 allowBuilds:
   '@firebase/util': true
-  core-js: set this to true or false
-  esbuild: set this to true or false
+  core-js: true
+  esbuild: true
   protobufjs: true
   unrs-resolver: true
