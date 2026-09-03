@@ -28,8 +28,9 @@ export default function TimerSelection({
     router.push(`/exam/${examId}?begin=1&timer=${selected}`);
   };
 
-  // If second timer is not enabled or no prior attempt, skip selection
-  if (!secondTimerEnabled || !hasPriorAttempt) {
+  // Show Timer Type selection whenever Second Timer Penalty is enabled — student must choose First vs Second Timer.
+  // Penalty is NOT auto-applied; only the explicit selection determines deduction.
+  if (!secondTimerEnabled) {
     return null;
   }
 
@@ -72,7 +73,7 @@ export default function TimerSelection({
           <div>
             <p className="text-sm font-extrabold text-heading">First Timer</p>
             <p className="mt-1 text-xs text-neutral-400">
-              No penalty applied. Full marks possible.
+              No timer penalty will be deducted.
             </p>
           </div>
           {selected === "first" && (
@@ -118,9 +119,9 @@ export default function TimerSelection({
             <p className="text-sm font-extrabold text-heading">Second Timer</p>
             <p className="mt-1 text-xs text-neutral-400">
               <span className="font-bold text-red-300">
-                −{secondTimerDeduction} marks
+                {secondTimerDeduction} marks
               </span>{" "}
-              penalty on final score.
+              will be deducted from the final score.
             </p>
           </div>
           {selected === "second" && (

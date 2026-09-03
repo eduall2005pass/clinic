@@ -31,7 +31,14 @@ export async function GET(
   const stored = await fetchExamRules(id);
   const rules = stored.length > 0 ? stored : buildDefaultExamRules(id);
   return NextResponse.json(
-    { examId: id, examName: exam.name, rules, customizable: stored.length > 0 },
+    {
+      examId: id,
+      examName: exam.name,
+      rules,
+      customizable: stored.length > 0,
+      secondTimerEnabled: exam.secondTimerEnabled,
+      secondTimerDeduction: exam.secondTimerDeduction,
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

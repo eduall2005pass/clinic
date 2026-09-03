@@ -62,14 +62,33 @@ export default function TimerSelectionPage({
         );
         const priorData = (await priorRes.json().catch(() => ({}))) as {
           hasPriorAttempt?: boolean;
+          exam?: {
+            id: string;
+            name: string;
+            secondTimerEnabled?: boolean;
+            secondTimerDeduction?: number;
+          };
           error?: string;
         };
 
         if (cancelled) return;
 
-        // If no prior attempt, skip selection — go straight to exam
-        if (!priorData.hasPriorAttempt) {
-          router.replace(`/exam/${examId}?begin=1`);
+        // Use exam's Second Timer config from prior-attempt response (dynamic, not hard-coded)
+        const secondEnabled = Boolean(priorData.exam?.secondTimerEnabled);
+        const secondDeduction =
+          typeof priorData.exam?.secondTimerDeduction === "number" && Number.isFinite(priorData.exam.secondTimerDeduction)
+            ? Number(priorData.exam!.secondTimerDeduction)
+            : 3;
+
+        // When Second Timer is NOT enabled, no selection is needed — go straight to exam.
+        // When enabled, always show Timer Type selection (First vs Second) — penalty only if Second is explicitly selected.
+        if (!secondEnabled) {
+          if (!priorData.hasPriorAttempt) {
+            router.replace(`/exam/${examId}?begin=1&timer=first`);
+            return;
+          }
+          // Even with prior attempt but no second timer, no penalty — start as First Timer
+          router.replace(`/exam/${examId}?begin=1&timer=first`);
           return;
         }
 
@@ -95,12 +114,12 @@ export default function TimerSelectionPage({
                 examTime: "",
                 status: "Live" as const,
                 published: true,
-                secondTimerEnabled: true,
-                secondTimerDeduction: 5,
+                secondTimerEnabled: secondEnabled,
+                secondTimerDeduction: secondDeduction,
                 eligibility: { mode: "all" as const, rules: [] },
               }
             : null,
-          hasPriorAttempt: true,
+          hasPriorAttempt: Boolean(priorData.hasPriorAttempt),
           error: examData.error,
         });
       } catch {

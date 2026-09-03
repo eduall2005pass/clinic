@@ -78,6 +78,7 @@ export async function GET(
     user.uid,
     user.name || user.email || "Student",
     startAttempt,
+    timerType as "first" | "second",
   );
   if (!payload) {
     // Distinguish missing ID vs genuinely unavailable (draft/closed/enrolled)

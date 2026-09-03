@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { exec, parseJsonColumn, query, withTransaction } from "@/lib/mysql";
+import { ensureColumn, exec, parseJsonColumn, query, withTransaction } from "@/lib/mysql";
 import { fetchExams, hasEnrolledExamAccess, type Exam } from "@/lib/exams-admin";
 import type { RowDataPacket } from "mysql2/promise";
 
@@ -74,13 +74,13 @@ export function secondTimerConfigFor(exam: {
   ruleTemplate?: string | null;
 }): { enabled: boolean; deduction: number } {
   if (exam.ruleTemplate) {
-    if (exam.ruleTemplate === "medical") return { enabled: true, deduction: 5 };
+    if (exam.ruleTemplate === "medical") return { enabled: true, deduction: 3 };
     // academic and university both have no second timer per Spec §17
     return { enabled: false, deduction: 0 };
   }
   const enabled = Boolean(exam.secondTimerEnabled);
   const deduction = enabled && exam.secondTimerDeduction != null && exam.secondTimerDeduction > 0 ? Number(exam.secondTimerDeduction) : 0;
-  return { enabled, deduction: enabled ? deduction || 5 : 0 };
+  return { enabled, deduction: enabled ? deduction || 3 : 0 };
 }
 
 export type TakingQuestion = {
@@ -179,6 +179,7 @@ type AttemptRow = {
   session_token: string;
   status: string;
   started_at?: Date | string | null;
+  timer_type?: string | null;
 };
 
 function isLivePublished(exam: Exam): boolean {
@@ -206,6 +207,13 @@ function ensureAttemptTables(): Promise<void> {
         answered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (exam_id, student_uid, question_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+      // Timer Type selection — student chooses First or Second Timer on Rules page.
+      // Stored per active attempt and used for grading; locked after start.
+      try {
+        await ensureColumn("exam_attempts", "timer_type", "`timer_type` ENUM('first','second') NULL AFTER status");
+      } catch {
+        // Best effort — column may already exist or table not yet ready.
+      }
     })().catch((error) => {
       attemptTablesReady = null;
       throw error;
@@ -224,8 +232,10 @@ async function startExamAttempt(
   examId: string,
   uid: string,
   studentName: string,
+  timerType: "first" | "second" = "first",
 ): Promise<string> {
   await ensureAttemptTables();
+  const normalizedTimer: "first" | "second" = timerType === "second" ? "second" : "first";
   // Max attempts enforcement: check exam_settings.maxAttempts if the table exists
   try {
     const settingsRows = await query<{ max_attempts: number | string | null }[]>(
@@ -255,12 +265,12 @@ async function startExamAttempt(
     await finalizeAttempt(examId, uid, studentName, {});
   }
   const token = randomUUID();
-  // Ensure started_at reflects the new start time
+  // Ensure started_at reflects the new start time and lock Timer Type for this attempt
   await exec(
-    `INSERT INTO exam_attempts (exam_id, student_uid, session_token, status, started_at)
-     VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP)
-     ON DUPLICATE KEY UPDATE session_token = VALUES(session_token), status = 'active', started_at = CURRENT_TIMESTAMP`,
-    [examId, uid, token],
+    `INSERT INTO exam_attempts (exam_id, student_uid, session_token, status, timer_type, started_at)
+     VALUES (?, ?, ?, 'active', ?, CURRENT_TIMESTAMP)
+     ON DUPLICATE KEY UPDATE session_token = VALUES(session_token), status = 'active', timer_type = VALUES(timer_type), started_at = CURRENT_TIMESTAMP`,
+    [examId, uid, token, normalizedTimer],
   );
   // Fresh session — clear any leftover answers.
   await exec(
@@ -458,14 +468,26 @@ async function finalizeAttempt(
   const negativePerWrong = negativePerWrongFor(found);
   const graded = gradeAnswers(rows, merged, negativePerWrong);
 
-  // Second-timer check — only PRIOR submissions of this SAME exam count.
+  // Second-timer check — use student's selected Timer Type for this attempt (stored in exam_attempts.timer_type).
+  // If enabled and student selected Second Timer, apply configured deduction; First Timer = no penalty.
+  // Legacy attempts without timer_type fall back to prior-submission check for backward compatibility, but
+  // new flow must NOT auto-apply penalty to every student — only when Second Timer is explicitly selected.
   let isSecondTimer = false;
   try {
-    const priorRows = await query<{ n: number }[]>(
-      `SELECT COUNT(*) AS n FROM exam_results WHERE exam_id = ? AND student_uid = ?`,
+    const timerRows = await query<{ timer_type: string | null }[]>(
+      `SELECT timer_type FROM exam_attempts WHERE exam_id = ? AND student_uid = ? LIMIT 1`,
       [examId, uid],
     );
-    isSecondTimer = (priorRows[0]?.n ?? 0) > 0;
+    const storedType = timerRows[0]?.timer_type ?? null;
+    if (storedType === "second") {
+      isSecondTimer = true;
+    } else if (storedType === "first") {
+      isSecondTimer = false;
+    } else {
+      // Legacy: no selection stored — treat as First Timer (no penalty) to avoid auto-deduction.
+      // Prior logic (count >0) is intentionally NOT used for new Timer Type flow.
+      isSecondTimer = false;
+    }
   } catch {
     // On failure treat as first timer — never penalise without evidence.
   }
@@ -670,6 +692,7 @@ export async function getExamForTaking(
   studentName?: string,
   /** Only true once the student accepts the exam rules — begins the attempt. */
   startAttempt = false,
+  timerType: "first" | "second" = "first",
 ): Promise<{
   exam: TakingExam;
   questions: TakingQuestion[];
@@ -725,7 +748,7 @@ export async function getExamForTaking(
     try {
       await ensureAttemptTables();
       if (startAttempt && questions.length > 0) {
-        sessionToken = await startExamAttempt(examId, uid, studentName || "Student");
+        sessionToken = await startExamAttempt(examId, uid, studentName || "Student", timerType);
         // Newly started attempt — timer is full duration
         secondsLeft = found.durationMinutes * 60;
         // Fetch the actual started_at that was just written

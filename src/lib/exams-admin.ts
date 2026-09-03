@@ -279,7 +279,7 @@ export function ruleTemplateDefaults(template: string): {
         negativeEnabled: true,
         negativePerWrong: 0.25,
         secondTimerEnabled: true,
-        secondTimerDeduction: 5,
+        secondTimerDeduction: 3,
       };
     case "university":
       return {
@@ -435,7 +435,7 @@ async function ensureTables(): Promise<void> {
     // Best effort — column may already exist.
   }
   try {
-    await ensureColumn("exams", "second_timer_deduction", "`second_timer_deduction` DECIMAL(6,2) NOT NULL DEFAULT 5 AFTER second_timer_enabled");
+    await ensureColumn("exams", "second_timer_deduction", "`second_timer_deduction` DECIMAL(6,2) NOT NULL DEFAULT 3 AFTER second_timer_enabled");
   } catch {
     // Best effort — column may already exist.
   }
@@ -786,15 +786,26 @@ export async function saveExam(
   let secondTimerDeduction =
     Number.isFinite(secondTimerDeductionRaw) && secondTimerDeductionRaw > 0
       ? Math.min(9999, secondTimerDeductionRaw)
-      : 5;
+      : 3;
 
-  // Override with template defaults when a template is selected
+  // Override with template defaults when a template is selected, but keep Second Timer deduction editable (default 3)
   if (resolvedRuleTemplate) {
     const defaults = ruleTemplateDefaults(resolvedRuleTemplate);
     negativeEnabled = defaults.negativeEnabled;
     negativePerWrong = defaults.negativePerWrong;
-    secondTimerEnabled = defaults.secondTimerEnabled;
-    secondTimerDeduction = defaults.secondTimerDeduction;
+    // Allow admin to override Second Timer penalty amount even with template (editable, suggested 3)
+    if (input.secondTimerEnabled !== undefined || input.secondTimerDeduction !== undefined) {
+      secondTimerEnabled = input.secondTimerEnabled === true;
+      if (secondTimerEnabled) {
+        const raw = Number(input.secondTimerDeduction);
+        secondTimerDeduction = Number.isFinite(raw) && raw > 0 ? Math.min(9999, raw) : defaults.secondTimerDeduction || 3;
+      } else {
+        secondTimerDeduction = 0;
+      }
+    } else {
+      secondTimerEnabled = defaults.secondTimerEnabled;
+      secondTimerDeduction = defaults.secondTimerDeduction;
+    }
   }
 
   const featured = input.featured === true;
@@ -1270,7 +1281,7 @@ export async function duplicateExam(sourceId: string, adminUid: string): Promise
       src.negative_enabled ?? 0,
       src.negative_per_wrong ?? 0.25,
       src.second_timer_enabled ?? 0,
-      src.second_timer_deduction ?? 5,
+      src.second_timer_deduction ?? 3,
       0,
       "draft",
       0,

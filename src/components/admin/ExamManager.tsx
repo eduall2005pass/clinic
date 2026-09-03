@@ -64,7 +64,7 @@ const EMPTY = {
   negativeEnabled: false,
   negativePerWrong: "0.25",
   secondTimerEnabled: false,
-  secondTimerDeduction: "5",
+  secondTimerDeduction: "3",
   kind: "public" as Exam["kind"],
   batchId: "hsc-28",
   subject: "",
@@ -236,7 +236,16 @@ export default function ExamManager({
   function startCreate() {
     if (fixedCategory) {
       const tpl = detectTemplateForCategory(fixedCategory);
-      setForm({ ...EMPTY, id: generateExamId(), ruleTemplate: tpl, questionCount: "30", marksPerQuestion: "1" });
+      const isSecond = tpl === "medical";
+      setForm({
+        ...EMPTY,
+        id: generateExamId(),
+        ruleTemplate: tpl,
+        questionCount: "30",
+        marksPerQuestion: "1",
+        secondTimerEnabled: isSecond,
+        secondTimerDeduction: isSecond ? "3" : "0",
+      });
     } else {
       setForm(EMPTY);
     }
@@ -261,7 +270,7 @@ export default function ExamManager({
       negativeEnabled: exam.negativeEnabled ?? exam.negativeMarks > 0,
       negativePerWrong: String(exam.negativePerWrong ?? 0.25),
       secondTimerEnabled: Boolean(exam.secondTimerEnabled),
-      secondTimerDeduction: String(exam.secondTimerDeduction ?? 5),
+      secondTimerDeduction: String(exam.secondTimerDeduction ?? 3),
       kind: exam.kind,
       batchId: exam.batchId || "hsc-28",
       subject: exam.subject,
@@ -365,7 +374,9 @@ export default function ExamManager({
           questionCount: qc,
           marksPerQuestion: mpqNum,
           totalMarks: total,
-          // template controls these — still send for legacy columns but server will override via ruleTemplateDefaults
+          // Second Timer Penalty — editable, default 3 when enabled (student chooses First/Second on Rules page)
+          secondTimerEnabled: form.secondTimerEnabled,
+          secondTimerDeduction: Number(form.secondTimerDeduction) || 3,
           negativeMarks: 0,
           ...(editingSortOrder !== null ? { sortOrder: editingSortOrder } : {}),
         };
@@ -381,7 +392,7 @@ export default function ExamManager({
           negativeEnabled: form.negativeEnabled,
           negativePerWrong: Number(form.negativePerWrong) || 0.25,
           secondTimerEnabled: form.secondTimerEnabled,
-          secondTimerDeduction: Number(form.secondTimerDeduction) || 5,
+          secondTimerDeduction: Number(form.secondTimerDeduction) || 3,
           negativeMarks: form.negativeEnabled ? Number(form.negativePerWrong) || 0.25 : 0,
           durationMinutes: Number(form.durationMinutes) || 30,
           totalMarks: form.totalMarks ? Number(form.totalMarks) : undefined,
@@ -785,7 +796,16 @@ export default function ExamManager({
                   <div>
                     <label className={labelClass} htmlFor="ex-rules">Rules</label>
                     <select id="ex-rules" className={inputClass} value={(form as unknown as { ruleTemplate: string }).ruleTemplate}
-                      onChange={(event) => setForm({ ...form, ruleTemplate: event.target.value } as unknown as typeof form)}>
+                      onChange={(event) => {
+                        const v = event.target.value;
+                        const isSecond = v === "medical";
+                        setForm({
+                          ...form,
+                          ruleTemplate: v,
+                          secondTimerEnabled: isSecond,
+                          secondTimerDeduction: isSecond ? (form.secondTimerDeduction && Number(form.secondTimerDeduction) > 0 ? form.secondTimerDeduction : "3") : "0",
+                        } as unknown as typeof form);
+                      }}>
                       <option value="academic">Academic Rules</option>
                       <option value="medical">Medical Rules</option>
                       <option value="university">University Rules</option>
@@ -794,6 +814,41 @@ export default function ExamManager({
                       {(form as unknown as { ruleTemplate: string }).ruleTemplate === "medical" && "Medical: negative marking + second-timer penalty."}
                       {(form as unknown as { ruleTemplate: string }).ruleTemplate === "university" && "University: negative marking, no second-timer."}
                       {(form as unknown as { ruleTemplate: string }).ruleTemplate === "academic" && "Academic: no negative marking, no second-timer."}
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2 rounded-xl border border-neutral-200 p-3 admin-dark:border-zinc-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700 admin-dark:text-zinc-200">
+                        Second Timer Penalty
+                      </span>
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600 admin-dark:text-zinc-300">
+                        <input
+                          type="checkbox"
+                          checked={form.secondTimerEnabled}
+                          onChange={(event) => setForm({ ...form, secondTimerEnabled: event.target.checked })}
+                        />
+                        {form.secondTimerEnabled ? "ON" : "OFF"}
+                      </label>
+                    </div>
+                    <div className="mt-2 flex items-center gap-3">
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        Penalty Marks
+                      </span>
+                      <input
+                        aria-label="Second timer penalty marks"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        disabled={!form.secondTimerEnabled}
+                        className={`${inputClass} w-28 disabled:opacity-50`}
+                        value={form.secondTimerDeduction}
+                        onChange={(event) => setForm({ ...form, secondTimerDeduction: event.target.value })}
+                        placeholder="3"
+                      />
+                      <span className="text-[11px] text-slate-500">marks (suggested 3) — deducted if Second Timer selected</span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      When enabled, student chooses First Timer (no penalty) or Second Timer (−{form.secondTimerDeduction || 3} marks) on Rules page.
                     </p>
                   </div>
                   <div>
