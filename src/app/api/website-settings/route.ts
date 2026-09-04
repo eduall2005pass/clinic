@@ -15,6 +15,7 @@ import {
   ALLOWED_LOGO_EXTENSIONS,
   MAX_LOGO_FILE_SIZE,
 } from "@/lib/logo";
+import { makeTransparentPng } from "@/lib/logo-background";
 
 // Public content: edge-cached for fast loads (60s revalidation).
 export const revalidate = 300;
@@ -147,11 +148,55 @@ export async function POST(request: NextRequest) {
       );
     }
     try {
-      const bytes = new Uint8Array(await logoFile.arrayBuffer());
-      const { width, height } = parseImageDimensions(bytes, extension);
-      // Need to re-read file after arrayBuffer consumption — clone for saveActiveLogo.
-      // Reconstruct File since arrayBuffer consumed the original's buffer cursor.
-      const freshLogo = new File([bytes], logoFile.name, { type: logoFile.type });
+      const rawBytes = new Uint8Array(await logoFile.arrayBuffer());
+      let processedBytes: Buffer;
+      let processedFileName: string;
+      let processedMime: string;
+      let width = 512;
+      let height = 512;
+
+      if (extension === ".svg") {
+        processedBytes = Buffer.from(rawBytes);
+        processedFileName = logoFile.name;
+        processedMime = "image/svg+xml";
+        try {
+          const dims = parseImageDimensions(rawBytes, extension);
+          width = dims.width;
+          height = dims.height;
+        } catch {
+          // fallback 512
+        }
+      } else {
+        try {
+          processedBytes = await makeTransparentPng(rawBytes);
+        } catch (bgErr) {
+          console.warn("Background removal failed (website-settings), fallback:", bgErr);
+          try {
+            const sharp = (await import("sharp")).default;
+            processedBytes = await sharp(rawBytes).ensureAlpha().png({ palette: false }).toBuffer();
+          } catch {
+            processedBytes = Buffer.from(rawBytes);
+          }
+        }
+        try {
+          const dims = parseImageDimensions(new Uint8Array(processedBytes), ".png");
+          width = dims.width;
+          height = dims.height;
+        } catch {
+          try {
+            const dims = parseImageDimensions(rawBytes, extension);
+            width = dims.width;
+            height = dims.height;
+          } catch {
+            // fallback
+          }
+        }
+        const base = logoFile.name.includes(".") ? logoFile.name.slice(0, logoFile.name.lastIndexOf(".")) : logoFile.name;
+        processedFileName = `${base}.png`;
+        processedMime = "image/png";
+      }
+
+      const freshLogo = new File([new Uint8Array(processedBytes)], processedFileName, { type: processedMime });
       const saved = await saveActiveLogo(freshLogo, width, height, admin.uid);
       logoResult = { url: saved.url, fileName: saved.fileName };
     } catch (error) {
