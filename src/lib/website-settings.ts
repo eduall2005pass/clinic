@@ -325,7 +325,7 @@ export async function saveWebsiteSettings(
       fileName,
       await faviconFile.arrayBuffer(),
     );
-    const newStoragePath = `${FAVICON_STORAGE_DIR}/${fileName}`;
+    const newStoragePath = url;
     // Keep previous for cleanup after successful DB write.
     if (typeof faviconStoragePath === "string" && isLocalUpload(faviconStoragePath)) {
       previousFaviconPath = faviconStoragePath;

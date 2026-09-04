@@ -114,9 +114,18 @@ function extractMediaPath(url: string): string | null {
 }
 
 export async function removeFile(storagePath: string): Promise<void> {
-  // New-style VM-hosted file: ask the medifiles service to unlink it.
+  if (!storagePath || typeof storagePath !== "string") return;
+
   const mediaPath = extractMediaPath(storagePath);
-  if (mediaPath && storagePath.startsWith(MEDIA_FILES_BASE_URL)) {
+  const isVmUrl = storagePath.startsWith(MEDIA_FILES_BASE_URL);
+  const isRelativeVmPath =
+    !storagePath.startsWith("http") &&
+    !storagePath.startsWith("/") &&
+    /^[A-Za-z0-9._-]+\/[A-Za-z0-9._\/-]+$/.test(storagePath.split(/[?#]/)[0]) &&
+    mediaPath === null;
+
+  // Case 1: full VM URL (e.g. https://medispark.duckdns.org/medifiles/...)
+  if (mediaPath && isVmUrl) {
     try {
       await fetch(MEDIA_DELETE_URL, {
         method: "POST",
@@ -125,6 +134,43 @@ export async function removeFile(storagePath: string): Promise<void> {
           "X-Medifiles-Token": mediaToken(),
         },
         body: JSON.stringify({ url: storagePath }),
+      });
+    } catch {
+      // Best-effort cleanup.
+    }
+    return;
+  }
+
+  // Case 2: relative VM path — e.g. "website/logo/uuid.png" → construct full URL
+  if (isRelativeVmPath) {
+    const clean = storagePath.split(/[?#]/)[0];
+    const fullUrl = `${MEDIA_FILES_BASE_URL}/${clean}`;
+    try {
+      await fetch(MEDIA_DELETE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Medifiles-Token": mediaToken(),
+        },
+        body: JSON.stringify({ url: fullUrl }),
+      });
+    } catch {
+      // Best-effort cleanup.
+    }
+    return;
+  }
+
+  // Case 2b: relative URL with /medifiles/ prefix (e.g. "/medifiles/course-images/uuid.png")
+  if (mediaPath && !isVmUrl && storagePath.includes("/medifiles/")) {
+    const fullUrl = `${MEDIA_FILES_BASE_URL}/${mediaPath}`;
+    try {
+      await fetch(MEDIA_DELETE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Medifiles-Token": mediaToken(),
+        },
+        body: JSON.stringify({ url: fullUrl }),
       });
     } catch {
       // Best-effort cleanup.
@@ -144,12 +190,15 @@ export async function removeFile(storagePath: string): Promise<void> {
 
 export function isLocalUpload(url: string): boolean {
   // Accepts VM-hosted media URLs, "/api/files/<id>" legacy URLs and legacy
-  // relative paths ("/uploads/...", "website/logo/...", ...) while rejecting
-  // external URLs (other https://... hosts).
+  // relative VM paths (e.g. "website/logo/...", "course-images/...") while
+  // rejecting external URLs (other https://... hosts).
+  if (!url || typeof url !== "string") return false;
   if (url.startsWith(`${MEDIA_FILES_BASE_URL}/`)) return true;
   if (url.startsWith(`${UPLOADS_BASE_URL}/`)) return true;
-  if (url.startsWith("https://")) return false;
-  return url.includes("/") && !url.startsWith("http");
+  if (url.startsWith("https://") || url.startsWith("http://")) return false;
+  // Relative VM path: at least one slash, looks like a storage dir
+  // Covers "website/logo/...", "course-images/...", "media-library/..." etc.
+  return /^[A-Za-z0-9._-]+\/[A-Za-z0-9._\/-]+$/.test(url.split(/[?#]/)[0]);
 }
 
 export async function fetchUpload(

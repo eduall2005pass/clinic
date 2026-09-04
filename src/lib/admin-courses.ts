@@ -333,19 +333,22 @@ export async function setAdminCourseImage(
 
   await exec(
     "UPDATE admin_courses SET image_url = ?, image_storage_path = ? WHERE id = ?",
-    [url, `${ADMIN_COURSES_STORAGE_DIR}/${fileName}`, id],
+    [url, url, id],
   );
 
-  if (
-    typeof previousPath === "string" &&
-    previousPath.startsWith(ADMIN_COURSES_STORAGE_DIR)
-  ) {
+  if (typeof previousPath === "string" && isLocalUpload(previousPath)) {
     try {
-      if (!isLocalUpload(previousPath)) {
-        // Non-local paths cannot be removed locally — ignore.
-      } else {
-        await removeFile(previousPath);
-      }
+      await removeFile(previousPath);
+    } catch {
+      // Best-effort cleanup.
+    }
+  } else if (
+    typeof previousPath === "string" &&
+    previousPath.includes(ADMIN_COURSES_STORAGE_DIR)
+  ) {
+    // Fallback for legacy relative paths that isLocalUpload might miss
+    try {
+      await removeFile(previousPath);
     } catch {
       // Best-effort cleanup.
     }
@@ -365,10 +368,15 @@ export async function deleteAdminCourse(id: string): Promise<AdminCourse[]> {
   await exec("DELETE FROM admin_courses WHERE id = ?", [id]);
 
   const storagePath = rows[0]?.image_storage_path ?? rows[0]?.image_url;
-  if (
+  if (typeof storagePath === "string" && isLocalUpload(storagePath)) {
+    try {
+      await removeFile(storagePath);
+    } catch {
+      // Best-effort cleanup.
+    }
+  } else if (
     typeof storagePath === "string" &&
-    storagePath.startsWith(ADMIN_COURSES_STORAGE_DIR) &&
-    isLocalUpload(storagePath)
+    storagePath.includes(ADMIN_COURSES_STORAGE_DIR)
   ) {
     try {
       await removeFile(storagePath);

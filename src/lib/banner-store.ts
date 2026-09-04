@@ -152,10 +152,18 @@ async function deleteBannerFile(
   storagePath: string | null | undefined,
 ): Promise<void> {
   if (typeof storagePath !== "string" || storagePath.length === 0) return;
-  // Only remove files managed by the uploads system — never static assets.
-  if (!storagePath.startsWith(BANNER_STORAGE_DIR)) return;
+  // Only remove VM-managed files — never static assets like /banners/*.svg
+  // Check both relative paths and full VM URLs
+  const isManaged =
+    storagePath.startsWith(BANNER_STORAGE_DIR) ||
+    storagePath.includes(BANNER_STORAGE_DIR) ||
+    storagePath.includes("/medifiles/");
+  if (!isManaged) return;
+  // Also reject obvious static assets
+  if (storagePath.startsWith("/banners/")) return;
   try {
-    const { removeFile } = await import("@/lib/storage");
+    const { removeFile, isLocalUpload } = await import("@/lib/storage");
+    if (!isLocalUpload(storagePath) && !storagePath.includes("/medifiles/")) return;
     await removeFile(storagePath);
   } catch {
     // Best-effort cleanup.
@@ -227,7 +235,7 @@ export async function saveCustomBanner(input: {
       fileName,
       await input.file.arrayBuffer(),
     );
-    storagePath = `${BANNER_STORAGE_DIR}/${fileName}`;
+    storagePath = url;
   } else {
     // Meta-only update path should not reach here; keep previous image.
     throw new Error("No banner file provided.");

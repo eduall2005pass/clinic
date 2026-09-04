@@ -334,7 +334,7 @@ export async function setCourseCategoryImage(
 
   await exec(
     "UPDATE course_categories SET image_url = ?, image_storage_path = ? WHERE id = ?",
-    [url, `${COURSE_CATEGORIES_STORAGE_DIR}/${fileName}`, id],
+    [url, url, id],
   );
   await deleteCategoryImage(previousPath);
 

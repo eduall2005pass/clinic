@@ -161,15 +161,14 @@ export async function saveActiveLogo(
     ? `.${file.name.split(".").pop()?.toLowerCase() ?? ""}`
     : ".png";
   const suffix = mode ? `${mode}-logo` : "active-logo";
-  const storagePath = `${LOGO_STORAGE_DIR}/${suffix}-${Date.now()}${extension}`;
+  const fileName = `${suffix}-${Date.now()}${extension}`;
   // Read file buffer once — callers may have already consumed the original File
   // stream, so we tolerate both File and already-buffered data.
   const buffer = await file.arrayBuffer();
-  const cleanUrl = await saveFile(
-    LOGO_STORAGE_DIR,
-    storagePath.split("/").pop() ?? "",
-    buffer,
-  );
+  const cleanUrl = await saveFile(LOGO_STORAGE_DIR, fileName, buffer);
+  // Store the actual VM URL as storage_path so delete can locate the file
+  // (VM generates a UUID filename, so the local fileName is not the real path)
+  const storagePath = cleanUrl;
 
   // Ensure table exists before read/write (first upload on fresh DB)
   await ensureLogosTable();
