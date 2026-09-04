@@ -5,10 +5,11 @@ import { use, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
 import { useAdminToast } from "@/components/admin/AdminToastProvider";
+import LegacyCourseContent from "@/components/admin/LegacyCourseContent";
 
 type Subject = { id: string; name: string; sortOrder?: number };
 
-// Flow 4 Level 2 — Course → Subjects
+// Flow 4 Level 2 — Course → Subjects (with router for existing 3 flows)
 export default function CourseSubjectsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const toast = useAdminToast();
@@ -19,6 +20,34 @@ export default function CourseSubjectsPage({ params }: { params: Promise<{ slug:
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [layout, setLayout] = useState<string | null>(null);
+  const [layoutLoading, setLayoutLoading] = useState(true);
+
+  // Determine course layout to branch: flow-4 vs legacy 1-3
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/admin/courses?slug=${encodeURIComponent(slug)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!cancelled && res.ok) {
+          const data = (await res.json()) as { course?: { contentLayout?: string } };
+          setLayout(data.course?.contentLayout ?? "flow-1");
+        } else if (!cancelled) {
+          setLayout("flow-1");
+        }
+      } catch {
+        if (!cancelled) setLayout("flow-1");
+      } finally {
+        if (!cancelled) setLayoutLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, authLoading, slug]);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -34,8 +63,9 @@ export default function CourseSubjectsPage({ params }: { params: Promise<{ slug:
 
   useEffect(() => {
     if (authLoading || !user) return;
+    if (layout !== "flow-4") return;
     void load();
-  }, [authLoading, user, load]);
+  }, [authLoading, user, load, layout]);
 
   async function post(body: Record<string, unknown>, success: string) {
     setBusy(true);
@@ -55,7 +85,12 @@ export default function CourseSubjectsPage({ params }: { params: Promise<{ slug:
     return true;
   }
 
-  if (authLoading || subjects === null || !user) return <AccessLoading label="Loading subjects…" />;
+  if (authLoading || layoutLoading || !user) return <AccessLoading label="Loading course…" />;
+  // Existing 3 flows: keep exactly as before via legacy component
+  if (layout !== "flow-4") {
+    return <LegacyCourseContent slug={slug} />;
+  }
+  if (subjects === null) return <AccessLoading label="Loading subjects…" />;
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -66,7 +101,7 @@ export default function CourseSubjectsPage({ params }: { params: Promise<{ slug:
         {decodeURIComponent(slug).replace(/-/g, " ")}
       </h1>
       <p className="mt-1 text-xs text-neutral-500">
-        Flow 4 — <span className="font-bold">Course → Subject → Chapter → Content</span> · Manage subjects for this course.
+        Flow 4 — <span className="font-bold">Course Content → Subject → Content</span> · Manage subjects for this course. Existing flows 1-3 remain unchanged.
       </p>
 
       {subjects.length === 0 ? (
@@ -88,7 +123,7 @@ export default function CourseSubjectsPage({ params }: { params: Promise<{ slug:
                   <Link href={`/admin/course-content-control/course/${encodeURIComponent(slug)}/subject/${encodeURIComponent(sub.id)}`} className="flex-1 break-words text-sm font-bold text-heading hover:text-primary-600">
                     {idx + 1}. {sub.name}
                   </Link>
-                  <Link href={`/admin/course-content-control/course/${encodeURIComponent(slug)}/subject/${encodeURIComponent(sub.id)}`} className="rounded-lg border border-ink/15 bg-ink/5 px-3 py-1.5 text-[11px] font-bold text-heading hover:border-[#93c5fd]">Chapters</Link>
+                  <Link href={`/admin/course-content-control/course/${encodeURIComponent(slug)}/subject/${encodeURIComponent(sub.id)}`} className="rounded-lg border border-ink/15 bg-ink/5 px-3 py-1.5 text-[11px] font-bold text-heading hover:border-[#93c5fd]">Contents</Link>
                   <button type="button" onClick={() => { setEditId(sub.id); setEditName(sub.name); }} className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-heading">Edit</button>
                   <button type="button" disabled={busy} onClick={async () => { if (window.confirm(`Delete "${sub.name}"?`)) await post({ action: "delete-subject", id: sub.id }, "Subject removed."); }} className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-1.5 text-xs font-bold text-red-400">Remove</button>
                   <span className="flex gap-1">
@@ -113,7 +148,7 @@ export default function CourseSubjectsPage({ params }: { params: Promise<{ slug:
         </div>
       )}
       <p className="mt-6 rounded-xl border border-dashed border-[#bfdbfe] bg-[#f8fbff]/70 px-4 py-3 text-center text-xs text-slate-500 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544]/60">
-        Navigation always remains: if a subject has no chapters → show &quot;No Content Available&quot; on student side.
+        Flow 4 navigation: Course Content → Subject → Content. If a subject has no content → student sees &quot;No Content Available&quot; while navigation remains.
       </p>
     </section>
   );

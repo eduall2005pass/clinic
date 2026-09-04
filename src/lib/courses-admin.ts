@@ -36,11 +36,12 @@ export function normalizeCatalogCategory(value: unknown): CatalogCourseCategory 
  * Flow 1 (Direct):  Course → Class / Exam / Materials / Archive → Chapter → Content
  * Flow 2 (Paper):   Course → 1st Paper / 2nd Paper → Class / Exam / Materials / Archive → Chapter → Content
  * Flow 3 (Subject): Course → Subject → Class / Exam / Materials / Archive → Chapter → Content
+ * Flow 4 (Direct Subject): Course Content → Subject → Content (no Chapter, no paper — direct per-subject contents)
  *
  * Backward-compatible: old values 'auto'/'direct'/'paper'/'subject' are
  * mapped to the corresponding flow on read.
  */
-export type CourseContentLayout = "flow-1" | "flow-2" | "flow-3";
+export type CourseContentLayout = "flow-1" | "flow-2" | "flow-3" | "flow-4";
 
 /** Flow metadata for display and hierarchy preview. */
 export type FlowMeta = {
@@ -69,13 +70,19 @@ export const CONTENT_FLOWS: FlowMeta[] = [
     description: "Multi-subject course like Medical Admission with subject-level grouping.",
     hierarchy: ["Course", "Subject", "Class / Exam / Materials / Archive", "Chapter", "Content"],
   },
+  {
+    id: "flow-4",
+    label: "Flow 4 — Subject → Content",
+    description: "Course Content → Subject → Content — direct per-subject contents (video, PDF, note, image, audio, quiz, etc.) without Chapter layer.",
+    hierarchy: ["Course Content", "Subject", "Content"],
+  },
 ];
 
 /** Map legacy content_layout values to the new flow system. */
 function normalizeContentLayoutRaw(value: unknown): CourseContentLayout {
   const v = String(value ?? "").trim().toLowerCase();
   // Direct mapping for new values.
-  if (v === "flow-1" || v === "flow-2" || v === "flow-3") return v;
+  if (v === "flow-1" || v === "flow-2" || v === "flow-3" || v === "flow-4") return v;
   // Backward compatibility: map old values.
   if (v === "direct") return "flow-1";
   if (v === "paper") return "flow-2";
@@ -265,11 +272,11 @@ async function ensureTables(): Promise<void> {
   } catch {
     // Best effort — column may already exist.
   }
-  // Course-wise content structure (flow-1 / flow-2 / flow-3 selection).
+  // Course-wise content structure (flow-1 / flow-2 / flow-3 / flow-4 selection).
   // Widens the ENUM to accept both old and new values during migration,
   // then narrows to only the new flow values once legacy rows are converted.
   try {
-    await ensureColumn("catalog_courses", "content_layout", "`content_layout` ENUM('auto','direct','paper','subject','flow-1','flow-2','flow-3') NOT NULL DEFAULT 'auto' AFTER availability");
+    await ensureColumn("catalog_courses", "content_layout", "`content_layout` ENUM('auto','direct','paper','subject','flow-1','flow-2','flow-3','flow-4') NOT NULL DEFAULT 'auto' AFTER availability");
   } catch {
     // Best effort — column may already exist.
   }
@@ -287,12 +294,20 @@ async function ensureTables(): Promise<void> {
     await exec(`UPDATE catalog_courses SET content_layout = 'flow-1' WHERE content_layout IN ('auto','direct')`);
     await exec(`UPDATE catalog_courses SET content_layout = 'flow-2' WHERE content_layout = 'paper'`);
     await exec(`UPDATE catalog_courses SET content_layout = 'flow-3' WHERE content_layout = 'subject'`);
-    // Narrow the ENUM to only flow values.
+    // Narrow the ENUM to only flow values (including flow-4 for the new Course Content → Subject → Content flow).
     await exec(
-      `ALTER TABLE catalog_courses MODIFY COLUMN content_layout ENUM('flow-1','flow-2','flow-3') NOT NULL DEFAULT 'flow-1'`,
+      `ALTER TABLE catalog_courses MODIFY COLUMN content_layout ENUM('flow-1','flow-2','flow-3','flow-4') NOT NULL DEFAULT 'flow-1'`,
     );
   } catch {
     // Best effort — migration may have already run.
+  }
+  // Ensure flow-4 is accepted even if the ENUM was previously narrowed to 3 values.
+  try {
+    await exec(
+      `ALTER TABLE catalog_courses MODIFY COLUMN content_layout ENUM('flow-1','flow-2','flow-3','flow-4') NOT NULL DEFAULT 'flow-1'`,
+    );
+  } catch {
+    // Best effort.
   }
   // Admin-entered class/exam counts for the course card.
   try {
@@ -310,7 +325,7 @@ async function ensureTables(): Promise<void> {
   // Course routine files (PDF / images) — per-course, supports multi-page.
   try {
     await exec(
-      `ALTER TABLE catalog_courses ADD COLUMN IF NOT EXISTS routine_urls JSON NULL`,
+      `ALTER TABLE catalog_courses ADD COLUMN routine_urls JSON NULL`,
     );
   } catch {
     // Best effort — column may already exist.

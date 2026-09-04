@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Flow4CourseView } from "@/components/dashboard/Flow4Student";
+import EnrolledCourseRouter from "@/components/dashboard/EnrolledCourseRouter";
 
 export const metadata: Metadata = {
   title: "Course Content | My Enrolled Courses",
-  description: "Your enrolled course content — Course → Subject → Chapter → Content.",
+  description: "Your enrolled course content — Course → Subject → Content and legacy flows.",
 };
 
 export default async function EnrolledCoursePage({
@@ -14,7 +14,7 @@ export default async function EnrolledCoursePage({
   const { slug } = await params;
   return (
     <main className="flex-1 bg-dark-950">
-      <Flow4CourseView slug={decodeURIComponent(slug)} />
+      <EnrolledCourseRouter slug={decodeURIComponent(slug)} />
     </main>
   );
 }
