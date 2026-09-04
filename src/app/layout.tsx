@@ -21,14 +21,15 @@ import "./globals.css";
 
 // Branding/settings change rarely — cache layout data for 60s so every page
 // render is fast. Admin edits appear within a minute.
+// Logo is critical for branding — use shorter cache (10s) so uploads appear immediately across devices.
 const getCachedSeo = unstable_cache(fetchSeoSettings, ["layout-seo"], {
   revalidate: 60,
 });
 const getCachedActiveLogo = unstable_cache(getActiveLogo, ["layout-logo"], {
-  revalidate: 60,
+  revalidate: 10,
 });
 const getCachedThemeLogos = unstable_cache(fetchThemeLogos, ["layout-themelogos"], {
-  revalidate: 60,
+  revalidate: 10,
 });
 const getCachedWebsiteSettings = unstable_cache(
   getWebsiteSettingsWithFallback,

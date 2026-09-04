@@ -30,6 +30,7 @@ export default function Logo({ size = "default" }: { size?: "default" | "large" 
       ? `${active.url}${active.url.includes("?") ? "&" : "?"}v=${active.updatedAt}`
       : active.url;
 
+  const isMedifiles = displayUrl.includes("medispark.duckdns.org/medifiles");
   return (
     <span
       className="inline-flex select-none items-center"
@@ -42,7 +43,13 @@ export default function Logo({ size = "default" }: { size?: "default" | "large" 
         width={active.width}
         height={active.height}
         priority
-        unoptimized={displayUrl.startsWith("/api/files/") || displayUrl.startsWith("/uploads/")}
+        unoptimized={
+          displayUrl.startsWith("/api/files/") ||
+          displayUrl.startsWith("/uploads/") ||
+          isMedifiles ||
+          displayUrl.endsWith(".svg") ||
+          active.fileName.toLowerCase().endsWith(".svg")
+        }
         onError={() => setFailedSource(logoSource)}
         className={imageClass}
       />

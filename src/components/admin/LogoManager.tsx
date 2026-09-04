@@ -98,6 +98,16 @@ function VariantManager({
       setPreviewUrl(null);
       return;
     }
+    // Validate file type: PNG, JPG/JPEG, WEBP, SVG (and GIF if supported)
+    const ext = file.name.includes(".") ? `.${file.name.split(".").pop()?.toLowerCase()}` : "";
+    const allowedExts = [".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"];
+    if (ext && !allowedExts.includes(ext as never)) {
+      setNotice({
+        kind: "error",
+        text: `Unsupported file type "${ext}". Use PNG, JPG, WEBP or SVG.`,
+      });
+      return;
+    }
     if (file.size > MAX_LOGO_FILE_SIZE) {
       setNotice({
         kind: "error",
@@ -107,6 +117,7 @@ function VariantManager({
     }
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setSelected(file);
+    // Immediate preview — shows selected logo instantly before upload
     setPreviewUrl(URL.createObjectURL(file));
   }
 
@@ -204,7 +215,9 @@ function VariantManager({
             height={current.height}
             unoptimized={
               current.url.startsWith("/api/files/") ||
-              current.url.startsWith("/uploads/")
+              current.url.startsWith("/uploads/") ||
+              current.url.includes("medispark.duckdns.org/medifiles") ||
+              current.fileName.toLowerCase().endsWith(".svg")
             }
             className="max-h-32 w-auto object-contain"
           />
@@ -238,7 +251,20 @@ function VariantManager({
         </dl>
       )}
 
-      <label className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-ink/20 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-6 py-8 text-center transition hover:border-primary-500/50 hover:bg-primary-500/5">
+      {/* Keep existing design but make file picker reliably open on all devices */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
+        className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-ink/20 bg-[#f8fbff] admin-dark:bg-[#0f2547] px-6 py-8 text-center transition hover:border-primary-500/50 hover:bg-primary-500/5"
+        aria-label="Choose logo image"
+      >
         <svg
           className="h-7 w-7 text-neutral-500"
           fill="none"
@@ -260,14 +286,19 @@ function VariantManager({
             ? `${(selected.size / 1024).toFixed(1)} KB`
             : "PNG, JPG, WebP, GIF or SVG — max 5 MB"}
         </span>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPTED}
-          className="sr-only"
-          onChange={(event) => handleFileChange(event.target.files?.[0])}
-        />
-      </label>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPTED}
+        className="hidden"
+        tabIndex={-1}
+        onChange={(event) => {
+          handleFileChange(event.target.files?.[0]);
+          // Reset value so same file can be re-selected after error
+          event.target.value = "";
+        }}
+      />
 
       {notice && (
         <p
@@ -363,7 +394,10 @@ function SharedLogoInfo() {
           width={logo.width}
           height={logo.height}
           unoptimized={
-            logo.url.startsWith("/api/files/") || logo.url.startsWith("/uploads/")
+            logo.url.startsWith("/api/files/") ||
+            logo.url.startsWith("/uploads/") ||
+            logo.url.includes("medispark.duckdns.org/medifiles") ||
+            logo.fileName.toLowerCase().endsWith(".svg")
           }
           className="max-h-24 w-auto object-contain"
         />
