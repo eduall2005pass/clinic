@@ -141,14 +141,28 @@ export async function removeFile(storagePath: string): Promise<void> {
     return;
   }
 
-  // Relative medifiles path (e.g. "website/logo/<uuid>.png") — reconstruct full URL
-  if (
-    !storagePath.startsWith("/") &&
-    !storagePath.startsWith("http") &&
-    storagePath.includes("/") &&
-    /^[A-Za-z0-9_\-/]+\.[A-Za-z0-9]{1,8}$/.test(storagePath)
-  ) {
-    const fullUrl = `${MEDIA_FILES_BASE_URL}/${storagePath.replace(/^\/+/, "")}`;
+  // Case 2: relative VM path — e.g. "website/logo/uuid.png" → construct full URL
+  if (isRelativeVmPath) {
+    const clean = storagePath.split(/[?#]/)[0];
+    const fullUrl = `${MEDIA_FILES_BASE_URL}/${clean}`;
+    try {
+      await fetch(MEDIA_DELETE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Medifiles-Token": mediaToken(),
+        },
+        body: JSON.stringify({ url: fullUrl }),
+      });
+    } catch {
+      // Best-effort cleanup.
+    }
+    return;
+  }
+
+  // Case 2b: relative URL with /medifiles/ prefix (e.g. "/medifiles/course-images/uuid.png")
+  if (mediaPath && !isVmUrl && storagePath.includes("/medifiles/")) {
+    const fullUrl = `${MEDIA_FILES_BASE_URL}/${mediaPath}`;
     try {
       await fetch(MEDIA_DELETE_URL, {
         method: "POST",
