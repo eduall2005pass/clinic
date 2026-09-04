@@ -161,15 +161,21 @@ export async function saveActiveLogo(
     ? `.${file.name.split(".").pop()?.toLowerCase() ?? ""}`
     : ".png";
   const suffix = mode ? `${mode}-logo` : "active-logo";
-  const storagePath = `${LOGO_STORAGE_DIR}/${suffix}-${Date.now()}${extension}`;
+  const tempStoragePath = `${LOGO_STORAGE_DIR}/${suffix}-${Date.now()}${extension}`;
   // Read file buffer once — callers may have already consumed the original File
   // stream, so we tolerate both File and already-buffered data.
   const buffer = await file.arrayBuffer();
   const cleanUrl = await saveFile(
     LOGO_STORAGE_DIR,
-    storagePath.split("/").pop() ?? "",
+    tempStoragePath.split("/").pop() ?? "",
     buffer,
   );
+  // Derive the actual VM path from the returned URL (saveFile uses UUID naming)
+  // e.g. https://medispark.duckdns.org/medifiles/website/logo/<uuid>.png -> website/logo/<uuid>.png
+  const marker = "/medifiles/";
+  const markerIndex = cleanUrl.indexOf(marker);
+  const actualStoragePath =
+    markerIndex !== -1 ? cleanUrl.slice(markerIndex + marker.length).split(/[?#]/)[0] : tempStoragePath;
 
   // Ensure table exists before read/write (first upload on fresh DB)
   await ensureLogosTable();
@@ -177,20 +183,26 @@ export async function saveActiveLogo(
   const targetId = targetIdFor(mode);
 
   let previousStoragePath: string | null = null;
+  let previousUrl: string | null = null;
   try {
-    const rows = await query<{ storage_path: string }[]>(
-      "SELECT storage_path FROM logos WHERE id = ? LIMIT 1",
+    const rows = await query<{ storage_path: string; url: string }[]>(
+      "SELECT storage_path, url FROM logos WHERE id = ? LIMIT 1",
       [targetId],
     );
-    const previousPath: unknown = rows[0]?.storage_path;
+    const row = rows[0];
+    const previousPath: unknown = row?.storage_path;
     if (typeof previousPath === "string" && isLocalUpload(previousPath)) {
       previousStoragePath = previousPath;
+    }
+    if (typeof row?.url === "string" && row.url.includes("/medifiles/")) {
+      previousUrl = row.url;
     }
   } catch {
     // Keep going — cleaning up the old file is best-effort only.
   }
 
   // Store clean URL in DB; cache-bust is added at read time.
+  // Store actualStoragePath (not temp) so removeFile can correctly delete via medifiles API.
   await query(
     `INSERT INTO logos
       (id, url, file_name, width, height, storage_path, updated_at, updated_by)
@@ -203,12 +215,16 @@ export async function saveActiveLogo(
       storage_path = VALUES(storage_path),
       updated_at = NOW(),
       updated_by = VALUES(updated_by)`,
-    [targetId, cleanUrl, file.name, width, height, storagePath, adminUid],
+    [targetId, cleanUrl, file.name, width, height, actualStoragePath, adminUid],
   );
 
   // Only clean up this slot's previous file — other slots stay untouched so
   // both theme logos always remain available simultaneously.
-  if (previousStoragePath) {
+  // Try both storage_path and previous URL (legacy rows stored timestamp name, not UUID)
+  if (previousUrl && previousUrl !== cleanUrl) {
+    await removeFile(previousUrl);
+  }
+  if (previousStoragePath && previousStoragePath !== actualStoragePath) {
     await removeFile(previousStoragePath);
   }
 
@@ -227,12 +243,17 @@ export async function saveActiveLogo(
 export async function removeActiveLogo(mode?: LogoMode): Promise<void> {
   try {
     const targetId = targetIdFor(mode);
-    const rows = await query<{ storage_path: string }[]>(
-      "SELECT storage_path FROM logos WHERE id = ? LIMIT 1",
+    const rows = await query<{ storage_path: string; url: string }[]>(
+      "SELECT storage_path, url FROM logos WHERE id = ? LIMIT 1",
       [targetId],
     );
-    const storagePath: unknown = rows[0]?.storage_path;
+    const row = rows[0];
+    const storagePath: unknown = row?.storage_path;
+    const url: unknown = row?.url;
     await query("DELETE FROM logos WHERE id = ?", [targetId]);
+    if (typeof url === "string" && url.includes("/medifiles/")) {
+      await removeFile(url);
+    }
     if (typeof storagePath === "string" && isLocalUpload(storagePath)) {
       await removeFile(storagePath);
     }
