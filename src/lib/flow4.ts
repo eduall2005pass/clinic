@@ -1,4 +1,4 @@
-import { exec, query } from "@/lib/mysql";
+import { exec, query, ensureColumn } from "@/lib/mysql";
 
 // Flow 4: Course → Subject → Chapter → Content (legacy) + Course Content → Subject → Content (NEW spec)
 // Single source of truth for both Admin and Student.
