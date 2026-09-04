@@ -2,6 +2,7 @@ import { fetchActiveSocialLinks } from "@/lib/social-links";
 import { fetchHomepageSections } from "@/lib/homepage-sections";
 import { getSocialPlatformIcon } from "@/components/social-icons";
 import type { SocialPlatformKey } from "@/lib/social-links-constants";
+import SectionHeading, { JoinIcon } from "@/components/home/SectionHeading";
 
 const JOIN_PLATFORMS: Array<{
   key: SocialPlatformKey;
@@ -46,16 +47,10 @@ export default async function JoinWithUs() {
   return (
     <section id="join-with-us" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center justify-center rounded-2xl border border-primary-600/20 bg-primary-600/10 px-6 py-4 shadow-lg shadow-black/10 sm:px-8 sm:py-5">
-            <h2 className="text-xl font-extrabold tracking-tight text-heading sm:text-2xl md:text-[28px] leading-tight">
-              Join With Us Now !!
-            </h2>
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-            Connect with MediSpark on your favourite platforms and never miss an update.
-          </p>
-        </div>
+        <SectionHeading icon={JoinIcon}>Join With Us Now!</SectionHeading>
+        <p className="mx-auto mt-3 max-w-3xl text-center text-sm leading-relaxed text-neutral-400">
+          Connect with MediSpark on your favourite platforms and never miss an update.
+        </p>
 
         <div className="mx-auto mt-10 grid max-w-5xl grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
           {visible.map((platform) => {
