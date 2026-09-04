@@ -44,10 +44,10 @@ export default function ContentControlPage() {
     <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-extrabold text-heading">Course Content Control</h1>
       <p className="mt-1 text-sm text-neutral-400">
-        Flow 4 — Course → Subject → Chapter → Content. Courses are synced from Course Control automatically.
+        Manage all 4 flows. Existing Flows 1-3 remain unchanged. Flow 4 is <span className="font-bold text-primary-400">Course Content → Subject → Content</span> — courses are synced from Course Control automatically.
       </p>
       <p className="mt-1 text-xs text-neutral-500">
-        Hierarchy: <span className="font-bold text-primary-400">Course → Subject → Chapter → Content</span>
+        Flow 4 Hierarchy: <span className="font-bold text-primary-400">Course Content → Subject → Content</span> · Flows 1-3 keep their own hierarchies (Direct / Paper / Subject → Class/Exam/Materials/Archive → Chapter → Content)
       </p>
       {error && (
         <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-6 text-center">

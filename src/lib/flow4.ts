@@ -1,15 +1,31 @@
 import { exec, query } from "@/lib/mysql";
 
-// Flow 4: Course → Subject → Chapter → Content
+// Flow 4: Course → Subject → Chapter → Content (legacy) + Course Content → Subject → Content (NEW spec)
 // Single source of truth for both Admin and Student.
 // Courses are from catalog_courses (Course Control). This module manages the
 // hierarchy below it.
+// - Legacy path: Course → Subject → Chapter → Content (via chapter_contents)
+// - NEW path (spec): Course Content → Subject → Content (via subject_contents) — no Chapter layer
+// Both coexist; student routing branches by course content_layout = flow-4 uses the NEW direct path.
 
 export type Flow4Subject = { id: string; name: string; sortOrder: number };
 export type Flow4Chapter = { id: string; subjectId: string; name: string; sortOrder: number };
 export type Flow4Content = {
   id: string;
   chapterId: string;
+  title: string;
+  contentType: string;
+  videoUrl: string | null;
+  fileUrl: string | null;
+  durationMinutes: number;
+  sortOrder: number;
+  isActive: boolean;
+};
+
+export type Flow4DirectContent = {
+  id: string;
+  courseSlug: string;
+  subjectId: string;
   title: string;
   contentType: string;
   videoUrl: string | null;
@@ -62,6 +78,34 @@ async function ensureSchema(): Promise<void> {
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   } catch {}
+  // NEW: Flow 4 Direct — Course Content → Subject → Content (no Chapter)
+  await exec(`CREATE TABLE IF NOT EXISTS subject_contents (
+    id VARCHAR(64) NOT NULL PRIMARY KEY,
+    course_slug VARCHAR(191) NOT NULL,
+    subject_id VARCHAR(64) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content_type ENUM('class','note','pdf','slide','link','exam','other','video','image','audio','quiz') NOT NULL DEFAULT 'class',
+    video_url VARCHAR(1024) NULL,
+    file_url VARCHAR(1024) NULL,
+    duration_minutes INT NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_subject_contents_course (course_slug),
+    KEY idx_subject_contents_subject (subject_id),
+    KEY idx_subject_contents_sort (subject_id, sort_order),
+    KEY idx_subject_contents_cs (course_slug, subject_id),
+    KEY idx_subject_contents_active (course_slug, subject_id, is_active, sort_order)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  // Ensure content_type supports new types (video,image,audio,quiz)
+  try {
+    await exec(`ALTER TABLE subject_contents MODIFY COLUMN content_type ENUM('class','note','pdf','slide','link','exam','other','video','image','audio','quiz') NOT NULL DEFAULT 'class'`);
+  } catch {}
+  // Also widen chapter_contents to support same types for consistency
+  try {
+    await exec(`ALTER TABLE chapter_contents MODIFY COLUMN content_type ENUM('class','note','pdf','slide','link','exam','other','video','image','audio','quiz') NOT NULL DEFAULT 'class'`);
+  } catch {}
   ensured = true;
 }
 
@@ -111,11 +155,14 @@ export async function deleteFlow4Subject(courseSlug: string, subjectId: string):
   await ensureSchema();
   // Remove assignment; keep subject row if used by other courses, else deactivate
   await exec(`DELETE FROM course_subject_assignments WHERE subject_id = ? AND course_slug = ?`, [subjectId, courseSlug]);
+  // Always deactivate direct contents for this course+subject
+  try { await exec(`UPDATE subject_contents SET is_active = 0 WHERE course_slug = ? AND subject_id = ?`, [courseSlug, subjectId]); } catch {}
   const remaining = await query<Array<{ cnt: number }>>(`SELECT COUNT(*) AS cnt FROM course_subject_assignments WHERE subject_id = ?`, [subjectId]);
   if (Number(remaining[0]?.cnt ?? 0) === 0) {
-    // Soft-delete subject and its chapters
+    // Soft-delete subject and its chapters + any remaining direct contents
     await exec(`UPDATE course_subjects SET is_active = 0 WHERE id = ?`, [subjectId]);
     await exec(`UPDATE course_chapters SET is_active = 0 WHERE subject_id = ?`, [subjectId]);
+    try { await exec(`UPDATE subject_contents SET is_active = 0 WHERE subject_id = ?`, [subjectId]); } catch {}
   }
 }
 
@@ -124,6 +171,127 @@ export async function reorderFlow4Subjects(courseSlug: string, orderedIds: strin
   for (let i = 0; i < orderedIds.length; i++) {
     await exec(`UPDATE course_subject_assignments SET sort_order = ? WHERE subject_id = ? AND course_slug = ?`, [i + 1, orderedIds[i], courseSlug]);
   }
+}
+
+// ── Direct Contents (per subject + course) — NEW Flow 4 spec: Course Content → Subject → Content ──
+export async function getFlow4DirectContents(courseSlug: string, subjectId: string): Promise<Flow4DirectContent[]> {
+  await ensureSchema();
+  const rows = await query<Array<{ id: string; course_slug: string; subject_id: string; title: string; content_type: string; video_url: string | null; file_url: string | null; duration_minutes: number; sort_order: number; is_active: number }>>(
+    `SELECT id, course_slug, subject_id, title, content_type, video_url, file_url, duration_minutes, sort_order, is_active
+       FROM subject_contents WHERE course_slug = ? AND subject_id = ? AND is_active = 1 ORDER BY sort_order ASC, created_at ASC`,
+    [courseSlug, subjectId],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    courseSlug: r.course_slug,
+    subjectId: r.subject_id,
+    title: r.title,
+    contentType: r.content_type,
+    videoUrl: r.video_url,
+    fileUrl: r.file_url,
+    durationMinutes: Number(r.duration_minutes ?? 0),
+    sortOrder: Number(r.sort_order ?? 0),
+    isActive: Boolean(r.is_active),
+  }));
+}
+
+export async function addFlow4DirectContent(input: {
+  courseSlug: string;
+  subjectId: string;
+  title: string;
+  contentType?: string;
+  videoUrl?: string | null;
+  fileUrl?: string | null;
+  durationMinutes?: number;
+}): Promise<Flow4DirectContent> {
+  await ensureSchema();
+  const title = toStr(input.title);
+  if (title.length < 1) throw new Error("Content title is required.");
+  if (!input.courseSlug || !input.subjectId) throw new Error("Course and Subject are required.");
+  let ct = toStr(input.contentType).toLowerCase() || "class";
+  const allowed = ["class", "note", "pdf", "slide", "link", "exam", "other", "video", "image", "audio", "quiz"];
+  if (!allowed.includes(ct)) ct = "class";
+  const rows = await query<Array<{ nxt: number }>>(
+    `SELECT COALESCE(MAX(sort_order),0)+1 AS nxt FROM subject_contents WHERE course_slug = ? AND subject_id = ?`,
+    [input.courseSlug, input.subjectId],
+  );
+  const id = `sc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  await exec(
+    `INSERT INTO subject_contents (id, course_slug, subject_id, title, content_type, video_url, file_url, duration_minutes, sort_order, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+    [id, input.courseSlug, input.subjectId, title, ct, input.videoUrl ? toStr(input.videoUrl) || null : null, input.fileUrl ? toStr(input.fileUrl) || null : null, Math.max(0, Number(input.durationMinutes) || 0), Number(rows[0]?.nxt ?? 1)],
+  );
+  return {
+    id,
+    courseSlug: input.courseSlug,
+    subjectId: input.subjectId,
+    title,
+    contentType: ct,
+    videoUrl: input.videoUrl ?? null,
+    fileUrl: input.fileUrl ?? null,
+    durationMinutes: Math.max(0, Number(input.durationMinutes) || 0),
+    sortOrder: Number(rows[0]?.nxt ?? 1),
+    isActive: true,
+  };
+}
+
+export async function updateFlow4DirectContent(id: string, patch: { title?: string; contentType?: string; videoUrl?: string | null; fileUrl?: string | null; durationMinutes?: number }): Promise<void> {
+  await ensureSchema();
+  const sets: string[] = [];
+  const vals: unknown[] = [];
+  if (patch.title !== undefined) {
+    const t = toStr(patch.title);
+    if (!t) throw new Error("Content title is required.");
+    sets.push("title = ?");
+    vals.push(t);
+  }
+  if (patch.contentType !== undefined) {
+    let ct = toStr(patch.contentType).toLowerCase();
+    const allowed = ["class", "note", "pdf", "slide", "link", "exam", "other", "video", "image", "audio", "quiz"];
+    if (!allowed.includes(ct)) ct = "class";
+    sets.push("content_type = ?");
+    vals.push(ct);
+  }
+  if (patch.videoUrl !== undefined) {
+    sets.push("video_url = ?");
+    vals.push(patch.videoUrl ? toStr(patch.videoUrl) || null : null);
+  }
+  if (patch.fileUrl !== undefined) {
+    sets.push("file_url = ?");
+    vals.push(patch.fileUrl ? toStr(patch.fileUrl) || null : null);
+  }
+  if (patch.durationMinutes !== undefined) {
+    sets.push("duration_minutes = ?");
+    vals.push(Math.max(0, Number(patch.durationMinutes) || 0));
+  }
+  if (sets.length === 0) return;
+  vals.push(id);
+  await exec(`UPDATE subject_contents SET ${sets.join(", ")} WHERE id = ?`, vals);
+}
+
+export async function deleteFlow4DirectContent(id: string): Promise<void> {
+  await ensureSchema();
+  await exec(`UPDATE subject_contents SET is_active = 0 WHERE id = ?`, [id]);
+}
+
+export async function reorderFlow4DirectContents(courseSlug: string, subjectId: string, orderedIds: string[]): Promise<void> {
+  await ensureSchema();
+  for (let i = 0; i < orderedIds.length; i++) {
+    await exec(`UPDATE subject_contents SET sort_order = ? WHERE id = ? AND course_slug = ? AND subject_id = ?`, [i + 1, orderedIds[i], courseSlug, subjectId]);
+  }
+}
+
+export async function getFlow4DirectCourseData(courseSlug: string): Promise<{
+  subjects: Array<{ id: string; name: string; sortOrder: number; contents: Flow4DirectContent[] }>;
+}> {
+  await ensureSchema();
+  const subjects = await getFlow4Subjects(courseSlug);
+  const result: Array<{ id: string; name: string; sortOrder: number; contents: Flow4DirectContent[] }> = [];
+  for (const sub of subjects) {
+    const contents = await getFlow4DirectContents(courseSlug, sub.id);
+    result.push({ id: sub.id, name: sub.name, sortOrder: sub.sortOrder, contents });
+  }
+  return { subjects: result };
 }
 
 // ── Chapters (per subject + course) ──
@@ -282,7 +450,7 @@ export async function addFlow4Content(input: {
   const title = toStr(input.title);
   if (title.length < 1) throw new Error("Content title is required.");
   let ct = toStr(input.contentType).toLowerCase() || "class";
-  const allowed = ["class", "note", "pdf", "slide", "link", "exam", "other"];
+  const allowed = ["class", "note", "pdf", "slide", "link", "exam", "other", "video", "image", "audio", "quiz"];
   if (!allowed.includes(ct)) ct = "class";
   const rows = await query<Array<{ nxt: number }>>(
     `SELECT COALESCE(MAX(sort_order),0)+1 AS nxt FROM chapter_contents WHERE chapter_id = ?`,
@@ -319,7 +487,7 @@ export async function updateFlow4Content(id: string, patch: { title?: string; co
   }
   if (patch.contentType !== undefined) {
     let ct = toStr(patch.contentType).toLowerCase();
-    const allowed = ["class", "note", "pdf", "slide", "link", "exam", "other"];
+    const allowed = ["class", "note", "pdf", "slide", "link", "exam", "other", "video", "image", "audio", "quiz"];
     if (!allowed.includes(ct)) ct = "class";
     sets.push("content_type = ?");
     vals.push(ct);

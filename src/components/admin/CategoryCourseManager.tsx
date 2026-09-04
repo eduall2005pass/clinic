@@ -41,7 +41,7 @@ const EMPTY_FORM = {
   status: "unpublished" as "published" | "unpublished",
   couponEnabled: false,
   featured: false,
-  contentLayout: "flow-1" as "flow-1" | "flow-2" | "flow-3",
+  contentLayout: "flow-1" as "flow-1" | "flow-2" | "flow-3" | "flow-4",
   totalClasses: "",
   totalExams: "",
   courseDuration: "",
@@ -194,9 +194,9 @@ export default function CategoryCourseManager({
       status: course.status,
       couponEnabled: course.couponEnabled,
       featured: course.featured,
-      contentLayout: (course.contentLayout === "flow-1" || course.contentLayout === "flow-2" || course.contentLayout === "flow-3"
+      contentLayout: (course.contentLayout === "flow-1" || course.contentLayout === "flow-2" || course.contentLayout === "flow-3" || course.contentLayout === "flow-4"
         ? course.contentLayout
-        : course.contentLayout === "paper" ? "flow-2" : course.contentLayout === "subject" ? "flow-3" : "flow-1"),
+        : String(course.contentLayout) === "paper" ? "flow-2" : String(course.contentLayout) === "subject" ? "flow-3" : "flow-1"),
       totalClasses: course.totalClasses != null ? String(course.totalClasses) : "",
       totalExams: course.totalExams != null ? String(course.totalExams) : "",
       courseDuration: details?.duration ?? "",

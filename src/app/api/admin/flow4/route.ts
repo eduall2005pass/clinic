@@ -3,28 +3,34 @@ import { requirePermission } from "@/lib/admin";
 import {
   addFlow4Chapter,
   addFlow4Content,
+  addFlow4DirectContent,
   addFlow4Subject,
   deleteFlow4Chapter,
   deleteFlow4Content,
+  deleteFlow4DirectContent,
   deleteFlow4Subject,
   getFlow4Chapters,
   getFlow4Contents,
   getFlow4CourseData,
+  getFlow4DirectContents,
+  getFlow4DirectCourseData,
   getFlow4Subjects,
   reorderFlow4Chapters,
   reorderFlow4Contents,
+  reorderFlow4DirectContents,
   reorderFlow4Subjects,
   updateFlow4Chapter,
   updateFlow4Content,
+  updateFlow4DirectContent,
   updateFlow4Subject,
 } from "@/lib/flow4";
 
 export const dynamic = "force-dynamic";
 
 // GET ?course=slug → subjects
-// GET ?course=slug&subject=subjectId → chapters
-// GET ?course=slug&subject=subjectId&chapter=chapterId → contents
-// GET ?course=slug&full=1 → full tree
+// GET ?course=slug&subject=subjectId → chapters (legacy) OR direct contents when &direct=1
+// GET ?course=slug&subject=subjectId&chapter=chapterId → contents (chapter)
+// GET ?course=slug&full=1 → full tree (chapters); &full=1&direct=1 → direct Course Content → Subject → Content
 export async function GET(request: NextRequest) {
   const admin = await requirePermission(request, "manageCourses");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -34,9 +40,14 @@ export async function GET(request: NextRequest) {
   const subject = url.searchParams.get("subject") ?? "";
   const chapter = url.searchParams.get("chapter") ?? "";
   const full = url.searchParams.get("full") === "1";
+  const direct = url.searchParams.get("direct") === "1";
 
   try {
     if (full) {
+      if (direct) {
+        const data = await getFlow4DirectCourseData(course);
+        return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
+      }
       const data = await getFlow4CourseData(course);
       return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
     }
@@ -45,6 +56,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ contents }, { headers: { "Cache-Control": "no-store" } });
     }
     if (subject) {
+      if (direct) {
+        const contents = await getFlow4DirectContents(course, subject);
+        return NextResponse.json({ contents }, { headers: { "Cache-Control": "no-store" } });
+      }
       const chapters = await getFlow4Chapters(course, subject);
       return NextResponse.json({ chapters }, { headers: { "Cache-Control": "no-store" } });
     }
@@ -155,6 +170,47 @@ export async function POST(request: NextRequest) {
       const ids = Array.isArray(body.orderedIds) ? (body.orderedIds as string[]) : [];
       if (!chapterId || ids.length === 0) return NextResponse.json({ error: "Missing data." }, { status: 400 });
       await reorderFlow4Contents(chapterId, ids);
+      return NextResponse.json({ ok: true });
+    }
+    // ── Direct Content (NEW Flow 4: Course Content → Subject → Content) ──
+    if (action === "add-direct-content") {
+      const subjectId = String(body.subjectId ?? body.subject ?? "");
+      const title = String(body.title ?? body.name ?? "");
+      if (!course || !subjectId || !title) return NextResponse.json({ error: "Missing data." }, { status: 400 });
+      const content = await addFlow4DirectContent({
+        courseSlug: course,
+        subjectId,
+        title,
+        contentType: String(body.contentType ?? "class"),
+        videoUrl: typeof body.videoUrl === "string" ? body.videoUrl : null,
+        fileUrl: typeof body.fileUrl === "string" ? body.fileUrl : null,
+        durationMinutes: Number(body.durationMinutes ?? 0),
+      });
+      return NextResponse.json({ ok: true, content });
+    }
+    if (action === "edit-direct-content") {
+      const id = String(body.id ?? "");
+      if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
+      await updateFlow4DirectContent(id, {
+        title: typeof body.title === "string" ? body.title : undefined,
+        contentType: typeof body.contentType === "string" ? body.contentType : undefined,
+        videoUrl: typeof body.videoUrl === "string" ? body.videoUrl : body.videoUrl === null ? null : undefined,
+        fileUrl: typeof body.fileUrl === "string" ? body.fileUrl : body.fileUrl === null ? null : undefined,
+        durationMinutes: body.durationMinutes !== undefined ? Number(body.durationMinutes) : undefined,
+      });
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "delete-direct-content") {
+      const id = String(body.id ?? "");
+      if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
+      await deleteFlow4DirectContent(id);
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "reorder-direct-contents") {
+      const subjectId = String(body.subjectId ?? body.subject ?? "");
+      const ids = Array.isArray(body.orderedIds) ? (body.orderedIds as string[]) : [];
+      if (!course || !subjectId || ids.length === 0) return NextResponse.json({ error: "Missing data." }, { status: 400 });
+      await reorderFlow4DirectContents(course, subjectId, ids);
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
