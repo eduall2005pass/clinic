@@ -1,4 +1,5 @@
 import { fetchActiveSocialLinks } from "@/lib/social-links";
+import { fetchHomepageSections } from "@/lib/homepage-sections";
 import { getSocialPlatformIcon } from "@/components/social-icons";
 import type { SocialPlatformKey } from "@/lib/social-links-constants";
 
@@ -25,7 +26,14 @@ const JOIN_PLATFORMS: Array<{
 ];
 
 export default async function JoinWithUs() {
-  const activeLinks = await fetchActiveSocialLinks();
+  const [activeLinks, sections] = await Promise.all([
+    fetchActiveSocialLinks(),
+    fetchHomepageSections().catch(() => [] as any),
+  ]);
+  // Respect homepage_sections toggle — if join-with-us is disabled, hide section entirely
+  const joinSection = (sections as any[])?.find((s: any) => s.key === "join-with-us" || s.section_key === "join-with-us");
+  if (joinSection && joinSection.isActive === false) return null;
+
   // Only the 3 required platforms, in defined order, enabled + has URL
   const visible = JOIN_PLATFORMS.map((p) => {
     const found = activeLinks.find((l) => l.key === p.key);
