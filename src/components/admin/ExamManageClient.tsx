@@ -541,8 +541,7 @@ export default function ExamManageClient({ examId }: { examId: string }) {
         {active === "questions" && (
           <div className="space-y-3">
             <div className={`${cardClass} p-3 sm:p-4`}>
-              <h3 className="text-xs font-extrabold uppercase tracking-widest text-[#0b1e3a] admin-dark:text-white">Questions — complete exam paper</h3>
-              <p className="mt-1 text-xs text-slate-500">Manage all question slots Q01..Q{String(exam.questionCount).padStart(2, "0")} vertically. Manual / Voice / Image per slot. Publish unlocks when all slots are completed.</p>
+              <h3 className="text-xs font-extrabold uppercase tracking-widest text-[#0b1e3a] admin-dark:text-white">Question Management</h3>
             </div>
             <ExamPaperEditor
               exam={{
