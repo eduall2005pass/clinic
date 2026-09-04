@@ -10,6 +10,7 @@ import {
 import { parseImageDimensions } from "@/lib/image-dimensions";
 import { ALLOWED_LOGO_EXTENSIONS, MAX_LOGO_FILE_SIZE } from "@/lib/logo";
 import { requirePermission } from "@/lib/admin";
+import { makeTransparentPng } from "@/lib/logo-background";
 
 // Public content: edge-cached for fast loads (60s revalidation).
 export const revalidate = 300;
@@ -66,19 +67,64 @@ export async function POST(request: NextRequest) {
     );
   }
   try {
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    const rawBytes = new Uint8Array(await file.arrayBuffer());
+
+    // Auto background removal: ANY uploaded logo (JPG/PNG/WEBP/etc.) is converted to transparent PNG
+    // SVG is preserved as-is (already vector with transparency)
+    let processedBytes: Buffer;
+    let processedFileName: string;
+    let processedMime: string;
     let width = 512;
     let height = 512;
-    try {
-      const dims = parseImageDimensions(bytes, extension);
-      width = dims.width;
-      height = dims.height;
-    } catch (dimErr) {
-      // Non-fatal — use fallback dimensions so upload still succeeds (e.g., progressive JPEG/WebP variants or SVG without explicit size)
-      console.warn("Logo dimensions parse failed, using fallback:", dimErr);
+
+    if (extension === ".svg") {
+      // SVG: keep original, dimensions from SVG parser, preserve as SVG
+      processedBytes = Buffer.from(rawBytes);
+      processedFileName = file.name;
+      processedMime = "image/svg+xml";
+      try {
+        const dims = parseImageDimensions(rawBytes, extension);
+        width = dims.width;
+        height = dims.height;
+      } catch (dimErr) {
+        console.warn("SVG dimensions parse failed, using fallback:", dimErr);
+      }
+    } else {
+      // Raster: remove background, output transparent PNG (preserves alpha, no JPG flattening)
+      try {
+        processedBytes = await makeTransparentPng(rawBytes);
+      } catch (bgErr) {
+        console.warn("Background removal failed, using original with ensure-alpha:", bgErr);
+        // Fallback: ensure original is encoded as PNG with alpha (no background added)
+        try {
+          const sharp = (await import("sharp")).default;
+          processedBytes = await sharp(rawBytes).ensureAlpha().png({ palette: false }).toBuffer();
+        } catch {
+          processedBytes = Buffer.from(rawBytes);
+        }
+      }
+      // Dimensions from processed PNG (after potential resize)
+      try {
+        const dims = parseImageDimensions(new Uint8Array(processedBytes), ".png");
+        width = dims.width;
+        height = dims.height;
+      } catch (dimErr) {
+        console.warn("Processed PNG dimensions parse failed, using fallback:", dimErr);
+        try {
+          const dims = parseImageDimensions(rawBytes, extension);
+          width = dims.width;
+          height = dims.height;
+        } catch {
+          // keep fallback 512
+        }
+      }
+      // Force PNG output regardless of input (JPG/WEBP→PNG) to preserve transparency
+      const base = file.name.includes(".") ? file.name.slice(0, file.name.lastIndexOf(".")) : file.name;
+      processedFileName = `${base}.png`;
+      processedMime = "image/png";
     }
-    // Re-create File from bytes — original File's buffer was consumed by arrayBuffer()
-    const freshFile = new File([bytes], file.name, { type: file.type });
+
+    const freshFile = new File([new Uint8Array(processedBytes)], processedFileName, { type: processedMime });
     const logo = await saveActiveLogo(freshFile, width, height, admin.uid, mode);
     // Bust CDN/edge cache immediately so new logo appears everywhere (persistent URL, survives refresh/logout)
     try {
