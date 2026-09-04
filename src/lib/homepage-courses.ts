@@ -161,7 +161,7 @@ export async function saveHomepageCourse(
     }
     const fileName = `${input.slug}-${Date.now()}${extension}`;
     const url = await saveFile(HOMEPAGE_COURSES_STORAGE_DIR, fileName, await imageFile.arrayBuffer());
-    const newStoragePath = `${HOMEPAGE_COURSES_STORAGE_DIR}/${fileName}`;
+    const newStoragePath = url;
     if (typeof imageStoragePath === "string" && isLocalUpload(imageStoragePath)) {
       previousImagePath = imageStoragePath;
     } else if (typeof imageUrl === "string" && isLocalUpload(imageUrl)) {

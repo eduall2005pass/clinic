@@ -347,7 +347,11 @@ export async function saveMentors(
 
 async function deletePhotoFile(storagePath: string | null | undefined): Promise<void> {
   if (typeof storagePath !== "string" || storagePath.length === 0) return;
-  if (!storagePath.startsWith(MENTOR_PHOTO_DIR)) return;
+  const isManaged =
+    storagePath.startsWith(MENTOR_PHOTO_DIR) ||
+    storagePath.includes(MENTOR_PHOTO_DIR) ||
+    storagePath.includes("/medifiles/");
+  if (!isManaged) return;
   try {
     await removeFile(storagePath);
   } catch {
@@ -384,7 +388,7 @@ export async function saveMentorPhoto(
     fileName,
     await file.arrayBuffer(),
   );
-  const storagePath = `${MENTOR_PHOTO_DIR}/${fileName}`;
+  const storagePath = url;
 
   await query(
     "UPDATE mentors SET photo_url = ?, photo_storage_path = ? WHERE id = ?",

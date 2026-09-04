@@ -56,6 +56,7 @@ export default function MediaLibraryPage() {
     setUploading(true);
     setNotice(null);
     try {
+      const urls: string[] = [];
       for (const file of Array.from(files)) {
         const formData = new FormData();
         formData.append("file", file);
@@ -70,8 +71,14 @@ export default function MediaLibraryPage() {
           setNotice({ kind: "error", text: data?.error ?? `Failed to upload "${file.name}".` });
           return;
         }
+        urls.push(data.url);
       }
-      setNotice({ kind: "success", text: `${files.length} file${files.length > 1 ? "s" : ""} uploaded.` });
+      if (urls.length === 1) {
+        setNotice({ kind: "success", text: `Uploaded: ${urls[0]} — copied to clipboard.` });
+        void navigator.clipboard?.writeText(urls[0]);
+      } else {
+        setNotice({ kind: "success", text: `${files.length} file${files.length > 1 ? "s" : ""} uploaded to VM storage.` });
+      }
       await load();
     } finally {
       setUploading(false);
@@ -132,9 +139,10 @@ export default function MediaLibraryPage() {
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight text-[#0b1e3a] admin-dark:text-white">Media Library</h2>
           <p className="mt-1.5 max-w-xl text-sm text-slate-500 admin-dark:text-slate-400">
-            Centralized library for every uploaded image — upload, search,
-            copy URLs, inspect file information and delete unused files.
-            Files live in MySQL and are served via /api/files/[id].
+            Centralized library for uploaded images — upload, search, copy URLs
+            and delete unused files. New uploads go to VM storage
+            (medispark.duckdns.org/medifiles) and return a direct URL; legacy
+            files remain in MySQL and are served via /api/files/[id].
           </p>
         </div>
         <div className="flex shrink-0 gap-2">

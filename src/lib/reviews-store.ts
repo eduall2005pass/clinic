@@ -108,7 +108,11 @@ export async function fetchAllReviewRecords(): Promise<ReviewRecord[]> {
 
 async function deletePhotoFile(storagePath: string | null | undefined): Promise<void> {
   if (typeof storagePath !== "string" || storagePath.length === 0) return;
-  if (!storagePath.startsWith(REVIEW_PHOTO_DIR)) return;
+  const isManaged =
+    storagePath.startsWith(REVIEW_PHOTO_DIR) ||
+    storagePath.includes(REVIEW_PHOTO_DIR) ||
+    storagePath.includes("/medifiles/");
+  if (!isManaged) return;
   try {
     await removeFile(storagePath);
   } catch {
@@ -176,7 +180,7 @@ export async function saveReviewRecord(
       await input.photoFile.arrayBuffer(),
     );
     previousPhotoPath = finalPhotoPath;
-    finalPhotoPath = `${REVIEW_PHOTO_DIR}/${fileName}`;
+    finalPhotoPath = finalPhotoUrl;
   }
 
   const sortOrder =
