@@ -368,7 +368,7 @@ export default function ThemeAppearancePage() {
               </div>
             </section>
 
-            {/* Light / Dark */}
+            {/* Light / Dark — SINGLE toggle */}
             <section className="mt-6 rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
               <h2 className="text-lg font-bold text-heading">
                 Website Theme Mode
@@ -377,33 +377,53 @@ export default function ThemeAppearancePage() {
                 The default mode for visitors. Visitors can still switch modes
                 with the website theme toggle.
               </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {THEME_MODE_OPTIONS.map((option) => (
-                  <label
-                    key={option.value}
-                    className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
-                      settings.themeMode === option.value
-                        ? "border-primary-500/60 bg-primary-600/10"
-                        : "border-ink/10 bg-[#f8fbff] admin-dark:bg-[#0f2547] hover:border-primary-500/40"
-                    }`}
+              <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-ink/10 bg-[#f8fbff] p-4 admin-dark:bg-[#0f2547] admin-dark:border-[#1e3a65]">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-heading">
+                    {settings.themeMode === "dark" ? "Dark Mode" : "Light Mode"} active
+                  </p>
+                  <p className="mt-0.5 text-xs text-neutral-500">
+                    {settings.themeMode === "dark"
+                      ? "Visitors start in dark mode"
+                      : "Visitors start in light mode"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => patch({ themeMode: settings.themeMode === "dark" ? "light" : "dark" })}
+                  aria-label={settings.themeMode === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                  title={settings.themeMode === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                  className="relative flex h-10 w-[4.25rem] shrink-0 items-center rounded-xl border border-[#dbeafe] bg-[#f8fbff] p-1 transition-colors duration-300 hover:border-[#93c5fd] admin-dark:border-[#1e3a65] admin-dark:bg-[#132a4f] admin-dark:hover:border-[#2f5aa0]"
+                >
+                  <span
+                    aria-hidden
+                    className={`absolute top-1 h-8 w-8 rounded-lg bg-[#1a3a78] shadow-md shadow-[#0b1e3a]/20 transition-all duration-300 admin-dark:bg-[#234e9f] ${settings.themeMode === "dark" ? "left-[2.15rem]" : "left-1"}`}
+                  />
+                  <span
+                    aria-hidden
+                    className={`relative z-10 flex h-8 w-8 items-center justify-center transition-colors duration-300 ${settings.themeMode === "dark" ? "text-slate-400" : "text-white"}`}
                   >
-                    <input
-                      type="radio"
-                      name="theme-mode"
-                      checked={settings.themeMode === option.value}
-                      onChange={() => patch({ themeMode: option.value })}
-                      className="mt-1 h-4 w-4 shrink-0 accent-primary-600"
-                    />
-                    <span>
-                      <span className="block text-sm font-semibold text-heading">
-                        {option.label}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-neutral-500">
-                        {option.hint}
-                      </span>
-                    </span>
-                  </label>
-                ))}
+                    <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="4" />
+                      <path d="M12 2v2" />
+                      <path d="M12 20v2" />
+                      <path d="m4.93 4.93 1.41 1.41" />
+                      <path d="m17.66 17.66 1.41 1.41" />
+                      <path d="M2 12h2" />
+                      <path d="M20 12h2" />
+                      <path d="m6.34 17.66-1.41 1.41" />
+                      <path d="m19.07 4.93-1.41 1.41" />
+                    </svg>
+                  </span>
+                  <span
+                    aria-hidden
+                    className={`relative z-10 flex h-8 w-8 items-center justify-center transition-colors duration-300 ${settings.themeMode === "dark" ? "text-white" : "text-slate-400"}`}
+                  >
+                    <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                    </svg>
+                  </span>
+                </button>
               </div>
             </section>
 
