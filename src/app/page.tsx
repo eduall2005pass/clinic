@@ -7,6 +7,7 @@ import JerseyGallery from "@/components/home/JerseyGallery";
 import Mentors from "@/components/home/Mentors";
 import StudentReviews from "@/components/home/StudentReviews";
 import FaqSection from "@/components/home/FaqSection";
+import JoinWithUs from "@/components/home/JoinWithUs";
 import PromotionsSection from "@/components/home/PromotionsSection";
 import { fetchHomepageSections } from "@/lib/homepage-sections";
 import { fetchHeroSettings } from "@/lib/hero-settings";
@@ -123,6 +124,9 @@ export default async function HomePage() {
     (section) => section.key === "our-success",
   );
 
+  // Join With Us Now !! — immediately after FAQ, before Footer (admin-managed social_links)
+  const joinNode = <JoinWithUs key="join-with-us" />;
+
   return (
     <main className="flex-1 bg-dark-950">
       <PromotionsSection />
@@ -140,6 +144,10 @@ export default async function HomePage() {
           ) {
             nodes.unshift(jerseyNode);
           }
+          // Required order: FAQ → Join With Us Now !! → Footer
+          if (section.key === "faq") {
+            nodes.push(joinNode);
+          }
           return nodes;
         })}
       {/* Fallback: both neighbours disabled but jersey still published. */}
@@ -149,6 +157,8 @@ export default async function HomePage() {
             section.key === "our-success" || section.key === "mentors",
         ) &&
         jerseyNode}
+      {/* If FAQ is disabled/hidden, still show Join With Us before Footer */}
+      {!activeSections.some((s) => s.key === "faq") && joinNode}
     </main>
   );
 }
