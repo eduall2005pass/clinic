@@ -181,6 +181,15 @@ function VariantManager({
     }
   }
 
+  // Checkerboard to make transparency visible — actual saved logo remains transparent (no background added)
+  const checkerboardStyle: React.CSSProperties = {
+    backgroundColor: "#ffffff",
+    backgroundImage:
+      "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
+    backgroundSize: "20px 20px",
+    backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+  };
+
   return (
     <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
       <div className="flex items-center gap-2">
@@ -196,8 +205,11 @@ function VariantManager({
       </div>
       <p className="mt-1 text-xs text-neutral-500">{hint}</p>
 
-      {/* Preview — shown in the matching theme context. */}
-      <div className={`mt-5 flex min-h-36 items-center justify-center rounded-xl p-6 ${previewBoxClass}`}>
+      {/* Preview — checkerboard makes transparent PNG visible; saved logo stays transparent */}
+      <div
+        className={`mt-5 flex min-h-36 items-center justify-center rounded-xl border border-ink/10 p-6 ${previewBoxClass}`}
+        style={checkerboardStyle}
+      >
         {previewUrl ? (
           <Image
             src={previewUrl}
@@ -361,14 +373,14 @@ export default function LogoManager() {
         mode="light"
         title="Light Mode Logo"
         hint="Shown whenever a visitor is using Light Mode."
-        previewBoxClass="bg-white border border-ink/10"
+        previewBoxClass=""
       />
 
       <VariantManager
         mode="dark"
         title="Dark Mode Logo"
         hint="Shown whenever a visitor is using Dark Mode."
-        previewBoxClass="bg-[#f8fbff] admin-dark:bg-[#0f2547] border border-ink/10"
+        previewBoxClass=""
       />
 
       <SharedLogoInfo />
@@ -379,6 +391,13 @@ export default function LogoManager() {
 /** Read-only view of the shared fallback logo (managed via Website Settings). */
 function SharedLogoInfo() {
   const { logo, isCustom } = useLogo();
+  const checkerboardStyle: React.CSSProperties = {
+    backgroundColor: "#ffffff",
+    backgroundImage:
+      "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
+    backgroundSize: "20px 20px",
+    backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+  };
   return (
     <section className="rounded-2xl border border-[#dbeafe] bg-white shadow-sm shadow-[#0b1e3a]/5 admin-dark:border-[#1e3a65] admin-dark:bg-[#112544] p-6">
       <h2 className="text-lg font-bold text-heading">Shared Logo (Fallback)</h2>
@@ -386,7 +405,10 @@ function SharedLogoInfo() {
         Used for any theme whose specific logo is not uploaded yet. Manage this
         logo from Admin Panel → Website Settings → Branding.
       </p>
-      <div className="mt-4 flex min-h-28 items-center justify-center rounded-xl bg-[#f8fbff] admin-dark:bg-[#0f2547] p-6">
+      <div
+        className="mt-4 flex min-h-28 items-center justify-center rounded-xl border border-ink/10 p-6"
+        style={checkerboardStyle}
+      >
         <Image
           key={logo.url}
           src={logo.url}

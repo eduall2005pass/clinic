@@ -485,7 +485,13 @@ export default function WebsiteInformationPage() {
               <label className={labelClass}>{label}</label>
               <div
                 className="mt-2 flex h-16 items-center justify-center overflow-hidden rounded-lg border border-ink/10"
-                style={{ backgroundColor: mode === "light" ? "#ffffff" : "#0a0a12" }}
+                style={{
+                  backgroundColor: "#ffffff",
+                  backgroundImage:
+                    "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
+                  backgroundSize: "16px 16px",
+                  backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px",
+                }}
               >
                 {value ? (
                   // eslint-disable-next-line @next/next/no-img-element
