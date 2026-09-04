@@ -1,5 +1,6 @@
 import type { SVGProps } from "react";
 import { fetchHomeCards } from "@/lib/home-cards";
+import SectionHeading, { SparkIcon } from "@/components/home/SectionHeading";
 
 type Benefit = {
   key: string;
@@ -153,13 +154,7 @@ export default async function WhyMediSpark({
       <div className="pointer-events-none absolute inset-0 bg-grid-lines" />
       <div className="pointer-events-none absolute -right-40 top-0 h-96 w-96 rounded-full bg-primary-600/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center justify-center rounded-2xl border border-ink/10 bg-dark-950/60 px-6 py-4 shadow-lg shadow-black/20 backdrop-blur sm:px-8 sm:py-5">
-            <h2 className="text-xl font-extrabold tracking-tight text-heading sm:text-2xl md:text-[28px] leading-tight">
-              Why you should choose MediSpark
-            </h2>
-          </div>
-        </div>
+        <SectionHeading icon={SparkIcon}>Why You Should Choose MediSpark?</SectionHeading>
 
         <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4">
           {benefits.length === 0 ? (

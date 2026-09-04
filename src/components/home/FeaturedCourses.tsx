@@ -2,6 +2,7 @@ import Link from "next/link";
 import CourseCard from "@/components/CourseCard";
 import { fetchActiveFeaturedSlugs } from "@/lib/featured-courses";
 import { getLiveCourse } from "@/lib/course-catalog";
+import SectionHeading, { BookIcon } from "@/components/home/SectionHeading";
 
 export default async function FeaturedCourses({
   title,
@@ -21,13 +22,7 @@ export default async function FeaturedCourses({
   return (
     <section id="featured-courses" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center justify-center rounded-2xl border border-ink/10 bg-dark-900 px-6 py-4 shadow-lg shadow-black/10 sm:px-8 sm:py-5">
-            <h2 className="text-xl font-extrabold tracking-tight text-heading sm:text-2xl md:text-[28px] leading-tight">
-              Start your journey with a featured course
-            </h2>
-          </div>
-        </div>
+        <SectionHeading icon={BookIcon}>Start Your Journey With a Featured Course</SectionHeading>
 
         <div
           className={`mx-auto mt-12 grid gap-6 ${
