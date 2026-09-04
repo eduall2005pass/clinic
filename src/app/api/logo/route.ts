@@ -80,7 +80,18 @@ export async function POST(request: NextRequest) {
     // Re-create File from bytes — original File's buffer was consumed by arrayBuffer()
     const freshFile = new File([bytes], file.name, { type: file.type });
     const logo = await saveActiveLogo(freshFile, width, height, admin.uid, mode);
-    // Bust CDN/edge cache immediately so new logo appears everywhere
+    // Bust CDN/edge cache immediately so new logo appears everywhere (persistent URL, survives refresh/logout)
+    try {
+      (revalidateTag as unknown as (tag: string, profile: string) => void)("logo", "max");
+      (revalidateTag as unknown as (tag: string, profile: string) => void)("logo-theme", "max");
+      (revalidateTag as unknown as (tag: string, profile: string) => void)("layout-logo", "max");
+      (revalidateTag as unknown as (tag: string, profile: string) => void)("layout-themelogos", "max");
+      revalidatePath("/", "layout");
+      revalidatePath("/admin/website/logo-favicon");
+      revalidatePath("/admin/website-information");
+    } catch {
+      // revalidation is best-effort (may not be available in some runtimes)
+    }
     return NextResponse.json({ logo }, { headers: { ...CACHE_HEADERS, "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Logo save failed:", error);

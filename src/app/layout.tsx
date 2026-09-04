@@ -22,14 +22,18 @@ import "./globals.css";
 // Branding/settings change rarely — cache layout data for 60s so every page
 // render is fast. Admin edits appear within a minute.
 // Logo is critical for branding — use shorter cache (10s) so uploads appear immediately across devices.
+// Tags allow immediate invalidation via revalidateTag("logo") after upload.
 const getCachedSeo = unstable_cache(fetchSeoSettings, ["layout-seo"], {
   revalidate: 60,
+  tags: ["seo"],
 });
 const getCachedActiveLogo = unstable_cache(getActiveLogo, ["layout-logo"], {
   revalidate: 10,
+  tags: ["logo", "layout-logo", "logo-theme"],
 });
 const getCachedThemeLogos = unstable_cache(fetchThemeLogos, ["layout-themelogos"], {
   revalidate: 10,
+  tags: ["logo", "layout-themelogos", "logo-theme"],
 });
 const getCachedWebsiteSettings = unstable_cache(
   getWebsiteSettingsWithFallback,
