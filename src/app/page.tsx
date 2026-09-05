@@ -124,8 +124,8 @@ export default async function HomePage() {
     (section) => section.key === "our-success",
   );
 
-  // Join With Us Now !! — immediately after FAQ, before Footer (admin-managed social_links)
-  // Title/description are admin-editable via homepage_sections (Admin → Website → Homepage)
+  // Join With Us Now! — immediately after FAQ, before Footer (admin-managed social_links)
+  // Description is admin-editable via homepage_sections (Admin → Website → Homepage); heading is fixed per design spec
   const joinSectionDef = sections.find((s) => s.key === "join-with-us");
   const joinNode = (
     <JoinWithUs
@@ -152,7 +152,7 @@ export default async function HomePage() {
           ) {
             nodes.unshift(jerseyNode);
           }
-          // Required order: FAQ → Join With Us Now !! → Footer
+          // Required order: FAQ → Join With Us Now! → Footer
           if (section.key === "faq") {
             nodes.push(joinNode);
           }

@@ -1,4 +1,4 @@
--- Join With Us Now !! — homepage section after FAQ, before Footer.
+-- Join With Us Now! — homepage section after FAQ, before Footer.
 -- Social platforms: Facebook, YouTube, Telegram (premium cards, DB-driven via social_links).
 
 -- Ensure homepage_sections has join-with-us (immediately after faq, sort_order 11)

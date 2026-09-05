@@ -108,8 +108,8 @@ export const HOMEPAGE_SECTIONS_CONFIG: HomepageSectionConfig[] = [
   },
   {
     key: "join-with-us",
-    label: "Join With Us Now !!",
-    defaultTitle: "Join With Us Now !!",
+    label: "Join With Us Now!",
+    defaultTitle: "Join With Us Now!",
     defaultDescription:
       "Connect with MediSpark on your favourite platforms and never miss an update.",
     editableText: true,
