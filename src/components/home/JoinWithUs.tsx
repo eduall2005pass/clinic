@@ -11,17 +11,17 @@ const JOIN_PLATFORMS: Array<{
 }> = [
   {
     key: "facebook",
-    description: "Follow us on Facebook for updates and community",
+    description: "Follow us on Facebook",
     buttonLabel: "Follow on Facebook",
   },
   {
     key: "youtube",
-    description: "Subscribe to our YouTube channel for courses",
+    description: "Subscribe to our YouTube channel",
     buttonLabel: "Subscribe on YouTube",
   },
   {
     key: "telegram",
-    description: "Join our Telegram community for instant updates",
+    description: "Join our Telegram community",
     buttonLabel: "Join on Telegram",
   },
 ];
@@ -47,7 +47,7 @@ export default async function JoinWithUs() {
   return (
     <section id="join-with-us" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <SectionHeading icon={JoinIcon}>Join With Us Now!</SectionHeading>
+        <SectionHeading icon={JoinIcon}>Join With Us Now !!</SectionHeading>
         <p className="mx-auto mt-3 max-w-3xl text-center text-sm leading-relaxed text-neutral-400">
           Connect with MediSpark on your favourite platforms and never miss an update.
         </p>
