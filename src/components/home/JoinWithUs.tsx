@@ -26,7 +26,13 @@ const JOIN_PLATFORMS: Array<{
   },
 ];
 
-export default async function JoinWithUs() {
+export default async function JoinWithUs({
+  title: titleProp,
+  description: descriptionProp,
+}: {
+  title?: string;
+  description?: string;
+} = {}) {
   const [activeLinks, sections] = await Promise.all([
     fetchActiveSocialLinks(),
     fetchHomepageSections().catch(() => [] as any),
@@ -34,6 +40,9 @@ export default async function JoinWithUs() {
   // Respect homepage_sections toggle — if join-with-us is disabled, hide section entirely
   const joinSection = (sections as any[])?.find((s: any) => s.key === "join-with-us" || s.section_key === "join-with-us");
   if (joinSection && joinSection.isActive === false) return null;
+  // Title/description are DB-driven via homepage_sections (editable in Admin → Homepage)
+  const title = titleProp ?? joinSection?.title ?? "Join With Us Now !!";
+  const description = descriptionProp ?? joinSection?.description ?? "Connect with MediSpark on your favourite platforms and never miss an update.";
 
   // Only the 3 required platforms, in defined order, enabled + has URL
   const visible = JOIN_PLATFORMS.map((p) => {
@@ -47,10 +56,12 @@ export default async function JoinWithUs() {
   return (
     <section id="join-with-us" className="scroll-mt-24 border-t border-ink/5 bg-dark-950">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <SectionHeading icon={JoinIcon}>Join With Us Now !!</SectionHeading>
-        <p className="mx-auto mt-3 max-w-3xl text-center text-sm leading-relaxed text-neutral-400">
-          Connect with MediSpark on your favourite platforms and never miss an update.
-        </p>
+        <SectionHeading icon={JoinIcon}>{title}</SectionHeading>
+        {description ? (
+          <p className="mx-auto mt-3 max-w-3xl text-center text-sm leading-relaxed text-neutral-400">
+            {description}
+          </p>
+        ) : null}
 
         <div className="mx-auto mt-10 grid max-w-5xl grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
           {visible.map((platform) => {

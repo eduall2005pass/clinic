@@ -156,7 +156,8 @@ export default function SocialLinksManagementPage() {
           Social Links
         </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-500 admin-dark:text-slate-400">
-          Manage the social platform links shown in the website footer.
+          Manage the social platform links for the “Join With Us Now !!” section (after FAQ)
+          and the website footer. Each platform can be enabled/disabled and its URL edited.
           Changes go live immediately after saving.
         </p>
       </header>

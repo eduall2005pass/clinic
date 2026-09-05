@@ -91,6 +91,12 @@ async function buildFallback(): Promise<SocialLink[]> {
       url: settings.youtubeUrl || null,
       isActive: Boolean(settings.youtubeUrl),
     },
+    {
+      key: "telegram",
+      label: "Telegram",
+      url: null,
+      isActive: false,
+    },
   ];
 }
 

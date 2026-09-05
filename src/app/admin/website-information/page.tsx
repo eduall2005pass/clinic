@@ -616,7 +616,7 @@ export default function WebsiteInformationPage() {
       <section id="social" className={`${cardClass} mt-6`}>
         <h2 className={cardTitleClass}>Social Links</h2>
         <p className="mt-1 text-xs text-slate-400 admin-dark:text-slate-500">
-          Icons shown in the footer. Each can be enabled or disabled.
+          Links for the “Join With Us Now !!” section and the footer. Each can be enabled or disabled.
         </p>
         <ul className="mt-5 space-y-3">
           {links.map((link) => {

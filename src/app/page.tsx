@@ -125,7 +125,15 @@ export default async function HomePage() {
   );
 
   // Join With Us Now !! — immediately after FAQ, before Footer (admin-managed social_links)
-  const joinNode = <JoinWithUs key="join-with-us" />;
+  // Title/description are admin-editable via homepage_sections (Admin → Website → Homepage)
+  const joinSectionDef = sections.find((s) => s.key === "join-with-us");
+  const joinNode = (
+    <JoinWithUs
+      key="join-with-us"
+      title={joinSectionDef?.title ?? undefined}
+      description={joinSectionDef?.description ?? undefined}
+    />
+  );
 
   return (
     <main className="flex-1 bg-dark-950">
