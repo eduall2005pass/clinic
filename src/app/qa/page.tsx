@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import QaPageClient from "@/components/auth/QaPageClient";
 import { fetchQaBrowseSubjects, fetchQaQuestions } from "@/lib/qa-store";
+import { fetchQaAskCardSettings } from "@/lib/qa-ask-card-settings";
 
 export const metadata: Metadata = {
   title: "Q&A",
@@ -11,9 +12,10 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function QaPage() {
-  const [dbSubjects, questions] = await Promise.all([
+  const [dbSubjects, questions, askCardSettings] = await Promise.all([
     fetchQaBrowseSubjects(),
     fetchQaQuestions({}),
+    fetchQaAskCardSettings(),
   ]);
   // Guideline is a built-in static card, not DB-managed.
   const subjects = [
@@ -24,7 +26,7 @@ export default async function QaPage() {
   return (
     <main className="flex-1 bg-dark-950">
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <QaPageClient subjects={subjects} questions={questions} />
+        <QaPageClient subjects={subjects} questions={questions} askCardSettings={askCardSettings} />
       </section>
     </main>
   );

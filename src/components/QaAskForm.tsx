@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { QaAskOptions } from "@/lib/qa";
+import type { QaAskCardSettings } from "@/lib/qa-ask-card-settings";
 
 type AskResult = { ok: boolean; error?: string };
 
@@ -19,12 +20,14 @@ export default function QaAskForm({
   onSubmit,
   onUploadImage,
   onClose,
+  cardSettings,
 }: {
   options: QaAskOptions | null;
   initialSubjectId?: string;
   onSubmit: (payload: QaAskPayload) => Promise<AskResult>;
   onUploadImage?: (file: File) => Promise<string | null>;
   onClose: () => void;
+  cardSettings?: Partial<QaAskCardSettings> | null;
 }) {
   const [categoryId, setCategoryId] = useState("");
   const [courseId, setCourseId] = useState("");
@@ -118,7 +121,7 @@ export default function QaAskForm({
       className="rounded-2xl border border-ink/10 bg-dark-900 p-6 shadow-lg shadow-black/20 sm:p-8"
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-heading">Ask a Question</h2>
+        <h2 className="text-lg font-bold text-heading">{cardSettings?.title ?? "Ask a Question"}</h2>
         <button
           type="button"
           onClick={onClose}
@@ -222,6 +225,15 @@ export default function QaAskForm({
             </select>
           </label>
 
+          {cardSettings?.subtitle ? (
+            <p className="mt-2 text-xs leading-relaxed text-neutral-400">{cardSettings.subtitle}</p>
+          ) : null}
+          {cardSettings?.guidelineText ? (
+            <p className="mt-3 rounded-lg border border-primary-500/20 bg-primary-500/10 px-3 py-2 text-[11px] leading-relaxed text-primary-300">
+              {cardSettings.guidelineText}
+            </p>
+          ) : null}
+
           <label className="mt-5 block">
             <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">
               Your Question
@@ -230,7 +242,7 @@ export default function QaAskForm({
               value={text}
               onChange={(event) => setText(event.target.value)}
               rows={4}
-              placeholder="Type your question here..."
+              placeholder={cardSettings?.placeholder ?? "Type your question here..."}
               className="mt-2 w-full resize-none rounded-xl border border-ink/10 bg-dark-850 px-4 py-3 text-sm text-heading outline-none transition placeholder:text-neutral-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
             />
           </label>
@@ -241,26 +253,28 @@ export default function QaAskForm({
             </p>
           )}
 
-          <div className="mt-5">
-            <label className="block cursor-pointer rounded-xl border border-dashed border-ink/15 bg-ink/5 p-4 text-center transition hover:border-primary-500/60">
-              <span className="block text-sm font-semibold text-neutral-300">
-                Picture Upload (optional)
-              </span>
-              <span className="mt-1 block text-xs text-neutral-500">
-                {pictureName || "Attach a picture"}
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  setPictureFile(file);
-                  setPictureName(file?.name ?? "");
-                }}
-                className="hidden"
-              />
-            </label>
-          </div>
+          {cardSettings?.showImageUpload !== false && (
+            <div className="mt-5">
+              <label className="block cursor-pointer rounded-xl border border-dashed border-ink/15 bg-ink/5 p-4 text-center transition hover:border-primary-500/60">
+                <span className="block text-sm font-semibold text-neutral-300">
+                  Picture Upload (optional)
+                </span>
+                <span className="mt-1 block text-xs text-neutral-500">
+                  {pictureName || "Attach a picture"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setPictureFile(file);
+                    setPictureName(file?.name ?? "");
+                  }}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <button
@@ -268,14 +282,14 @@ export default function QaAskForm({
               disabled={!canSubmit}
               className="flex-1 rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-900/40 transition hover:bg-primary-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:border disabled:border-ink/10 disabled:bg-dark-800 disabled:text-neutral-500 disabled:shadow-none"
             >
-              {busy ? "Submitting…" : "Submit Question"}
+              {busy ? "Submitting…" : (cardSettings?.submitLabel ?? "Submit Question")}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="rounded-xl border border-ink/15 bg-ink/5 px-6 py-3 font-semibold text-neutral-300 transition hover:border-primary-500/60 hover:text-primary-400"
             >
-              Cancel
+              {cardSettings?.cancelLabel ?? "Cancel"}
             </button>
           </div>
         </>
