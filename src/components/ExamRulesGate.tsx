@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 
 type Rule = { id: number | null; title: string; text: string };
 
@@ -13,6 +14,7 @@ type Rule = { id: number | null; title: string; text: string };
  */
 export default function ExamRulesGate({ examId }: { examId: string }) {
   const router = useRouter();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
@@ -20,11 +22,30 @@ export default function ExamRulesGate({ examId }: { examId: string }) {
   const [timerType, setTimerType] = useState<"first" | "second" | null>(null);
   const [secondTimerEnabled, setSecondTimerEnabled] = useState(false);
   const [secondTimerDeduction, setSecondTimerDeduction] = useState<number>(3);
+  const [alreadyAttempted, setAlreadyAttempted] = useState(false);
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
+      // Strict one-attempt check: if already completed, block start and show View Result
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          const priorRes = await fetch(`/api/exams/${encodeURIComponent(examId)}/prior-attempt`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            cache: "no-store",
+          });
+          const priorData = (await priorRes.json().catch(() => null)) as { hasPriorAttempt?: boolean } | null;
+          if (priorRes.ok && priorData?.hasPriorAttempt) {
+            setAlreadyAttempted(true);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // ignore prior check failure
+        }
+      }
       const response = await fetch(`/api/exams/${examId}/rules`, {
         cache: "no-store",
       });
@@ -52,8 +73,8 @@ export default function ExamRulesGate({ examId }: { examId: string }) {
 
   useEffect(() => {
     void Promise.resolve().then(load);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on exam change
-  }, [examId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on exam/user change
+  }, [examId, user]);
 
   return (
     <div className="mt-8 rounded-2xl border border-ink/10 bg-dark-900 p-5 shadow-lg shadow-black/20 sm:p-6">
@@ -82,7 +103,32 @@ export default function ExamRulesGate({ examId }: { examId: string }) {
         </div>
       )}
 
-      {!loading && !error && rules.length === 0 && (
+      {!loading && !error && alreadyAttempted && (
+        <div className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center">
+          <p className="font-extrabold text-emerald-300">You have already appeared in this exam.</p>
+          <p className="mt-1 text-sm leading-relaxed text-neutral-400">
+            Each Public Exam can be taken only once per student. You cannot start this exam again — view your existing result.
+          </p>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <button
+              type="button"
+              onClick={() => router.push(`/exam/${examId}/result`)}
+              className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-700 active:scale-[0.98]"
+            >
+              View Result →
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(`/exam/${examId}`)}
+              className="rounded-xl border border-ink/10 bg-dark-850 px-6 py-3 text-sm font-bold text-neutral-300 transition hover:text-heading"
+            >
+              Back to Exam
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && !alreadyAttempted && rules.length === 0 && (
         <>
           <p className="mt-6 rounded-xl border border-dashed border-ink/15 bg-dark-950/60 p-6 text-center text-sm text-neutral-400">
             No Rules Added.
@@ -181,7 +227,7 @@ export default function ExamRulesGate({ examId }: { examId: string }) {
         </>
       )}
 
-      {!loading && !error && rules.length > 0 && (
+      {!loading && !error && !alreadyAttempted && rules.length > 0 && (
         <>
           <ul className="mt-4 space-y-3">
             {rules.map((rule, index) => (

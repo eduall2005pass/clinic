@@ -105,6 +105,8 @@ export default function ExamParticipationArea({
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<SubmissionOutcome | null>(null);
   const [terminatedNotice, setTerminatedNotice] = useState(false);
+  // Strict one-attempt: if already completed, show View Result instead of Start Exam
+  const [alreadyAttempted, setAlreadyAttempted] = useState(false);
   // Rules accepted → the actual attempt has begun.
   const [begun, setBegun] = useState(false);
   const [beginning, setBeginning] = useState(false);
@@ -194,6 +196,43 @@ export default function ExamParticipationArea({
         }
         setExam(data.exam);
         setQuestions(data.questions ?? []);
+        // Strict one-attempt: check if already has completed attempt for this public exam
+        try {
+          const priorRes = await fetch(`/api/exams/${encodeURIComponent(examId)}/prior-attempt`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            cache: "no-store",
+          });
+          const priorData = (await priorRes.json().catch(() => ({}))) as { hasPriorAttempt?: boolean };
+          if (!cancelled && priorRes.ok && priorData.hasPriorAttempt) {
+            // Already appeared — fetch existing result and show View Result instead of Start Exam
+            setAlreadyAttempted(true);
+            try {
+              const resultRes = await fetch(`/api/exams/${encodeURIComponent(examId)}/result`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                cache: "no-store",
+              });
+              const resultData = (await resultRes.json().catch(() => ({}))) as SubmissionOutcome & { error?: string };
+              if (!cancelled && resultRes.ok && "score" in resultData) {
+                setOutcome(resultData as SubmissionOutcome);
+              } else {
+                // Fallback: show already attempted notice even if result fetch fails
+                setOutcome({
+                  score: 0,
+                  totalMarks: data.exam.totalMarks ?? 0,
+                  correctCount: 0,
+                  wrongCount: 0,
+                  skippedCount: 0,
+                  examName: data.exam.name,
+                } as SubmissionOutcome);
+              }
+            } catch {
+              // ignore
+            }
+            return;
+          }
+        } catch {
+          // ignore prior check failure — proceed to normal flow
+        }
         // "Start Now" flow: rules were already accepted on the exam card,
         // so begin the attempt right away without showing them again.
         if (autoBegin && (data.questions?.length ?? 0) > 0) {
@@ -210,7 +249,7 @@ export default function ExamParticipationArea({
             );
             const startData = (await startResponse
               .json()
-              .catch(() => ({}))) as { sessionToken?: string | null; secondsLeft?: number | null };
+              .catch(() => ({}))) as { sessionToken?: string | null; secondsLeft?: number | null; error?: string; alreadyAttempted?: boolean };
             if (cancelled) return;
             if (startResponse.ok && data.exam) {
               activateSession(
@@ -218,6 +257,23 @@ export default function ExamParticipationArea({
                 data.exam.durationMinutes,
                 startData.secondsLeft ?? null,
               );
+            } else if (startResponse.status === 403 && (startData as { alreadyAttempted?: boolean }).alreadyAttempted) {
+              // Backend enforced one-attempt — show View Result
+              setAlreadyAttempted(true);
+              try {
+                const resultRes = await fetch(`/api/exams/${encodeURIComponent(examId)}/result`, {
+                  headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+                  cache: "no-store",
+                });
+                const resultData = (await resultRes.json().catch(() => ({}))) as SubmissionOutcome & { error?: string };
+                if (!cancelled && resultRes.ok && "score" in resultData) {
+                  setOutcome(resultData as SubmissionOutcome);
+                }
+              } catch {
+                // ignore
+              }
+            } else if (!startResponse.ok) {
+              if (!cancelled) setLoadError((startData as { error?: string }).error ?? "Could not start the exam. Please retry.");
             }
           } catch {
             if (!cancelled) setLoadError("Failed to start the exam. Please retry.");

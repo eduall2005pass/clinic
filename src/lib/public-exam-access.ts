@@ -76,10 +76,24 @@ export async function checkPublicExamAccess(
     };
   }
 
-  // Attempt limits (shared with the engine's startExamAttempt guard).
-  // The canonical limit lives in exam_settings.max_attempts and counts
-  // prior rows in exam_results (each submitted attempt). exam_attempts
-  // tracks the in-flight session; max-attempts is enforced against results.
+  // Strict One Attempt Per Public Exam: Student ID + Exam ID = max one completed attempt
+  // Public exams (kind !== 'enrolled') enforce exactly one attempt regardless of exam_settings.
+  try {
+    const countRows = await query<{ n: number }[]>(
+      `SELECT COUNT(*) AS n FROM exam_results WHERE exam_id = ? AND student_uid = ?`,
+      [normalizedId, uid.trim()],
+    );
+    if ((countRows[0]?.n ?? 0) > 0) {
+      return {
+        allowed: false,
+        reason: "You have already appeared in this exam. View your result.",
+      };
+    }
+  } catch {
+    // On query failure, continue to maxAttempts fallback below
+  }
+
+  // Attempt limits (shared with the engine's startExamAttempt guard) — fallback for enrolled / legacy
   try {
     const settingsRows = await query<
       { max_attempts: number | string | null }[]
@@ -102,8 +116,6 @@ export async function checkPublicExamAccess(
           reason: `Maximum attempts (${maxAttempts}) reached for this exam.`,
         };
       }
-      // Also guard against stale exam_attempts rows left in 'submitted' state
-      // when results and attempts drift — the result count is authoritative.
     }
   } catch (error) {
     if (
@@ -112,9 +124,6 @@ export async function checkPublicExamAccess(
     ) {
       throw error;
     }
-    // If exam_settings / exam_results are unavailable, fail open for the
-    // attempt-limit check only — the published/live/enrolled checks above
-    // are still enforced.
   }
 
   return { allowed: true };

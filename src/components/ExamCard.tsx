@@ -125,10 +125,13 @@ export default function ExamCard({
   /** Extra management controls rendered under the main action button —
    *  only supplied by the Admin Panel; students never see this. */
   manage,
+  /** Strict one-attempt: if student already completed this public exam, show View Result */
+  hasCompleted,
 }: {
   exam: PublicExam;
   detailsHref?: string;
   manage?: React.ReactNode;
+  hasCompleted?: boolean;
 }) {
   const status = statusMeta[exam.status];
   const action = actionMeta[exam.status];
@@ -136,10 +139,13 @@ export default function ExamCard({
   const CategoryIcon = categoryMeta[category].icon;
   const isLive = exam.status === "Live";
   const isAvailable = exam.status === "Available";
-  const canStart = isLive || isAvailable;
+  const canStart = !hasCompleted && (isLive || isAvailable);
   const isInactive = exam.status === "Inactive";
   const isUnpublished = exam.status === "Unpublished";
   const href = detailsHref ?? `/exam/${exam.id}`;
+  // Strict one-attempt: if already completed, override action to View Result
+  const effectiveStatus: ExamStatus = hasCompleted ? "Completed" : exam.status;
+  const effectiveAction = hasCompleted ? { label: "View Result" } : actionMeta[exam.status];
 
   const cardClasses = canStart
     ? "border-primary-600/60 ring-1 ring-primary-600/40 shadow-xl shadow-primary-900/40 hover:border-primary-500 hover:shadow-primary-800/50"
@@ -228,27 +234,35 @@ export default function ExamCard({
             )}
           </p>
 
-          {canStart && !detailsHref ? (
+          {hasCompleted ? (
+            <Link
+              href={`/exam/${exam.id}/result`}
+              className={`${buttonClasses} flex items-center justify-center gap-2 border border-emerald-600/50 bg-emerald-600/10 text-emerald-300 hover:bg-emerald-600/20`}
+            >
+              View Result
+              <span aria-hidden="true">&rarr;</span>
+            </Link>
+          ) : canStart && !detailsHref ? (
             <StartExamButton
               exam={exam}
               disabled={isInactive || isUnpublished}
               className={`${buttonClasses} flex items-center justify-center gap-2 bg-primary-600 text-white shadow-md shadow-primary-900/50 hover:bg-primary-500`}
             >
-              {action.label}
+              {effectiveAction.label}
               <span aria-hidden="true">&rarr;</span>
             </StartExamButton>
           ) : (
             <Link
               href={href}
               className={`${buttonClasses} flex items-center justify-center gap-2 ${
-                exam.status === "Upcoming"
+                effectiveStatus === "Upcoming"
                   ? "border border-primary-600/50 bg-primary-600/10 text-primary-300 hover:bg-primary-600/20"
                   : isInactive || isUnpublished
                     ? "border border-ink/10 bg-dark-850 text-neutral-500 cursor-not-allowed"
                     : "border border-ink/10 bg-dark-850 text-neutral-300 hover:border-ink/20 hover:text-heading"
               }`}
             >
-              {action.label}
+              {effectiveAction.label}
               <span aria-hidden="true">&rarr;</span>
             </Link>
           )}

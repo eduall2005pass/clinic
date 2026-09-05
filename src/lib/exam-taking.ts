@@ -236,7 +236,24 @@ async function startExamAttempt(
 ): Promise<string> {
   await ensureAttemptTables();
   const normalizedTimer: "first" | "second" = timerType === "second" ? "second" : "first";
-  // Max attempts enforcement: check exam_settings.maxAttempts if the table exists
+  // Strict One Attempt Per Public Exam: Student ID + Exam ID = max one completed attempt
+  // Public exams are those with kind !== 'enrolled' (public/practice). Enrolled exams keep existing maxAttempts logic.
+  let isPublicExam = false;
+  try {
+    const { fetchExamById } = await import("@/lib/exams-admin");
+    const examForCheck = await fetchExamById(examId);
+    isPublicExam = !!examForCheck && examForCheck.kind !== "enrolled";
+    if (isPublicExam) {
+      const hasCompleted = await hasPriorExamAttempt(examId, uid);
+      if (hasCompleted) {
+        throw new Error("You have already appeared in this exam. View your result.");
+      }
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("already appeared")) throw e;
+    // If exam lookup fails, fall through to normal handling
+  }
+  // Max attempts enforcement: check exam_settings.maxAttempts if the table exists (for enrolled / fallback)
   try {
     const settingsRows = await query<{ max_attempts: number | string | null }[]>(
       `SELECT max_attempts FROM exam_settings WHERE id = 'active' LIMIT 1`,
@@ -254,6 +271,7 @@ async function startExamAttempt(
     }
   } catch (e) {
     if (e instanceof Error && e.message.includes("Maximum attempts")) throw e;
+    if (e instanceof Error && e.message.includes("already appeared")) throw e;
     // If exam_settings missing or query fails, ignore and allow attempt.
   }
   const existing = await query<AttemptRow[]>(
@@ -261,7 +279,11 @@ async function startExamAttempt(
     [examId, uid],
   );
   if (existing[0]?.status === "active") {
-    // Terminate the previous session and auto-submit what it had answered.
+    if (isPublicExam) {
+      // For public exams with strict one-attempt, an active attempt is still the first attempt — resume it, don't auto-submit and create duplicate
+      return existing[0].session_token;
+    }
+    // For enrolled/practice, terminate the previous session and auto-submit what it had answered.
     await finalizeAttempt(examId, uid, studentName, {});
   }
   const token = randomUUID();
@@ -452,6 +474,18 @@ async function finalizeAttempt(
   const exams = await fetchExams();
   const found = exams.find((exam) => exam.id === examId);
   if (!found) return null;
+  // Strict one-attempt for public exams: if already has completed result, don't create duplicate — return existing
+  if (found.kind !== "enrolled") {
+    try {
+      const hasCompleted = await hasPriorExamAttempt(examId, uid);
+      if (hasCompleted) {
+        const existing = await latestOutcome(examId, uid);
+        if (existing) return existing;
+      }
+    } catch {
+      // best-effort
+    }
+  }
 
   const stored = await fetchStoredAnswers(examId, uid);
   const merged: Record<string, number> = { ...extraAnswers };
@@ -832,6 +866,19 @@ export async function submitExamAttempt(
   }
 
   await ensureAttemptTables();
+
+  // Strict one-attempt for public exams: if already has completed result, return existing and don't create duplicate
+  if (found.kind !== "enrolled") {
+    try {
+      const hasCompleted = await hasPriorExamAttempt(examId, uid);
+      if (hasCompleted) {
+        const existing = await latestOutcome(examId, uid);
+        if (existing) return existing;
+      }
+    } catch {
+      // best-effort
+    }
+  }
 
   // Already submitted (double-submit / auto-submit race / terminated by
   // another device) → return the stored result instead of re-grading.
