@@ -8,7 +8,8 @@ export type HomepageSectionKey =
   | "jersey"
   | "mentors"
   | "reviews"
-  | "faq";
+  | "faq"
+  | "join-with-us";
 
 export type HomepageSection = {
   key: HomepageSectionKey;
@@ -103,6 +104,14 @@ export const HOMEPAGE_SECTIONS_CONFIG: HomepageSectionConfig[] = [
     defaultTitle: "Frequently asked questions",
     defaultDescription:
       "Quick answers to the most common questions about MediSpark.",
+    editableText: true,
+  },
+  {
+    key: "join-with-us",
+    label: "Join With Us Now !!",
+    defaultTitle: "Join With Us Now !!",
+    defaultDescription:
+      "Connect with MediSpark on your favourite platforms and never miss an update.",
     editableText: true,
   },
 ];
