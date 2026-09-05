@@ -89,6 +89,34 @@ export default function QaExplorer({
 
   const isGuideline = selectedSubjectId === "guideline";
 
+  const [qaFavIds, setQaFavIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!user) {
+      setQaFavIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    void user
+      .getIdToken()
+      .then((token) =>
+        fetch("/api/my/favourites", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }),
+      )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { favourites?: { itemType: string; itemId: string }[] } | null) => {
+        if (cancelled || !data?.favourites) return;
+        const ids = new Set(data.favourites.filter((f) => f.itemType === "qa").map((f) => f.itemId));
+        setQaFavIds(ids);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   const visibleQuestions = selectedSubjectId
     ? questions.filter(
         (question) => question.subjectId === selectedSubjectId
@@ -310,7 +338,10 @@ export default function QaExplorer({
       ) : visibleQuestions.length > 0 ? (
         <div className="flex flex-col gap-6">
           {visibleQuestions.map((question) => (
-            <QaQuestionItem key={question.id} question={question} />
+            <QaQuestionItem
+              key={question.id}
+              question={{ ...question, isFavourite: qaFavIds.has(question.id) } as QaQuestion & { isFavourite?: boolean }}
+            />
           ))}
         </div>
       ) : (

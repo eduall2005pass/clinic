@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import MaterialCard from "@/components/dashboard/MaterialCard";
+import FavouriteToggle from "@/components/dashboard/FavouriteToggle";
 import { isActiveEnrollment } from "@/lib/enrollments";
 import PermissionGate, {
   courseDeniedGuidance,
@@ -867,11 +868,11 @@ function PaperChapterView({
           {(chapter) => (
             <ul className="space-y-2">
               {chapter.classes.map((cls, index) => (
-                <li key={cls.id}>
+                <li key={cls.id} className="flex items-center gap-2">
                   <Link
                     href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/classes/${encodeURIComponent(cls.id)}`}
                     onClick={() => recordRecentView(user, "class", cls.id)}
-                    className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                    className="group flex flex-1 items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
                   >
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${cls.completed ? "bg-emerald-500/15 text-emerald-400" : "bg-primary-600/15 text-primary-500"}`}>
                       {cls.completed ? (
@@ -897,6 +898,7 @@ function PaperChapterView({
                       <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
                     </svg>
                   </Link>
+                  <FavouriteToggle itemType="class" itemId={cls.id} initial={cls.isFavourite} compact />
                 </li>
               ))}
             </ul>
@@ -917,11 +919,11 @@ function PaperChapterView({
           {(chapter) => (
             <ul className="space-y-2">
               {chapter.exams.map((exam, index) => (
-                <li key={exam.id}>
+                <li key={exam.id} className="flex items-center gap-2">
                   <Link
                     href={`/exam/${encodeURIComponent(exam.id)}/rules`}
                     onClick={() => recordRecentView(user, "exam", exam.id)}
-                    className="group flex items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
+                    className="group flex flex-1 items-center gap-3 rounded-xl border border-ink/10 bg-dark-900 px-3.5 py-3 transition hover:border-primary-600/50 hover:bg-ink/5"
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-400">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -940,6 +942,7 @@ function PaperChapterView({
                       <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
                     </svg>
                   </Link>
+                  <FavouriteToggle itemType="exam" itemId={exam.id} initial={Boolean((exam as unknown as { isFavourite?: boolean }).isFavourite)} compact />
                 </li>
               ))}
             </ul>

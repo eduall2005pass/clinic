@@ -30,6 +30,7 @@ export type QaQuestion = {
   createdAt: string;
   status: QaQuestionStatus;
   answer?: TeacherAnswer;
+  isFavourite?: boolean;
 };
 
 /** Ask-a-question dropdown data — derived from real Course Control +

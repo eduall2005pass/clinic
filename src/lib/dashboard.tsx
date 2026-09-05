@@ -204,11 +204,7 @@ export const dashboardSubUnits: Record<string, DashboardSubItem[]> = {
     { title: "Exam", description: "Exams attached to your learning" },
     { title: "Materials", description: "Notes and resources" },
   ],
-  "/dashboard/favourites": [
-    { title: "Favourite Courses", description: "Courses you saved" },
-    { title: "Favourite Classes", description: "Classes you saved" },
-    { title: "Favourite Materials", description: "Materials you saved" },
-  ],
+  "/dashboard/favourites": [],
   "/dashboard/continue-learning": [
     { title: "Current Course", description: "The course you are studying now" },
     { title: "Current Subject", description: "Where you are inside the course" },

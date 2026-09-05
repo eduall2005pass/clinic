@@ -1,42 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import type { QaQuestion } from "@/lib/qa";
 import QaAnswer from "@/components/QaAnswer";
-
-function FavouriteButton() {
-  const [favourite, setFavourite] = useState(false);
-
-  return (
-    <button
-      type="button"
-      aria-label="Favourite this question"
-      aria-pressed={favourite}
-      onClick={() => setFavourite((value) => !value)}
-      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-        favourite
-          ? "border-primary-500 bg-primary-600/15 text-primary-400"
-          : "border-ink/10 bg-ink/5 text-neutral-400 hover:border-primary-500/60 hover:text-primary-400"
-      }`}
-    >
-      <svg
-        className="h-4 w-4"
-        viewBox="0 0 24 24"
-        fill={favourite ? "currentColor" : "none"}
-        stroke="currentColor"
-        strokeWidth="1.8"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-        />
-      </svg>
-      Favourite
-    </button>
-  );
-}
+import FavouriteToggle from "@/components/dashboard/FavouriteToggle";
 
 function AttachmentIndicator({
   label,
@@ -127,7 +94,7 @@ export default function QaQuestionItem({
       )}
 
       <div className="mt-5 flex items-center justify-between border-t border-ink/10 pt-4">
-        <FavouriteButton />
+        <FavouriteToggle itemType="qa" itemId={question.id} initial={Boolean((question as unknown as { isFavourite?: boolean }).isFavourite)} />
         <span className="text-xs text-neutral-500">
           {question.status === "answered"
             ? "Answered by a teacher"
