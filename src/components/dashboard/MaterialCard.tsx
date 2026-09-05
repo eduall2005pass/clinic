@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import FavouriteToggle from "@/components/dashboard/FavouriteToggle";
 
 type Props = {
   slug: string;
-  material: { id: number | string; title: string; questionCount: number };
+  material: { id: number | string; title: string; questionCount: number; isFavourite?: boolean };
   onView?: () => void;
 };
 
@@ -20,16 +21,19 @@ export default function MaterialCard({ slug, material, onView }: Props) {
           {qc} Questions
         </span>
       </div>
-      <Link
-        href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/materials/${encodeURIComponent(String(material.id))}`}
-        onClick={() => onView?.()}
-        className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary-900/20 transition hover:bg-primary-700 active:scale-[0.98] sm:w-auto"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-        </svg>
-        View PDF
-      </Link>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Link
+          href={`/dashboard/enrolled-courses/${encodeURIComponent(slug)}/materials/${encodeURIComponent(String(material.id))}`}
+          onClick={() => onView?.()}
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary-900/20 transition hover:bg-primary-700 active:scale-[0.98] sm:flex-none"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+          </svg>
+          View PDF
+        </Link>
+        <FavouriteToggle itemType="material" itemId={String(material.id)} initial={Boolean(material.isFavourite)} compact />
+      </div>
     </div>
   );
 }

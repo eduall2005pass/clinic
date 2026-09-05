@@ -65,6 +65,7 @@ export type ChapterItem = {
     title: string;
     durationMinutes: number;
     totalMarks: number;
+    isFavourite: boolean;
   }[];
 };
 
@@ -673,6 +674,7 @@ function buildCourseData(
       title: exam.title,
       durationMinutes: toNumber(exam.duration_minutes),
       totalMarks: toNumber(exam.total_marks),
+      isFavourite: favourites.has(`exam:${exam.id}`),
     });
   }
 

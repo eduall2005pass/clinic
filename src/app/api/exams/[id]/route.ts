@@ -73,13 +73,44 @@ export async function GET(
     }
   }
 
-  const payload = await getExamForTaking(
-    id,
-    user.uid,
-    user.name || user.email || "Student",
-    startAttempt,
-    timerType as "first" | "second",
-  );
+  let payload: Awaited<ReturnType<typeof getExamForTaking>> = null;
+  try {
+    payload = await getExamForTaking(
+      id,
+      user.uid,
+      user.name || user.email || "Student",
+      startAttempt,
+      timerType as "first" | "second",
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to start exam.";
+    if (message.includes("already appeared")) {
+      // For public exams with strict one-attempt, return 403 with existing result hint
+      // Frontend will show View Result instead of Start Exam
+      try {
+        const { hasPriorExamAttempt } = await import("@/lib/exam-taking");
+        const { query } = await import("@/lib/mysql");
+        // Try to fetch existing result for View Result link
+        const rows = await query<{ id: number }[]>(
+          `SELECT id FROM exam_results WHERE exam_id = ? AND student_uid = ? LIMIT 1`,
+          [id, user.uid],
+        );
+        if (rows[0]) {
+          return NextResponse.json(
+            { error: message, alreadyAttempted: true, examId: id },
+            { status: 403 },
+          );
+        }
+      } catch {
+        // fall through
+      }
+      return NextResponse.json(
+        { error: message, alreadyAttempted: true, examId: id },
+        { status: 403 },
+      );
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
   if (!payload) {
     // Distinguish missing ID vs genuinely unavailable (draft/closed/enrolled)
     // to avoid showing "No exam found" due to category/status mismatches.

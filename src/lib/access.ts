@@ -70,16 +70,17 @@ export async function canAccessCourseContent(
 }
 
 /**
- * Whether a class/material/exam item belongs to a course the student is
- * actively enrolled in. Used to validate item-level requests (favourites,
- * progress, view history) so IDs cannot point outside the enrollment.
+ * Whether a class/material/exam/qa item belongs to a course the student is
+ * actively enrolled in (or is owned by the student for QA). Used to validate
+ * item-level requests (favourites, progress, view history) so IDs cannot point
+ * outside the enrollment.
  */
 export async function itemInEnrolledCourse(
   uid: string,
-  itemType: "class" | "material" | "exam",
+  itemType: "class" | "material" | "exam" | "qa",
   itemId: string,
 ): Promise<boolean> {
-  if (!itemId || itemId.length > 64) return false;
+  if (!itemId || itemId.length > 191) return false;
   try {
     let rows: { found: number }[] = [];
     if (itemType === "exam") {
@@ -93,6 +94,38 @@ export async function itemInEnrolledCourse(
           WHERE ex.id = ? LIMIT 1`,
         [uid, itemId],
       );
+      if (rows.length === 0) {
+        // Course-level exams (chapter_id IS NULL) — allow if student has any active enrollment
+        const courseLevel = await query<{ found: number }[]>(
+          `SELECT 1 AS found FROM exams ex WHERE ex.id = ? AND ex.chapter_id IS NULL LIMIT 1`,
+          [itemId],
+        );
+        if (courseLevel.length > 0) {
+          const enrolled = await query<{ found: number }[]>(
+            `SELECT 1 AS found FROM enrollments WHERE student_uid = ? AND enrollment_status = 'active' LIMIT 1`,
+            [uid],
+          );
+          return enrolled.length > 0;
+        }
+      }
+    } else if (itemType === "qa") {
+      // QA questions: allow if the student owns the question OR the question's subject/course
+      // belongs to a course the student is enrolled in, or any paid enrollment (QA is paid-only feature).
+      rows = await query<{ found: number }[]>(
+        `SELECT 1 AS found FROM qa_questions q WHERE q.question_id = ? AND (q.student_uid = ? OR q.subject_id IN (
+           SELECT s.id FROM course_subjects s
+           JOIN course_subject_assignments a ON a.subject_id = s.id
+           JOIN enrollments e ON e.course_id = a.course_slug AND e.student_uid = ? AND e.enrollment_status = 'active'
+        )) LIMIT 1`,
+        [itemId, uid, uid],
+      );
+      if (rows.length > 0) return true;
+      // Fallback: any active enrollment (paid students may favourite any Q&A)
+      const enrolled = await query<{ found: number }[]>(
+        `SELECT 1 AS found FROM enrollments WHERE student_uid = ? AND enrollment_status = 'active' LIMIT 1`,
+        [uid],
+      );
+      return enrolled.length > 0;
     } else {
       const table =
         itemType === "class" ? "course_classes cl" : "course_materials m";

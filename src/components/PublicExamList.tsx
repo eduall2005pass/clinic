@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 import ExamCard from "@/components/ExamCard";
 import {
   categorizeExam,
@@ -52,6 +53,33 @@ export default function PublicExamList({
   renderManage?: (exam: PublicExam) => React.ReactNode;
 }) {
   const [batch, setBatch] = useState("All Batches");
+  const { user } = useAuth();
+  const [completedSet, setCompletedSet] = useState<Set<string>>(new Set());
+
+  // Strict one-attempt: fetch completed public exam IDs for current student
+  useEffect(() => {
+    if (!user || detailsBase) return; // Admin mirror pages never show View Result (admin view)
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/exams/completed-public", {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json().catch(() => null)) as { completed?: string[] } | null;
+        if (!cancelled && Array.isArray(data?.completed)) {
+          setCompletedSet(new Set(data.completed));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, detailsBase]);
 
   const filtered = exams.filter(
     (exam) =>
@@ -137,6 +165,7 @@ export default function PublicExamList({
                               : undefined
                           }
                           manage={renderManage?.(exam)}
+                          hasCompleted={completedSet.has(exam.id)}
                         />
                       ))}
                   </div>
@@ -188,6 +217,7 @@ export default function PublicExamList({
                                 : undefined
                             }
                             manage={renderManage?.(exam)}
+                            hasCompleted={completedSet.has(exam.id)}
                           />
                         ))}
                       </div>

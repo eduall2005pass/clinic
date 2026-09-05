@@ -5,14 +5,14 @@ import { itemInEnrolledCourse } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
-const ITEM_TYPES = new Set(["class", "material"]);
+const ITEM_TYPES = new Set(["class", "material", "exam", "qa"]);
 
 function parseBody(body: unknown): { itemType: string; itemId: string } | null {
   if (typeof body !== "object" || body === null) return null;
   const record = body as Record<string, unknown>;
   const itemType = typeof record.itemType === "string" ? record.itemType : "";
   const itemId = typeof record.itemId === "string" ? record.itemId : "";
-  if (!ITEM_TYPES.has(itemType) || !itemId || itemId.length > 64) return null;
+  if (!ITEM_TYPES.has(itemType) || !itemId || itemId.length > 191) return null;
   return { itemType, itemId };
 }
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   try {
-    // Only return favourites whose item is still inside an enrolled course.
+    // Only return favourites whose item is still inside an enrolled course (or owned QA).
     const rows = await query<{ item_type: string; item_id: string }[]>(
       `SELECT f.item_type, f.item_id
          FROM student_favourites f
@@ -43,9 +43,28 @@ export async function GET(request: NextRequest) {
                 JOIN enrollments e ON e.course_id = a.course_slug
                      AND e.student_uid = ? AND e.enrollment_status = 'active'
                WHERE m.id = f.item_id))
+            OR
+            (f.item_type = 'exam' AND (
+               EXISTS (
+                 SELECT 1 FROM exams ex
+                  JOIN course_chapters ch ON ch.id = ex.chapter_id
+                  JOIN course_subject_assignments a ON a.subject_id = ch.subject_id
+                  JOIN enrollments e ON e.course_id = a.course_slug
+                       AND e.student_uid = ? AND e.enrollment_status = 'active'
+                 WHERE ex.id = f.item_id)
+               OR EXISTS (
+                 SELECT 1 FROM exams ex2 WHERE ex2.id = f.item_id AND ex2.chapter_id IS NULL
+                 AND EXISTS (SELECT 1 FROM enrollments e2 WHERE e2.student_uid = ? AND e2.enrollment_status = 'active')
+               )
+            ))
+            OR
+            (f.item_type = 'qa' AND (
+               EXISTS (SELECT 1 FROM qa_questions q WHERE q.question_id = f.item_id AND q.student_uid = ?)
+               OR EXISTS (SELECT 1 FROM enrollments e WHERE e.student_uid = ? AND e.enrollment_status = 'active')
+            ))
           )
         ORDER BY f.created_at DESC`,
-      [user.uid, user.uid, user.uid],
+      [user.uid, user.uid, user.uid, user.uid, user.uid, user.uid, user.uid],
     );
     return NextResponse.json({
       favourites: rows.map((row) => ({
@@ -75,7 +94,7 @@ export async function POST(request: NextRequest) {
     // student is ACTIVELY enrolled in — favourites cannot point outside.
     const allowed = await itemInEnrolledCourse(
       user.uid,
-      parsed.itemType as "class" | "material",
+      parsed.itemType as "class" | "material" | "exam" | "qa",
       parsed.itemId,
     );
     if (!allowed) {
