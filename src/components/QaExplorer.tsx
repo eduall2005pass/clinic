@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { QaAskOptions, QaQuestion, QaSubject } from "@/lib/qa";
 import QaSubjectPicker from "@/components/QaSubjectPicker";
@@ -12,13 +12,16 @@ import PermissionGuidanceCard, {
   type PermissionGuidance,
 } from "@/components/auth/PermissionGuidanceCard";
 import { useAuth } from "@/lib/auth-context";
+import type { QaAskCardSettings } from "@/lib/qa-ask-card-settings";
 
 export default function QaExplorer({
   subjects,
   questions,
+  askCardSettings: initialAskCardSettings,
 }: {
   subjects: QaSubject[];
   questions: QaQuestion[];
+  askCardSettings?: import("@/lib/qa-ask-card-settings").QaAskCardSettings | null;
 }) {
   const router = useRouter();
   const {
@@ -38,6 +41,25 @@ export default function QaExplorer({
     null
   );
   const [signingIn, setSigningIn] = useState(false);
+  const [askCardSettings, setAskCardSettings] = useState<QaAskCardSettings | null>(
+    initialAskCardSettings ?? null
+  );
+
+  useEffect(() => {
+    if (initialAskCardSettings) return;
+    let cancelled = false;
+    void fetch("/api/qa/ask-card", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data && typeof data.title === "string") {
+          setAskCardSettings(data as QaAskCardSettings);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialAskCardSettings]);
 
   const subjectStats = useMemo(
     () =>
@@ -263,6 +285,7 @@ export default function QaExplorer({
               onSubmit={handleAskSubmit}
               onUploadImage={handleUploadImage}
               onClose={closeAsk}
+              cardSettings={askCardSettings}
             />
           ) : (
             <div className="flex items-center justify-center gap-3 rounded-2xl border border-ink/10 bg-dark-900 p-8 text-sm text-neutral-400">

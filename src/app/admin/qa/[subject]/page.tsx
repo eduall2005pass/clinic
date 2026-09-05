@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { AccessLoading } from "@/components/auth/AccessGuard";
 import { useAdminToast } from "@/components/admin/AdminToastProvider";
@@ -33,13 +34,17 @@ export default function SubjectQuestionsPage({
   params: Promise<{ subject: string }>;
 }) {
   const { subject: subjectId } = use(params);
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status");
+  const initialTab: Tab =
+    initialStatus === "answered" || initialStatus === "unanswered" ? initialStatus : "all";
   const toast = useAdminToast();
   const { user, authLoading } = useAuth();
   const [state, setState] = useState<"loading" | "invalid" | "error" | "ready">(
     "loading",
   );
   const [subject, setSubject] = useState<QaSubject | null>(null);
-  const [tab, setTab] = useState<Tab>("all");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [questions, setQuestions] = useState<QaQuestion[]>([]);
   const [counts, setCounts] = useState<{ all: number; unanswered: number; answered: number } | null>(
     null,
@@ -57,7 +62,7 @@ export default function SubjectQuestionsPage({
     };
   }
 
-  // Load the subject + All tab counts once.
+  // Load the subject + All tab counts once, then load initial filtered tab if needed.
   const loadSubject = useCallback(async () => {
     if (!user) return;
     setState("loading");
@@ -77,7 +82,26 @@ export default function SubjectQuestionsPage({
       };
       setSubject(data.subject ?? null);
       const list = Array.isArray(data.questions) ? data.questions : [];
-      if (tab === "all") setQuestions(list);
+      // If initial tab is filtered, fetch filtered list immediately so subject-specific filtering is exact
+      if (initialTab !== "all") {
+        const statusQs = `&status=${initialTab}`;
+        try {
+          const filteredRes = await fetch(
+            `/api/admin/qa?subject=${encodeURIComponent(subjectId)}${statusQs}`,
+            { headers: await headers(), cache: "no-store" },
+          );
+          if (filteredRes.ok) {
+            const fData = (await filteredRes.json()) as { questions?: QaQuestion[] };
+            setQuestions(Array.isArray(fData.questions) ? fData.questions : []);
+          } else {
+            setQuestions(list.filter((q) => q.status === initialTab));
+          }
+        } catch {
+          setQuestions(list.filter((q) => q.status === initialTab));
+        }
+      } else {
+        setQuestions(list);
+      }
       setCounts({
         all: list.length,
         unanswered: list.filter((q) => q.status === "unanswered").length,
@@ -88,7 +112,7 @@ export default function SubjectQuestionsPage({
       setState("error");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, subjectId]);
+  }, [user, subjectId, initialTab]);
 
   // Load questions for the selected tab — backend-filtered every time.
   const loadTab = useCallback(
