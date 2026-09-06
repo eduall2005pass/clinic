@@ -65,9 +65,27 @@ export default function MaterialPdfGeneratorPage() {
   const [detection, setDetection] = useState<{ total: number } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfReady, setPdfReady] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const standaloneInputRef = useRef<HTMLInputElement>(null);
   const questionFileRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const pdfUrlRef = useRef<string | null>(null);
+
+  function sanitizeFileName(name: string): string {
+    const raw = (name || "MediSpark-Material").trim();
+    // Remove invalid filename chars: < > : " / \ | ? * and control chars, also leading dots
+    let s = raw.replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/^\.+/, "");
+    // Replace whitespace with underscore, collapse multiple underscores
+    s = s.replace(/\s+/g, "_").replace(/__+/g, "_").replace(/^_+|_+$/g, "");
+    if (!s) s = "MediSpark-Material";
+    // Limit to 60 chars (without extension)
+    s = s.slice(0, 60).replace(/_+$/g, "");
+    if (!s) s = "MediSpark-Material";
+    return s;
+  }
 
   useEffect(() => {
     if (toast) {
@@ -75,6 +93,31 @@ export default function MaterialPdfGeneratorPage() {
       return () => clearTimeout(t);
     }
   }, [toast]);
+
+  // Revoke Blob URL on unmount or when replaced
+  useEffect(() => {
+    pdfUrlRef.current = pdfUrl;
+  }, [pdfUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (pdfUrlRef.current) {
+        URL.revokeObjectURL(pdfUrlRef.current);
+        pdfUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  // Invalidate generated PDF when preview content changes (requires regeneration)
+  const prevPreviewKeyRef = useRef<string>("");
+  useEffect(() => {
+    const key = JSON.stringify(questions) + "|" + materialName + "|" + String(lineSpacing);
+    if (prevPreviewKeyRef.current && prevPreviewKeyRef.current !== key && pdfReady) {
+      setPdfReady(false);
+      setGenerateError(null);
+    }
+    prevPreviewKeyRef.current = key;
+  }, [questions, materialName, lineSpacing, pdfReady]);
 
   // Usable column height depends on lineSpacing? Keep fixed, pagination estimates handle spacing
   const usableColumnHeight = 740; // px per column after header + answer box reserved
@@ -236,13 +279,24 @@ export default function MaterialPdfGeneratorPage() {
   const handleGeneratePdf = async () => {
     if (questions.length === 0) {
       setToast("No questions to generate.");
+      setGenerateError("No questions to generate.");
       return;
     }
     if (!previewRef.current) {
       setToast("Preview not ready");
+      setGenerateError("Preview not ready — please try again.");
       return;
     }
     setGenerating(true);
+    setGenerateError(null);
+    setPdfReady(false);
+    // Revoke previous Blob URL to prevent memory leaks before creating new one
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+      pdfUrlRef.current = null;
+    }
+    setPdfUrl(null);
+    setPdfBlob(null);
     try {
       const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
         import("jspdf"),
@@ -291,15 +345,58 @@ export default function MaterialPdfGeneratorPage() {
         if (i > 0) pdf.addPage();
         pdf.addImage(imgData, "JPEG", 0, 0, pageW, pageH, undefined, "FAST");
       }
-      const fileName =
-        (materialName || "MediSpark-Material").replace(/[^a-zA-Z0-9\u0980-\u09FF\-_ ]/g, "").trim().slice(0, 60) ||
-        "MediSpark-Material";
-      pdf.save(`${fileName}.pdf`);
-      setToast("PDF downloaded");
+      // Create Blob and Object URL correctly for reliable download (Chrome/Android/desktop)
+      const blob: Blob = pdf.output("blob");
+      if (!blob || blob.size === 0) throw new Error("Generated PDF is empty — please try again.");
+      const url = URL.createObjectURL(blob);
+      // Verify Blob type is PDF
+      // Store for Download button — do not auto-revoke immediately to allow multiple clicks
+      setPdfBlob(blob);
+      setPdfUrl(url);
+      pdfUrlRef.current = url;
+      setPdfReady(true);
+      setToast("PDF generated — click Download PDF");
     } catch (e) {
-      setToast(e instanceof Error ? e.message : "PDF generation failed");
+      const msg = e instanceof Error ? e.message : "PDF generation failed — please try again.";
+      setGenerateError(msg);
+      setToast(msg);
+      setPdfReady(false);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    if (generating) {
+      setToast("Please wait — generating PDF…");
+      return;
+    }
+    if (!pdfReady || !pdfBlob || !pdfUrl) {
+      setToast("Please click Generate PDF first.");
+      setGenerateError("No PDF generated yet — click Generate PDF first.");
+      return;
+    }
+    try {
+      const fileName = `${sanitizeFileName(materialName)}.pdf`;
+      // Create anchor with download attribute — forces download (no new tab), works on Chrome/Android
+      const a = document.createElement("a");
+      a.href = pdfUrl;
+      a.download = fileName;
+      a.style.display = "none";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      // Clean up anchor immediately, but keep Blob URL alive for multiple downloads
+      // Revocation happens only on next Generate or unmount to prevent memory leaks without breaking re-downloads
+      setTimeout(() => {
+        if (a.parentNode) document.body.removeChild(a);
+      }, 100);
+      setToast("PDF downloaded");
+      setGenerateError(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Download failed — please try again.";
+      setGenerateError(msg);
+      setToast(msg);
     }
   };
 
@@ -307,6 +404,14 @@ export default function MaterialPdfGeneratorPage() {
     setQuestions([]);
     setPasteText("");
     setDetection(null);
+    setGenerateError(null);
+    setPdfReady(false);
+    setPdfBlob(null);
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+      pdfUrlRef.current = null;
+    }
+    setPdfUrl(null);
     setToast("Cleared");
   };
 
@@ -769,22 +874,36 @@ D. 150 দিন
 
         {/* 16. Generate PDF + 17. Download */}
         {questions.length > 0 && (
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button
-              onClick={handleGeneratePdf}
-              disabled={generating}
-              className="rounded-xl bg-[#0b1e3a] px-8 py-3 text-sm font-extrabold text-white shadow hover:bg-[#123060] disabled:opacity-40 admin-dark:bg-[#234e9f]"
-            >
-              {generating ? "Generating…" : "Generate PDF"}
-            </button>
-            <button
-              onClick={handleGeneratePdf}
-              disabled={generating}
-              className="rounded-xl border border-[#cbd5e1] bg-white px-6 py-3 text-sm font-bold text-[#0b1e3a] hover:bg-slate-50 disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-white"
-            >
-              Download PDF
-            </button>
-          </div>
+          <>
+            {generateError && (
+              <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 admin-dark:border-red-900/40 admin-dark:bg-red-900/20 admin-dark:text-red-300">
+                {generateError}
+              </div>
+            )}
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <button
+                onClick={handleGeneratePdf}
+                disabled={generating}
+                className="rounded-xl bg-[#0b1e3a] px-8 py-3 text-sm font-extrabold text-white shadow hover:bg-[#123060] disabled:opacity-40 admin-dark:bg-[#234e9f]"
+                title={generating ? "Generating PDF…" : "Generate PDF"}
+              >
+                {generating ? "Generating PDF…" : "Generate PDF"}
+              </button>
+              <button
+                onClick={handleDownloadPdf}
+                disabled={generating || !pdfReady}
+                className="rounded-xl border border-[#cbd5e1] bg-white px-6 py-3 text-sm font-bold text-[#0b1e3a] hover:bg-slate-50 disabled:opacity-40 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-white"
+                title={!pdfReady ? "Click Generate PDF first" : "Download PDF"}
+              >
+                Download PDF
+              </button>
+            </div>
+            {pdfReady && !generating && (
+              <p className="mt-2 text-center text-xs font-semibold text-emerald-700 admin-dark:text-emerald-300">
+                ✓ PDF ready — click Download PDF to save {sanitizeFileName(materialName)}.pdf
+              </p>
+            )}
+          </>
         )}
 
         <p className="mt-6 text-center text-xs text-slate-400 admin-dark:text-[#8da0c0]">
