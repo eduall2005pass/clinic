@@ -32,12 +32,28 @@ function mapParserToQuestions(parsed: ReturnType<typeof parsePastedMcqs>): PdfMa
       answer: ans,
       needsReview: p.needsReview,
       issues: p.issues ?? [],
+      image: null,
+      isStandaloneImage: false,
     };
   });
 }
 
 function sanitizeQuestions(questions: PdfMaterialQuestion[]): PdfMaterialQuestion[] {
-  return questions.map((q, idx) => ({ ...q, qNumber: idx + 1 }));
+  let counter = 0;
+  return questions.map((q) => {
+    if (q.isStandaloneImage) return q;
+    counter += 1;
+    return { ...q, qNumber: counter };
+  });
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function MaterialPdfGeneratorPage() {
@@ -50,6 +66,8 @@ export default function MaterialPdfGeneratorPage() {
   const [generating, setGenerating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const standaloneInputRef = useRef<HTMLInputElement>(null);
+  const questionFileRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   useEffect(() => {
     if (toast) {
@@ -78,8 +96,8 @@ export default function MaterialPdfGeneratorPage() {
     const mapped = mapParserToQuestions(parsed);
     const sanitized = sanitizeQuestions(mapped);
     setQuestions(sanitized);
-    setDetection({ total: sanitized.length });
-    setToast(`${sanitized.length} questions detected & formatted (1..${sanitized.length})`);
+    setDetection({ total: sanitized.filter((q) => !q.isStandaloneImage).length });
+    setToast(`${sanitized.filter((q) => !q.isStandaloneImage).length} questions detected & formatted (1..${sanitized.filter((q) => !q.isStandaloneImage).length})`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -101,6 +119,120 @@ export default function MaterialPdfGeneratorPage() {
     handleUpdate(id, { answer: final });
   };
 
+  const handleStandaloneImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setToast("Please select an image file");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setToast("Image too large (max 8MB)");
+      return;
+    }
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const newBlock: PdfMaterialQuestion = {
+        id: uid(),
+        qNumber: 0,
+        question: "",
+        options: ["", "", "", ""],
+        answer: "",
+        needsReview: false,
+        issues: [],
+        image: { dataUrl, name: file.name, widthPercent: 100 },
+        isStandaloneImage: true,
+      };
+      setQuestions((prev) => [...prev, newBlock]);
+      setToast("Image inserted — you can move/resize it");
+    } catch {
+      setToast("Failed to load image");
+    } finally {
+      if (standaloneInputRef.current) standaloneInputRef.current.value = "";
+    }
+  };
+
+  const handleQuestionImageUpload = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setToast("Please select an image file");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setToast("Image too large (max 8MB)");
+      return;
+    }
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      handleUpdate(id, { image: { dataUrl, name: file.name, widthPercent: 100 } });
+      setToast("Image added to question");
+    } catch {
+      setToast("Failed to load image");
+    } finally {
+      const r = questionFileRefs.current.get(id);
+      if (r) r.value = "";
+    }
+  };
+
+  const handleRemoveImage = (id: string) => {
+    handleUpdate(id, { image: null });
+    setToast("Image removed");
+  };
+
+  const handleResizeImage = (id: string, widthPercent: number) => {
+    setQuestions((prev) => prev.map((q) => (q.id === id && q.image ? { ...q, image: { ...q.image, widthPercent } } : q)));
+  };
+
+  const handleMoveBlock = (id: string, dir: -1 | 1) => {
+    setQuestions((prev) => {
+      const idx = prev.findIndex((q) => q.id === id);
+      if (idx === -1) return prev;
+      const target = idx + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(idx, 1);
+      next.splice(target, 0, moved);
+      return sanitizeQuestions(next);
+    });
+  };
+
+  const handleInsertStandaloneAfter = async (afterId: string) => {
+    // Trigger file picker and insert after given id
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        setToast("Please select an image file");
+        return;
+      }
+      const dataUrl = await fileToDataUrl(file);
+      const newBlock: PdfMaterialQuestion = {
+        id: uid(),
+        qNumber: 0,
+        question: "",
+        options: ["", "", "", ""],
+        answer: "",
+        needsReview: false,
+        issues: [],
+        image: { dataUrl, name: file.name, widthPercent: 100 },
+        isStandaloneImage: true,
+      };
+      setQuestions((prev) => {
+        const idx = prev.findIndex((q) => q.id === afterId);
+        if (idx === -1) return [...prev, newBlock];
+        const next = [...prev];
+        next.splice(idx + 1, 0, newBlock);
+        return next;
+      });
+      setToast("Image inserted between questions");
+    };
+    input.click();
+  };
+
   const handleGeneratePdf = async () => {
     if (questions.length === 0) {
       setToast("No questions to generate.");
@@ -116,9 +248,23 @@ export default function MaterialPdfGeneratorPage() {
         import("jspdf"),
         import("html2canvas"),
       ]);
-      // Ensure Bangla fonts loaded
+      // Ensure Bangla fonts and images loaded
       // @ts-ignore
       if (document.fonts?.ready) await document.fonts.ready;
+      // Wait for all images inside preview to load
+      const imgs = Array.from(previewRef.current.querySelectorAll("img"));
+      await Promise.all(
+        imgs.map(
+          (img) =>
+            new Promise<void>((res) => {
+              if ((img as HTMLImageElement).complete) res();
+              else {
+                (img as HTMLImageElement).onload = () => res();
+                (img as HTMLImageElement).onerror = () => res();
+              }
+            }),
+        ),
+      );
       await new Promise((r) => setTimeout(r, 300));
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
@@ -129,6 +275,7 @@ export default function MaterialPdfGeneratorPage() {
         const canvas = await html2canvas(el, {
           scale: 2,
           useCORS: true,
+          allowTaint: true,
           backgroundColor: "#ffffff",
           logging: false,
           onclone: (clonedDoc) => {
@@ -167,6 +314,8 @@ export default function MaterialPdfGeneratorPage() {
 
   const spacingLabel = typeof lineSpacing === "string" ? lineSpacing : `${lineSpacing}`;
   const lineHeightStyle = lineSpacingFactor(lineSpacing);
+  const questionCount = questions.filter((q) => !q.isStandaloneImage).length;
+  const imageCount = questions.filter((q) => q.image).length;
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] admin-dark:bg-[#0a162e]">
@@ -182,11 +331,11 @@ export default function MaterialPdfGeneratorPage() {
             Materials PDF Generator
           </h1>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500 sm:text-sm admin-dark:text-[#8da0c0]">
-            Material Name → Paste MCQs → Detect & Format → Editable A4 Preview → Generate PDF → Download. Two-column A4, never-split MCQ blocks, page-specific উত্তরমালা.
+            Material Name → Paste MCQs → Detect & Format → Editable A4 Preview → Generate PDF → Download. Two-column A4, never-split MCQ blocks, page-specific উত্তরমালা. Manual image insertion (no OCR).
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <span className="text-xs font-bold text-slate-600 admin-dark:text-[#8da0c0]">
-              {questions.length} Questions • {pages.length} Page{pages.length !== 1 ? "s" : ""} • A4 Two-Column
+              {questionCount} Questions • {imageCount > 0 ? `${imageCount} Images • ` : ""}{pages.length} Page{pages.length !== 1 ? "s" : ""} • A4 Two-Column
             </span>
             {detection && (
               <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-white admin-dark:bg-white admin-dark:text-slate-900">
@@ -271,10 +420,17 @@ D. 150 দিন
               <div>
                 <h2 className="text-sm font-extrabold text-[#0b1e3a] admin-dark:text-white">Editable A4 Preview</h2>
                 <p className="mt-1 text-xs text-slate-500 admin-dark:text-[#8da0c0]">
-                  Real-time A4 preview = exact PDF layout. Click any question/option to edit. Changing text updates pagination instantly. Page-specific উত্তরমালা at bottom of every page.
+                  Real-time A4 preview = exact PDF layout. Click any question/option to edit. Add images — they stay together with their question and never overflow. Changing text/image updates pagination instantly. Page-specific উত্তরমালা at bottom.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => standaloneInputRef.current?.click()}
+                  className="rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+                >
+                  + Add Image
+                </button>
+                <input ref={standaloneInputRef} type="file" accept="image/*" className="hidden" onChange={handleStandaloneImageUpload} />
                 <button
                   onClick={handleClear}
                   className="rounded-xl border border-[#cbd5e1] bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 admin-dark:border-[#1e3a65] admin-dark:bg-[#0f2547] admin-dark:text-white"
@@ -282,6 +438,11 @@ D. 150 দিন
                   Reset
                 </button>
               </div>
+            </div>
+
+            {/* Image help */}
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900 admin-dark:border-amber-900/40 admin-dark:bg-amber-900/20 admin-dark:text-amber-200">
+              <span className="font-bold">Image Upload:</span> Manual only — for diagrams/figures/tables. No OCR. Images are inserted between questions or inside a specific question. Resize / Move / Remove available per image. Images never overflow A4 and preserve aspect ratio in PDF.
             </div>
 
             {/* 11. Editable Line Spacing — ONLY control */}
@@ -352,97 +513,212 @@ D. 150 দিন
                     widows: 1,
                   } as React.CSSProperties}
                 >
-                  {/* Center vertical line fallback absolute for PDF fidelity */}
-                  {/* Questions */}
-                  {page.questions.map((q) => (
-                    <div
-                      key={q.id}
-                      className="mb-3 break-inside-avoid rounded-[2px] p-1"
-                      style={{ breakInside: "avoid", pageBreakInside: "avoid", WebkitColumnBreakInside: "avoid" } as React.CSSProperties}
-                    >
-                      {/* Question text Bold — number editable */}
-                      <div className="flex gap-1.5">
-                        <span className="flex shrink-0 items-start gap-1">
-                          <input
-                            type="number"
-                            value={q.qNumber}
-                            onChange={(e) => {
-                              const n = parseInt(e.target.value, 10);
-                              if (Number.isFinite(n) && n > 0) handleUpdate(q.id, { qNumber: n });
-                            }}
-                            className="pdf-number-input w-8 rounded border border-transparent bg-transparent text-center text-[11px] font-bold text-[#0f172a] outline-none hover:border-[#cbd5e1] focus:border-[#234e9f] focus:bg-white"
-                            style={{ lineHeight: "1" }}
-                            title="Edit question number"
-                          />
-                          <span className="text-[11px] font-bold text-[#0f172a]">.</span>
-                        </span>
-                        <span
-                          className="bangla flex-1 cursor-text text-[11px] font-bold leading-[1.7] text-[#0f172a] outline-none focus:bg-yellow-50 focus:ring-1 focus:ring-amber-300 rounded px-0.5"
-                          contentEditable
-                          suppressContentEditableWarning
-                          onBlur={(e) => {
-                            const txt = (e.currentTarget.textContent || "").trim();
-                            if (txt !== q.question) handleUpdate(q.id, { question: txt });
-                          }}
-                          title="Click to edit question (bold in PDF)"
-                          style={{ lineHeight: `${lineHeightStyle * 1.1}` }}
-                        >
-                          {q.question || <span className="text-red-400 font-normal">[Empty — click to edit]</span>}
-                        </span>
-                        <button
-                          onClick={() => handleDelete(q.id)}
-                          title="Delete question"
-                          className="shrink-0 rounded border border-red-200 px-1 py-0.5 text-[9px] font-bold text-red-600 hover:bg-red-50 pdf-hide"
-                          data-html2canvas-ignore="true"
-                          style={{ height: 18 }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                      {/* Options Regular */}
-                      <div className="bangla mt-1 grid gap-0.5 pl-5 text-[11px] font-normal leading-[1.6] text-[#1e293b]">
-                        {(["A", "B", "C", "D"] as const).map((ltr, idx) => (
-                          <div key={ltr} className="flex gap-1.5">
-                            <span className="shrink-0 font-semibold">{ltr}.</span>
-                            <span
-                              className="flex-1 cursor-text font-normal outline-none focus:bg-yellow-50 focus:ring-1 focus:ring-amber-300 rounded px-0.5"
-                              contentEditable
-                              suppressContentEditableWarning
-                              onBlur={(e) => {
-                                const txt = (e.currentTarget.textContent || "").trim();
-                                if (txt !== q.options[idx]) {
-                                  const next = [...q.options] as [string, string, string, string];
-                                  next[idx] = txt;
-                                  handleUpdate(q.id, { options: next });
-                                }
-                              }}
-                              title={`Click to edit Option ${ltr}`}
-                              style={{ lineHeight: `${lineHeightStyle}` }}
-                            >
-                              {q.options[idx] || <span className="text-red-400">[Empty]</span>}
-                            </span>
+                  {/* Blocks: questions + standalone images interleaved already via pagination */}
+                  {page.questions.map((q) =>
+                    q.isStandaloneImage ? (
+                      <div
+                        key={q.id}
+                        className="mb-3 break-inside-avoid rounded border border-[#cbd5e1] bg-[#f8fafc] p-2"
+                        style={{ breakInside: "avoid", pageBreakInside: "avoid", WebkitColumnBreakInside: "avoid" } as React.CSSProperties}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[9px] font-bold text-slate-500">Image Block</span>
+                          <div className="flex gap-1 pdf-hide" data-html2canvas-ignore="true">
+                            <button onClick={() => handleMoveBlock(q.id, -1)} className="rounded border bg-white px-1 py-0.5 text-[9px] font-bold hover:bg-slate-50">↑</button>
+                            <button onClick={() => handleMoveBlock(q.id, 1)} className="rounded border bg-white px-1 py-0.5 text-[9px] font-bold hover:bg-slate-50">↓</button>
+                            <button onClick={() => handleDelete(q.id)} className="rounded border border-red-200 bg-white px-1 py-0.5 text-[9px] font-bold text-red-600 hover:bg-red-50">Remove</button>
                           </div>
-                        ))}
+                        </div>
+                        {q.image?.dataUrl && (
+                          <div className="mt-2">
+                            <img
+                              src={q.image.dataUrl}
+                              alt={q.image.name || "uploaded"}
+                              className="mx-auto block rounded border border-slate-200 bg-white"
+                              style={{
+                                width: `${q.image.widthPercent ?? 100}%`,
+                                maxWidth: "100%",
+                                height: "auto",
+                                maxHeight: "280px",
+                                objectFit: "contain",
+                              }}
+                            />
+                            <div className="mt-2 flex flex-wrap items-center gap-2 pdf-hide" data-html2canvas-ignore="true">
+                              <span className="text-[9px] font-bold text-slate-500">Size:</span>
+                              {[30, 50, 70, 100].map((w) => (
+                                <button
+                                  key={w}
+                                  onClick={() => handleResizeImage(q.id, w)}
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ (q.image?.widthPercent ?? 100) === w ? "bg-[#0b1e3a] text-white" : "bg-white border border-[#cbd5e1] text-slate-600 hover:bg-slate-50"}`}
+                                >
+                                  {w}%
+                                </button>
+                              ))}
+                              <input
+                                type="range"
+                                min={30}
+                                max={100}
+                                value={q.image.widthPercent ?? 100}
+                                onChange={(e) => handleResizeImage(q.id, parseInt(e.target.value, 10))}
+                                className="ml-2 h-1 w-20 accent-[#0b1e3a]"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {/* Correct Answer inline editor — hidden in PDF, only for editing */}
-                      <div className="mt-1 flex items-center gap-1.5 pl-5 pdf-hide" data-html2canvas-ignore="true">
-                        <span className="text-[9px] font-bold text-slate-500">Ans:</span>
-                        <select
-                          value={q.answer}
-                          onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                          className="rounded border border-[#cbd5e1] bg-white px-1 py-0.5 text-[11px] font-bold text-[#0b1e3a] outline-none focus:border-[#234e9f]"
-                          style={{ minWidth: 44 }}
-                        >
-                          <option value="">—</option>
-                          <option value="A">A</option>
-                          <option value="B">B</option>
-                          <option value="C">C</option>
-                          <option value="D">D</option>
-                        </select>
-                        <span className="text-[9px] text-slate-400">editable — updates Answer Box</span>
+                    ) : (
+                      <div
+                        key={q.id}
+                        className="mb-3 break-inside-avoid rounded-[2px] p-1"
+                        style={{ breakInside: "avoid", pageBreakInside: "avoid", WebkitColumnBreakInside: "avoid" } as React.CSSProperties}
+                      >
+                        {/* Question text Bold — number editable */}
+                        <div className="flex gap-1.5">
+                          <span className="flex shrink-0 items-start gap-1">
+                            <input
+                              type="number"
+                              value={q.qNumber}
+                              onChange={(e) => {
+                                const n = parseInt(e.target.value, 10);
+                                if (Number.isFinite(n) && n > 0) handleUpdate(q.id, { qNumber: n });
+                              }}
+                              className="pdf-number-input w-8 rounded border border-transparent bg-transparent text-center text-[11px] font-bold text-[#0f172a] outline-none hover:border-[#cbd5e1] focus:border-[#234e9f] focus:bg-white"
+                              style={{ lineHeight: "1" }}
+                              title="Edit question number"
+                            />
+                            <span className="text-[11px] font-bold text-[#0f172a]">.</span>
+                          </span>
+                          <span
+                            className="bangla flex-1 cursor-text text-[11px] font-bold leading-[1.7] text-[#0f172a] outline-none focus:bg-yellow-50 focus:ring-1 focus:ring-amber-300 rounded px-0.5"
+                            contentEditable
+                            suppressContentEditableWarning
+                            onBlur={(e) => {
+                              const txt = (e.currentTarget.textContent || "").trim();
+                              if (txt !== q.question) handleUpdate(q.id, { question: txt });
+                            }}
+                            title="Click to edit question (bold in PDF)"
+                            style={{ lineHeight: `${lineHeightStyle * 1.1}` }}
+                          >
+                            {q.question || <span className="text-red-400 font-normal">[Empty — click to edit]</span>}
+                          </span>
+                          <div className="flex shrink-0 gap-1 pdf-hide" data-html2canvas-ignore="true">
+                            <button onClick={() => handleMoveBlock(q.id, -1)} title="Move up" className="rounded border bg-white px-1 py-0.5 text-[9px] font-bold hover:bg-slate-50">↑</button>
+                            <button onClick={() => handleMoveBlock(q.id, 1)} title="Move down" className="rounded border bg-white px-1 py-0.5 text-[9px] font-bold hover:bg-slate-50">↓</button>
+                            <button
+                              onClick={() => handleDelete(q.id)}
+                              title="Delete question"
+                              className="rounded border border-red-200 px-1 py-0.5 text-[9px] font-bold text-red-600 hover:bg-red-50"
+                              style={{ height: 18 }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                        {/* Question-attached image (optional, stays together with question+options) */}
+                        {q.image?.dataUrl ? (
+                          <div className="mt-2 pl-5">
+                            <img
+                              src={q.image.dataUrl}
+                              alt={q.image.name || "question image"}
+                              className="mx-auto block rounded border border-slate-200 bg-white"
+                              style={{
+                                width: `${q.image.widthPercent ?? 100}%`,
+                                maxWidth: "100%",
+                                height: "auto",
+                                maxHeight: "260px",
+                                objectFit: "contain",
+                              }}
+                            />
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pdf-hide" data-html2canvas-ignore="true">
+                              <span className="text-[9px] font-bold text-slate-500">Image:</span>
+                              {[30, 50, 70, 100].map((w) => (
+                                <button
+                                  key={w}
+                                  onClick={() => handleResizeImage(q.id, w)}
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ (q.image?.widthPercent ?? 100) === w ? "bg-[#0b1e3a] text-white" : "bg-white border border-[#cbd5e1] text-slate-600 hover:bg-slate-50"}`}
+                                >
+                                  {w}%
+                                </button>
+                              ))}
+                              <input
+                                type="range"
+                                min={30}
+                                max={100}
+                                value={q.image.widthPercent ?? 100}
+                                onChange={(e) => handleResizeImage(q.id, parseInt(e.target.value, 10))}
+                                className="h-1 w-16 accent-[#0b1e3a]"
+                              />
+                              <button onClick={() => handleRemoveImage(q.id)} className="rounded border border-red-200 bg-white px-2 py-0.5 text-[9px] font-bold text-red-600 hover:bg-red-50">Remove</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-1 pl-5 pdf-hide" data-html2canvas-ignore="true">
+                            <button
+                              onClick={() => questionFileRefs.current.get(q.id)?.click()}
+                              className="rounded-full border border-dashed border-[#cbd5e1] bg-white px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-50"
+                            >
+                              + Add Image to this question
+                            </button>
+                            <input
+                              ref={(el) => {
+                                if (el) questionFileRefs.current.set(q.id, el);
+                                else questionFileRefs.current.delete(q.id);
+                              }}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleQuestionImageUpload(q.id, e)}
+                            />
+                            <button onClick={() => handleInsertStandaloneAfter(q.id)} className="ml-2 rounded-full border border-[#cbd5e1] bg-white px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-50">
+                              + Insert image after
+                            </button>
+                          </div>
+                        )}
+                        {/* Options Regular */}
+                        <div className="bangla mt-1.5 grid gap-0.5 pl-5 text-[11px] font-normal leading-[1.6] text-[#1e293b]">
+                          {(["A", "B", "C", "D"] as const).map((ltr, idx) => (
+                            <div key={ltr} className="flex gap-1.5">
+                              <span className="shrink-0 font-semibold">{ltr}.</span>
+                              <span
+                                className="flex-1 cursor-text font-normal outline-none focus:bg-yellow-50 focus:ring-1 focus:ring-amber-300 rounded px-0.5"
+                                contentEditable
+                                suppressContentEditableWarning
+                                onBlur={(e) => {
+                                  const txt = (e.currentTarget.textContent || "").trim();
+                                  if (txt !== q.options[idx]) {
+                                    const next = [...q.options] as [string, string, string, string];
+                                    next[idx] = txt;
+                                    handleUpdate(q.id, { options: next });
+                                  }
+                                }}
+                                title={`Click to edit Option ${ltr}`}
+                                style={{ lineHeight: `${lineHeightStyle}` }}
+                              >
+                                {q.options[idx] || <span className="text-red-400">[Empty]</span>}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Correct Answer inline editor — hidden in PDF, only for editing */}
+                        <div className="mt-1 flex items-center gap-1.5 pl-5 pdf-hide" data-html2canvas-ignore="true">
+                          <span className="text-[9px] font-bold text-slate-500">Ans:</span>
+                          <select
+                            value={q.answer}
+                            onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                            className="rounded border border-[#cbd5e1] bg-white px-1 py-0.5 text-[11px] font-bold text-[#0b1e3a] outline-none focus:border-[#234e9f]"
+                            style={{ minWidth: 44 }}
+                          >
+                            <option value="">—</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                          </select>
+                          <span className="text-[9px] text-slate-400">editable — updates Answer Box</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                   {page.questions.length === 0 && (
                     <p className="py-10 text-center text-sm text-slate-400 col-span-2">No questions</p>
                   )}
@@ -454,24 +730,28 @@ D. 150 দিন
                     <div className="border-b border-[#0f172a] bg-[#f8fafc] py-1 text-center">
                       <span className="bangla text-[11px] font-extrabold tracking-wide text-[#0b1e3a]">উত্তরমালা</span>
                     </div>
-                    {page.questions.length === 0 ? (
+                    {page.questions.filter((q) => !q.isStandaloneImage).length === 0 ? (
                       <div className="px-3 py-2 text-center text-xs text-slate-400">—</div>
                     ) : (
                       <div className="p-2">
                         {/* Two horizontal rows — spec exact: row1 numbers, row2 answers */}
                         <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-center">
-                          {page.questions.map((q) => (
-                            <span key={`num-${q.id}`} className="min-w-[24px] text-[11px] font-normal text-slate-700">
-                              {String(q.qNumber).padStart(2, "0")}
-                            </span>
-                          ))}
+                          {page.questions
+                            .filter((q) => !q.isStandaloneImage)
+                            .map((q) => (
+                              <span key={`num-${q.id}`} className="min-w-[24px] text-[11px] font-normal text-slate-700">
+                                {String(q.qNumber).padStart(2, "0")}
+                              </span>
+                            ))}
                         </div>
                         <div className="mt-1 flex flex-wrap justify-center gap-x-4 gap-y-1 text-center border-t border-dashed border-slate-200 pt-1">
-                          {page.questions.map((q) => (
-                            <span key={`ans-${q.id}`} className="min-w-[24px] text-[11px] font-normal text-slate-900">
-                              {q.answer?.trim() ? q.answer.trim().toUpperCase() : "—"}
-                            </span>
-                          ))}
+                          {page.questions
+                            .filter((q) => !q.isStandaloneImage)
+                            .map((q) => (
+                              <span key={`ans-${q.id}`} className="min-w-[24px] text-[11px] font-normal text-slate-900">
+                                {q.answer?.trim() ? q.answer.trim().toUpperCase() : "—"}
+                              </span>
+                            ))}
                         </div>
                       </div>
                     )}
@@ -508,7 +788,7 @@ D. 150 দিন
         )}
 
         <p className="mt-6 text-center text-xs text-slate-400 admin-dark:text-[#8da0c0]">
-          MediSpark Material PDF Generator • Focused tool: Material Name → Paste → Detect & Format → Edit → Generate → Download • Two-column A4 • Professional print-ready
+          MediSpark Material PDF Generator • Focused tool: Material Name → Paste → Detect & Format → Edit → Generate → Download • Two-column A4 • Professional print-ready • Images manual only (no OCR)
         </p>
       </div>
 
