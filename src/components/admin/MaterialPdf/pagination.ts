@@ -7,19 +7,35 @@ import type { PdfMaterialQuestion } from "@/lib/pdf-materials";
 export const A4_CONTENT_WIDTH_PX = 682;
 export const A4_USABLE_HEIGHT_PX = 820; // dynamic via header
 
-export function estimateQuestionHeight(q: PdfMaterialQuestion): number {
-  const charsPerLineQ = 78;
-  const charsPerLineOpt = 74;
+export type LineSpacing = "compact" | "normal" | "relaxed" | number;
+export function lineSpacingFactor(v: LineSpacing): number {
+  if (typeof v === "number") return v;
+  switch (v) {
+    case "compact":
+      return 1.0;
+    case "normal":
+      return 1.35;
+    case "relaxed":
+      return 1.7;
+    default:
+      return 1.35;
+  }
+}
+
+export function estimateQuestionHeight(q: PdfMaterialQuestion, spacing: LineSpacing = "normal"): number {
+  const factor = lineSpacingFactor(spacing);
+  // In two-column layout, width is half (~325px), so chars per line is ~38-42
+  const charsPerLineQ = 42;
+  const charsPerLineOpt = 38;
   const linesQ = Math.max(1, Math.ceil((q.question || "").length / charsPerLineQ));
-  const qHeight = linesQ * 21 + 10; // bold question with spacing
+  const qHeight = linesQ * (18 * factor) + 10;
   let optsHeight = 0;
   for (const opt of q.options) {
     const len = (opt || "").length;
     const lines = Math.max(1, Math.ceil(Math.max(len, 1) / charsPerLineOpt));
-    optsHeight += lines * 19 + 4;
+    optsHeight += lines * (16 * factor) + 4;
   }
-  // spacing between question and options + bottom margin
-  return qHeight + optsHeight + 22;
+  return qHeight + optsHeight + 14 * factor + 12;
 }
 
 export type PaginatedPage = {
@@ -32,15 +48,20 @@ export type PaginatedPage = {
 export function paginateQuestions(
   questions: PdfMaterialQuestion[],
   usableHeight: number = A4_USABLE_HEIGHT_PX,
+  spacing: LineSpacing = "normal",
+  twoColumn: boolean = true,
 ): PaginatedPage[] {
   if (questions.length === 0) return [{ pageNumber: 1, questions: [], startQ: 1, endQ: 0 }];
+  // Two-column: page holds 2 * columnHeight. When twoColumn true, usableHeight is column height,
+  // so effective page capacity = usableHeight * 2
+  const pageCapacity = twoColumn ? usableHeight * 2 : usableHeight;
   const pages: PaginatedPage[] = [];
   let current: PdfMaterialQuestion[] = [];
   let curH = 0;
   for (const q of questions) {
-    const h = estimateQuestionHeight(q);
-    // If single question taller than usable, still put alone on page
-    if (curH + h > usableHeight && current.length > 0) {
+    const h = estimateQuestionHeight(q, spacing);
+    // Never split: if overflow, move entire block to next page/column
+    if (curH + h > pageCapacity && current.length > 0) {
       const start = pages.reduce((acc, p) => acc + p.questions.length, 0) + 1;
       pages.push({
         pageNumber: pages.length + 1,
@@ -53,6 +74,10 @@ export function paginateQuestions(
     } else {
       current.push(q);
       curH += h;
+    }
+    // If single question taller than pageCapacity, still keep alone (will overflow gracefully)
+    if (h > pageCapacity && current.length === 1) {
+      // already handled, will be pushed next iter
     }
   }
   if (current.length > 0) {
