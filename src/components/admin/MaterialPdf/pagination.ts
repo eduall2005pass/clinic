@@ -22,8 +22,24 @@ export function lineSpacingFactor(v: LineSpacing): number {
   }
 }
 
+function estimateImageHeight(q: PdfMaterialQuestion): number {
+  if (!q.image?.dataUrl) return 0;
+  // Standalone image block: no question/options, only image
+  const w = q.image.widthPercent ?? 100;
+  // Estimate height: base on width percent, preserve aspect ~4:3 typical diagram
+  // 100% ~ 160px, 70% ~ 120px, 50% ~ 90px, 30% ~ 60px in column width
+  const base = 160;
+  const h = Math.round((base * w) / 100);
+  // Add padding/margin around image
+  return h + 12;
+}
+
 export function estimateQuestionHeight(q: PdfMaterialQuestion, spacing: LineSpacing = "normal"): number {
   const factor = lineSpacingFactor(spacing);
+  // Standalone image block: only image height
+  if (q.isStandaloneImage) {
+    return estimateImageHeight(q) + 8;
+  }
   // In two-column layout, width is half (~325px), so chars per line is ~38-42
   const charsPerLineQ = 42;
   const charsPerLineOpt = 38;
@@ -35,7 +51,8 @@ export function estimateQuestionHeight(q: PdfMaterialQuestion, spacing: LineSpac
     const lines = Math.max(1, Math.ceil(Math.max(len, 1) / charsPerLineOpt));
     optsHeight += lines * (16 * factor) + 4;
   }
-  return qHeight + optsHeight + 14 * factor + 12;
+  const imgH = estimateImageHeight(q);
+  return qHeight + optsHeight + imgH + 14 * factor + 12;
 }
 
 export type PaginatedPage = {

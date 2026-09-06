@@ -10,6 +10,12 @@ export type PdfMaterialHeader = {
   showPageNumbers: boolean;
 };
 
+export type PdfMaterialImage = {
+  dataUrl: string; // base64 data URL (no OCR, PDF-only)
+  name?: string;
+  widthPercent?: number; // 30-100, default 100 (column width)
+};
+
 export type PdfMaterialQuestion = {
   id: string;
   qNumber: number;
@@ -18,6 +24,8 @@ export type PdfMaterialQuestion = {
   answer: string; // "A"|"B"|"C"|"D" or "ক"|"খ"|"গ"|"ঘ" or "" if not set
   needsReview: boolean;
   issues: string[];
+  image?: PdfMaterialImage | null;
+  isStandaloneImage?: boolean; // true if block is image-only between questions
 };
 
 export type PdfMaterialPayload = {
@@ -181,7 +189,7 @@ export async function savePdfMaterial(
   }
   // normalize header title to top title
   if (payload.header?.title) payload.header.title = payload.header.title.trim().slice(0, 255);
-  // ensure payload questions have ids and numbers
+  // ensure payload questions have ids and numbers (preserve image for manual insertion)
   payload.questions = (payload.questions ?? []).map((q, idx) => ({
     id: q.id || `q-${Date.now()}-${idx}`,
     qNumber: q.qNumber || idx + 1,
@@ -190,7 +198,9 @@ export async function savePdfMaterial(
     answer: q.answer ?? "",
     needsReview: Boolean(q.needsReview),
     issues: q.issues ?? [],
-  }));
+    image: (q as unknown as { image?: unknown }).image ?? null,
+    isStandaloneImage: Boolean((q as unknown as { isStandaloneImage?: unknown }).isStandaloneImage),
+  })) as PdfMaterialQuestion[];
 
   const payloadJson = JSON.stringify(payload);
   const headerTitle = payload.header.title || title;
