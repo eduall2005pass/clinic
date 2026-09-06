@@ -59,19 +59,35 @@ function parseOptionLine(line: string, allowNumeric = false): { index: number; t
 
 function parseAnswerLine(line: string): { index: number } | null {
   const trimmed = line.trim();
-  // Various answer patterns: Ans: A, Answer: B, Correct: C, Key: D, Solution: A, Answer is B, etc.
-  // Also handles "Correct Answer: A" "Ans - b" "Answer - C" "Key : B"
-  let m = trimmed.match(/^\s*(?:Ans(?:wer)?|Correct\s*Answer|Correct|Key|Solution|Answer\s*Key)\s*(?:is)?\s*[:\-]?\s*([A-Da-d1-4])\b/i);
-  if (m) {
-    const raw = m[1].toUpperCase();
-    let idx: number;
-    if (/[1-4]/.test(raw)) idx = parseInt(raw, 10) - 1;
-    else idx = raw.charCodeAt(0) - 65;
-    if (idx >= 0 && idx < 4) return { index: idx };
+  // Bangla answer patterns: উত্তর: খ , উত্তর - ক , উত্তরঃ গ , সঠিক উত্তর: ঘ , Ans: ক etc.
+  // Must map ক->0, খ->1, গ->2, ঘ->3
+  const bnMap: Record<string, number> = { ক: 0, খ: 1, গ: 2, ঘ: 3 };
+  // Try Bangla first — avoid \b after Bangla chars (word boundary fails for Unicode)
+  let mBn = trimmed.match(
+    /^\s*(?:উত্তর(?:মালা)?|সঠিক\s*উত্তর|Ans(?:wer)?\.?|Correct\s*Answer|Correct|Key|Solution|Answer\s*Key)\s*(?:is)?\s*[:\-ঃ.]?\s*[\(]?\s*([A-Da-dকখগঘ1-4])\s*[\)]?(?:\s|$)/i,
+  );
+  // Broader Bangla: "উত্তর: খ" anywhere at line start, also handle "উঃ খ" variant
+  if (!mBn) {
+    mBn = trimmed.match(/^\s*উ(?:ত্তর)?\s*[:\-ঃ.]?\s*[\(]?\s*([কখগঘ])\s*[\)]?(?:\s|$)/);
   }
-  // Also handle "Answer: A - explanation" or "A is correct" style at end
-  // Try to find standalone: "*A", "Option B is correct" — less common, skip for now
-  // Handle "✓ A" type? ignore
+  if (mBn) {
+    const raw = mBn[1];
+    if (bnMap[raw] !== undefined) return { index: bnMap[raw] };
+    const up = raw.toUpperCase();
+    if (/[A-D]/.test(up)) return { index: up.charCodeAt(0) - 65 };
+    if (/[1-4]/.test(raw)) return { index: parseInt(raw, 10) - 1 };
+  }
+  // English patterns (fallback, more permissive with . and () )
+  let m = trimmed.match(
+    /^\s*(?:Ans(?:wer)?\.?|Correct\s*Answer|Correct|Key|Solution|Answer\s*Key)\s*(?:is)?\s*[:\-.]?\s*[\(]?\s*([A-Da-dকখগঘ1-4])\s*[\)]?(?:\s|$)/i,
+  );
+  if (m) {
+    const raw = m[1];
+    if (bnMap[raw] !== undefined) return { index: bnMap[raw] };
+    const up = raw.toUpperCase();
+    if (/[1-4]/.test(up)) return { index: parseInt(up, 10) - 1 };
+    if (/[A-D]/.test(up)) return { index: up.charCodeAt(0) - 65 };
+  }
   return null;
 }
 
